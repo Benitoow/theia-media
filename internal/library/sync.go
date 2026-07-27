@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Benitoow/theia-media/internal/scanner"
+	"github.com/Benitoow/theia-media/internal/tmdb"
 )
 
 // ErrScanInProgress is returned when a scan is requested while one is already
@@ -25,25 +26,53 @@ type ScanReport struct {
 	Updated int `json:"updated"`
 	Removed int `json:"removed"`
 
+	// Metadata lookups performed during this pass.
+	Enriched       int `json:"enriched"`
+	NotFound       int `json:"not_found"`
+	MetadataErrors int `json:"metadata_errors"`
+
 	// Directories that could not be read, already rendered for display. A scan
 	// that hit problems still reports everything it did manage to index.
 	Problems []string `json:"problems,omitempty"`
 }
 
-// Service reconciles the files on disk with the library in the database.
+// defaultMetadataBatch caps how many TMDB lookups one scan performs.
+//
+// A first scan of a large library would otherwise sit there making thousands of
+// requests before the interface shows anything. Capping the batch means posters
+// fill in over the first few scans instead, which is visible progress rather
+// than a long silence.
+const defaultMetadataBatch = 200
+
+// Service reconciles the files on disk with the library in the database, and
+// fills in metadata for what it finds.
 type Service struct {
 	store *Store
 	log   *slog.Logger
+
+	// tmdb is nil when no API key is configured. Everything else still works;
+	// the library is simply built from filenames alone.
+	tmdb          *tmdb.Client
+	metadataBatch int
 
 	mu       sync.Mutex
 	scanning bool
 	last     *ScanReport
 }
 
-// NewService builds the scanning service.
-func NewService(store *Store, log *slog.Logger) *Service {
-	return &Service{store: store, log: log}
+// NewService builds the scanning service. client may be nil, in which case no
+// metadata is fetched and scanning carries on regardless.
+func NewService(store *Store, client *tmdb.Client, log *slog.Logger) *Service {
+	return &Service{
+		store:         store,
+		tmdb:          client,
+		metadataBatch: defaultMetadataBatch,
+		log:           log,
+	}
 }
+
+// HasMetadataSource reports whether a TMDB key was configured.
+func (s *Service) HasMetadataSource() bool { return s.tmdb != nil }
 
 // LastScan returns the most recent report, or nil if nothing has run yet.
 func (s *Service) LastScan() *ScanReport {
@@ -157,6 +186,11 @@ func (s *Service) Scan(ctx context.Context, roots []string) (*ScanReport, error)
 			"problems", len(found.Problems))
 	}
 
+	// Metadata comes last, so that the library is complete and browsable before
+	// a single network request is made. A TMDB outage delays posters; it never
+	// delays knowing what you own.
+	s.enrich(ctx, report)
+
 	report.Duration = time.Since(startedAt)
 	report.Seconds = report.Duration.Seconds()
 
@@ -165,6 +199,8 @@ func (s *Service) Scan(ctx context.Context, roots []string) (*ScanReport, error)
 		"added", report.Added,
 		"updated", report.Updated,
 		"removed", report.Removed,
+		"enriched", report.Enriched,
+		"not_found", report.NotFound,
 		"problems", len(report.Problems),
 		"duration", report.Duration,
 	)

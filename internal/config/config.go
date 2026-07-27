@@ -219,6 +219,55 @@ func (c *Config) LogValue() slog.Value {
 	)
 }
 
+// KeySource says where the effective TMDB key came from. It is reported in the
+// settings so that "why is it using the wrong key" is answerable without
+// reading any code.
+type KeySource string
+
+const (
+	KeyFromSettings  KeySource = "settings"
+	KeyFromBuild     KeySource = "built-in"
+	KeyFromLocalFile KeySource = "config.local.json"
+	KeyMissing       KeySource = "none"
+)
+
+// ResolveTMDBKey picks the key to use, given the one compiled into this build.
+//
+// Order, highest first:
+//
+//  1. tmdb_api_key in config.json. Someone typing a key into the settings is
+//     deliberately spending their own quota, and that outranks the default.
+//  2. The key injected at build time. This is what a release binary ships with
+//     and what makes the product work out of the box.
+//  3. tmdb_api_key in config.local.json, the development fallback. It sits
+//     below the built-in key on purpose: a release build behaves identically
+//     wherever it runs, whatever happens to be lying around next to it.
+//  4. Nothing, in which case the caller says so plainly rather than quietly
+//     serving a library with no posters and no explanation.
+func (c *Config) ResolveTMDBKey(builtIn string) (string, KeySource) {
+	settings := c.TMDBAPIKey
+	local := ""
+	if c.overridden["tmdb_api_key"] {
+		local = c.TMDBAPIKey
+		if c.persisted != nil {
+			settings = c.persisted.TMDBAPIKey
+		} else {
+			settings = ""
+		}
+	}
+
+	switch {
+	case settings != "":
+		return settings, KeyFromSettings
+	case builtIn != "":
+		return builtIn, KeyFromBuild
+	case local != "":
+		return local, KeyFromLocalFile
+	default:
+		return "", KeyMissing
+	}
+}
+
 // Redact reduces a secret to something safe to print: enough to confirm which
 // credential is loaded, never enough to use it.
 func Redact(secret string) string {

@@ -23,11 +23,23 @@ import (
 	"github.com/Benitoow/theia-media/internal/config"
 	"github.com/Benitoow/theia-media/internal/db"
 	"github.com/Benitoow/theia-media/internal/discovery"
+	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
+	"github.com/Benitoow/theia-media/internal/tmdb"
 )
 
 // version is overwritten at build time with -ldflags "-X main.version=v1.2.3".
 var version = "dev"
+
+// tmdbAPIKey is the key official releases ship with, injected by CI from a
+// repository secret:
+//
+//	-ldflags "-X main.tmdbAPIKey=$TMDB_API_KEY"
+//
+// It is deliberately empty in any build made from a plain `go build`, and it is
+// never committed -- this repository is public, and a key in a source file is a
+// key published. During development, config.local.json fills the gap.
+var tmdbAPIKey string
 
 func main() {
 	if err := run(); err != nil {
@@ -91,7 +103,25 @@ func run() error {
 	}
 	defer database.Close()
 
-	libraryService := library.NewService(library.NewStore(database), log)
+	// No key is a supported state, not a failure: the library still scans and
+	// browses, it just has no posters. The settings screen says so explicitly
+	// rather than leaving the user to guess.
+	apiKey, keySource := cfg.ResolveTMDBKey(tmdbAPIKey)
+	var tmdbClient *tmdb.Client
+	if apiKey != "" {
+		tmdbClient = tmdb.New(apiKey)
+		log.Info("TMDB metadata enabled", "key_source", keySource, "key", config.Redact(apiKey))
+	} else {
+		log.Warn("no TMDB API key configured, films will be listed without metadata")
+	}
+
+	store := library.NewStore(database)
+	libraryService := library.NewService(store, tmdbClient, log)
+
+	images, err := imagecache.New(filepath.Join(dataDir, "cache", "images"), tmdbClient)
+	if err != nil {
+		return err
+	}
 
 	// Bind before announcing anything: failing here is the one startup error
 	// users actually hit, and it should not be preceded by a cheerful banner.
@@ -101,7 +131,15 @@ func run() error {
 	}
 
 	httpSrv := &http.Server{
-		Handler: api.New(cfg, libraryService, webFS, version, log).Handler(),
+		Handler: api.New(api.Options{
+			Config:    cfg,
+			Library:   libraryService,
+			Images:    images,
+			Web:       webFS,
+			Version:   version,
+			KeySource: keySource,
+			Logger:    log,
+		}).Handler(),
 		// Guards against a client that opens a connection and never finishes
 		// sending its request headers. There is deliberately no WriteTimeout:
 		// video streaming holds a single response open for the length of a film.

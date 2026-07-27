@@ -4,7 +4,11 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="theme-color" content="#0b0a09" />
-		<link rel="icon" href="%sveltekit.assets%/favicon.svg" />
+		<!-- Two icons on purpose. The tab icon is the sun drawn as vector, because
+		     a photographic crop of the wordmark is unreadable at 16px; the touch
+		     icon is the real crop, which works at 180. -->
+		<link rel="icon" type="image/svg+xml" href="%sveltekit.assets%/favicon.svg" />
+		<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover" class="grain bg-ink text-bone antialiased">

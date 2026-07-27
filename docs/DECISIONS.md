@@ -121,6 +121,52 @@ neither failure mode.
 Timestamps are still stored, but nothing branches on them — they are there for
 people to read.
 
+## 9. Metadata is cached, but never frozen
+
+**Decided.** A TMDB record is considered fresh for **90 days**. A film TMDB did
+not recognise is retried after **7 days**. Both are re-fetched silently by the
+next scan; nothing asks the user to press anything.
+
+The two lifetimes differ because the failures differ. A TMDB record changes
+slowly — synopses get rewritten, a poster gets replaced, a missing runtime gets
+filled in — so re-reading it more than a few times a year is pure waste. A
+*miss*, though, is usually our fault rather than TMDB's: a mangled filename, or
+a title parsed badly enough that a slightly different guess would have landed.
+Making somebody wait three months to see a poster appear after they fixed a
+filename would feel broken, so misses come back around within the week.
+
+There is a third trigger that beats both: **renaming a file invalidates its
+metadata immediately.** Renaming is how a user corrects a bad match, and the
+upsert resets the row to `pending` whenever the parsed title or year changes.
+Waiting out ninety days after fixing a name would make the fix look like it did
+nothing.
+
+Images are separate. TMDB image paths are content-addressed — a given path
+always returns the same picture — so a cached file never expires. What can
+change is which path a film points at, and that is covered by the metadata
+lifetime above. Images are also fetched lazily, on first request rather than
+during a scan: a first scan of a large library would otherwise download
+thousands of posters nobody has scrolled to yet.
+
+The metadata pass is capped at 200 lookups per scan for the same reason. A large
+library fills in over the first few scans, which is visible progress, rather
+than sitting silent through several thousand requests.
+
+## 10. TMDB attribution
+
+**Required, not chosen.** TMDB's terms of use oblige any application using their
+API to display:
+
+> This product uses the TMDB API but is not endorsed or certified by TMDB.
+
+It is served by `/api/settings` and shown at the bottom of the home screen. The
+wording is theirs and is not ours to paraphrase or translate. It stays visible
+wherever the metadata section ends up in later milestones.
+
+Their logo is not shipped: no copy of it has had its licence checked, and
+nothing in this repository fetches assets from the web. Text alone satisfies the
+requirement.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

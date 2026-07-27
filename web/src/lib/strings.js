@@ -37,7 +37,18 @@ export const strings = {
 		updated: 'mis à jour',
 		removed: 'retirés',
 		problems: 'Problèmes rencontrés',
-		milestone: 'Jalon M1 — analyse des dossiers et lecture des noms de fichiers.'
+		milestone: 'Jalon M2 — métadonnées TMDB, affiches mises en cache localement.'
+	},
+
+	metadata: {
+		heading: 'Métadonnées',
+		enriched: 'enrichis',
+		notFound: 'non trouvés',
+		source: 'Source',
+		noKeyTitle: 'Aucune clé TMDB',
+		pending: 'en attente',
+		unmatched: 'Non identifié sur TMDB',
+		attributionLabel: 'Attribution'
 	},
 
 	errors: {
@@ -47,6 +58,13 @@ export const strings = {
 		scanBusy: 'Une analyse est déjà en cours.'
 	}
 };
+
+// posterURL builds the URL for a cached TMDB poster. Images are served by
+// Theia itself, never fetched from TMDB by the browser.
+export function posterURL(path, size = 'w185') {
+	if (!path) return null;
+	return `/api/images/${size}/${path.replace(/^\//, '')}`;
+}
 
 // formatUptime turns a duration in seconds into something readable in French.
 export function formatUptime(seconds) {

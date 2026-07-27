@@ -1,11 +1,12 @@
 <script>
 	import { onMount } from 'svelte';
-	import { strings as t, formatUptime, formatSize } from '$lib/strings.js';
+	import { strings as t, formatUptime, formatSize, posterURL } from '$lib/strings.js';
 
 	/** @type {'checking' | 'online' | 'offline'} */
 	let connection = $state('checking');
 	let health = $state(null);
 	let stats = $state(null);
+	let settings = $state(null);
 	let movies = $state([]);
 	let scanError = $state(null);
 	let scanning = $state(false);
@@ -18,10 +19,14 @@
 
 	async function refresh() {
 		try {
-			[health, stats] = await Promise.all([json('/api/health'), json('/api/library/stats')]);
+			[health, stats, settings] = await Promise.all([
+				json('/api/health'),
+				json('/api/library/stats'),
+				json('/api/settings')
+			]);
 			connection = 'online';
 			// The grid arrives in M3; this is only enough to prove the scan
-			// landed something in the database.
+			// landed something in the database and that posters resolve.
 			movies = stats.movies > 0 ? (await json('/api/library/movies?limit=12')).movies : [];
 		} catch {
 			connection = 'offline';
@@ -126,12 +131,42 @@
 				</p>
 			</div>
 		{:else if movies.length > 0}
+			<!-- A list, not the poster grid. The grid is M3; this exists to show
+			     that metadata and cached posters actually resolve. -->
 			<ul class="divide-y divide-line border-y border-line">
 				{#each movies as movie (movie.id)}
-					<li class="flex items-baseline justify-between gap-6 py-4">
-						<span class="truncate text-body">{movie.title}</span>
+					{@const poster = posterURL(movie.metadata?.poster_path, 'w92')}
+					<li class="flex items-center gap-5 py-4">
+						<div class="h-18 w-12 shrink-0 overflow-hidden bg-surface">
+							{#if poster}
+								<img
+									src={poster}
+									alt=""
+									loading="lazy"
+									class="h-full w-full object-cover"
+								/>
+							{/if}
+						</div>
+
+						<div class="min-w-0 flex-1">
+							<p class="truncate text-body">
+								{movie.metadata?.tmdb_title || movie.title}
+							</p>
+							<p class="label mt-1 truncate">
+								{movie.metadata?.release_date?.slice(0, 4) || movie.year || '—'}
+								{#if movie.metadata?.director}· {movie.metadata.director}{/if}
+								{#if movie.metadata?.runtime_minutes}· {movie.metadata.runtime_minutes} min{/if}
+							</p>
+						</div>
+
 						<span class="label shrink-0">
-							{movie.year ?? '—'} · {formatSize(movie.size_bytes)}
+							{#if movie.metadata?.status === 'not_found'}
+								<span class="text-faint">{t.metadata.unmatched}</span>
+							{:else if movie.metadata?.status === 'pending'}
+								<span class="text-faint">{t.metadata.pending}</span>
+							{:else}
+								{formatSize(movie.size_bytes)}
+							{/if}
 						</span>
 					</li>
 				{/each}
@@ -161,6 +196,16 @@
 					<dt class="label">{t.library.removed}</dt>
 					<dd class="text-label text-parchment">{stats.last_scan.removed}</dd>
 				</div>
+				{#if stats.last_scan.enriched || stats.last_scan.not_found}
+					<div class="flex gap-2">
+						<dt class="label">{t.metadata.enriched}</dt>
+						<dd class="text-label text-parchment">{stats.last_scan.enriched}</dd>
+					</div>
+					<div class="flex gap-2">
+						<dt class="label">{t.metadata.notFound}</dt>
+						<dd class="text-label text-parchment">{stats.last_scan.not_found}</dd>
+					</div>
+				{/if}
 			</dl>
 
 			{#if stats.last_scan.problems?.length}
@@ -176,7 +221,26 @@
 		{/if}
 	</section>
 
-	<footer class="mt-24 border-t border-line pt-6">
+	<!-- Metadata source and the attribution TMDB's terms require. -->
+	{#if settings}
+		<section class="mt-24 border-t border-line pt-6">
+			<h2 class="label mb-5">{t.metadata.heading}</h2>
+
+			{#if settings.tmdb.configured}
+				<p class="text-small text-parchment">
+					TMDB · <span class="text-muted">{t.metadata.source} {settings.tmdb.source}</span>
+				</p>
+			{:else}
+				<p class="mb-4 border-l border-warning py-1 pl-5 text-small text-parchment">
+					{settings.tmdb.advice}
+				</p>
+			{/if}
+
+			<p class="micro mt-5 leading-relaxed">{settings.tmdb.attribution}</p>
+		</section>
+	{/if}
+
+	<footer class="mt-16 border-t border-line pt-6">
 		<span class="micro">{t.library.milestone}</span>
 	</footer>
 </main>

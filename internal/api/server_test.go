@@ -46,10 +46,17 @@ func newTestServerWithLibrary(t *testing.T, web fstest.MapFS) (http.Handler, *li
 	t.Cleanup(func() { database.Close() })
 
 	log := slog.New(slog.DiscardHandler)
-	service := library.NewService(library.NewStore(database), log)
+	service := library.NewService(library.NewStore(database), nil, log)
 
 	cfg := config.Default()
-	return New(&cfg, service, web, "test-version", log).Handler(), service
+	return New(Options{
+		Config:    &cfg,
+		Library:   service,
+		Web:       web,
+		Version:   "test-version",
+		KeySource: config.KeyMissing,
+		Logger:    log,
+	}).Handler(), service
 }
 
 func get(t *testing.T, h http.Handler, path string) *http.Response {

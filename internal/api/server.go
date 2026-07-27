@@ -14,30 +14,47 @@ import (
 	"time"
 
 	"github.com/Benitoow/theia-media/internal/config"
+	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
 )
+
+// Options is everything the server needs. A struct rather than a parameter
+// list because this has grown once per milestone and will grow again.
+type Options struct {
+	Config    *config.Config
+	Library   *library.Service
+	Images    *imagecache.Cache
+	Web       fs.FS
+	Version   string
+	KeySource config.KeySource
+	Logger    *slog.Logger
+}
 
 // Server wires the configuration, the embedded frontend and the JSON API into
 // a single http.Handler.
 type Server struct {
-	cfg     *config.Config
-	lib     *library.Service
-	web     fs.FS
-	log     *slog.Logger
-	version string
-	started time.Time
+	cfg       *config.Config
+	lib       *library.Service
+	images    *imagecache.Cache
+	web       fs.FS
+	log       *slog.Logger
+	version   string
+	keySource config.KeySource
+	started   time.Time
 }
 
-// New builds a Server. web is the compiled frontend, normally the embedded
+// New builds a Server. Web is the compiled frontend, normally the embedded
 // bundle returned by theia.WebFS.
-func New(cfg *config.Config, lib *library.Service, web fs.FS, version string, log *slog.Logger) *Server {
+func New(opts Options) *Server {
 	return &Server{
-		cfg:     cfg,
-		lib:     lib,
-		web:     web,
-		log:     log,
-		version: version,
-		started: time.Now(),
+		cfg:       opts.Config,
+		lib:       opts.Library,
+		images:    opts.Images,
+		web:       opts.Web,
+		log:       opts.Logger,
+		version:   opts.Version,
+		keySource: opts.KeySource,
+		started:   time.Now(),
 	}
 }
 
@@ -45,9 +62,11 @@ func New(cfg *config.Config, lib *library.Service, web fs.FS, version string, lo
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", s.handleHealth)
+	mux.HandleFunc("GET /api/settings", s.handleSettings)
 	mux.HandleFunc("GET /api/library/movies", s.handleMovies)
 	mux.HandleFunc("GET /api/library/stats", s.handleLibraryStats)
 	mux.HandleFunc("POST /api/library/scan", s.handleScan)
+	mux.HandleFunc("GET /api/images/{size}/{name}", s.handleImage)
 	mux.Handle("/", s.staticHandler())
 	return s.logRequests(mux)
 }

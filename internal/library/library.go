@@ -21,8 +21,13 @@ type Movie struct {
 
 	// Title is never empty; the parser falls back to the filename rather than
 	// giving up. Year is zero when the filename did not say, which is common.
+	// Both come from the filename and stay as they are even once TMDB has
+	// something better to say -- the interface prefers Metadata.Title and falls
+	// back to these, so a film TMDB never recognised still has a name.
 	Title string `json:"title"`
 	Year  int    `json:"year,omitempty"`
+
+	Metadata Metadata `json:"metadata"`
 
 	AddedAt   time.Time `json:"added_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -84,7 +89,19 @@ func (s *Store) Upsert(ctx context.Context, m Movie, generation int64) (upsertRe
 			title          = excluded.title,
 			year           = excluded.year,
 			last_seen_scan = excluded.last_seen_scan,
-			updated_at     = excluded.updated_at
+			updated_at     = excluded.updated_at,
+
+			-- Renaming a file is how a user corrects a bad match. When the
+			-- parsed title or year changes, whatever TMDB returned for the old
+			-- name is now wrong, so the row goes back in the lookup queue
+			-- instead of waiting out its ninety days. IS NOT is null-safe here;
+			-- = would leave rows with an unknown year untouched.
+			metadata_status = CASE
+				WHEN movies.title IS NOT excluded.title OR movies.year IS NOT excluded.year
+				THEN 'pending' ELSE movies.metadata_status END,
+			metadata_fetched_at = CASE
+				WHEN movies.title IS NOT excluded.title OR movies.year IS NOT excluded.year
+				THEN 0 ELSE movies.metadata_fetched_at END
 		RETURNING first_seen_scan`,
 		m.Path, m.FileName, m.SizeBytes, m.ModifiedAt.Unix(), m.Title, year,
 		generation, generation, now, now,
@@ -130,7 +147,11 @@ func (s *Store) List(ctx context.Context, limit, offset int) ([]Movie, error) {
 	}
 
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, path, file_name, size_bytes, modified_at, title, year, added_at, updated_at
+		SELECT id, path, file_name, size_bytes, modified_at, title, year,
+		       added_at, updated_at,
+		       tmdb_id, tmdb_title, overview, release_date, poster_path,
+		       backdrop_path, director, genres_json, cast_json,
+		       runtime_minutes, vote_average, metadata_status, metadata_fetched_at
 		FROM movies
 		ORDER BY title COLLATE NOCASE, year
 		LIMIT ? OFFSET ?`, limit, offset)
@@ -144,10 +165,19 @@ func (s *Store) List(ctx context.Context, limit, offset int) ([]Movie, error) {
 		var (
 			m                              Movie
 			modifiedAt, addedAt, updatedAt int64
-			year                           sql.NullInt64
+			year, tmdbID, runtime          sql.NullInt64
+			vote                           sql.NullFloat64
+			status                         string
+			fetchedAt                      int64
+			tmdbTitle, overview, release   sql.NullString
+			poster, backdrop, director     sql.NullString
+			genresJSON, castJSON           sql.NullString
 		)
 		if err := rows.Scan(&m.ID, &m.Path, &m.FileName, &m.SizeBytes, &modifiedAt,
-			&m.Title, &year, &addedAt, &updatedAt); err != nil {
+			&m.Title, &year, &addedAt, &updatedAt,
+			&tmdbID, &tmdbTitle, &overview, &release, &poster,
+			&backdrop, &director, &genresJSON, &castJSON,
+			&runtime, &vote, &status, &fetchedAt); err != nil {
 			return nil, fmt.Errorf("listing the library: %w", err)
 		}
 		m.ModifiedAt = time.Unix(modifiedAt, 0).UTC()
@@ -156,6 +186,8 @@ func (s *Store) List(ctx context.Context, limit, offset int) ([]Movie, error) {
 		if year.Valid {
 			m.Year = int(year.Int64)
 		}
+		scanMetadata(&m, tmdbID, tmdbTitle, overview, release, poster, backdrop,
+			director, genresJSON, castJSON, runtime, vote, status, fetchedAt)
 		movies = append(movies, m)
 	}
 	return movies, rows.Err()

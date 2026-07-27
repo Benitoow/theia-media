@@ -56,18 +56,39 @@ jobs:
       # This matrix is the guardrail, not a convenience: every target has to
       # cross-compile from one Linux runner with CGO off. The day a dependency
       # needs cgo, five of these six jobs go red on the commit that added it.
+      #
+      # TMDB_API_KEY is a repository secret, injected here and never committed.
+      # It is empty on pull requests from forks, which GitHub does not expose
+      # secrets to -- those builds simply produce a binary with no built-in key,
+      # which is a supported state rather than a failure.
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: '0'
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: |
           go build -trimpath \
-            -ldflags "-s -w -X main.version=${GITHUB_SHA::7}" \
+            -ldflags "-s -w -X main.version=${GITHUB_SHA::7} -X main.tmdbAPIKey=${TMDB_API_KEY}" \
             -o "dist/theia-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}" \
             ./cmd/theia
 
+      # A key baked into a binary that is then published as a build artifact is
+      # a key published. Artifacts are only uploaded when no key went in.
+      - name: Check whether the artifact carries a key
+        id: keyed
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: |
+          if [ -n "$TMDB_API_KEY" ]; then
+            echo "upload=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Build carries the built-in TMDB key; artifact upload skipped."
+          else
+            echo "upload=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/upload-artifact@v4
+        if: steps.keyed.outputs.upload == 'true'
         with:
           name: theia-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/

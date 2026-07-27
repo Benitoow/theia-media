@@ -22,7 +22,9 @@ func newTestService(t *testing.T) (*Service, string) {
 	t.Cleanup(func() { database.Close() })
 
 	root := t.TempDir()
-	return NewService(NewStore(database), slog.New(slog.DiscardHandler)), root
+	// No TMDB client: these tests are about disk reconciliation, and a scan
+	// must work identically whether or not metadata is available.
+	return NewService(NewStore(database), nil, slog.New(slog.DiscardHandler)), root
 }
 
 // writeFile creates a file of a plausible size at a path relative to root.

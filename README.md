@@ -6,12 +6,14 @@ paywall. Plug in the machine, open a browser, watch a film.
 Navidrome proved a media server could be one Go binary using 50 MB of RAM with
 an interface people actually enjoy. Theia does the same thing for video.
 
-> **Status: milestone M1.** The server starts, announces itself on the local
-> network, scans the directories you point it at and catalogues what it finds.
-> It does not fetch metadata or play anything yet. See
+> **Status: milestone M2.** The server starts, announces itself on the local
+> network, scans the directories you point it at, and fetches posters, synopses
+> and credits from TMDB. It does not play anything yet. See
 > [docs/DECISIONS.md](docs/DECISIONS.md) for what is coming and what has been
 > deliberately left out, and [docs/design-system.md](docs/design-system.md)
 > before touching the interface.
+
+This product uses the TMDB API but is not endorsed or certified by TMDB.
 
 ---
 
@@ -83,7 +85,20 @@ Point Theia at your films by adding directories to `library_paths`:
 
 It scans them at startup and whenever you ask it to. Files it cannot identify
 still appear, listed under whatever the filename said — a badly named file is
-better shown than silently dropped.
+better shown than silently dropped, and the same goes for one TMDB has never
+heard of.
+
+### Metadata
+
+Official releases ship with a TMDB key, so metadata works out of the box. If you
+would rather spend your own API quota, put your key in `tmdb_api_key` in
+`config.json` and it takes precedence. With no key at all Theia still scans and
+lists your library, it simply has no posters, and says so in the interface
+rather than leaving you to wonder.
+
+Posters and synopses are cached locally and refreshed every few months on their
+own. Renaming a file re-runs its lookup immediately, which is how you correct a
+wrong match.
 
 ---
 
