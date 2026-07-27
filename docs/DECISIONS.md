@@ -1,0 +1,103 @@
+# Decisions
+
+The founding spec fixed the stack and the scope. This file records the calls
+made on top of it, in the order they came up, so that neither a future
+contributor nor a future AI session has to re-litigate them.
+
+---
+
+## 1. Playback: remux video, transcode audio when needed
+
+**Decided.** Direct play whenever the browser can read the file. When it cannot,
+remux the container and re-encode *audio only* if the track is AC3, DTS or
+TrueHD. Full video transcoding stays out of v1.
+
+The spec says "remux", which taken literally means changing the container and
+copying every stream untouched. That would ship a product where a perfectly
+ordinary H.264 + AC3 MKV plays with a picture and no sound — a technical success
+that is a product failure. Audio re-encoding to AAC costs about one CPU core;
+video transcoding is the real furnace, and that is what remains out of scope.
+
+## 2. TV series are out of v1
+
+**Decided.** Films only. Series get their own milestone immediately after M8.
+
+The spec mentioned series in passing without scoping them. They are not a small
+addition: a three-level model (series → season → episode), `SxxExx` parsing, the
+TMDB TV endpoints rather than the movie ones, a different detail page, and a
+"continue watching" row that has to roll on to the next episode. Bolting that
+onto v1 would have blurred every milestone it touched.
+
+## 3. Subtitles: text tracks only
+
+**Decided.** External `.srt` files, plus SRT and ASS tracks extracted from
+containers with ffmpeg. Image-based subtitles — PGS, VobSub — are out.
+
+Extracting a text track is nearly free given ffmpeg is already a dependency.
+Image subtitles cannot be extracted into anything a browser renders; they have
+to be burned into the video, which drags in exactly the full-transcode pipeline
+decision 1 keeps out.
+
+## 4. The TMDB key ships with the binary
+
+**Decided.** A key is compiled in. `tmdb_api_key` in the settings overrides it
+for anyone who would rather spend their own quota.
+
+Requiring the user to register with TMDB, generate a key and paste it in before
+a single poster appears puts the project's worst friction in front of its best
+first impression. "Zero configuration" cannot mean "zero configuration except
+for the one step that makes it look like a media server." Jellyfin ships a key
+the same way.
+
+## 5. The QR code is the contract, mDNS is a bonus
+
+**Decided.** Reaching the server must never depend on `theia.local` resolving.
+
+Announcing over mDNS and *resolving* a `.local` name are different things.
+Windows and Apple devices resolve it; many Android builds and smart-TV browsers
+do not. On top of that, a second mDNS responder on the machine can quietly take
+the port — this actually happened during M0 development on the dev machine, and
+`hashicorp/mdns` reports it as success, so `internal/discovery` probes the
+sockets itself and warns when only one IP family came up.
+
+The reliable path is the numeric address, and from M6 the QR code shown at first
+launch. mDNS is the pleasant shortcut layered on top.
+
+**Related:** the interface is served over plain HTTP. That means it cannot be
+installed as a PWA, which needs HTTPS. A self-signed certificate on a LAN trades
+that for a browser warning screen on every device, which is worse. Responsive
+web, not installable, is the v1 answer.
+
+## 6. No authentication at all
+
+**Decided.** Anyone who can reach the port can do anything, settings included.
+
+A deliberate scope decision for single-user home use. It is called out at the
+top of the README because the first support request will come from someone who
+forwarded the port on their router.
+
+Worth knowing that this is the hardest decision here to reverse: adding accounts
+later touches every route, the player and the settings page at once.
+
+## 7. Run it by hand; installing a service is opt-in
+
+**Decided.** The binary runs in the foreground. A `theia install-service`
+command will exist for people who want it, and will be the only thing that ever
+asks for elevation.
+
+Installing a boot service needs administrator rights on every OS. Asking for
+that on first launch contradicts "plug it in and it works" before the user has
+seen a single frame.
+
+## 8. Logistics
+
+- **Repository:** public, `theia-media`, from M0.
+- **Language:** code, comments and internal error messages in English, for
+  contributors. User interface in French, isolated in
+  `web/src/lib/strings.js` so a second language is a new file rather than a
+  rewrite.
+- **Updater:** built from the documented GitHub Releases pattern — check the
+  API, download, swap atomically, restart — rather than ported from Hermes,
+  whose source was not available. The Windows case needs care: a running `.exe`
+  cannot overwrite itself, so it takes a small relay process that waits for the
+  parent to exit, replaces the file and relaunches.

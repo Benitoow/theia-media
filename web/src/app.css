@@ -1,0 +1,19 @@
+@import 'tailwindcss';
+
+/* Theia is named after the titan of sight and heavenly light, so the palette is
+   a dark room with a warm source in it. These tokens are the whole design
+   system for now; the Netflix-style interface in M3 builds on them rather than
+   inventing its own. */
+@theme {
+	--color-ink: #0b0b0f;
+	--color-slate: #14141c;
+	--color-edge: #23232f;
+	--color-mist: #e8e8ef;
+	--color-muted: #8b8b9c;
+	--color-helios: #f5a623;
+}
+
+html,
+body {
+	min-height: 100%;
+}
