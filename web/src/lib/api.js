@@ -33,6 +33,17 @@ export function displayYear(movie) {
 	return movie?.metadata?.release_date?.slice(0, 4) || movie?.year || null;
 }
 
+/** A playback timestamp as "1:23:45" or "4:07". */
+export function formatTime(seconds) {
+	if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+	const total = Math.floor(seconds);
+	const h = Math.floor(total / 3600);
+	const m = Math.floor((total % 3600) / 60);
+	const s = total % 60;
+	const pad = (n) => String(n).padStart(2, '0');
+	return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
 /** Runtime as "2 h 18" or "94 min". */
 export function formatRuntime(minutes) {
 	if (!minutes) return null;

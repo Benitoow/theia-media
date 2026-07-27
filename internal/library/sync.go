@@ -103,6 +103,21 @@ func (s *Service) Get(ctx context.Context, id int64) (Movie, error) {
 	return s.store.Get(ctx, id)
 }
 
+// SaveProgress records where a viewer got to.
+func (s *Service) SaveProgress(ctx context.Context, id int64, position, duration float64) (Progress, error) {
+	return s.store.SaveProgress(ctx, id, position, duration, time.Now())
+}
+
+// ResetProgress forgets a viewing position.
+func (s *Service) ResetProgress(ctx context.Context, id int64) error {
+	return s.store.ResetProgress(ctx, id)
+}
+
+// SaveDuration records a duration learned from probing a file.
+func (s *Service) SaveDuration(ctx context.Context, id int64, seconds float64) error {
+	return s.store.SaveDuration(ctx, id, seconds)
+}
+
 // Row is one horizontal strip on the home screen.
 type Row struct {
 	Title  string  `json:"title"`
@@ -140,8 +155,18 @@ func (s *Service) HomeScreen(ctx context.Context, rowCount, perRow int) (*Home, 
 		return nil, err
 	}
 
-	// Recently added leads, because it answers the question people actually
-	// open a media server with: what is new since last time.
+	// Continue watching comes first when there is anything in it. Somebody
+	// opening a media server mid-film wants one click, not a search.
+	inProgress, err := s.store.ContinueWatching(ctx, perRow)
+	if err != nil {
+		return nil, err
+	}
+	if len(inProgress) > 0 {
+		home.Rows = append(home.Rows, Row{Title: "Continuer à regarder", Movies: inProgress})
+	}
+
+	// Recently added next, because it answers the other question people open a
+	// media server with: what is new since last time.
 	recent, err := s.store.RecentlyAdded(ctx, perRow)
 	if err != nil {
 		return nil, err

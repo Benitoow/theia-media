@@ -298,6 +298,49 @@ resume will be its first real user.
 input and no output prints the stream table and exits non-zero on purpose, so
 the exit code is ignored and the table is parsed instead.
 
+## 17. When a film counts as watched
+
+**Decided.** Finished when the remaining time is under **two minutes**, or under
+**five per cent** of the running time — *whichever sits closer to the end*.
+
+The first version combined the two the other way round, taking whichever
+triggered first, and a test caught what that meant: a ten-minute short was
+called finished at eight minutes, because two minutes is a fifth of it. Taking
+the stricter threshold gives the behaviour both cases want — a two-hour film
+clears when the credits roll, a ten-minute one needs its last thirty seconds,
+and a three-hour epic does not demand nine minutes of credits.
+
+**Finished is recomputed on every report, never latched.** Starting a film again
+clears it and the film returns to the continue-watching row, which is what
+anybody rewatching something expects.
+
+**Nothing under thirty seconds is remembered.** Opening a film to look at the
+poster and closing it again must not fill the row. One consequence worth
+knowing: a clip shorter than about ten minutes can never appear in
+continue-watching, since thirty seconds is already past its finishing
+threshold. Irrelevant for films, and it surfaced while testing with short
+clips rather than in use.
+
+## 18. Seeking a stream that has no length
+
+A remuxed stream is a pipe: no Content-Length, no byte ranges, and a native
+scrub bar with nothing to draw. That is why the player has its own controls
+rather than the browser's.
+
+Two clocks are in play. The video element always starts at zero, whatever
+timestamp ffmpeg actually began at, so the player keeps an **offset** and shows
+`offset + element.currentTime`. Seeking means restarting ffmpeg at a new
+timestamp and moving the offset with it.
+
+Getting that wrong is subtle and was caught in the browser rather than by a
+test: setting the source without moving the offset left the displayed clock
+reading the old position while the stream played the new one — and saved that
+wrong number as the resume point.
+
+The duration comes from the server, since the stream cannot supply it: the
+ffmpeg probe records it on first playback, with TMDB's runtime as a fallback
+until then.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

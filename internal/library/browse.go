@@ -17,7 +17,8 @@ const movieColumns = `
 	added_at, updated_at,
 	tmdb_id, tmdb_title, overview, release_date, poster_path,
 	backdrop_path, director, genres_json, cast_json,
-	runtime_minutes, vote_average, metadata_status, metadata_fetched_at`
+	runtime_minutes, vote_average, metadata_status, metadata_fetched_at,
+	duration_seconds, position_seconds, watched_at, finished`
 
 // scanMovie reads one row projected with movieColumns.
 func scanMovie(row interface{ Scan(...any) error }) (Movie, error) {
@@ -31,12 +32,17 @@ func scanMovie(row interface{ Scan(...any) error }) (Movie, error) {
 		tmdbTitle, overview, release   sql.NullString
 		poster, backdrop, director     sql.NullString
 		genresJSON, castJSON           sql.NullString
+		duration                       sql.NullFloat64
+		position                       float64
+		watchedAt                      int64
+		finished                       int
 	)
 	if err := row.Scan(&m.ID, &m.Path, &m.FileName, &m.SizeBytes, &modifiedAt,
 		&m.Title, &year, &addedAt, &updatedAt,
 		&tmdbID, &tmdbTitle, &overview, &release, &poster,
 		&backdrop, &director, &genresJSON, &castJSON,
-		&runtime, &vote, &status, &fetchedAt); err != nil {
+		&runtime, &vote, &status, &fetchedAt,
+		&duration, &position, &watchedAt, &finished); err != nil {
 		return Movie{}, err
 	}
 	m.ModifiedAt = unix(modifiedAt)
@@ -47,6 +53,16 @@ func scanMovie(row interface{ Scan(...any) error }) (Movie, error) {
 	}
 	scanMetadata(&m, tmdbID, tmdbTitle, overview, release, poster, backdrop,
 		director, genresJSON, castJSON, runtime, vote, status, fetchedAt)
+
+	m.Progress = Progress{
+		PositionSeconds: position,
+		DurationSeconds: duration.Float64,
+		Finished:        finished != 0,
+	}
+	if watchedAt > 0 {
+		at := unix(watchedAt)
+		m.Progress.WatchedAt = &at
+	}
 	return m, nil
 }
 

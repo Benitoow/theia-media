@@ -178,6 +178,13 @@ Rules for the grid, which override §4 and §5:
 - Grid gap is `--space-3`, not the chrome spacing scale.
 - Cards carry no accent colour at rest. Gold appears on hover and focus only,
   as a 1px `--accent` border and nothing more.
+- **One exception, added in M5: the playback progress bar.** A 3px gold rule
+  across the bottom of a part-watched poster. It earns its place because it is
+  information rather than decoration — it is the entire reason the
+  "continue watching" row exists — and because no amount of hover state can
+  convey it. It is drawn only for films actually part-watched: never at zero,
+  never on a finished film. Nothing else in the grid may take this exemption
+  without being written down here first.
 - Poster aspect ratio is locked to `2/3`. Never crop, never letterbox.
 - Card chrome is minimal: poster, title, year. Everything else belongs on the
   detail page.

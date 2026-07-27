@@ -6,10 +6,11 @@ paywall. Plug in the machine, open a browser, watch a film.
 Navidrome proved a media server could be one Go binary using 50 MB of RAM with
 an interface people actually enjoy. Theia does the same thing for video.
 
-> **Status: milestone M4.** The server starts, announces itself on the local
+> **Status: milestone M5.** The server starts, announces itself on the local
 > network, scans the directories you point it at, fetches posters, synopses and
-> credits from TMDB, presents the lot as a browsable library, and plays films.
-> Resume, subtitles and the onboarding QR code are still to come. See
+> credits from TMDB, presents the lot as a browsable library, plays films, and
+> remembers where you stopped. Subtitles and the onboarding QR code are still
+> to come. See
 > [docs/DECISIONS.md](docs/DECISIONS.md) for what is coming and what has been
 > deliberately left out, and [docs/design-system.md](docs/design-system.md)
 > before touching the interface.
@@ -117,6 +118,15 @@ requires it — never at launch, and never at all for a library it can play
 directly. It comes from a pinned GitHub release, its SHA-256 is checked before
 it is ever executed, and it lives in the data directory rather than inside the
 Theia binary.
+
+### Resume
+
+Stopping mid-film puts it in the **Continuer à regarder** row, newest first,
+with a progress bar on its poster. Reopening offers to resume where you left
+off, or to start again from the beginning.
+
+A film watched to the end leaves the row and stays out. Starting it again brings
+it back. Opening one for a few seconds and closing it is not remembered at all.
 
 ---
 

@@ -28,6 +28,7 @@ type Movie struct {
 	Year  int    `json:"year,omitempty"`
 
 	Metadata Metadata `json:"metadata"`
+	Progress Progress `json:"progress"`
 
 	AddedAt   time.Time `json:"added_at"`
 	UpdatedAt time.Time `json:"updated_at"`

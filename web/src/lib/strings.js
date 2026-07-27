@@ -31,7 +31,15 @@ export const strings = {
 
 	player: {
 		play: 'Lire',
+		resume: 'Reprendre à',
+		fromStart: 'Depuis le début',
 		close: 'Fermer',
+		pause: 'Pause',
+		mute: 'Couper le son',
+		unmute: 'Rétablir le son',
+		fullscreen: 'Plein écran',
+		seeking: 'Repositionnement…',
+		continueWatching: 'Continuer à regarder',
 		preparing:
 			'Préparation de la lecture — ffmpeg est téléchargé une seule fois, cela peut prendre un moment.',
 		remuxNotice:

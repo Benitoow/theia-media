@@ -70,6 +70,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/library/home", s.handleHome)
 	mux.HandleFunc("GET /api/library/movies", s.handleMovies)
 	mux.HandleFunc("GET /api/library/movies/{id}", s.handleMovie)
+	mux.HandleFunc("PUT /api/library/movies/{id}/progress", s.handleSaveProgress)
+	mux.HandleFunc("DELETE /api/library/movies/{id}/progress", s.handleResetProgress)
 	mux.HandleFunc("GET /api/library/stats", s.handleLibraryStats)
 	mux.HandleFunc("POST /api/library/scan", s.handleScan)
 	mux.HandleFunc("GET /api/images/{size}/{name}", s.handleImage)
