@@ -57,18 +57,18 @@ nobody checks.
 
 | Token | Value | Contrast on `--ink` | Use |
 |---|---|---|---|
-| `--bone` | `#EDE7DC` | **16.1:1** | Primary text, headings, hero type |
-| `--parchment` | `#D6CFC2` | **12.4:1** | Secondary text, body copy at length |
-| `--muted` | `#8C857A` | **5.4:1** | Labels, metadata, captions. Passes AA for normal text |
-| `--faint` | `#5A544C` | **2.6:1** | Disabled and decorative only. **Never for text a user must read** |
+| `--bone` | `#EDE7DC` | **16.07:1** | Primary text, headings, hero type |
+| `--parchment` | `#D6CFC2` | **12.78:1** | Secondary text, body copy at length |
+| `--muted` | `#8C857A` | **5.42:1** | Labels, metadata, captions. Passes AA for normal text |
+| `--faint` | `#5A544C` | **2.64:1** | Disabled and decorative only. **Never for text a user must read** |
 
 ### Accent
 
 | Token | Value | Contrast on `--ink` | Use |
 |---|---|---|---|
-| `--accent` | `#C8A24A` | **8.2:1** | The single accent. Focus rings, the active nav item, the play affordance, the progress bar |
-| `--accent-bright` | `#E3C173` | 11.4:1 | Hover and focus states of the above |
-| `--accent-dim` | `#7A6330` | 3.1:1 | Borders and glows only, never text |
+| `--accent` | `#C8A24A` | **8.22:1** | The single accent. Focus rings, the active nav item, the play affordance, the progress bar |
+| `--accent-bright` | `#E3C173` | 11.44:1 | Hover and focus states of the above |
+| `--accent-dim` | `#7A6330` | 3.44:1 | Borders and glows only, never text |
 
 **Budget: five uses of `--accent` per screen.** If a sixth appears, something
 else on the screen has stopped being important. This is the rule the references
@@ -80,8 +80,18 @@ Red is free precisely because the accent is gold.
 
 | Token | Value | Contrast | Use |
 |---|---|---|---|
-| `--error` | `#C75B4F` | 5.0:1 | Failed scans, unreachable server, destructive confirmation |
-| `--warning` | `#C9964A` | 7.4:1 | Degraded state — mDNS on IPv6 only, ffmpeg missing |
+| `--error` | `#D06A5D` | 5.56:1 | Failed scans, unreachable server, destructive confirmation |
+| `--warning` | `#C9964A` | 7.48:1 | Degraded state — mDNS on IPv6 only, ffmpeg missing |
+
+The first candidate for `--error` was `#C75B4F`, which measures 4.75:1 — over the
+4.5 AA threshold, but only just. Error text is the one thing a user reads while
+already annoyed, often on a TV across a room, so it was lightened until it had
+real headroom.
+
+Every ratio in this document was computed from the WCAG relative-luminance
+formula rather than eyeballed; the script lives in
+[`scripts/contrast.mjs`](../scripts/contrast.mjs) and should be re-run whenever a
+colour changes.
 
 `--warning` sits deliberately close to `--accent`. A warning in this app is
 almost always "it still works, but less well", and it should feel adjacent to
