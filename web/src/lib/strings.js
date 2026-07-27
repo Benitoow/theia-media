@@ -29,6 +29,20 @@ export const strings = {
 			"La page est chargée mais l'API ne répond pas. Le serveur a probablement été arrêté."
 	},
 
+	player: {
+		play: 'Lire',
+		close: 'Fermer',
+		preparing:
+			'Préparation de la lecture — ffmpeg est téléchargé une seule fois, cela peut prendre un moment.',
+		remuxNotice:
+			"Ce fichier est réencapsulé à la volée : la barre de progression n'est pas encore disponible.",
+		unavailable: "La lecture n'a pas pu être préparée.",
+		noFfmpeg:
+			"Ce fichier doit être réencapsulé, mais aucune version de ffmpeg n'est disponible pour cette plateforme.",
+		failed:
+			"Ce fichier n'a pas pu être lu. Son format n'est probablement pas pris en charge par la v1."
+	},
+
 	film: {
 		notFound: 'Ce film est introuvable.',
 		overview: 'Synopsis',
@@ -68,7 +82,7 @@ export const strings = {
 		problems: 'Problèmes rencontrés',
 		metadata: 'Métadonnées',
 		source: 'Source',
-		milestone: 'Jalon M3 — interface de navigation. La lecture arrive au jalon suivant.'
+		milestone: 'Jalon M4 — lecture directe et réencapsulation à la volée. La reprise arrive au jalon suivant.'
 	},
 
 	errors: {

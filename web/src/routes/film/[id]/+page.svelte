@@ -3,10 +3,12 @@
 	import { page } from '$app/stores';
 	import { getJSON, imageURL, displayTitle, displayYear, formatRuntime } from '$lib/api.js';
 	import { strings as t, formatSize } from '$lib/strings.js';
+	import Player from '$lib/components/Player.svelte';
 
 	/** @type {'loading' | 'ready' | 'missing'} */
 	let state = $state('loading');
 	let movie = $state(null);
+	let playing = $state(false);
 
 	const meta = $derived(movie?.metadata ?? {});
 	const backdrop = $derived(imageURL(meta.backdrop_path, 'w1280'));
@@ -86,6 +88,16 @@
 						{/if}
 					</div>
 
+					<button
+						type="button"
+						onclick={() => (playing = true)}
+						class="ease-cine mb-10 cursor-pointer border border-accent px-7 py-3.5
+						       text-label text-accent uppercase transition-colors duration-160
+						       hover:bg-accent hover:text-ink"
+					>
+						{t.player.play}
+					</button>
+
 					{#if meta.status === 'not_found'}
 						<p class="mb-8 border-l border-warning py-1 pl-5 text-small text-parchment">
 							{t.film.unmatched}
@@ -130,4 +142,8 @@
 			</div>
 		</div>
 	</article>
+
+	{#if playing}
+		<Player {movie} onclose={() => (playing = false)} />
+	{/if}
 {/if}

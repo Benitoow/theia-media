@@ -139,8 +139,15 @@ func (s *Store) Count(ctx context.Context) (int, error) {
 // List returns films ordered by title. The ordering is NOCASE so that "the
 // matrix" and "The Matrix" do not end up in different halves of the list.
 func (s *Store) List(ctx context.Context, limit, offset int) ([]Movie, error) {
-	if limit <= 0 || limit > 500 {
+	// Asking for more than the ceiling gets you the ceiling. An earlier version
+	// fell back to the default here, so limit=600 quietly returned 100 rows and
+	// the caller had no way to tell a short page from the end of the library.
+	const maxLimit = 500
+	switch {
+	case limit <= 0:
 		limit = 100
+	case limit > maxLimit:
+		limit = maxLimit
 	}
 	if offset < 0 {
 		offset = 0

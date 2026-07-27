@@ -23,6 +23,7 @@ import (
 	"github.com/Benitoow/theia-media/internal/config"
 	"github.com/Benitoow/theia-media/internal/db"
 	"github.com/Benitoow/theia-media/internal/discovery"
+	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
 	"github.com/Benitoow/theia-media/internal/tmdb"
@@ -123,6 +124,11 @@ func run() error {
 		return err
 	}
 
+	// Nothing is downloaded here. The manager only fetches ffmpeg the first
+	// time something actually needs to rewrap a file, which for a library of
+	// browser-friendly containers is never.
+	transcoder := ffmpeg.New(filepath.Join(dataDir, "bin"), log)
+
 	// Bind before announcing anything: failing here is the one startup error
 	// users actually hit, and it should not be preceded by a cheerful banner.
 	listener, err := net.Listen("tcp", net.JoinHostPort("", strconv.Itoa(cfg.Port)))
@@ -135,6 +141,7 @@ func run() error {
 			Config:    cfg,
 			Library:   libraryService,
 			Images:    images,
+			FFmpeg:    transcoder,
 			Web:       webFS,
 			Version:   version,
 			KeySource: keySource,

@@ -6,10 +6,10 @@ paywall. Plug in the machine, open a browser, watch a film.
 Navidrome proved a media server could be one Go binary using 50 MB of RAM with
 an interface people actually enjoy. Theia does the same thing for video.
 
-> **Status: milestone M3.** The server starts, announces itself on the local
+> **Status: milestone M4.** The server starts, announces itself on the local
 > network, scans the directories you point it at, fetches posters, synopses and
-> credits from TMDB, and presents the lot as a browsable library with a hero,
-> genre rows and a page per film. It does not play anything yet. See
+> credits from TMDB, presents the lot as a browsable library, and plays films.
+> Resume, subtitles and the onboarding QR code are still to come. See
 > [docs/DECISIONS.md](docs/DECISIONS.md) for what is coming and what has been
 > deliberately left out, and [docs/design-system.md](docs/design-system.md)
 > before touching the interface.
@@ -100,6 +100,23 @@ rather than leaving you to wonder.
 Posters and synopses are cached locally and refreshed every few months on their
 own. Renaming a file re-runs its lookup immediately, which is how you correct a
 wrong match.
+
+### Playback
+
+Files a browser can already read — H.264 and AAC in an MP4, typically — are sent
+untouched, so seeking is instant and nothing is spawned.
+
+Anything else is rewrapped on the fly: the picture is copied, and the sound is
+re-encoded to AAC when it is AC3, DTS or TrueHD, which is what stops an ordinary
+MKV from playing with a picture and no sound. Re-encoding the *picture* is out
+of scope for v1, so a file whose video codec no browser reads is reported as
+such rather than quietly consuming a CPU for two hours.
+
+Rewrapping needs ffmpeg, which Theia downloads the first time something actually
+requires it — never at launch, and never at all for a library it can play
+directly. It comes from a pinned GitHub release, its SHA-256 is checked before
+it is ever executed, and it lives in the data directory rather than inside the
+Theia binary.
 
 ---
 

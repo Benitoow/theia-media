@@ -1,0 +1,179 @@
+// Package stream decides how a file should reach the browser, and produces the
+// bytes.
+//
+// Two paths, deliberately unequal in cost. Direct play hands the file over
+// untouched with range requests, which is what should happen for most of a
+// modern library and needs no ffmpeg at all. Remuxing rewraps the streams into
+// a fragmented MP4 on the fly, re-encoding the audio when the browser cannot
+// decode it.
+//
+// Full video transcoding is out of scope for v1 (decision 1 in
+// docs/DECISIONS.md). That is the expensive one, and a file whose video codec
+// no browser reads is reported as such rather than quietly eating a CPU.
+package stream
+
+import (
+	"path/filepath"
+	"strconv"
+	"strings"
+)
+
+// Mode is how a file will be delivered.
+type Mode string
+
+const (
+	// ModeDirect sends the file as-is. Seeking works, nothing is spawned.
+	ModeDirect Mode = "direct"
+
+	// ModeRemux rewraps into fragmented MP4, copying the video and copying or
+	// re-encoding the audio.
+	ModeRemux Mode = "remux"
+
+	// ModeUnsupported means the video codec would need a full transcode.
+	ModeUnsupported Mode = "unsupported"
+)
+
+// AudioAction is what happens to the audio track when remuxing.
+type AudioAction string
+
+const (
+	AudioCopy      AudioAction = "copy"
+	AudioTranscode AudioAction = "transcode"
+)
+
+// Decision is the plan for one file.
+type Decision struct {
+	Mode  Mode        `json:"mode"`
+	Audio AudioAction `json:"audio,omitempty"`
+
+	// Reason is shown to the user when Mode is unsupported, and logged
+	// otherwise. It exists because "it does not play" is a useless bug report.
+	Reason string `json:"reason,omitempty"`
+
+	// VideoRisky marks a remux whose video codec browsers disagree about --
+	// HEVC plays in Safari and generally not in Chrome. The remux is still
+	// attempted; the flag lets the interface warn rather than look broken.
+	VideoRisky bool `json:"video_risky,omitempty"`
+}
+
+// browserContainers are the containers a browser will open directly. MKV is
+// absent on purpose: no browser plays it, however friendly its contents.
+var browserContainers = map[string]bool{
+	".mp4": true, ".m4v": true, ".webm": true, ".ogv": true, ".ogg": true,
+}
+
+// browserVideo are the video codecs browsers decode broadly.
+var browserVideo = map[string]bool{
+	"h264": true, "vp8": true, "vp9": true, "av1": true,
+}
+
+// riskyVideo are codecs that can be copied into MP4 and will play in some
+// browsers but not others.
+var riskyVideo = map[string]bool{
+	"hevc": true, "h265": true,
+}
+
+// browserAudio are the audio codecs browsers decode.
+var browserAudio = map[string]bool{
+	"aac": true, "mp3": true, "opus": true, "vorbis": true, "flac": true,
+}
+
+// DecideByContainer is the decision available without running anything.
+//
+// This is what keeps the promise that ffmpeg is downloaded on first *need*: a
+// library of MP4s is played without ever fetching it. The cost is that an MP4
+// hiding an exotic codec is attempted directly and fails in the browser, which
+// the player detects and retries as a remux.
+func DecideByContainer(path string) Decision {
+	ext := strings.ToLower(filepath.Ext(path))
+	if browserContainers[ext] {
+		return Decision{
+			Mode:   ModeDirect,
+			Reason: "the container is one browsers open directly",
+		}
+	}
+	return Decision{
+		Mode:   ModeRemux,
+		Reason: "the container needs rewrapping before a browser will read it",
+	}
+}
+
+// Decide is the full decision, once the codecs are known.
+func Decide(path, videoCodec, audioCodec string) Decision {
+	ext := strings.ToLower(filepath.Ext(path))
+	video := strings.ToLower(videoCodec)
+	audio := strings.ToLower(audioCodec)
+
+	switch {
+	case browserVideo[video]:
+		// Nothing to do to the picture.
+	case riskyVideo[video]:
+		// Copyable into MP4, decodable by some browsers. Worth attempting.
+	default:
+		return Decision{
+			Mode: ModeUnsupported,
+			Reason: "the video is " + videoCodec +
+				", which no browser decodes and which v1 does not re-encode",
+		}
+	}
+
+	// A friendly container holding friendly streams needs nothing at all.
+	if browserContainers[ext] && browserVideo[video] && browserAudio[audio] {
+		return Decision{Mode: ModeDirect, Reason: "the file plays as it is"}
+	}
+
+	decision := Decision{Mode: ModeRemux, Audio: AudioCopy, VideoRisky: riskyVideo[video]}
+	if !browserAudio[audio] {
+		// The case decision 1 exists for: an ordinary H.264 + AC3 MKV would
+		// otherwise remux into a film with a picture and no sound. Re-encoding
+		// audio costs about one core; re-encoding video is the furnace v1
+		// refuses to light.
+		decision.Audio = AudioTranscode
+		decision.Reason = "the audio is " + audioCodec + ", which browsers do not decode"
+	} else {
+		decision.Reason = "the container needs rewrapping; both streams are copied"
+	}
+	return decision
+}
+
+// RemuxArgs builds the ffmpeg invocation for a decision.
+//
+// Output is a fragmented MP4 on stdout: fragmented because a plain MP4 needs to
+// rewind and write its index at the end, which a pipe cannot do, and empty_moov
+// so the browser can start decoding before the file is finished.
+func RemuxArgs(path string, d Decision, startSeconds float64) []string {
+	args := []string{"-hide_banner", "-loglevel", "error"}
+
+	// -ss before -i seeks by keyframe without decoding what came before, which
+	// is what makes scrubbing through a two-hour film bearable.
+	if startSeconds > 0 {
+		args = append(args, "-ss", formatSeconds(startSeconds))
+	}
+
+	args = append(args,
+		"-i", path,
+		"-map", "0:v:0",
+		"-map", "0:a:0?",
+		"-c:v", "copy",
+	)
+
+	if d.Audio == AudioTranscode {
+		// Stereo at 192k: surround downmixed because a browser is usually two
+		// speakers or a pair of headphones, and because copying 5.1 into AAC
+		// costs bandwidth nobody hears.
+		args = append(args, "-c:a", "aac", "-b:a", "192k", "-ac", "2")
+	} else {
+		args = append(args, "-c:a", "copy")
+	}
+
+	args = append(args,
+		"-movflags", "+frag_keyframe+empty_moov+default_base_moof",
+		"-f", "mp4",
+		"pipe:1",
+	)
+	return args
+}
+
+func formatSeconds(s float64) string {
+	return strconv.FormatFloat(s, 'f', 3, 64)
+}

@@ -221,6 +221,83 @@ clears it, because a modest library still deserves a front page.
 This is the same failure mode as the scan-generation bug in decision 7c:
 second-resolution timestamps cannot order events that happen inside one second.
 
+## 14. Where ffmpeg comes from
+
+**Decided: `eugeneware/ffmpeg-static`, tag `b6.1.1`, on GitHub Releases.**
+
+The obvious candidates were the ones every guide names: gyan.dev for Windows,
+johnvansickle.com for Linux, evermeet.cx for macOS. Two of those three are not
+GitHub, and this project is allowed to contact exactly two hosts — TMDB and
+GitHub Releases. Using them would have meant widening that rule for a
+convenience.
+
+`BtbN/FFmpeg-Builds` is on GitHub but publishes under the tag `latest`, which is
+republished in place. A pinned checksum against a moving target fails the day
+upstream rebuilds, which is the worst kind of failure: it works for months and
+then breaks for everyone at once.
+
+`eugeneware/ffmpeg-static` tags every build, ships bare binaries rather than
+archives — no zip or tar.xz handling — and covers all six OS/architecture pairs
+Theia builds for. Its Windows binary identifies itself as
+`6.1.1-essentials_build-www.gyan.dev`, so it is gyan.dev's build after all,
+served from a host the project is already allowed to talk to.
+
+There is no upstream Windows ARM64 build. That platform gets the x64 binary,
+which Windows runs under emulation — better than leaving it unable to remux.
+
+**Checksums come from the GitHub release API**, which reports a `digest` for
+every asset. They were pinned without downloading 450 MB and without trusting a
+separately published checksum file.
+
+**Nothing is executed before its digest matches.** The download goes to a
+temporary file with no executable bit; the bit is set and the file moved into
+place only after the hash is verified. A binary fetched over the network and
+then run as a subprocess is exactly the thing that has to be checked.
+
+## 15. ffmpeg arrives on first need, not first launch
+
+**Decided.** A library of MP4s never downloads it.
+
+This is why the "how will this play" endpoint answers from the container alone
+rather than probing: probing means running ffmpeg, and running it means fetching
+80 MB. The cost is that an MP4 hiding an exotic codec is attempted directly and
+fails in the browser — the player catches that and retries as a remux, so the
+worst case is a moment's delay rather than a wrong answer.
+
+Only the remux endpoint downloads. Verified on the running binary: asking for
+stream info left no `bin/` directory behind.
+
+## 16. Three playback paths
+
+| Container | Video | Audio | What happens |
+|---|---|---|---|
+| MP4, M4V, WebM | browser-friendly | browser-friendly | **Direct play**, byte for byte, with range requests |
+| anything else | H.264, VP8/9, AV1 | AAC, MP3, Opus, Vorbis, FLAC | **Remux**, both streams copied |
+| anything else | same | AC3, DTS, TrueHD… | **Remux**, video copied, audio re-encoded to AAC |
+| any | MPEG-2, VC-1, … | any | **Refused**, with the reason |
+
+The third row is decision 1 in practice: an ordinary H.264 + AC3 MKV would
+otherwise remux into a film with a picture and no sound. The fourth is decision
+1's other half — re-encoding video is the furnace v1 refuses to light, and
+saying so beats pinning a CPU for two hours.
+
+HEVC sits between the rows: it copies into MP4 and plays in Safari but generally
+not in Chrome. It is attempted and flagged, rather than refused outright.
+
+**Seeking.** Direct play seeks natively — `http.ServeContent` answers byte
+ranges and the browser's scrub bar just works. The remux path is a pipe with no
+length, so it seeks by restarting ffmpeg at a timestamp (`?t=`). `-ss` goes
+*before* `-i`, which seeks by keyframe without decoding everything in between;
+the cost is landing on the keyframe before the requested time. Measured on a
+20-second clip with one keyframe per second: asking for t=12 yielded 9.02
+seconds remaining rather than 8. That granularity is inherent to stream copy.
+The endpoint exists and works; the interface does not expose it yet, and M5's
+resume will be its first real user.
+
+**No ffprobe.** The pinned upstream ships only `ffmpeg`. Running it with an
+input and no output prints the stream table and exits non-zero on purpose, so
+the exit code is ignored and the table is parsed instead.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

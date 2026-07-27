@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Benitoow/theia-media/internal/config"
+	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
 )
@@ -24,6 +25,7 @@ type Options struct {
 	Config    *config.Config
 	Library   *library.Service
 	Images    *imagecache.Cache
+	FFmpeg    *ffmpeg.Manager
 	Web       fs.FS
 	Version   string
 	KeySource config.KeySource
@@ -36,6 +38,7 @@ type Server struct {
 	cfg       *config.Config
 	lib       *library.Service
 	images    *imagecache.Cache
+	ffmpeg    *ffmpeg.Manager
 	web       fs.FS
 	log       *slog.Logger
 	version   string
@@ -50,6 +53,7 @@ func New(opts Options) *Server {
 		cfg:       opts.Config,
 		lib:       opts.Library,
 		images:    opts.Images,
+		ffmpeg:    opts.FFmpeg,
 		web:       opts.Web,
 		log:       opts.Logger,
 		version:   opts.Version,
@@ -69,6 +73,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/library/stats", s.handleLibraryStats)
 	mux.HandleFunc("POST /api/library/scan", s.handleScan)
 	mux.HandleFunc("GET /api/images/{size}/{name}", s.handleImage)
+	mux.HandleFunc("GET /api/stream/{id}/info", s.handleStreamInfo)
+	mux.HandleFunc("GET /api/stream/{id}/remux", s.handleStreamRemux)
+	mux.HandleFunc("GET /api/stream/{id}", s.handleStreamDirect)
 	mux.Handle("/", s.staticHandler())
 	return s.logRequests(mux)
 }
