@@ -98,6 +98,75 @@ func (s *Service) List(ctx context.Context, limit, offset int) ([]Movie, error) 
 	return s.store.List(ctx, limit, offset)
 }
 
+// Get returns one film.
+func (s *Service) Get(ctx context.Context, id int64) (Movie, error) {
+	return s.store.Get(ctx, id)
+}
+
+// Row is one horizontal strip on the home screen.
+type Row struct {
+	Title  string  `json:"title"`
+	Genre  string  `json:"genre,omitempty"`
+	Movies []Movie `json:"movies"`
+}
+
+// Home is everything the home screen needs, in one request: the hero and the
+// rows beneath it. One round trip rather than one per row, because the client
+// cannot know which genres exist until the server tells it.
+type Home struct {
+	Hero  *Movie `json:"hero"`
+	Rows  []Row  `json:"rows"`
+	Total int    `json:"total"`
+}
+
+// HomeScreen assembles the hero and the genre rows.
+//
+// A film appears in every row its genres put it in; deduplicating across rows
+// would leave the later ones thin for no benefit, and seeing a favourite twice
+// under two genres is how every streaming service behaves.
+func (s *Service) HomeScreen(ctx context.Context, rowCount, perRow int) (*Home, error) {
+	total, err := s.store.Count(ctx)
+	if err != nil {
+		return nil, err
+	}
+	home := &Home{Total: total}
+	if total == 0 {
+		return home, nil
+	}
+
+	if hero, err := s.store.Hero(ctx); err == nil {
+		home.Hero = &hero
+	} else if !errors.Is(err, ErrNoSuchMovie) {
+		return nil, err
+	}
+
+	// Recently added leads, because it answers the question people actually
+	// open a media server with: what is new since last time.
+	recent, err := s.store.RecentlyAdded(ctx, perRow)
+	if err != nil {
+		return nil, err
+	}
+	if len(recent) > 0 {
+		home.Rows = append(home.Rows, Row{Title: "Récemment ajoutés", Movies: recent})
+	}
+
+	genres, err := s.store.Genres(ctx, rowCount)
+	if err != nil {
+		return nil, err
+	}
+	for _, genre := range genres {
+		movies, err := s.store.ByGenre(ctx, genre.Name, perRow)
+		if err != nil {
+			return nil, err
+		}
+		if len(movies) == 0 {
+			continue
+		}
+		home.Rows = append(home.Rows, Row{Title: genre.Name, Genre: genre.Name, Movies: movies})
+	}
+	return home, nil
+}
+
 // Scan walks the given roots and brings the database in line with what is on
 // disk: new files are added, known ones refreshed, and rows whose file has
 // disappeared are removed.

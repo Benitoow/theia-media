@@ -166,12 +166,18 @@ func isHidden(name string) bool {
 // looksLikeSample matches the short teaser file that ships next to a release.
 // The check is on a whole word so that a film with "sample" inside a longer
 // word is not thrown away.
+//
+// Only words that describe the *file* belong here. Release group names do not:
+// an earlier version of this list included "rarbg", which threw away every film
+// whose filename carried that group -- nine of them in a 277-file test library.
+// The junk it was meant to catch (RARBG.txt and friends) is not a video file
+// and never reaches this function.
 func looksLikeSample(name string) bool {
 	base := strings.ToLower(strings.TrimSuffix(name, filepath.Ext(name)))
 	for _, field := range strings.FieldsFunc(base, func(r rune) bool {
 		return r == '.' || r == '-' || r == '_' || r == ' ' || r == '(' || r == ')' || r == '[' || r == ']'
 	}) {
-		if field == "sample" || field == "trailer" || field == "rarbg" {
+		if field == "sample" || field == "trailer" {
 			return true
 		}
 	}

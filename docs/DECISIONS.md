@@ -167,6 +167,60 @@ Their logo is not shipped: no copy of it has had its licence checked, and
 nothing in this repository fetches assets from the web. Text alone satisfies the
 requirement.
 
+## 11. TMDB search is ranked by relevance, not popularity
+
+**Found the hard way, on a 268-file library.** `search/movie` returns results in
+TMDB's own text-relevance order. The `popularity` field exists but does not
+order anything.
+
+Searching `The Handmaiden` with `primary_release_year=2016` returns:
+
+| popularity | title |
+|---|---|
+| 0.6 | Making of The Handmaiden |
+| 19.1 | Mademoiselle |
+
+Taking the first result catalogues a library of documentaries *about* films
+rather than the films. Two of 268 test files landed that way, and the same
+happened to *Crouching Tiger, Hidden Dragon*.
+
+The exact-title check that was supposed to catch this failed for a second
+reason: the request asks for `fr-FR`, so `title` comes back translated. A file
+named "The Handmaiden" matches neither the French title ("Mademoiselle") nor the
+Korean original. Both safeguards failed at once.
+
+`internal/tmdb.pick` now checks `title` **and** `original_title` for an exact
+match, and falls back to the **most popular** result rather than the first. A
+film is reliably more popular than the making-of about it.
+
+## 12. Release group names are not sample markers
+
+**Also found on the large library.** The scanner's sample-file word list
+contained `rarbg`, which silently deleted every film whose filename carried that
+release group — nine real films out of 277.
+
+The junk it was meant to catch (`RARBG.txt` and similar) is not a video file and
+never reaches that function, so the rule could only ever do harm. Only words
+that describe *the file* belong in that list, never words that describe who
+packaged it.
+
+## 13. The hero is chosen by rating, not just recency
+
+On a first scan every row is inserted within the same second, so `added_at` is
+identical across the whole library and "most recently added" collapses to
+insertion order. On the test library that put a mis-identified junk file on the
+front page.
+
+The hero is now ordered by recency *then* rating, with a floor of 6.0 and a
+requirement for both a backdrop and a synopsis — a hero without artwork is a
+hole, and one without text is a title floating in the dark. On a first scan,
+where recency says nothing, the best-rated film wins; afterwards a genuinely new
+film takes the slot if it is worth showing. The floor drops to zero if nothing
+clears it, because a modest library still deserves a front page.
+
+This is the same failure mode as the scan-generation bug in decision 7c:
+second-resolution timestamps cannot order events that happen inside one second.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

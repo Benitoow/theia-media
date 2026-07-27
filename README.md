@@ -6,9 +6,10 @@ paywall. Plug in the machine, open a browser, watch a film.
 Navidrome proved a media server could be one Go binary using 50 MB of RAM with
 an interface people actually enjoy. Theia does the same thing for video.
 
-> **Status: milestone M2.** The server starts, announces itself on the local
-> network, scans the directories you point it at, and fetches posters, synopses
-> and credits from TMDB. It does not play anything yet. See
+> **Status: milestone M3.** The server starts, announces itself on the local
+> network, scans the directories you point it at, fetches posters, synopses and
+> credits from TMDB, and presents the lot as a browsable library with a hero,
+> genre rows and a page per film. It does not play anything yet. See
 > [docs/DECISIONS.md](docs/DECISIONS.md) for what is coming and what has been
 > deliberately left out, and [docs/design-system.md](docs/design-system.md)
 > before touching the interface.

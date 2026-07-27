@@ -168,6 +168,27 @@
 		color: var(--color-faint);
 	}
 
+	/* Horizontal rows scroll, and the default Windows scrollbar is a wide grey
+	   slab that cuts the row in half. This is not a Tailwind utility -- there
+	   is no scrollbar plugin here -- so it is written out. */
+	.scrollbar-thin {
+		scrollbar-width: thin;
+		scrollbar-color: var(--color-line) transparent;
+	}
+	.scrollbar-thin::-webkit-scrollbar {
+		height: 6px;
+	}
+	.scrollbar-thin::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	.scrollbar-thin::-webkit-scrollbar-thumb {
+		background: var(--color-line);
+		border-radius: 3px;
+	}
+	.scrollbar-thin:hover::-webkit-scrollbar-thumb {
+		background: var(--color-raised);
+	}
+
 	/* Film grain over the whole page. Kept under 0.05 opacity: past that it
 	   stops being texture and starts being noise. */
 	.grain::after {

@@ -9,26 +9,53 @@
 export const strings = {
 	appName: 'Theia',
 	tagline: 'Serveur média personnel',
-	pitch:
-		"Un seul binaire. Aucune configuration, aucun compte, aucun paywall. Vous branchez la machine, vous ouvrez un navigateur, un film se lance.",
 
-	status: {
-		checking: 'Connexion au serveur…',
-		online: 'En ligne',
-		offline: 'Serveur injoignable',
-		version: 'Version',
-		network: 'Réseau',
-		films: 'Films'
+	nav: {
+		home: 'Accueil',
+		settings: 'Réglages',
+		back: 'Retour'
 	},
 
-	library: {
-		heading: 'Bibliothèque',
-		emptyTitle: 'Aucun dossier configuré',
+	hero: {
+		details: 'Voir la fiche'
+	},
+
+	home: {
+		loading: 'Chargement de la bibliothèque…',
+		emptyTitle: 'La bibliothèque est vide',
 		emptyBody:
-			"Theia n'a pas encore de dossier à surveiller. Ajoutez-en un dans config.json, puis relancez une analyse.",
-		scannedTitle: 'Rien trouvé pour l’instant',
-		scannedBody:
-			"L'analyse s'est terminée sans trouver de fichier vidéo. Vérifiez que les dossiers configurés contiennent bien des films.",
+			"Indiquez à Theia où sont vos films dans config.json, puis lancez une analyse depuis les réglages.",
+		unreachable:
+			"La page est chargée mais l'API ne répond pas. Le serveur a probablement été arrêté."
+	},
+
+	film: {
+		notFound: 'Ce film est introuvable.',
+		overview: 'Synopsis',
+		cast: 'Distribution',
+		director: 'Réalisation',
+		genres: 'Genres',
+		runtime: 'Durée',
+		year: 'Année',
+		file: 'Fichier',
+		size: 'Taille',
+		noOverview: "Aucun synopsis n'est disponible pour ce film.",
+		unmatched:
+			"Ce fichier n'a pas été identifié sur TMDB. Il reste listé sous le nom que porte le fichier ; " +
+			'renommer celui-ci relance une recherche à la prochaine analyse.'
+	},
+
+	settings: {
+		heading: 'Réglages',
+		server: 'Serveur',
+		version: 'Version',
+		port: 'Port',
+		hostname: 'Nom mDNS',
+		dataDir: 'Dossier de données',
+		library: 'Bibliothèque',
+		paths: 'Dossiers surveillés',
+		noPaths: 'Aucun dossier surveillé.',
+		films: 'Films',
 		scan: 'Analyser les dossiers',
 		scanning: 'Analyse en cours…',
 		lastScan: 'Dernière analyse',
@@ -36,35 +63,19 @@ export const strings = {
 		added: 'ajoutés',
 		updated: 'mis à jour',
 		removed: 'retirés',
-		problems: 'Problèmes rencontrés',
-		milestone: 'Jalon M2 — métadonnées TMDB, affiches mises en cache localement.'
-	},
-
-	metadata: {
-		heading: 'Métadonnées',
 		enriched: 'enrichis',
-		notFound: 'non trouvés',
+		notFound: 'non identifiés',
+		problems: 'Problèmes rencontrés',
+		metadata: 'Métadonnées',
 		source: 'Source',
-		noKeyTitle: 'Aucune clé TMDB',
-		pending: 'en attente',
-		unmatched: 'Non identifié sur TMDB',
-		attributionLabel: 'Attribution'
+		milestone: 'Jalon M3 — interface de navigation. La lecture arrive au jalon suivant.'
 	},
 
 	errors: {
-		unreachable:
-			"La page est chargée mais l'API ne répond pas. Le serveur a probablement été arrêté.",
 		scanFailed: "L'analyse n'a pas pu être menée à son terme.",
 		scanBusy: 'Une analyse est déjà en cours.'
 	}
 };
-
-// posterURL builds the URL for a cached TMDB poster. Images are served by
-// Theia itself, never fetched from TMDB by the browser.
-export function posterURL(path, size = 'w185') {
-	if (!path) return null;
-	return `/api/images/${size}/${path.replace(/^\//, '')}`;
-}
 
 // formatUptime turns a duration in seconds into something readable in French.
 export function formatUptime(seconds) {

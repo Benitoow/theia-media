@@ -147,48 +147,25 @@ func (s *Store) List(ctx context.Context, limit, offset int) ([]Movie, error) {
 	}
 
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, path, file_name, size_bytes, modified_at, title, year,
-		       added_at, updated_at,
-		       tmdb_id, tmdb_title, overview, release_date, poster_path,
-		       backdrop_path, director, genres_json, cast_json,
-		       runtime_minutes, vote_average, metadata_status, metadata_fetched_at
+		SELECT `+movieColumns+`
 		FROM movies
 		ORDER BY title COLLATE NOCASE, year
 		LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("listing the library: %w", err)
 	}
-	defer rows.Close()
-
-	movies := make([]Movie, 0, limit)
-	for rows.Next() {
-		var (
-			m                              Movie
-			modifiedAt, addedAt, updatedAt int64
-			year, tmdbID, runtime          sql.NullInt64
-			vote                           sql.NullFloat64
-			status                         string
-			fetchedAt                      int64
-			tmdbTitle, overview, release   sql.NullString
-			poster, backdrop, director     sql.NullString
-			genresJSON, castJSON           sql.NullString
-		)
-		if err := rows.Scan(&m.ID, &m.Path, &m.FileName, &m.SizeBytes, &modifiedAt,
-			&m.Title, &year, &addedAt, &updatedAt,
-			&tmdbID, &tmdbTitle, &overview, &release, &poster,
-			&backdrop, &director, &genresJSON, &castJSON,
-			&runtime, &vote, &status, &fetchedAt); err != nil {
-			return nil, fmt.Errorf("listing the library: %w", err)
-		}
-		m.ModifiedAt = time.Unix(modifiedAt, 0).UTC()
-		m.AddedAt = time.Unix(addedAt, 0).UTC()
-		m.UpdatedAt = time.Unix(updatedAt, 0).UTC()
-		if year.Valid {
-			m.Year = int(year.Int64)
-		}
-		scanMetadata(&m, tmdbID, tmdbTitle, overview, release, poster, backdrop,
-			director, genresJSON, castJSON, runtime, vote, status, fetchedAt)
-		movies = append(movies, m)
+	movies, err := collectMovies(rows, limit)
+	if err != nil {
+		return nil, fmt.Errorf("listing the library: %w", err)
 	}
-	return movies, rows.Err()
+	return movies, nil
+}
+
+// unix converts a stored timestamp, leaving the zero value alone so that
+// "never" does not become 1970 on its way to the interface.
+func unix(seconds int64) time.Time {
+	if seconds == 0 {
+		return time.Time{}
+	}
+	return time.Unix(seconds, 0).UTC()
 }

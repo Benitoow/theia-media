@@ -85,6 +85,45 @@ func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, report)
 }
 
+// handleHome returns the hero and the genre rows in one request.
+func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
+	rows := clamp(intQuery(r, "rows", 8), 1, 20)
+	perRow := clamp(intQuery(r, "per_row", 20), 1, 60)
+
+	home, err := s.lib.HomeScreen(r.Context(), rows, perRow)
+	if err != nil {
+		s.log.Error("building the home screen failed", "error", err)
+		writeJSONError(w, http.StatusInternalServerError, "could not read the library")
+		return
+	}
+	writeJSON(w, http.StatusOK, home)
+}
+
+// handleMovie returns one film.
+func (s *Server) handleMovie(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid film id")
+		return
+	}
+
+	movie, err := s.lib.Get(r.Context(), id)
+	switch {
+	case errors.Is(err, library.ErrNoSuchMovie):
+		writeJSONError(w, http.StatusNotFound, "no such film")
+		return
+	case err != nil:
+		s.log.Error("reading a film failed", "id", id, "error", err)
+		writeJSONError(w, http.StatusInternalServerError, "could not read the film")
+		return
+	}
+	writeJSON(w, http.StatusOK, movie)
+}
+
+func clamp(v, lo, hi int) int {
+	return min(max(v, lo), hi)
+}
+
 // intQuery reads a positive integer query parameter, falling back to a default
 // when it is missing or unparseable. A malformed limit is not worth a 400.
 func intQuery(r *http.Request, name string, fallback int) int {

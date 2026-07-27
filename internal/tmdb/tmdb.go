@@ -131,12 +131,16 @@ func (c *Client) Search(ctx context.Context, title string, year int) (int, error
 	return 0, err
 }
 
+type searchResult struct {
+	ID            int     `json:"id"`
+	Title         string  `json:"title"`
+	OriginalTitle string  `json:"original_title"`
+	ReleaseDate   string  `json:"release_date"`
+	Popularity    float64 `json:"popularity"`
+}
+
 type searchResponse struct {
-	Results []struct {
-		ID          int    `json:"id"`
-		Title       string `json:"title"`
-		ReleaseDate string `json:"release_date"`
-	} `json:"results"`
+	Results []searchResult `json:"results"`
 }
 
 func (c *Client) search(ctx context.Context, title string, year int) (int, error) {
@@ -159,16 +163,40 @@ func (c *Client) search(ctx context.Context, title string, year int) (int, error
 	if len(body.Results) == 0 {
 		return 0, ErrNotFound
 	}
+	return pick(body.Results, title), nil
+}
 
-	// TMDB orders by popularity, which is usually right. An exact title match
-	// further down still beats a popular near-miss at the top.
+// pick chooses the best result for a search.
+//
+// TMDB does not order results by popularity, whatever the field name suggests
+// -- it orders them by its own text relevance. Searching "The Handmaiden" with
+// the right year puts "Making of The Handmaiden" (popularity 0.6) ahead of the
+// film itself (popularity 19.1), because the making-of's title contains the
+// query literally. Taking the first result therefore catalogues a library full
+// of documentaries about films instead of the films.
+//
+// Two rules, in order:
+//
+//  1. An exact title match wins. Both title and original_title are checked,
+//     because the request asks for French and a Korean film comes back as
+//     "Mademoiselle" -- a filename saying "The Handmaiden" matches neither the
+//     French title nor the Korean original, but plenty of films do match one
+//     or the other.
+//  2. Failing that, the most popular result wins. A film is reliably more
+//     popular than the making-of about it.
+func pick(results []searchResult, title string) int {
 	wanted := normalise(title)
-	for _, r := range body.Results {
-		if normalise(r.Title) == wanted {
-			return r.ID, nil
+
+	best := results[0]
+	for _, r := range results {
+		if normalise(r.Title) == wanted || normalise(r.OriginalTitle) == wanted {
+			return r.ID
+		}
+		if r.Popularity > best.Popularity {
+			best = r
 		}
 	}
-	return body.Results[0].ID, nil
+	return best.ID
 }
 
 type detailsResponse struct {

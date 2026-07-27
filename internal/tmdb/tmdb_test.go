@@ -56,12 +56,10 @@ func TestSearchSendsTheYearAndABearerToken(t *testing.T) {
 }
 
 func TestSearchPrefersAnExactTitleMatch(t *testing.T) {
-	// TMDB orders by popularity. A popular near-miss at the top should lose to
-	// an exact match further down.
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`{"results":[
-			{"id":1,"title":"The Matrix Reloaded"},
-			{"id":2,"title":"The Matrix"}
+			{"id":1,"title":"The Matrix Reloaded","popularity":50},
+			{"id":2,"title":"The Matrix","popularity":10}
 		]}`))
 	})
 
@@ -70,7 +68,47 @@ func TestSearchPrefersAnExactTitleMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	if id != 2 {
-		t.Errorf("id = %d, want the exact match 2", id)
+		t.Errorf("id = %d, want the exact match 2 even though 1 is more popular", id)
+	}
+}
+
+func TestSearchMatchesTheOriginalTitle(t *testing.T) {
+	// The request asks for French, so `title` comes back translated. A filename
+	// carrying the original English title must still match.
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"results":[
+			{"id":1,"title":"Un truc","original_title":"Something Else","popularity":90},
+			{"id":2,"title":"Piège de cristal","original_title":"Die Hard","popularity":5}
+		]}`))
+	})
+
+	id, err := client.Search(t.Context(), "Die Hard", 1988)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id != 2 {
+		t.Errorf("id = %d, want 2 matched on original_title", id)
+	}
+}
+
+func TestSearchFallsBackToPopularityNotOrder(t *testing.T) {
+	// The real failure this guards against, taken from live data. Searching
+	// "The Handmaiden" for 2016 returns the making-of first, because TMDB ranks
+	// by text relevance rather than by the popularity field. Taking results[0]
+	// catalogues documentaries about films instead of the films.
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"results":[
+			{"id":1,"title":"Making of The Handmaiden","original_title":"Making of The Handmaiden","popularity":0.6},
+			{"id":2,"title":"Mademoiselle","original_title":"아가씨","popularity":19.1}
+		]}`))
+	})
+
+	id, err := client.Search(t.Context(), "The Handmaiden", 2016)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id != 2 {
+		t.Errorf("id = %d, want the film (2), not the making-of about it", id)
 	}
 }
 
