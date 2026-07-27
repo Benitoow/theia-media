@@ -1,0 +1,15 @@
+# Normalise everything to LF in the repository. Without this, a checkout on
+# Windows commits CRLF, and a Makefile whose recipes end in \r fails on the
+# Linux CI runner in ways that are tedious to diagnose.
+* text=auto eol=lf
+
+# PowerShell is the one exception: it is only ever run on Windows, where CRLF
+# is what every editor and tool expects.
+*.ps1 text eol=crlf
+
+# Never touch these.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
