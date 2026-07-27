@@ -6,10 +6,13 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
 	"testing/fstest"
 
 	"github.com/Benitoow/theia-media/internal/config"
+	"github.com/Benitoow/theia-media/internal/db"
+	"github.com/Benitoow/theia-media/internal/library"
 )
 
 // bundle stands in for a real SvelteKit build: an entry point, a hashed asset
@@ -25,9 +28,28 @@ func bundle() fstest.MapFS {
 
 func newTestServer(t *testing.T, web fstest.MapFS) http.Handler {
 	t.Helper()
-	cfg := config.Default()
+	handler, _ := newTestServerWithLibrary(t, web)
+	return handler
+}
+
+// newTestServerWithLibrary builds a server backed by a real, migrated database
+// in a temporary directory. An in-memory SQLite would need shared-cache games
+// to survive database/sql's connection pool; a temp file is simpler and closer
+// to what actually runs.
+func newTestServerWithLibrary(t *testing.T, web fstest.MapFS) (http.Handler, *library.Service) {
+	t.Helper()
+
+	database, err := db.Open(t.Context(), filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatalf("opening the test database: %v", err)
+	}
+	t.Cleanup(func() { database.Close() })
+
 	log := slog.New(slog.DiscardHandler)
-	return New(&cfg, web, "test-version", log).Handler()
+	service := library.NewService(library.NewStore(database), log)
+
+	cfg := config.Default()
+	return New(&cfg, service, web, "test-version", log).Handler(), service
 }
 
 func get(t *testing.T, h http.Handler, path string) *http.Response {

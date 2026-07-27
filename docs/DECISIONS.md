@@ -89,6 +89,38 @@ Installing a boot service needs administrator rights on every OS. Asking for
 that on first launch contradicts "plug it in and it works" before the user has
 seen a single frame.
 
+## 7b. The TMDB key never lives in the repository
+
+**Decided.** Decision 4 says a key ships with the binary. That cannot mean a
+constant in a source file: this repository is public, and a key committed here
+is a key published.
+
+Two separate mechanisms, easy to confuse:
+
+- **Development.** A `config.local.json` in the working directory overrides the
+  real configuration at runtime. It is in `.gitignore`, `Save` never writes its
+  values back into the persisted config, and `Config` implements
+  `slog.LogValuer` so that logging one prints `eyJh…OM4w` rather than the key.
+- **Distribution.** The shipped default has to be injected at build time from a
+  CI secret — `-ldflags "-X ...=$TMDB_KEY"` — not committed. That work belongs
+  with M2, when there is finally something to call TMDB about.
+
+## 7c. Reconciliation counts scans, not seconds
+
+**Decided.** Every scan bumps an integer in `scan_generation` and stamps the
+rows it touches with the result. Nothing about deciding what changed reads the
+clock.
+
+The first implementation used timestamps, and two tests caught it immediately:
+two scans within the same second are indistinguishable, so an update was
+reported as an insert and a file that had genuinely disappeared was never
+pruned. Seconds are not fine-grained enough for a scan of a small library, and
+an NTP correction between two scans breaks the ordering outright. A counter has
+neither failure mode.
+
+Timestamps are still stored, but nothing branches on them — they are there for
+people to read.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

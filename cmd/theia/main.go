@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -20,7 +21,9 @@ import (
 	theia "github.com/Benitoow/theia-media"
 	"github.com/Benitoow/theia-media/internal/api"
 	"github.com/Benitoow/theia-media/internal/config"
+	"github.com/Benitoow/theia-media/internal/db"
 	"github.com/Benitoow/theia-media/internal/discovery"
+	"github.com/Benitoow/theia-media/internal/library"
 )
 
 // version is overwritten at build time with -ldflags "-X main.version=v1.2.3".
@@ -68,11 +71,27 @@ func run() error {
 	if *portFlag != 0 {
 		cfg.Port = *portFlag
 	}
+	if cfg.HasLocalOverrides() {
+		// Worth saying out loud: running with a development port or key without
+		// realising it is a confusing afternoon. The key itself is redacted.
+		log.Info("config.local.json is in effect", "config", cfg)
+	}
 
 	webFS, err := theia.WebFS()
 	if err != nil {
 		return fmt.Errorf("loading embedded frontend: %w", err)
 	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	database, err := db.Open(ctx, filepath.Join(dataDir, db.FileName))
+	if err != nil {
+		return err
+	}
+	defer database.Close()
+
+	libraryService := library.NewService(library.NewStore(database), log)
 
 	// Bind before announcing anything: failing here is the one startup error
 	// users actually hit, and it should not be preceded by a cheerful banner.
@@ -82,7 +101,7 @@ func run() error {
 	}
 
 	httpSrv := &http.Server{
-		Handler: api.New(cfg, webFS, version, log).Handler(),
+		Handler: api.New(cfg, libraryService, webFS, version, log).Handler(),
 		// Guards against a client that opens a connection and never finishes
 		// sending its request headers. There is deliberately no WriteTimeout:
 		// video streaming holds a single response open for the length of a film.
@@ -108,8 +127,15 @@ func run() error {
 		}
 	}()
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	// Scan in the background rather than before serving. A library on a slow
+	// external drive would otherwise hold the interface hostage at exactly the
+	// moment the user is trying to see whether the thing works at all.
+	go func() {
+		if _, err := libraryService.Scan(ctx, cfg.LibraryPaths); err != nil &&
+			!errors.Is(err, context.Canceled) {
+			log.Error("the initial scan failed", "error", err)
+		}
+	}()
 
 	select {
 	case err := <-serveErr:

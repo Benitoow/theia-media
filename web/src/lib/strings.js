@@ -8,26 +8,43 @@
 
 export const strings = {
 	appName: 'Theia',
-	tagline: 'Votre serveur média personnel',
+	tagline: 'Serveur média personnel',
+	pitch:
+		"Un seul binaire. Aucune configuration, aucun compte, aucun paywall. Vous branchez la machine, vous ouvrez un navigateur, un film se lance.",
 
 	status: {
 		checking: 'Connexion au serveur…',
-		online: 'Serveur en ligne',
+		online: 'En ligne',
 		offline: 'Serveur injoignable',
 		version: 'Version',
-		uptime: 'En ligne depuis'
+		network: 'Réseau',
+		films: 'Films'
 	},
 
 	library: {
-		emptyTitle: 'Aucune bibliothèque configurée',
+		heading: 'Bibliothèque',
+		emptyTitle: 'Aucun dossier configuré',
 		emptyBody:
-			"Theia n'a pas encore de dossier à surveiller. L'analyse des dossiers et l'affichage des films arrivent au jalon suivant.",
-		emptyHint: 'Jalon M0 — le serveur démarre, se fait connaître sur le réseau et sert cette page.'
+			"Theia n'a pas encore de dossier à surveiller. Ajoutez-en un dans config.json, puis relancez une analyse.",
+		scannedTitle: 'Rien trouvé pour l’instant',
+		scannedBody:
+			"L'analyse s'est terminée sans trouver de fichier vidéo. Vérifiez que les dossiers configurés contiennent bien des films.",
+		scan: 'Analyser les dossiers',
+		scanning: 'Analyse en cours…',
+		lastScan: 'Dernière analyse',
+		found: 'trouvés',
+		added: 'ajoutés',
+		updated: 'mis à jour',
+		removed: 'retirés',
+		problems: 'Problèmes rencontrés',
+		milestone: 'Jalon M1 — analyse des dossiers et lecture des noms de fichiers.'
 	},
 
 	errors: {
 		unreachable:
-			"La page est chargée mais l'API ne répond pas. Le serveur a probablement été arrêté."
+			"La page est chargée mais l'API ne répond pas. Le serveur a probablement été arrêté.",
+		scanFailed: "L'analyse n'a pas pu être menée à son terme.",
+		scanBusy: 'Une analyse est déjà en cours.'
 	}
 };
 
@@ -40,4 +57,17 @@ export function formatUptime(seconds) {
 	if (hours < 24) return `${hours} h ${minutes % 60} min`;
 	const days = Math.floor(hours / 24);
 	return `${days} j ${hours % 24} h`;
+}
+
+// formatSize renders a file size the way a person would say it out loud.
+export function formatSize(bytes) {
+	if (!bytes) return '—';
+	const units = ['o', 'Ko', 'Mo', 'Go', 'To'];
+	let value = bytes;
+	let unit = 0;
+	while (value >= 1024 && unit < units.length - 1) {
+		value /= 1024;
+		unit++;
+	}
+	return `${value < 10 && unit > 0 ? value.toFixed(1) : Math.round(value)} ${units[unit]}`;
 }

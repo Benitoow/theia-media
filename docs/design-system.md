@@ -255,41 +255,39 @@ Everything else uses `--duration-base`.
   rule most likely to be broken by accident.
 - The interface is French; `<html lang="fr">` is already set and stays set.
 
-## 10. Open decisions
+## 10. Fonts, as shipped
 
-**Fonts are unresolved, and this is the one thing blocking a faithful
-implementation.**
+**Playfair Display Variable** for the display register, **Inter Variable** for
+everything else. Both SIL Open Font License 1.1, which is GPL-compatible and
+imposes nothing on the rest of the project.
 
-The stacks in §4 are system fonts. On macOS, `Didot` renders close to the
-references. On Windows, `Bodoni MT` exists only if Microsoft Office is installed,
-so most Windows users will fall back to Georgia — a perfectly decent serif that
-is nowhere near dramatic enough for what the references promise.
+They are self-hosted, not linked. The packages come from npm
+(`@fontsource-variable/*`), but their stylesheets are deliberately not imported:
+those ship Cyrillic, Vietnamese and Latin-Extended alongside Latin, and while a
+browser would only download the subset it needs, every subset would still be
+embedded in the binary. `web/src/app.css` declares the two `@font-face` rules by
+hand against the Latin files only. That range covers French completely, accents
+and the OE ligature included.
 
-Getting the real thing means bundling font files in the repository, which runs
-into two project constraints at once:
+Cost: two WOFF2 files, 85 KB together, hashed into `_app/immutable/` and so
+covered by the immutable cache header the Go server already sets.
 
-- **No external network calls.** Google Fonts as a CDN link is out. Fonts have
-  to be self-hosted and embedded in the binary alongside the rest of `web-dist`.
-- **Licence verification is yours.** Per your instruction, I do not fetch assets
-  from the web myself.
+**There is no CDN request anywhere in the application**, which is not a
+preference but the project's no-external-calls rule. Verified from the running
+binary: every request the page makes is to its own origin or a `data:` URI.
 
-Candidates worth your review, all under the SIL Open Font License, which is
-GPL-compatible and imposes no obligation on the rest of the project:
+The system stacks are still listed behind them in §4 and still work — they are
+what renders during the swap, and what a browser with WOFF2 disabled falls back
+to.
 
-| Font | Register | Why |
-|---|---|---|
-| **Playfair Display** | Display serif | High-contrast transitional, closest to the Rinascimento reference. Variable weight |
-| **Cormorant Garamond** | Display serif | Lighter, more literary, closer to Luxam. Beautiful at hero size, weak below 24px |
-| **Inter** | UI sans | Designed for screens, excellent at 11px with wide tracking — exactly the label register |
+## 11. Implementation status
 
-Two subset WOFF2 files would add roughly 80–120 KB to the binary.
+Implemented in `web/src/app.css` as of M1. The provisional M0 palette
+(`--color-ink: #0b0b0f`, `--color-helios: #f5a623`) is gone.
 
-Say the word and which ones, and I will wire them in. Until then the system
-fonts are a real fallback rather than a placeholder — the layout, scale,
-tracking and colour are all correct without them.
+Colour, type scale and tracking are verified against a running build rather than
+assumed: the hero computes to Playfair Display at `-0.03em`, labels to Inter at
+11px and `+0.18em`, the page background to `#0B0A09` and body text to `#EDE7DC`.
 
-## 11. Migration note
-
-M0 shipped a provisional palette in `web/src/app.css` — `--color-ink: #0b0b0f`,
-`--color-helios: #f5a623` and three others. Those predate this document and are
-superseded by it. Rewriting them is the first task of the next milestone.
+`scripts/contrast.mjs` guards the ratios. The poster grid of §6 does not exist
+yet — it arrives with M3, and §6 is written for whoever builds it.

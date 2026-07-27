@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -156,6 +157,165 @@ func TestDataDirHonoursTheEnvironmentOverride(t *testing.T) {
 	}
 	if want := filepath.Join("custom", "place"); got != want {
 		t.Errorf("DataDir() = %q, want %q", got, want)
+	}
+}
+
+func TestLocalOverridesReplaceLoadedValues(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, `{"port": 9000, "hostname": "media"}`)
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load returned an unexpected error: %v", err)
+	}
+	local := filepath.Join(t.TempDir(), localFileName)
+	if err := os.WriteFile(local, []byte(`{"port": 7777, "tmdb_api_key": "dev-key"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := cfg.applyLocalOverrides(local); err != nil {
+		t.Fatalf("applyLocalOverrides returned an unexpected error: %v", err)
+	}
+
+	if cfg.Port != 7777 {
+		t.Errorf("Port = %d, want the override 7777", cfg.Port)
+	}
+	if cfg.TMDBAPIKey != "dev-key" {
+		t.Errorf("TMDBAPIKey = %q, want the override", cfg.TMDBAPIKey)
+	}
+	// Untouched by the overlay, so the loaded value has to survive.
+	if cfg.Hostname != "media" {
+		t.Errorf("Hostname = %q, want the loaded value %q", cfg.Hostname, "media")
+	}
+	if !cfg.HasLocalOverrides() {
+		t.Error("HasLocalOverrides() = false after applying an overlay")
+	}
+}
+
+func TestLocalOverridesAreNeverPersisted(t *testing.T) {
+	// The whole point: a development key in config.local.json must not migrate
+	// into the real configuration file, where it would outlive the file it came
+	// from and survive deleting it.
+	dir := t.TempDir()
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load returned an unexpected error: %v", err)
+	}
+
+	local := filepath.Join(t.TempDir(), localFileName)
+	if err := os.WriteFile(local, []byte(`{"tmdb_api_key": "super-secret", "port": 7777}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := cfg.applyLocalOverrides(local); err != nil {
+		t.Fatal(err)
+	}
+	if err := cfg.Save(); err != nil {
+		t.Fatalf("Save returned an unexpected error: %v", err)
+	}
+
+	written, err := os.ReadFile(filepath.Join(dir, fileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(written), "super-secret") {
+		t.Error("the development key was written into the persisted configuration")
+	}
+
+	var got Config
+	if err := json.Unmarshal(written, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Port != DefaultPort {
+		t.Errorf("persisted port = %d, want the pre-override default %d", got.Port, DefaultPort)
+	}
+	// The in-memory value still reflects the override; only the file is clean.
+	if cfg.Port != 7777 {
+		t.Errorf("in-memory port = %d, want the override to still apply at runtime", cfg.Port)
+	}
+}
+
+func TestChangesSurviveSaveWhenNotOverridden(t *testing.T) {
+	// Protecting overridden fields must not freeze the others: the settings
+	// page still has to be able to persist a change.
+	dir := t.TempDir()
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	local := filepath.Join(t.TempDir(), localFileName)
+	if err := os.WriteFile(local, []byte(`{"tmdb_api_key": "dev-key"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := cfg.applyLocalOverrides(local); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg.Hostname = "cinema"
+	if err := cfg.Save(); err != nil {
+		t.Fatal(err)
+	}
+
+	reloaded, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reloaded.Hostname != "cinema" {
+		t.Errorf("Hostname = %q, want the saved value %q", reloaded.Hostname, "cinema")
+	}
+}
+
+func TestMissingLocalFileIsNotAnError(t *testing.T) {
+	cfg := Default()
+	if err := cfg.applyLocalOverrides(filepath.Join(t.TempDir(), "absent.json")); err != nil {
+		t.Errorf("a missing local override should be the normal case, got: %v", err)
+	}
+	if cfg.HasLocalOverrides() {
+		t.Error("HasLocalOverrides() = true with no local file")
+	}
+}
+
+func TestMalformedLocalFileIsAnError(t *testing.T) {
+	// Ignoring it silently would leave a developer wondering why their key is
+	// not being picked up.
+	local := filepath.Join(t.TempDir(), localFileName)
+	if err := os.WriteFile(local, []byte(`{"tmdb_api_key":`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := Default()
+	if err := cfg.applyLocalOverrides(local); err == nil {
+		t.Error("a truncated local override was accepted, want an error")
+	}
+}
+
+func TestRedact(t *testing.T) {
+	tests := []struct {
+		name, in, want string
+	}{
+		{"empty", "", "(not set)"},
+		{"short secrets reveal nothing", "abcd1234", "****"},
+		// Deliberately not shaped like a real JWT. A fixture carrying the
+		// standard HS256 header makes every "did a key leak into the repo?"
+		// scan light up on a test file.
+		{"long secret keeps only its ends", "NOT-A-REAL-TOKEN-just-a-fixture", "NOT-…ture"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Redact(tt.in); got != tt.want {
+				t.Errorf("Redact(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLogValueDoesNotExposeTheKey(t *testing.T) {
+	cfg := Default()
+	cfg.TMDBAPIKey = "a-real-looking-secret-value"
+
+	rendered := cfg.LogValue().String()
+	if strings.Contains(rendered, "a-real-looking-secret-value") {
+		t.Errorf("LogValue() leaked the key: %s", rendered)
+	}
+	if !strings.Contains(rendered, "a-re") {
+		t.Errorf("LogValue() = %s, want a redacted fingerprint of the key", rendered)
 	}
 }
 

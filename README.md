@@ -6,10 +6,12 @@ paywall. Plug in the machine, open a browser, watch a film.
 Navidrome proved a media server could be one Go binary using 50 MB of RAM with
 an interface people actually enjoy. Theia does the same thing for video.
 
-> **Status: milestone M0.** The server starts, announces itself on the local
-> network and serves the web interface. It does not scan, catalogue or play
-> anything yet. See [docs/DECISIONS.md](docs/DECISIONS.md) for what is coming
-> and what has been deliberately left out.
+> **Status: milestone M1.** The server starts, announces itself on the local
+> network, scans the directories you point it at and catalogues what it finds.
+> It does not fetch metadata or play anything yet. See
+> [docs/DECISIONS.md](docs/DECISIONS.md) for what is coming and what has been
+> deliberately left out, and [docs/design-system.md](docs/design-system.md)
+> before touching the interface.
 
 ---
 
@@ -70,6 +72,19 @@ Everything except `-data-dir` is also settable in `config.json` inside the data
 directory. `THEIA_DATA_DIR` overrides the location of that directory, which is
 what you want for a portable install on an external drive.
 
+Point Theia at your films by adding directories to `library_paths`:
+
+```json
+{
+  "port": 8383,
+  "library_paths": ["/media/films", "/mnt/nas/cinema"]
+}
+```
+
+It scans them at startup and whenever you ask it to. Files it cannot identify
+still appear, listed under whatever the filename said — a badly named file is
+better shown than silently dropped.
+
 ---
 
 ## Building from source
@@ -97,15 +112,31 @@ go run ./cmd/theia     # terminal 1
 cd web && npm run dev  # terminal 2
 ```
 
+A `config.local.json` in the repository root overrides the real configuration at
+runtime, which is where your own TMDB key belongs:
+
+```json
+{ "tmdb_api_key": "…" }
+```
+
+It is git-ignored, it is never written back into the real `config.json`, and
+logging the configuration prints the key redacted. Do not commit it, and do not
+paste it anywhere this repository can see.
+
 ### Layout
 
 ```
-cmd/theia/       entry point and startup orchestration
-internal/api/    HTTP routes, JSON API, static file serving
-internal/config/ configuration file and data directory
+cmd/theia/           entry point and startup orchestration
+internal/api/        HTTP routes, JSON API, static file serving
+internal/config/     configuration file and data directory
+internal/db/         SQLite: opening, migrations
 internal/discovery/  mDNS announcement, LAN address selection
-web/             SvelteKit source
-web-dist/        compiled frontend, embedded via go:embed (generated)
+internal/library/    the domain model, filename parsing, scan reconciliation
+internal/scanner/    walking directories, finding video files
+web/                 SvelteKit source
+web-dist/            compiled frontend, embedded via go:embed (generated)
+assets/              brand assets, not shipped in the binary
+docs/                design system and decision record
 ```
 
 `embed.go` at the repository root is what pulls `web-dist/` into the binary;

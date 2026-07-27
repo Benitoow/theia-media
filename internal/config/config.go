@@ -3,6 +3,12 @@
 // Theia is meant to run with zero configuration, so every field here has a
 // working default and the file is created automatically on first launch. The
 // settings page edits this same file; nothing else is expected to.
+//
+// There is a second, development-only layer: a config.local.json sitting in the
+// working directory overrides the real configuration at runtime. That is where
+// a developer's own TMDB key lives. It is listed in .gitignore, it is never
+// written back by Save, and Config implements slog.LogValuer so that logging
+// one cannot spill the key.
 package config
 
 import (
@@ -10,9 +16,11 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 )
 
 const (
@@ -25,6 +33,10 @@ const (
 
 	// fileName is the configuration file inside the data directory.
 	fileName = "config.json"
+
+	// localFileName is the development override, read from the working
+	// directory. Never committed, never written to.
+	localFileName = "config.local.json"
 )
 
 // Config is the full on-disk configuration. Every field is optional: zero
@@ -38,8 +50,7 @@ type Config struct {
 	// "<hostname>.local". It has no other effect.
 	Hostname string `json:"hostname"`
 
-	// LibraryPaths are the directories scanned for media files. Empty until the
-	// user adds one; the scanner lands in M1.
+	// LibraryPaths are the directories scanned for media files.
 	LibraryPaths []string `json:"library_paths"`
 
 	// TMDBAPIKey overrides the key compiled into the binary. Empty means "use
@@ -49,6 +60,13 @@ type Config struct {
 
 	// dir is where this config was loaded from. Not serialized.
 	dir string
+
+	// persisted holds the values as they were on disk, before any local
+	// development override was layered on top, together with the set of fields
+	// that override actually replaced. Save consults both so that a developer's
+	// key cannot migrate from config.local.json into the real configuration.
+	persisted  *Config
+	overridden map[string]bool
 }
 
 // Default returns a configuration with every field at its default value.
@@ -81,7 +99,8 @@ func DataDir() (string, error) {
 }
 
 // Load reads the configuration from dir, creating it with defaults if it does
-// not exist yet. Fields left empty in the file fall back to their defaults.
+// not exist yet. Fields left empty in the file fall back to their defaults, and
+// a config.local.json in the working directory is layered on top afterwards.
 func Load(dir string) (*Config, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("creating data directory %s: %w", dir, err)
@@ -97,16 +116,19 @@ func Load(dir string) (*Config, error) {
 		if err := cfg.Save(); err != nil {
 			return nil, err
 		}
-		return &cfg, nil
 	case err != nil:
 		return nil, fmt.Errorf("reading %s: %w", fileName, err)
+	default:
+		if err := json.Unmarshal(data, &cfg); err != nil {
+			return nil, fmt.Errorf("parsing %s: %w", fileName, err)
+		}
+		cfg.dir = dir
+		cfg.applyDefaults()
 	}
 
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing %s: %w", fileName, err)
+	if err := cfg.applyLocalOverrides(localFileName); err != nil {
+		return nil, err
 	}
-	cfg.dir = dir
-	cfg.applyDefaults()
 	return &cfg, nil
 }
 
@@ -123,18 +145,124 @@ func (c *Config) applyDefaults() {
 	}
 }
 
+// overlay mirrors Config with pointers, so that "absent from the file" is
+// distinguishable from "present and set to zero".
+type overlay struct {
+	Port         *int      `json:"port"`
+	Hostname     *string   `json:"hostname"`
+	LibraryPaths *[]string `json:"library_paths"`
+	TMDBAPIKey   *string   `json:"tmdb_api_key"`
+}
+
+// applyLocalOverrides layers a development config.local.json over the loaded
+// configuration. A missing file is the normal case and not an error; a
+// malformed one is, because silently ignoring it would leave a developer
+// wondering why their key is not being used.
+func (c *Config) applyLocalOverrides(path string) error {
+	data, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", path, err)
+	}
+
+	var over overlay
+	if err := json.Unmarshal(data, &over); err != nil {
+		return fmt.Errorf("parsing %s: %w", path, err)
+	}
+
+	snapshot := *c
+	snapshot.LibraryPaths = slices.Clone(c.LibraryPaths)
+	snapshot.persisted = nil
+	snapshot.overridden = nil
+
+	c.persisted = &snapshot
+	c.overridden = map[string]bool{}
+
+	if over.Port != nil {
+		c.Port = *over.Port
+		c.overridden["port"] = true
+	}
+	if over.Hostname != nil {
+		c.Hostname = *over.Hostname
+		c.overridden["hostname"] = true
+	}
+	if over.LibraryPaths != nil {
+		c.LibraryPaths = *over.LibraryPaths
+		c.overridden["library_paths"] = true
+	}
+	if over.TMDBAPIKey != nil {
+		c.TMDBAPIKey = *over.TMDBAPIKey
+		c.overridden["tmdb_api_key"] = true
+	}
+	return nil
+}
+
 // Dir returns the data directory this configuration was loaded from.
 func (c *Config) Dir() string { return c.dir }
+
+// HasLocalOverrides reports whether a config.local.json was layered on top.
+// Used at startup to say so out loud, since a developer running with someone
+// else's port or key and not realising it is a confusing afternoon.
+func (c *Config) HasLocalOverrides() bool { return len(c.overridden) > 0 }
+
+// LogValue implements slog.LogValuer, so that logging a Config -- deliberately
+// or by accident, in a crash dump or a screen-shared terminal -- cannot spill
+// the TMDB key.
+func (c *Config) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Int("port", c.Port),
+		slog.String("hostname", c.Hostname),
+		slog.Int("library_paths", len(c.LibraryPaths)),
+		slog.String("tmdb_api_key", Redact(c.TMDBAPIKey)),
+	)
+}
+
+// Redact reduces a secret to something safe to print: enough to confirm which
+// credential is loaded, never enough to use it.
+func Redact(secret string) string {
+	const keep = 4
+	switch {
+	case secret == "":
+		return "(not set)"
+	case len(secret) <= keep*2:
+		return "****"
+	default:
+		return secret[:keep] + "…" + secret[len(secret)-keep:]
+	}
+}
 
 // Save writes the configuration back to disk. The write goes to a temporary
 // file first and is then renamed over the target, so an interrupted save can
 // never leave a truncated config behind.
+//
+// Fields that came from config.local.json are written back with their original
+// on-disk values: a development override is a runtime thing, and a key that
+// migrated into the real configuration file would outlive the file it came from.
 func (c *Config) Save() error {
 	if c.dir == "" {
 		return errors.New("config: no data directory set")
 	}
 
-	data, err := json.MarshalIndent(c, "", "  ")
+	out := *c
+	out.LibraryPaths = slices.Clone(c.LibraryPaths)
+	if c.persisted != nil {
+		if c.overridden["port"] {
+			out.Port = c.persisted.Port
+		}
+		if c.overridden["hostname"] {
+			out.Hostname = c.persisted.Hostname
+		}
+		if c.overridden["library_paths"] {
+			out.LibraryPaths = slices.Clone(c.persisted.LibraryPaths)
+		}
+		if c.overridden["tmdb_api_key"] {
+			out.TMDBAPIKey = c.persisted.TMDBAPIKey
+		}
+	}
+
+	data, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encoding config: %w", err)
 	}

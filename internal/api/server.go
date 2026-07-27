@@ -14,12 +14,14 @@ import (
 	"time"
 
 	"github.com/Benitoow/theia-media/internal/config"
+	"github.com/Benitoow/theia-media/internal/library"
 )
 
 // Server wires the configuration, the embedded frontend and the JSON API into
 // a single http.Handler.
 type Server struct {
 	cfg     *config.Config
+	lib     *library.Service
 	web     fs.FS
 	log     *slog.Logger
 	version string
@@ -28,9 +30,10 @@ type Server struct {
 
 // New builds a Server. web is the compiled frontend, normally the embedded
 // bundle returned by theia.WebFS.
-func New(cfg *config.Config, web fs.FS, version string, log *slog.Logger) *Server {
+func New(cfg *config.Config, lib *library.Service, web fs.FS, version string, log *slog.Logger) *Server {
 	return &Server{
 		cfg:     cfg,
+		lib:     lib,
 		web:     web,
 		log:     log,
 		version: version,
@@ -42,6 +45,9 @@ func New(cfg *config.Config, web fs.FS, version string, log *slog.Logger) *Serve
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", s.handleHealth)
+	mux.HandleFunc("GET /api/library/movies", s.handleMovies)
+	mux.HandleFunc("GET /api/library/stats", s.handleLibraryStats)
+	mux.HandleFunc("POST /api/library/scan", s.handleScan)
 	mux.Handle("/", s.staticHandler())
 	return s.logRequests(mux)
 }
