@@ -52,6 +52,7 @@ func newTestServerWithLibrary(t *testing.T, web fstest.MapFS) (http.Handler, *li
 	return New(Options{
 		Config:    &cfg,
 		Library:   service,
+		State:     db.NewState(database),
 		Web:       web,
 		Version:   "test-version",
 		KeySource: config.KeyMissing,

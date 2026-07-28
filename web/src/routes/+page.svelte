@@ -1,5 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { getJSON } from '$lib/api.js';
 	import { strings as t } from '$lib/strings.js';
 	import Hero from '$lib/components/Hero.svelte';
@@ -10,12 +11,24 @@
 	let home = $state(null);
 
 	onMount(async () => {
-		try {
-			home = await getJSON('/api/library/home');
-			state = 'ready';
-		} catch {
-			state = 'offline';
+		// Asked alongside the library rather than before it, so a normal launch
+		// pays one extra request in parallel and never a round trip in series.
+		const [library, onboarding] = await Promise.allSettled([
+			getJSON('/api/library/home'),
+			getJSON('/api/onboarding')
+		]);
+
+		if (onboarding.status === 'fulfilled' && onboarding.value.needed) {
+			goto('/bienvenue', { replaceState: true });
+			return;
 		}
+
+		if (library.status === 'rejected') {
+			state = 'offline';
+			return;
+		}
+		home = library.value;
+		state = 'ready';
 	});
 </script>
 

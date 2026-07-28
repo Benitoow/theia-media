@@ -341,6 +341,49 @@ The duration comes from the server, since the stream cannot supply it: the
 ffmpeg probe records it on first playback, with TMDB's runtime as a fallback
 until then.
 
+## 19. The QR code encodes an IP address, never the mDNS name
+
+**Settled by measurement, not by argument.** `theia.local` does not resolve on
+Android — tested on a real phone, five milestones after decision 5 predicted it.
+It is a platform limitation rather than a Theia bug, and it is exactly why
+decision 5 made the numeric address the contract and mDNS the convenience.
+
+So the QR code encodes `http://<ip>:<port>`. The mDNS name appears underneath as
+a second line, with the Android caveat written out rather than left for somebody
+to discover.
+
+**Choosing which IP is the hard part.** A machine running Docker, WSL, Hyper-V,
+VirtualBox or a VPN has several private IPv4 addresses, all equally valid to a
+naive check, and only one that a phone on the sofa can reach. A QR code pointing
+at a Hyper-V switch is worse than no QR code at all: it scans perfectly and
+leads nowhere.
+
+There is no portable way in pure Go to ask which interface carries the default
+route, so `discovery.Candidates` ranks by what can be observed — real adapters
+before virtual ones, private addresses before public — using a list of adapter
+name markers. Ranking cannot be certain, so the other addresses are offered in
+the interface with their interface names, and the screen says what to do if the
+code leads nowhere.
+
+## 20. The welcome screen appears once, and never for an existing install
+
+Dismissal is recorded in a new `app_state` table rather than in `config.json`,
+because that file belongs to the user and nothing in it should change by itself.
+The updater will want the same table for its last-check timestamp.
+
+There is one extra rule at startup: **a database that already contains films is
+marked as onboarded without ever showing the screen.** Somebody upgrading into
+the version that added onboarding has already pointed Theia at a folder and
+watched it scan; a welcome screen would be telling them something they did years
+ago.
+
+**Verifying the code without a camera.** The encoder is a well-used library and
+is taken on trust. The SVG rendering is code written here, and that is where a
+bug would live — inverted modules, an off-by-one in the run merging, a missing
+quiet zone. So the test parses the generated SVG back into a module matrix and
+compares it against the encoder's own bitmap, module by module. A symbol that
+survives that scans, or the encoder is wrong.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

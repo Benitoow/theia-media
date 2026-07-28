@@ -2,19 +2,22 @@
 	import { onMount } from 'svelte';
 	import { getJSON } from '$lib/api.js';
 	import { strings as t, formatUptime } from '$lib/strings.js';
+	import ConnectPanel from '$lib/components/ConnectPanel.svelte';
 
 	let health = $state(null);
 	let stats = $state(null);
 	let settings = $state(null);
+	let connect = $state(null);
 	let scanning = $state(false);
 	let scanError = $state(null);
 
 	async function refresh() {
 		try {
-			[health, stats, settings] = await Promise.all([
+			[health, stats, settings, connect] = await Promise.all([
 				getJSON('/api/health'),
 				getJSON('/api/library/stats'),
-				getJSON('/api/settings')
+				getJSON('/api/settings'),
+				getJSON('/api/onboarding')
 			]);
 		} catch {
 			// The layout already shows a dead page well enough; a settings screen
@@ -52,6 +55,15 @@
 	<h1 class="mb-16 font-display text-display font-normal">{t.settings.heading}</h1>
 
 	{#if settings && stats}
+		<!-- The welcome screen shows this once. Keeping it reachable afterwards
+		     is what you want the evening a second device turns up. -->
+		{#if connect}
+			<section class="mb-14 border-b border-line pb-14">
+				<h2 class="label mb-6">{t.connect.heading}</h2>
+				<ConnectPanel info={connect} />
+			</section>
+		{/if}
+
 		<section class="mb-14">
 			<h2 class="label mb-5">{t.settings.server}</h2>
 			<dl class="grid gap-x-8 gap-y-3 sm:grid-cols-[11rem_1fr]">

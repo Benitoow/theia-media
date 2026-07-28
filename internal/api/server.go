@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Benitoow/theia-media/internal/config"
+	"github.com/Benitoow/theia-media/internal/db"
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
@@ -26,6 +27,7 @@ type Options struct {
 	Library   *library.Service
 	Images    *imagecache.Cache
 	FFmpeg    *ffmpeg.Manager
+	State     *db.State
 	Web       fs.FS
 	Version   string
 	KeySource config.KeySource
@@ -39,6 +41,7 @@ type Server struct {
 	lib       *library.Service
 	images    *imagecache.Cache
 	ffmpeg    *ffmpeg.Manager
+	state     *db.State
 	web       fs.FS
 	log       *slog.Logger
 	version   string
@@ -54,6 +57,7 @@ func New(opts Options) *Server {
 		lib:       opts.Library,
 		images:    opts.Images,
 		ffmpeg:    opts.FFmpeg,
+		state:     opts.State,
 		web:       opts.Web,
 		log:       opts.Logger,
 		version:   opts.Version,
@@ -67,6 +71,8 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("GET /api/settings", s.handleSettings)
+	mux.HandleFunc("GET /api/onboarding", s.handleOnboarding)
+	mux.HandleFunc("POST /api/onboarding/complete", s.handleCompleteOnboarding)
 	mux.HandleFunc("GET /api/library/home", s.handleHome)
 	mux.HandleFunc("GET /api/library/movies", s.handleMovies)
 	mux.HandleFunc("GET /api/library/movies/{id}", s.handleMovie)

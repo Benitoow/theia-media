@@ -118,6 +118,15 @@ func run() error {
 
 	store := library.NewStore(database)
 	libraryService := library.NewService(store, tmdbClient, log)
+	state := db.NewState(database)
+
+	// An installation that already has a library has, by definition, already
+	// been set up -- somebody pointed it at a folder and watched it scan. The
+	// welcome screen exists for a first launch, not for everyone upgrading into
+	// the version that added it.
+	if err := markOnboardedIfEstablished(ctx, state, libraryService, log); err != nil {
+		return err
+	}
 
 	images, err := imagecache.New(filepath.Join(dataDir, "cache", "images"), tmdbClient)
 	if err != nil {
@@ -142,6 +151,7 @@ func run() error {
 			Library:   libraryService,
 			Images:    images,
 			FFmpeg:    transcoder,
+			State:     state,
 			Web:       webFS,
 			Version:   version,
 			KeySource: keySource,
@@ -195,6 +205,32 @@ func run() error {
 		return fmt.Errorf("shutting down: %w", err)
 	}
 	return nil
+}
+
+// markOnboardedIfEstablished suppresses the welcome screen for an installation
+// that clearly predates it: a database with films in it belongs to somebody who
+// has already been through setup, whatever version they were on at the time.
+func markOnboardedIfEstablished(ctx context.Context, state *db.State,
+	lib *library.Service, log *slog.Logger,
+) error {
+	done, err := state.Has(ctx, db.KeyOnboardingCompleted)
+	if err != nil {
+		return err
+	}
+	if done {
+		return nil
+	}
+
+	count, err := lib.Count(ctx)
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return nil // a genuine first launch; the welcome screen is for this
+	}
+
+	log.Info("existing library found, skipping the welcome screen", "films", count)
+	return state.Set(ctx, db.KeyOnboardingCompleted, "pre-existing")
 }
 
 // printBanner lists every way to reach the server. This goes to stdout rather

@@ -29,6 +29,28 @@ export const strings = {
 			"La page est chargée mais l'API ne répond pas. Le serveur a probablement été arrêté."
 	},
 
+	welcome: {
+		eyebrow: 'Premier lancement',
+		title: 'Theia est prêt',
+		body:
+			"Scannez ce code avec un téléphone ou une tablette du même réseau, ou tapez l'adresse à la main sur une TV. Il n'y a rien à configurer.",
+		enter: 'Voir la bibliothèque'
+	},
+
+	connect: {
+		heading: 'Connecter un appareil',
+		address: 'Adresse sur le réseau local',
+		copy: 'Copier',
+		copied: 'Copié',
+		mdns: 'Également joignable à',
+		mdnsCaveat:
+			"Ce nom ne fonctionne pas sur Android — utilisez l'adresse IP ci-dessus dans ce cas.",
+		otherAddresses: 'Autres adresses de cette machine',
+		otherAddressesHint:
+			"Si le code ne mène nulle part, cette machine a plusieurs cartes réseau et Theia a peut-être choisi la mauvaise. Essayez l'une de ces adresses.",
+		virtual: 'carte virtuelle'
+	},
+
 	player: {
 		play: 'Lire',
 		resume: 'Reprendre à',
@@ -90,7 +112,8 @@ export const strings = {
 		problems: 'Problèmes rencontrés',
 		metadata: 'Métadonnées',
 		source: 'Source',
-		milestone: 'Jalon M4 — lecture directe et réencapsulation à la volée. La reprise arrive au jalon suivant.'
+		milestone:
+			"Jalon M6 — connexion d'un appareil par QR code. La mise à jour automatique arrive au jalon suivant."
 	},
 
 	errors: {

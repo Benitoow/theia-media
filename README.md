@@ -6,11 +6,12 @@ paywall. Plug in the machine, open a browser, watch a film.
 Navidrome proved a media server could be one Go binary using 50 MB of RAM with
 an interface people actually enjoy. Theia does the same thing for video.
 
-> **Status: milestone M5.** The server starts, announces itself on the local
-> network, scans the directories you point it at, fetches posters, synopses and
-> credits from TMDB, presents the lot as a browsable library, plays films, and
-> remembers where you stopped. Subtitles and the onboarding QR code are still
-> to come. See
+> **Status: milestone M6.** The server starts, announces itself on the local
+> network, shows a QR code on first launch so another device can reach it,
+> scans the directories you point it at, fetches posters, synopses and credits
+> from TMDB, presents the lot as a browsable library, plays films, and
+> remembers where you stopped. Automatic updates and subtitles are still to
+> come. See
 > [docs/DECISIONS.md](docs/DECISIONS.md) for what is coming and what has been
 > deliberately left out, and [docs/design-system.md](docs/design-system.md)
 > before touching the interface.
@@ -57,11 +58,17 @@ directory, prints every address it can be reached at, and starts serving:
 
 Open any of those from any device on the same network.
 
-`theia.local` works on devices that resolve mDNS hostnames -- Windows, macOS,
-iOS and most Linux desktops. Plenty of smart-TV browsers do not, and some
-machines already run another mDNS responder that owns the port. When that
-happens Theia says so at startup and the numeric address still works; from M6
-on, a QR code shown at first launch removes the need to type either.
+On first launch Theia shows a QR code. Point a phone at it and you are in;
+there is nothing to configure first.
+
+The code encodes the numeric address, never `theia.local`. That name works on
+Windows, macOS, iOS and most Linux desktops, but **not on Android**, and plenty
+of smart-TV browsers do not resolve it either — so it is offered as a
+convenience underneath and never as the only way in. The same panel is on the
+settings page for the evening a second device turns up.
+
+If the code leads nowhere, the machine has several network adapters and Theia
+picked the wrong one; the screen lists the others.
 
 ### Options
 
