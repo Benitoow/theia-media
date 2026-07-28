@@ -335,13 +335,14 @@ internal/tmdb/       TMDB client and result matching
 internal/updater/    release checks and reversible self-update
 web/                 SvelteKit source
 web-dist/            generated static frontend embedded into the binary
-docs/                design system and decision record
+docs/                founding spec, design system and decision record
 assets/              licensed source imagery and brand assets
 ```
 
-Read [docs/design-system.md](docs/design-system.md) before changing the
-interface. Read [docs/DECISIONS.md](docs/DECISIONS.md) before reopening a scope
-argument the code has already settled.
+Read [docs/spec-fondatrice.md](docs/spec-fondatrice.md) first. Read
+[docs/design-system.md](docs/design-system.md) before changing the interface.
+Read [docs/DECISIONS.md](docs/DECISIONS.md) before reopening a scope argument
+the code has already settled.
 
 ## Licence and attribution
 

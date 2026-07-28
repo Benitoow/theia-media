@@ -1,8 +1,8 @@
 # Decisions
 
-The founding spec fixed the stack and the scope. This file records the calls
-made on top of it, in the order they came up, so that neither a future
-contributor nor a future AI session has to re-litigate them.
+The [founding spec](spec-fondatrice.md) fixed the stack and the scope. This file
+records the calls made on top of it, in the order they came up, so that neither
+a future contributor nor a future AI session has to re-litigate them.
 
 ---
 
@@ -488,6 +488,41 @@ anyway** and reported — configuring a drive before plugging it in is a normal
 thing to do, and refusing would be wrong. And a TMDB key is never sent to the
 browser, so an empty field means "leave it alone" rather than "clear it";
 clearing is possible, but only deliberately.
+
+## 27. A TV interface has to work with only a D-pad
+
+**Added after v1.0.0.** The founding scope required a television-friendly web
+interface, but did not define remote-control navigation. Relying on Tab or on a
+browser's optional spatial-navigation implementation made "TV-first" a visual
+claim rather than an interaction contract.
+
+The contract is now explicit:
+
+1. The first arrow press enters at a declared primary action when the screen
+   has one, otherwise at its first visible control.
+2. Up and down use geometry, preferring controls whose rectangles overlap on
+   the perpendicular axis before considering diagonal candidates.
+3. Left and right inside a film row move to the adjacent poster
+   deterministically and scroll it into view.
+4. Tab remains available. Arrow handling never steals input from text fields,
+   selects, editable content, video elements or the playback slider.
+5. An open player is a hard navigation boundary: focus moves into it, Tab wraps
+   inside it, directional navigation is scoped to it, and closing restores
+   focus to the button that opened it.
+
+The screen-level implementation belongs in `web/src/routes/+layout.svelte`
+because navigation has to cross the hero, global nav and separate rows.
+`Row.svelte` keeps the stricter horizontal rule because "next poster" is more
+predictable than a geometric guess. `Player.svelte` owns playback semantics:
+left and right seek by ten seconds only when focus is not on a discrete
+control, so one key press cannot both move focus and seek.
+
+This was verified against the embedded production build, not only the source:
+at 1280×720 a D-pad can enter the hero, reach the first row, move across and
+between rows, open the player, reach every control and close it without losing
+focus. A slider ArrowRight advances exactly ten seconds rather than firing both
+the slider and window handlers. The same build was checked at 1600×900 and
+390×844 with no horizontal page overflow.
 
 ## 8. Logistics
 
