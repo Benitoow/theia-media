@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
+    "postbuild": "node scripts/keep-webdist.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {
