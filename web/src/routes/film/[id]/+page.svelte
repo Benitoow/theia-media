@@ -29,53 +29,64 @@
 </svelte:head>
 
 {#if state === 'loading'}
-	<div class="flex min-h-screen items-center justify-center">
+	<div class="flex min-h-screen flex-col items-center justify-center gap-5">
+		<span class="brand-orbit" aria-hidden="true"></span>
 		<span class="label">{t.home.loading}</span>
 	</div>
 {:else if state === 'missing'}
-	<div class="flex min-h-screen flex-col items-center justify-center gap-6 px-6">
-		<p class="text-small text-parchment">{t.film.notFound}</p>
-		<a href="/" class="label hover:text-bone">{t.nav.back}</a>
+	<div class="page-shell flex min-h-screen items-center justify-center py-32">
+		<div class="chrome-panel max-w-xl p-8 text-center sm:p-12">
+			<h1 class="font-display text-display font-normal">{t.film.notFound}</h1>
+			<a href="/" class="tv-link label mt-7 justify-center">← {t.nav.back}</a>
+		</div>
 	</div>
 {:else}
 	<!-- Chrome again: the identity goes in full here, as on the hero. -->
 	<article>
-		<header class="relative isolate min-h-[52vh] overflow-hidden">
+		<header class="relative isolate min-h-[68svh] overflow-hidden">
 			{#if backdrop}
 				<img
 					src={backdrop}
 					alt=""
 					fetchpriority="high"
-					class="absolute inset-0 -z-20 h-full w-full object-cover opacity-40"
+					class="absolute inset-0 -z-20 h-full w-full scale-[1.015] object-cover opacity-[0.58]"
 				/>
 			{/if}
 			<div
 				class="absolute inset-0 -z-10"
-				style="background: linear-gradient(to top, var(--color-ink) 6%, rgba(11,10,9,0.6) 55%, rgba(11,10,9,0.2) 100%)"
+				style="background:
+					linear-gradient(to top, var(--color-ink) 2%, rgba(11,10,9,0.58) 48%, rgba(11,10,9,0.08) 100%),
+					linear-gradient(to right, rgba(11,10,9,0.7), transparent 70%)"
 			></div>
 		</header>
 
-		<div class="mx-auto -mt-40 max-w-5xl px-6 pb-16 lg:px-16">
-			<div class="flex flex-col gap-10 sm:flex-row sm:gap-12">
+		<div class="page-shell relative z-10 -mt-52 pb-20">
+			<div class="flex flex-col gap-10 md:flex-row md:items-end md:gap-14">
 				<!-- Poster keeps the grid's locked 2:3 and its plainness. -->
-				<div class="w-44 shrink-0 self-start overflow-hidden rounded-xs border border-line bg-surface">
+				<div
+					class="w-48 shrink-0 self-start overflow-hidden rounded-sm border border-line bg-surface
+					       shadow-[0_1.75rem_4rem_rgba(0,0,0,0.42)] lg:w-56 2xl:w-64"
+				>
 					<div class="aspect-[2/3]">
 						{#if poster}
-							<img src={poster} alt="" class="h-full w-full object-cover" />
+							<img src={poster} alt="" decoding="async" class="h-full w-full object-cover" />
 						{/if}
 					</div>
 				</div>
 
-				<div class="min-w-0 flex-1">
+				<div class="min-w-0 flex-1 pb-2">
 					{#if meta.genres?.length}
 						<span class="label">{meta.genres.join(' · ')}</span>
 					{/if}
 
-					<h1 class="mt-3 mb-5 font-display text-display font-normal text-balance">
+					<h1
+						class="mt-4 mb-7 max-w-[14ch] font-display text-[clamp(3.25rem,6.8vw,7.5rem)]
+						       leading-[0.9] font-normal tracking-[-0.04em] text-balance"
+					>
 						{displayTitle(movie)}
 					</h1>
 
-					<div class="mb-8 flex flex-wrap items-center gap-x-5 gap-y-2">
+					<div class="mb-8 flex flex-wrap items-center gap-x-6 gap-y-3">
 						{#if displayYear(movie)}<span class="label">{displayYear(movie)}</span>{/if}
 						{#if formatRuntime(meta.runtime_minutes)}
 							<span class="label">{formatRuntime(meta.runtime_minutes)}</span>
@@ -91,11 +102,11 @@
 					<button
 						type="button"
 						onclick={() => (playing = true)}
-						class="ease-cine mb-10 cursor-pointer border border-accent px-7 py-3.5
-						       text-label text-accent uppercase transition-colors duration-160
-						       hover:bg-accent hover:text-ink"
+						class="tv-action tv-action--primary mb-12 cursor-pointer"
+						data-remote-default
 					>
-						{t.player.play}
+						<span aria-hidden="true">▶</span>
+						<span>{t.player.play}</span>
 					</button>
 
 					{#if meta.status === 'not_found'}
@@ -104,7 +115,7 @@
 						</p>
 					{/if}
 
-					<p class="mb-10 max-w-prose text-body text-parchment">
+					<p class="tv-copy mb-12 max-w-[46rem]">
 						{meta.overview || t.film.noOverview}
 					</p>
 
@@ -114,7 +125,7 @@
 							<ul class="grid gap-x-8 gap-y-3 sm:grid-cols-2">
 								{#each meta.cast as person (person.name + person.character)}
 									<li class="flex flex-col">
-										<span class="text-small">{person.name}</span>
+										<span class="text-base">{person.name}</span>
 										{#if person.character}
 											<span class="label mt-0.5">{person.character}</span>
 										{/if}
@@ -135,7 +146,7 @@
 						</dl>
 					</section>
 
-					<a href="/" class="label ease-cine mt-10 inline-block transition-colors duration-160 hover:text-bone">
+					<a href="/" class="tv-link label mt-10">
 						← {t.nav.back}
 					</a>
 				</div>

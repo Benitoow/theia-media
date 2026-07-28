@@ -141,8 +141,13 @@
 	<title>{t.settings.heading} — {t.appName}</title>
 </svelte:head>
 
-<main class="mx-auto max-w-3xl px-6 pt-32 pb-16 lg:px-16">
-	<h1 class="mb-16 font-display text-display font-normal">{t.settings.heading}</h1>
+<main class="settings-page page-shell max-w-6xl pt-36 pb-20">
+	<h1
+		class="mb-14 font-display text-[clamp(3.5rem,8vw,7rem)] leading-[0.92] font-normal
+		       tracking-[-0.04em]"
+	>
+		{t.settings.heading}
+	</h1>
 
 	{#if settings && stats}
 		<!-- The welcome screen shows this once. Keeping it reachable afterwards
@@ -179,9 +184,7 @@
 					type="button"
 					onclick={scan}
 					disabled={busy}
-					class="ease-cine cursor-pointer border border-line px-6 py-3 text-label uppercase
-					       transition-colors duration-160 hover:border-muted
-					       disabled:cursor-not-allowed disabled:text-faint disabled:hover:border-line"
+					class="tv-action cursor-pointer disabled:cursor-not-allowed disabled:text-faint"
 				>
 					{busy ? t.settings.scanning : t.settings.scan}
 				</button>
@@ -282,9 +285,8 @@
 							type="button"
 							onclick={saveSettings}
 							disabled={saving}
-							class="ease-cine cursor-pointer border border-accent px-6 py-3 text-label
-							       uppercase text-accent transition-colors duration-160
-							       hover:bg-accent hover:text-ink disabled:cursor-not-allowed disabled:text-faint"
+							class="tv-action tv-action--primary cursor-pointer disabled:cursor-not-allowed
+							       disabled:text-faint"
 						>
 							{saving ? t.settings.saving : t.settings.save}
 						</button>

@@ -1,266 +1,357 @@
+<p align="center">
+  <img src="assets/theia-logo.png" width="720" alt="Theia">
+</p>
+
 # Theia
 
-A personal media server in a single binary. No configuration, no account, no
-paywall. Plug in the machine, open a browser, watch a film.
+Your films. One binary. Your network.
 
-Navidrome proved a media server could be one Go binary using 50 MB of RAM with
-an interface people actually enjoy. Theia does the same thing for video.
+Theia turns folders of movie files into a browser-based library for the TV,
+phone and computer already in your home. There is no account, subscription,
+cloud library, Docker ceremony or separate frontend to install. Run the binary,
+choose the folders, watch.
 
-Point it at a folder of films and it does the rest: finds them, fetches posters
-and synopses, and plays them in a browser on any device in the house.
+The v1 scope is complete and published as
+[v1.0.0](https://github.com/Benitoow/theia-media/releases/tag/v1.0.0).
+The interface is in French.
 
-TV series, subtitles and remote access are deliberately not in this version —
-see [docs/DECISIONS.md](docs/DECISIONS.md) for what was left out and why.
+> [!WARNING]
+> **Theia has no authentication. Never expose its port directly to the
+> internet.** It listens on the local network, and anyone who can reach it can
+> browse and stream the library, change settings, start a scan and install an
+> available update. Use it on a trusted home network. For access away from
+> home, use a VPN; do not forward port `8383` on the router.
 
-This product uses the TMDB API but is not endorsed or certified by TMDB.
-Theia is free software under the [GPL-3.0](LICENSE).
+## See it
 
----
+![Theia movie library designed for a television](docs/screenshots/library.webp)
 
-## Security
+| First connection | Settings |
+| --- | --- |
+| ![Theia onboarding screen with a LAN QR code](docs/screenshots/onboarding.webp) | ![Theia settings screen](docs/screenshots/settings.webp) |
 
-**Theia performs no authentication whatsoever. Never expose it directly to the
-internet.**
+## What v1 does
 
-This is a deliberate v1 scope decision, not an oversight. Theia assumes a single
-user on a trusted home network: anyone who can reach the port can browse the
-library, play everything in it, and change the settings. There is no login
-because there are no accounts.
+- Scans one or more folders at startup or on demand and keeps a local SQLite
+  catalogue.
+- Extracts a useful title and year from ordinary release filenames. A file
+  still appears when parsing or metadata matching fails.
+- Fetches movie titles, synopses, dates, posters, backdrops, runtime, rating,
+  director, genres and cast from TMDB. Images are cached locally.
+- Builds a television-first home screen with a hero, recently added films,
+  genre rows and a continue-watching row.
+- Shows a detail page for every film, including the source filename and size.
+- Direct-plays browser-ready files with range requests.
+- Remuxes other compatible containers on demand. Video is copied; incompatible
+  audio is converted to AAC.
+- Saves playback position, resumes a film and lets remuxed streams seek by
+  restarting at the requested timestamp.
+- Shows a numeric LAN address and QR code on first launch. `theia.local` is a
+  convenience, never the only route.
+- Checks GitHub Releases for updates and installs one only when asked. An update
+  is refused while something is playing.
 
-If you want to reach your library from outside your home, put it behind a VPN
-such as Tailscale or WireGuard. Do not forward the port on your router.
+All configuration, catalogue data, cached artwork and the optional FFmpeg
+binary stay on the machine running Theia. The browser talks to that machine,
+not to TMDB.
 
----
+## What v1 deliberately does not do
 
-## Running it
+| Not included | Consequence |
+| --- | --- |
+| TV series | The catalogue model is films only. There are no seasons or episodes. |
+| Subtitles | Neither external nor embedded subtitle tracks are exposed in the player. |
+| Video transcoding | MPEG-2, VC-1 and other video codecs that need re-encoding are refused instead of pinning the CPU for hours. |
+| Accounts, profiles or permissions | There is no login and no per-user history. See the warning above; it is not decorative. |
+| Built-in remote access or HTTPS | Theia serves plain HTTP on the LAN. It is not a relay, reverse proxy or VPN. |
+| PWA or native TV/mobile apps | The shipped client is a responsive web interface. |
+| Background-service installer | The binary runs in the foreground. Starting it at boot is left to the operating system. |
+| Search or manual TMDB matching | v1 is browsed through its home rows and detail pages. Renaming a badly matched file makes the next scan look it up again. |
 
-Download the binary for your platform from the
-[releases page](https://github.com/Benitoow/theia-media/releases) and run it.
-There is no installer and nothing to configure first.
+The reasoning behind these boundaries lives in
+[the decision record](docs/DECISIONS.md). They are scope decisions, not
+half-finished menu items.
+
+## Install
+
+Download the binary for your operating system and CPU from
+[GitHub Releases](https://github.com/Benitoow/theia-media/releases/latest).
+Release assets are raw executables: there is no installer and no archive to
+unpack.
+
+Choose the right architecture:
+
+| Machine | Release suffix |
+| --- | --- |
+| Intel or AMD 64-bit | `amd64` |
+| Apple silicon, Windows on ARM or 64-bit ARM Linux | `arm64` |
+
+Theia runs in the foreground. Keep its terminal open while using it.
+
+### Windows
+
+Download `theia-windows-amd64.exe` or `theia-windows-arm64.exe`, then run it
+from PowerShell:
+
+```powershell
+cd $HOME\Downloads
+.\theia-windows-amd64.exe
+```
+
+Use the `arm64` filename on Windows on ARM. If Windows Firewall asks, allow
+access on **private networks** so televisions and phones on the same LAN can
+connect. The release workflow does not code-sign the executable, so Windows
+may show a first-run reputation warning.
+
+### macOS
+
+Use `theia-darwin-arm64` on Apple silicon and `theia-darwin-amd64` on an Intel
+Mac:
 
 ```bash
+cd ~/Downloads
+chmod +x theia-darwin-arm64
+./theia-darwin-arm64
+```
+
+The release workflow does not sign or notarize the binary. If macOS blocks the
+first launch, attempt it once, then approve it under **System Settings →
+Privacy & Security → Open Anyway**. That exception should name the binary you
+just downloaded; if it does not, stop.
+
+### Linux
+
+Use `theia-linux-amd64` on `x86_64` and `theia-linux-arm64` on `aarch64`:
+
+```bash
+cd ~/Downloads
+chmod +x theia-linux-amd64
+./theia-linux-amd64
+```
+
+No system packages are required for direct play. When a film needs remuxing,
+Theia downloads its pinned FFmpeg build itself and verifies the SHA-256 digest
+before making it executable.
+
+## First launch
+
+1. Open [http://localhost:8383](http://localhost:8383) on the machine running
+   Theia.
+2. Scan the QR code to open it on another device, or use the numeric network
+   address printed in the terminal.
+3. Open **Réglages**, add one or more movie folders, save, then start a scan.
+
+The QR code contains an IP address. That is intentional: `theia.local` does not
+resolve on Android and is unreliable in some smart-TV browsers. If the first
+address is wrong because Docker, a VPN or a virtual machine added extra network
+adapters, the welcome and settings screens list the other candidates.
+
+## Configuration
+
+There are three settings in the interface:
+
+| Setting | Purpose |
+| --- | --- |
+| Watched folders | Directories Theia scans for movie files |
+| Port | HTTP port, `8383` by default; takes effect after restart |
+| Personal TMDB key | Optional override for the key injected into official release builds |
+
+`hostname` is a fourth field in `config.json`. It controls the mDNS name
+(`<hostname>.local`) and is intentionally file-only.
+
+The data directory is created on first launch:
+
+| OS | Default data directory |
+| --- | --- |
+| Windows | `%APPDATA%\Theia` |
+| macOS | `$HOME/Library/Application Support/Theia` |
+| Linux | `${XDG_CONFIG_HOME:-$HOME/.config}/theia` |
+
+It contains `config.json`, `theia.db`, the image cache and, after the first
+remux, the verified FFmpeg binary. Set `THEIA_DATA_DIR` or pass `-data-dir` for
+a portable installation.
+
+### Command-line options
+
+| Flag | Effective default | Purpose |
+| --- | --- | --- |
+| `-port` | `8383` | Override the configured TCP port for this run |
+| `-data-dir` | OS path above | Store configuration, database and cache elsewhere |
+| `-verbose` | off | Log every HTTP request |
+| `-version` | — | Print the version and exit |
+
+## Playback contract
+
+Theia does not pretend every codec is cheap to support.
+
+| Input | Delivery |
+| --- | --- |
+| Browser-ready MP4, M4V, WebM, OGV or OGG | Direct play, byte for byte, with range requests |
+| H.264, VP8, VP9 or AV1 in another container, with browser-ready audio | Remux to fragmented MP4; video and audio copied |
+| Same video with AC3, DTS, TrueHD or another unsupported audio codec | Remux; video copied, audio converted to stereo AAC |
+| HEVC / H.265 | Remux attempted; normally works in Safari, browser support elsewhere varies |
+| MPEG-2, VC-1 or another unsupported video codec | Refused; v1 does not transcode video |
+
+FFmpeg is fetched only when a remux is first needed. The source is the pinned
+`eugeneware/ffmpeg-static` release `b6.1.1` on GitHub Releases. Each supported
+OS/architecture pair has a hard-coded SHA-256 digest, and the file is not made
+executable until it matches.
+
+## Architecture and data flow
+
+```mermaid
+flowchart LR
+    Movies["Movie folders"]
+    Browser["Browser<br/>TV · phone · computer"]
+    Theia["Theia process<br/>Go server + embedded SvelteKit UI"]
+    DB[("Local SQLite database")]
+    Cache["Local image cache"]
+    FFmpeg["Verified FFmpeg<br/>only when remuxing"]
+    TMDB["TMDB API"]
+    GitHub["GitHub Releases"]
+
+    Movies -->|"scan filenames"| Theia
+    Theia <--> DB
+    Theia -->|"metadata and artwork"| TMDB
+    TMDB --> Theia
+    Theia <--> Cache
+    Movies -->|"direct bytes"| Theia
+    Movies -->|"compatible stream"| FFmpeg
+    FFmpeg -->|"fragmented MP4"| Theia
+    Browser <-->|"embedded UI · JSON · video over HTTP"| Theia
+    Theia <-->|"update checks and verified downloads"| GitHub
+```
+
+The compiled frontend lives inside the Go executable. A normal request serves
+the SvelteKit application; `/api/*` handles the catalogue, settings, playback,
+onboarding and updater. SQLite stores metadata and progress. Movie files are
+read from their original folders and are never imported into a second library.
+
+The only outbound internet destinations in the application are:
+
+- TMDB API and image hosts for metadata and artwork.
+- GitHub Releases for Theia updates and the pinned FFmpeg download.
+
+There is no telemetry, analytics endpoint, cloud account or frontend CDN. Fonts
+and the frontend ship inside the binary.
+
+## Technical specification
+
+| Layer | v1 implementation |
+| --- | --- |
+| Server | Go `1.26.5`, standard `net/http`, no CGO |
+| Database | SQLite through the pure-Go `modernc.org/sqlite` driver |
+| Web UI | Svelte 5, SvelteKit 2, Vite 6 and Tailwind CSS 4 |
+| Packaging | Static web build embedded with `go:embed` |
+| Discovery | Numeric LAN addresses, QR code and best-effort mDNS |
+| Metadata | TMDB API, local 90-day metadata cache, lazy image cache |
+| Media | Direct file serving or on-demand FFmpeg remux |
+| Distribution | Windows, macOS and Linux; `amd64` and `arm64` |
+| Updates | GitHub Releases, digest verification, atomic executable swap |
+| Interface language | French |
+
+## Build from source
+
+Use Go `1.26.5` and Node.js `22`, the versions used by the module and CI.
+
+### macOS or Linux
+
+```bash
+git clone https://github.com/Benitoow/theia-media.git
+cd theia-media
+make
 ./theia
 ```
 
-On Windows, double-clicking `theia-windows-amd64.exe` is enough. On macOS and
-Linux, mark it executable first:
+`make` runs `npm ci`, creates the static frontend in `web-dist/`, then builds a
+CGO-free binary with that frontend embedded.
 
-```bash
-chmod +x theia-linux-amd64 && ./theia-linux-amd64
-```
-
-It prints every address it answers on:
-
-```
-  Theia v1.0.0
-
-  Local     http://localhost:8383
-  Network   http://192.168.1.19:8383
-  mDNS      http://theia.local:8383
-
-  Data      /home/you/.config/theia
-```
-
-### First launch
-
-Open the local address and Theia shows a QR code. Point a phone at it and you
-are in — that is the whole setup on a second device.
-
-The code encodes the numeric address rather than `theia.local`, because **that
-name does not resolve on Android** and plenty of TV browsers ignore it too. It
-is offered underneath as a convenience, never as the only way in.
-
-Then tell Theia where your films are, in **Réglages**, and it scans them.
-
-On first launch Theia shows a QR code. Point a phone at it and you are in;
-there is nothing to configure first.
-
-The code encodes the numeric address, never `theia.local`. That name works on
-Windows, macOS, iOS and most Linux desktops, but **not on Android**, and plenty
-of smart-TV browsers do not resolve it either — so it is offered as a
-convenience underneath and never as the only way in. The same panel is on the
-settings page for the evening a second device turns up.
-
-If the code leads nowhere, the machine has several network adapters and Theia
-picked the wrong one; the screen lists the others.
-
-### Options
-
-| Flag | Default | Meaning |
-|---|---|---|
-| `-port` | `8383` | TCP port to listen on |
-| `-data-dir` | OS-dependent | Where configuration, database and cache live |
-| `-verbose` | off | Log every HTTP request |
-| `-version` | | Print the version and exit |
-
-`THEIA_DATA_DIR` overrides where the configuration, database and cache live,
-which is what you want for a portable install on an external drive.
-
-### Settings
-
-There are three, all on the **Réglages** page, and deliberately nothing else:
-
-| Setting | What it does |
-|---|---|
-| Watched folders | Where your films are. Add as many as you like |
-| Port | Which port to listen on. Takes effect on the next start |
-| TMDB key | Optional. Yours instead of the one Theia ships with |
-
-They live in `config.json` in the data directory if you would rather edit a
-file. Theia scans the folders at startup and whenever you ask it to. Files it
-cannot identify still appear, listed under whatever the filename said — a badly
-named file is better shown than silently dropped, and the same goes for one TMDB
-has never heard of.
-
-### Metadata
-
-Official releases ship with a TMDB key, so metadata works out of the box. If you
-would rather spend your own API quota, put your key in `tmdb_api_key` in
-`config.json` and it takes precedence. With no key at all Theia still scans and
-lists your library, it simply has no posters, and says so in the interface
-rather than leaving you to wonder.
-
-Posters and synopses are cached locally and refreshed every few months on their
-own. Renaming a file re-runs its lookup immediately, which is how you correct a
-wrong match.
-
-### Playback
-
-Files a browser can already read — H.264 and AAC in an MP4, typically — are sent
-untouched, so seeking is instant and nothing is spawned.
-
-Anything else is rewrapped on the fly: the picture is copied, and the sound is
-re-encoded to AAC when it is AC3, DTS or TrueHD, which is what stops an ordinary
-MKV from playing with a picture and no sound. Re-encoding the *picture* is out
-of scope for v1, so a file whose video codec no browser reads is reported as
-such rather than quietly consuming a CPU for two hours.
-
-Rewrapping needs ffmpeg, which Theia downloads the first time something actually
-requires it — never at launch, and never at all for a library it can play
-directly. It comes from a pinned GitHub release, its SHA-256 is checked before
-it is ever executed, and it lives in the data directory rather than inside the
-Theia binary.
-
-### Updates
-
-Theia checks GitHub for a newer release at startup and every few hours, and says
-so in the settings. **Installing is something you ask for**, not something that
-happens while you are watching something.
-
-A download is only installed once its SHA-256 matches the digest GitHub
-publishes *and* the downloaded binary has been run to confirm it works. If
-either check fails, the update is abandoned and the version you had keeps
-running, untouched. The previous binary is kept beside the new one until the
-next start, so a bad release can be undone by hand.
-
-An update will refuse to install while anything is playing, and say so.
-
-### Resume
-
-Stopping mid-film puts it in the **Continuer à regarder** row, newest first,
-with a progress bar on its poster. Reopening offers to resume where you left
-off, or to start again from the beginning.
-
-A film watched to the end leaves the row and stays out. Starting it again brings
-it back. Opening one for a few seconds and closing it is not remembered at all.
-
----
-
-## Building from source
-
-You need Go 1.23+ and Node 20+.
-
-```bash
-make
-```
-
-That builds the frontend into `web-dist/`, embeds it into the binary and leaves
-`theia` in the repository root. On Windows without `make`:
+### Windows
 
 ```powershell
+git clone https://github.com/Benitoow/theia-media.git
+cd theia-media
 .\build.ps1
+.\theia.exe
 ```
 
-### Working on the frontend
+Pass `-Version 1.0.0` to `build.ps1` when a local build needs a real version
+string. Builds left at `dev` deliberately do not self-update.
 
-Run the Go server and the Vite dev server side by side. Vite proxies `/api` to
-the Go process, so you get hot reload without rebuilding Go:
+### Frontend development
+
+Install the web dependencies once, then run the Go API and Vite in separate
+terminals:
 
 ```bash
-go run ./cmd/theia     # terminal 1
-cd web && npm run dev  # terminal 2
+# terminal 1, repository root
+go run ./cmd/theia
+
+# terminal 2
+cd web
+npm ci
+npm run dev
 ```
 
-A `config.local.json` in the repository root overrides the real configuration at
-runtime, which is where your own TMDB key belongs:
+Vite proxies `/api` to `http://localhost:8383`.
+
+For a development TMDB key, create `config.local.json` in the repository root:
 
 ```json
-{ "tmdb_api_key": "…" }
+{
+  "tmdb_api_key": "your-key"
+}
 ```
 
-It is git-ignored, it is never written back into the real `config.json`, and
-logging the configuration prints the key redacted. Do not commit it, and do not
-paste it anywhere this repository can see.
+That file is ignored by Git, never copied into the saved user configuration and
+redacted in logs. Do not commit it. Release keys are injected by CI at build
+time; they do not live in this repository.
 
-### Layout
+### Checks
 
+```bash
+go test ./...
+go vet ./...
+node scripts/contrast.mjs
 ```
-cmd/theia/           entry point and startup orchestration
-internal/api/        HTTP routes, JSON API, static file serving
-internal/config/     configuration file and data directory
-internal/db/         SQLite: opening, migrations
-internal/discovery/  mDNS announcement, LAN address selection
-internal/library/    the domain model, filename parsing, scan reconciliation
-internal/scanner/    walking directories, finding video files
+
+CI also builds the frontend and cross-compiles all six release targets with
+`CGO_ENABLED=0`.
+
+## Repository map
+
+```text
+cmd/theia/           startup and process orchestration
+internal/api/        HTTP routes, static UI and playback endpoints
+internal/config/     config file and data-directory rules
+internal/db/         SQLite opening, state and migrations
+internal/discovery/  LAN address ranking, mDNS and QR generation
+internal/ffmpeg/     pinned download, probing and remux process
+internal/imagecache/ lazy TMDB artwork cache
+internal/library/    catalogue, scans, metadata and playback progress
+internal/scanner/    filesystem walk and media-file filtering
+internal/stream/     direct-play/remux decisions
+internal/tmdb/       TMDB client and result matching
+internal/updater/    release checks and reversible self-update
 web/                 SvelteKit source
-web-dist/            compiled frontend, embedded via go:embed (generated)
-assets/              brand assets, not shipped in the binary
+web-dist/            generated static frontend embedded into the binary
 docs/                design system and decision record
+assets/              licensed source imagery and brand assets
 ```
 
-`embed.go` at the repository root is what pulls `web-dist/` into the binary;
-`//go:embed` cannot reach outside its own directory, which is why it lives there
-rather than next to the code that uses it.
+Read [docs/design-system.md](docs/design-system.md) before changing the
+interface. Read [docs/DECISIONS.md](docs/DECISIONS.md) before reopening a scope
+argument the code has already settled.
 
----
+## Licence and attribution
 
-## Non-negotiables
+Theia is free software under the
+[GNU General Public License v3.0](LICENSE).
 
-These are enforced in review and in CI:
+Metadata and artwork come from [TMDB](https://www.themoviedb.org/):
 
-- **No CGO, ever.** It breaks cross-compilation, which is the whole delivery
-  model. The SQLite driver is `modernc.org/sqlite` for this reason.
-- **No runtime dependency beyond ffmpeg**, which Theia downloads itself on first
-  use. Nothing is ever installed by hand.
-- **Docker is never required.** It may be offered as one distribution option
-  among others, never as the way in.
-- **No telemetry, no cloud account.** The only external services contacted are
-  TMDB for metadata and GitHub for updates.
+> This product uses the TMDB API but is not endorsed or certified by TMDB.
 
-## Language
-
-Code, comments and internal error messages are English. The user interface is
-French for v1, kept in `web/src/lib/strings.js` so that adding another language
-is a matter of adding a file rather than editing markup.
-
-Anything the interface shows a user is a code the server sends and the interface
-words — never a message the server wrote. That rule exists because an earlier
-version put Go error strings straight on screen, and people saw
-`GetFileAttributesEx D:\Films: ...` where they should have read "that drive is
-not plugged in".
-
----
-
-## Licence
-
-GPL-3.0. See [LICENSE](LICENSE).
-
-Theia is free software and will stay that way: the licence is what makes a
-closed, paid fork impossible, which is the entire point of building an
-alternative to Plex.
-
-Metadata comes from [TMDB](https://www.themoviedb.org/). **This product uses the
-TMDB API but is not endorsed or certified by TMDB.**
-
-`ffmpeg`, downloaded on demand rather than bundled, is licensed separately by
-its own authors and is never modified or redistributed by this project.
+FFmpeg is downloaded on demand from its upstream GitHub release and remains
+under its own licence. Inter and Playfair Display are self-hosted under the SIL
+Open Font License 1.1.

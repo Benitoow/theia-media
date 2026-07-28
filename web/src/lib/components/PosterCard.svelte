@@ -30,16 +30,23 @@
 -->
 <a
 	href="/film/{movie.id}"
-	class="group block w-34 shrink-0 focus:outline-none sm:w-38"
+	class="poster-card group"
 	title={title}
+	data-poster-card
 >
 	<div
-		class="ease-cine relative aspect-[2/3] overflow-hidden rounded-xs border border-transparent
-		       bg-surface transition-colors duration-320
+		class="poster-frame relative aspect-[2/3] overflow-hidden rounded-sm border border-transparent
+		       bg-surface
 		       group-hover:border-accent group-focus-visible:border-accent"
 	>
 		{#if poster}
-			<img src={poster} alt="" loading="lazy" class="h-full w-full object-cover" />
+			<img
+				src={poster}
+				alt=""
+				loading="lazy"
+				decoding="async"
+				class="h-full w-full object-cover"
+			/>
 		{:else}
 			<!-- No poster is a normal state: TMDB did not recognise the file, or
 			     has no artwork. The title still has to be readable. -->
@@ -59,6 +66,6 @@
 		{/if}
 	</div>
 
-	<p class="mt-2 truncate text-small">{title}</p>
-	<p class="label mt-0.5">{year ?? '—'}</p>
+	<p class="poster-title">{title}</p>
+	<p class="poster-year label">{year ?? '—'}</p>
 </a>

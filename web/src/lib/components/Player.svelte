@@ -1,5 +1,5 @@
 <script>
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { getJSON, formatTime, displayTitle } from '$lib/api.js';
 	import { strings as t } from '$lib/strings.js';
 
@@ -13,9 +13,9 @@
 	let triedRemux = $state(false);
 
 	/** @type {HTMLVideoElement} */
-	let video;
+	let video = $state();
 	/** @type {HTMLElement} */
-	let shell;
+	let shell = $state();
 
 	// A remuxed stream is a pipe: it always starts at zero as far as the video
 	// element is concerned, whatever timestamp ffmpeg actually began at. This
@@ -33,8 +33,14 @@
 
 	let saveTimer;
 	let lastSaved = 0;
+	let returnFocus;
+	let previousBodyOverflow;
 
 	onMount(async () => {
+		returnFocus = document.activeElement;
+		previousBodyOverflow = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+
 		try {
 			info = await getJSON(`/api/stream/${movie.id}/info`);
 		} catch {
@@ -59,6 +65,12 @@
 	onDestroy(() => {
 		clearInterval(saveTimer);
 		save(true);
+		document.body.style.overflow = previousBodyOverflow;
+		queueMicrotask(() => {
+			if (returnFocus instanceof HTMLElement && returnFocus.isConnected) {
+				returnFocus.focus();
+			}
+		});
 	});
 
 	function start(from) {
@@ -175,13 +187,56 @@
 	}
 
 	function onKeydown(event) {
-		if (event.key === 'Escape' && !document.fullscreenElement) onclose();
-		if (event.key === ' ' || event.key === 'k') {
+		if (event.key === 'Escape' && !document.fullscreenElement) {
+			event.preventDefault();
+			onclose();
+			return;
+		}
+		if (event.defaultPrevented || phase !== 'playing') return;
+
+		const active = document.activeElement;
+		const isDiscreteControl =
+			active instanceof HTMLButtonElement ||
+			active instanceof HTMLAnchorElement ||
+			active instanceof HTMLInputElement ||
+			active instanceof HTMLSelectElement ||
+			active instanceof HTMLTextAreaElement;
+
+		if ((event.key === ' ' || event.key === 'k') && !isDiscreteControl) {
 			event.preventDefault();
 			togglePlay();
 		}
-		if (event.key === 'ArrowRight') seekTo(position + 10);
-		if (event.key === 'ArrowLeft') seekTo(position - 10);
+		if (isDiscreteControl) return;
+		if (event.key === 'ArrowRight') {
+			event.preventDefault();
+			seekTo(position + 10);
+		}
+		if (event.key === 'ArrowLeft') {
+			event.preventDefault();
+			seekTo(position - 10);
+		}
+	}
+
+	function trapDialogFocus(event) {
+		if (event.key !== 'Tab' || !shell) return;
+
+		const focusable = [...shell.querySelectorAll(
+			'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), ' +
+			'textarea:not(:disabled), summary, video[controls], [role="slider"], ' +
+			'[tabindex]:not([tabindex="-1"])'
+		)].filter((element) => element instanceof HTMLElement && element.tabIndex >= 0);
+		if (!focusable.length) return;
+
+		const first = focusable[0];
+		const last = focusable[focusable.length - 1];
+		const active = document.activeElement;
+		if (event.shiftKey && (active === first || !shell.contains(active))) {
+			event.preventDefault();
+			last.focus();
+		} else if (!event.shiftKey && (active === last || !shell.contains(active))) {
+			event.preventDefault();
+			first.focus();
+		}
 	}
 
 	$effect(() => {
@@ -189,45 +244,65 @@
 		saveTimer = setInterval(() => save(), 5000);
 		return () => clearInterval(saveTimer);
 	});
+
+	$effect(() => {
+		const currentPhase = phase;
+		if (!shell) return;
+
+		tick().then(() => {
+			if (!shell?.isConnected || phase !== currentPhase) return;
+			const preferred =
+				shell.querySelector('[data-remote-default]') ??
+				shell.querySelector('button:not(:disabled), [href], [role="slider"]');
+			if (preferred instanceof HTMLElement) preferred.focus();
+		});
+	});
 </script>
 
 <svelte:window onkeydown={onKeydown} />
 
 <div
 	bind:this={shell}
-	class="fixed inset-0 z-50 flex flex-col bg-ink"
+	class="fixed inset-0 z-50 flex flex-col overflow-hidden bg-ink"
 	role="dialog"
 	aria-modal="true"
 	aria-label={displayTitle(movie)}
+	tabindex="-1"
+	onkeydown={trapDialogFocus}
 >
-	<div class="flex items-center justify-between gap-6 px-6 py-4 lg:px-10">
-		<span class="label truncate">{displayTitle(movie)}</span>
+	<div
+		class="flex min-h-20 items-center justify-between gap-6 border-b border-line
+		       px-[var(--page-gutter)] py-3"
+	>
+		<span class="section-title truncate">{displayTitle(movie)}</span>
 		<button
 			type="button"
 			onclick={() => { save(true); onclose(); }}
-			class="ease-cine cursor-pointer text-label uppercase tracking-[0.18em] text-muted
-			       transition-colors duration-160 hover:text-bone"
+			class="tv-link label cursor-pointer border-0 bg-transparent px-4"
 		>
 			{t.player.close}
 		</button>
 	</div>
 
-	<div class="flex flex-1 items-center justify-center px-6 pb-8 lg:px-10">
+	<div
+		class="flex min-h-0 flex-1 items-center justify-center overflow-y-auto
+		       px-[var(--page-gutter)] py-6"
+	>
 		{#if phase === 'failed'}
-			<p class="max-w-prose border-l border-error py-1 pl-5 text-small text-parchment">
+			<p class="tv-copy max-w-prose border-l border-error py-2 pl-6">
 				{failure}
 			</p>
 		{:else if phase === 'resume'}
 			<!-- Resuming has to be the obvious choice without hiding the other one. -->
 			<div class="text-center">
-				<p class="label mb-6">{t.player.continueWatching}</p>
-				<div class="flex flex-wrap items-center justify-center gap-4">
+				<p class="label mb-7">{t.player.continueWatching}</p>
+				<h2 class="mb-10 font-display text-display font-normal">{displayTitle(movie)}</h2>
+				<div class="flex flex-wrap items-center justify-center gap-5">
 					<button
 						type="button"
 						onclick={() => start(offset)}
-						class="ease-cine cursor-pointer border border-accent px-7 py-3.5 text-label
-						       uppercase text-accent transition-colors duration-160
-						       hover:bg-accent hover:text-ink"
+						class="tv-action tv-action--primary cursor-pointer"
+						data-remote-default
 					>
 						{t.player.resume} {formatTime(offset)}
 					</button>
@@ -237,8 +312,7 @@
 							await fetch(`/api/library/movies/${movie.id}/progress`, { method: 'DELETE' });
 							start(0);
 						}}
-						class="ease-cine cursor-pointer border border-line px-7 py-3.5 text-label
-						       uppercase transition-colors duration-160 hover:border-muted"
+						class="tv-action cursor-pointer"
 					>
 						{t.player.fromStart}
 					</button>
@@ -247,7 +321,7 @@
 		{:else}
 			<div class="w-full max-w-6xl">
 				{#if phase === 'preparing'}
-					<p class="label mb-4">{t.player.preparing}</p>
+					<p class="tv-copy mb-5">{t.player.preparing}</p>
 				{/if}
 
 				{#if source}
@@ -264,7 +338,8 @@
 						onpause={() => { paused = true; save(true); }}
 						onended={() => save(true, duration || position)}
 						onvolumechange={() => (muted = video.muted)}
-						class="max-h-[76vh] w-full bg-black"
+						class="max-h-[min(70vh,calc(100svh-16rem))] w-full rounded-sm bg-black
+						       shadow-[0_2rem_6rem_rgba(0,0,0,0.4)]"
 					></video>
 				{/if}
 
@@ -277,7 +352,7 @@
 				-->
 				<div class="mt-4">
 					<div
-						class="group -my-2 cursor-pointer py-2"
+						class="group -my-3 cursor-pointer rounded-sm py-3"
 						role="slider"
 						tabindex="0"
 						aria-label="Position"
@@ -286,11 +361,17 @@
 						aria-valuenow={Math.round(position)}
 						onclick={onScrub}
 						onkeydown={(e) => {
-							if (e.key === 'ArrowRight') seekTo(position + 10);
-							if (e.key === 'ArrowLeft') seekTo(position - 10);
+							if (e.key === 'ArrowRight') {
+								e.preventDefault();
+								seekTo(position + 10);
+							}
+							if (e.key === 'ArrowLeft') {
+								e.preventDefault();
+								seekTo(position - 10);
+							}
 						}}
 					>
-						<div class="h-0.5 w-full bg-raised">
+						<div class="h-1 w-full bg-raised">
 							<div
 								class="ease-cine h-full bg-accent transition-[width] duration-160"
 								style="width: {progressPercent}%"
@@ -298,17 +379,17 @@
 						</div>
 					</div>
 
-					<div class="mt-3 flex items-center gap-5">
+					<div class="mt-4 flex flex-wrap items-center gap-3 sm:gap-5">
 						<button
 							type="button"
 							onclick={togglePlay}
-							class="ease-cine cursor-pointer text-label uppercase tracking-[0.18em]
-							       transition-colors duration-160 hover:text-accent"
+							class="tv-link label cursor-pointer border-0 bg-transparent px-3"
+							data-remote-default
 						>
 							{paused ? t.player.play : t.player.pause}
 						</button>
 
-						<span class="label tabular-nums">
+						<span class="text-sm font-medium tabular-nums text-parchment sm:text-base">
 							{formatTime(position)}{#if duration > 0} / {formatTime(duration)}{/if}
 						</span>
 
@@ -321,16 +402,14 @@
 						<button
 							type="button"
 							onclick={() => (video.muted = !video.muted)}
-							class="ease-cine cursor-pointer text-label uppercase tracking-[0.18em]
-							       text-muted transition-colors duration-160 hover:text-bone"
+							class="tv-link label cursor-pointer border-0 bg-transparent px-3"
 						>
 							{muted ? t.player.unmute : t.player.mute}
 						</button>
 						<button
 							type="button"
 							onclick={toggleFullscreen}
-							class="ease-cine cursor-pointer text-label uppercase tracking-[0.18em]
-							       text-muted transition-colors duration-160 hover:text-bone"
+							class="tv-link label cursor-pointer border-0 bg-transparent px-3"
 						>
 							{t.player.fullscreen}
 						</button>

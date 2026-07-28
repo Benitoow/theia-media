@@ -14,34 +14,36 @@
 	The chrome, where the identity goes in full: display serif, room to breathe,
 	a single accent. Everything below this section is the dense half.
 -->
-<section class="relative isolate flex min-h-[78vh] items-end overflow-hidden">
+<section class="relative isolate flex min-h-[82svh] items-end overflow-hidden">
 	{#if backdrop}
 		<img
 			src={backdrop}
 			alt=""
 			fetchpriority="high"
-			class="absolute inset-0 -z-20 h-full w-full object-cover object-center opacity-45"
+			class="absolute inset-0 -z-20 h-full w-full scale-[1.015] object-cover object-center opacity-60"
 		/>
 	{/if}
 
-	<!-- Two gradients, not one. The vertical fade carries the text; the
-	     horizontal one keeps the right of the frame from competing with it. -->
+	<!-- The picture is chrome, so it can carry treatment. Posters below stay
+	     untouched. The three fades protect the copy without turning the frame
+	     into the generic blue-black wash used by every streaming clone. -->
 	<div
 		class="absolute inset-0 -z-10"
 		style="background:
-			linear-gradient(to top, var(--color-ink) 4%, rgba(11,10,9,0.55) 45%, rgba(11,10,9,0.15) 100%),
-			linear-gradient(to right, var(--color-ink) 0%, rgba(11,10,9,0.35) 55%, transparent 100%)"
+			linear-gradient(to top, var(--color-ink) 0%, rgba(11,10,9,0.72) 34%, rgba(11,10,9,0.08) 76%),
+			linear-gradient(to right, rgba(11,10,9,0.94) 0%, rgba(11,10,9,0.52) 43%, transparent 76%),
+			radial-gradient(circle at 75% 28%, rgba(200,162,74,0.13), transparent 28rem)"
 	></div>
 
-	<div class="w-full px-6 pt-32 pb-16 lg:px-16 lg:pb-24">
-		<div class="max-w-2xl">
+	<div class="page-shell w-full pt-36 pb-28 lg:pt-44 lg:pb-36">
+		<div class="max-w-[52rem]">
 			{#if movie.metadata?.genres?.length}
 				<span class="label">{movie.metadata.genres.slice(0, 3).join(' · ')}</span>
 			{/if}
 
-			<h1 class="mt-3 mb-5 font-display text-hero font-normal text-balance">{title}</h1>
+			<h1 class="hero-title mt-4 mb-7">{title}</h1>
 
-			<div class="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2">
+			<div class="mb-7 flex flex-wrap items-center gap-x-6 gap-y-3">
 				{#if year}<span class="label">{year}</span>{/if}
 				{#if runtime}<span class="label">{runtime}</span>{/if}
 				{#if movie.metadata?.director}<span class="label">{movie.metadata.director}</span>{/if}
@@ -53,18 +55,14 @@
 			</div>
 
 			{#if movie.metadata?.overview}
-				<p class="mb-8 max-w-prose text-body text-parchment line-clamp-3">
+				<p class="tv-copy mb-9 max-w-[42rem] line-clamp-3">
 					{movie.metadata.overview}
 				</p>
 			{/if}
 
-			<a
-				href="/film/{movie.id}"
-				class="ease-cine inline-block border border-accent px-7 py-3.5 text-label
-				       text-accent uppercase transition-colors duration-160
-				       hover:bg-accent hover:text-ink"
-			>
-				{t.hero.details}
+			<a href="/film/{movie.id}" class="tv-action tv-action--primary" data-remote-default>
+				<span>{t.hero.details}</span>
+				<span aria-hidden="true">→</span>
 			</a>
 		</div>
 	</div>

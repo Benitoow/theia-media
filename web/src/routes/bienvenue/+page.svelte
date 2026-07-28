@@ -33,30 +33,47 @@
 	<title>{t.welcome.title} — {t.appName}</title>
 </svelte:head>
 
-<main class="mx-auto min-h-screen max-w-4xl px-6 pt-32 pb-16 lg:px-16">
+<main class="relative isolate min-h-screen overflow-hidden">
+	<img
+		src="/chrome/theia-onboarding.webp"
+		alt=""
+		class="absolute inset-0 -z-20 h-full w-full object-cover object-center opacity-55"
+	/>
+	<div
+		class="absolute inset-0 -z-10"
+		style="background:
+			linear-gradient(to right, var(--color-ink) 0%, rgba(11,10,9,0.9) 48%, rgba(11,10,9,0.3) 100%),
+			linear-gradient(to top, var(--color-ink) 0%, transparent 55%)"
+	></div>
+
 	{#if info}
-		<header class="mb-16">
-			<span class="label">{t.welcome.eyebrow}</span>
-			<h1 class="mt-4 mb-6 font-display text-display font-normal">{t.welcome.title}</h1>
-			<p class="max-w-prose text-body text-parchment">{t.welcome.body}</p>
-		</header>
+		<div class="page-shell grid min-h-screen items-center gap-10 py-32 xl:grid-cols-[0.8fr_1.2fr]">
+			<header class="max-w-xl">
+				<span class="label">{t.welcome.eyebrow}</span>
+				<h1 class="hero-title mt-5 mb-7">{t.welcome.title}</h1>
+				<p class="tv-copy max-w-prose">{t.welcome.body}</p>
+			</header>
 
-		<section class="border-y border-line py-12">
-			<ConnectPanel {info} size="large" />
-		</section>
-
-		<div class="mt-12">
-			<button
-				type="button"
-				onclick={enter}
-				class="ease-cine cursor-pointer border border-accent px-7 py-3.5 text-label
-				       uppercase text-accent transition-colors duration-160
-				       hover:bg-accent hover:text-ink"
-			>
-				{t.welcome.enter}
-			</button>
+			<section class="chrome-panel p-6 sm:p-10 xl:p-12">
+				<ConnectPanel {info} size="large" />
+				<div class="mt-9 border-t border-line pt-8">
+					<button
+						type="button"
+						onclick={enter}
+						class="tv-action tv-action--primary cursor-pointer"
+						data-remote-default
+					>
+						<span>{t.welcome.enter}</span>
+						<span aria-hidden="true">→</span>
+					</button>
+				</div>
+			</section>
 		</div>
 	{:else if failure}
-		<p class="border-l border-error py-1 pl-5 text-small text-parchment">{failure}</p>
+		<div class="page-shell flex min-h-screen items-center py-32">
+			<p class="chrome-panel max-w-prose border-l border-error p-8 text-small text-parchment">
+				{failure}
+			</p>
+		</div>
 	{/if}
 </main>

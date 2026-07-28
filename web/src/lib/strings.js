@@ -22,9 +22,9 @@ export const strings = {
 
 	home: {
 		loading: 'Chargement de la bibliothèque…',
-		emptyTitle: 'La bibliothèque est vide',
+		emptyTitle: 'Aucun film, pour l’instant',
 		emptyBody:
-			"Indiquez à Theia où sont vos films dans config.json, puis lancez une analyse depuis les réglages.",
+			'Ajoutez un ou plusieurs dossiers depuis les réglages, puis lancez une analyse. Theia s’occupe du reste.',
 		unreachable:
 			"La page est chargée mais l'API ne répond pas. Le serveur a probablement été arrêté."
 	},

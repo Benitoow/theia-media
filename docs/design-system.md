@@ -24,6 +24,17 @@ the Notes. Stripped of their subject matter, they share five moves:
 Theia inverts the paper references to a dark ground, because a media server is
 looked at in a dark room and everything in it is a bright rectangle.
 
+The v1 television pass adds three more precise references:
+
+- **Apple TV+ sets the interaction scale.** Large targets, short lines, obvious
+  focus and information that survives three metres of distance are the real
+  product constraints.
+- **Netflix contributes one structural idea only:** a strong hero followed by
+  horizontal rows. Its visual language is deliberately not copied.
+- **Squarespace confirms the palette and display register:** warm darkness,
+  cinematic imagery and a dramatic serif belong to the chrome, not to the film
+  grid.
+
 ## 2. The accent: gold, not oxblood
 
 Both were on the table. Gold wins on three counts:
@@ -110,7 +121,8 @@ the brand rather than alarming.
 headlines. Nothing else. `--font-ui` is for everything else without exception:
 nav, labels, body copy, buttons, metadata, the poster grid.
 
-The stacks are system fonts on purpose — see §9, this is an open decision.
+The first family in each stack is self-hosted; the remaining system fonts are
+deliberate fallbacks. See §10 for the shipped files.
 
 ### Scale
 
@@ -133,6 +145,22 @@ same screen is what makes it look designed rather than merely dark.
 Display serif at 400 only. The high-contrast thick–thin does the work; a bold
 Didone at hero size is a smear. UI sans uses 400 for body, 500 for nav and
 buttons, 600 as the ceiling.
+
+### The three-metre rule
+
+The primary client is a television read from a sofa, not a laptop held at arm's
+length. The base scale above remains the small-screen floor; wide viewports add
+a viewing-distance layer without inventing a third type register:
+
+- chrome body copy scales from 16px to 19px;
+- row headings scale from 18px to 24px and stay in the UI sans;
+- poster titles scale from `--text-small` (14px) to 16px, still in the UI sans;
+- tracked labels scale from 11px to 13px. They remain metadata, never the only
+  wording on a primary action.
+
+The test is blunt: the main action, current row and focused film must be
+identifiable from three metres away on a 1080p screen. A desktop screenshot at
+100% zoom is not evidence that this passes.
 
 ## 5. Spacing
 
@@ -157,8 +185,8 @@ Hero and empty-state screens start at `--space-24` for vertical rhythm. Dense
 surfaces — the poster grid, settings rows — live between `--space-2` and
 `--space-6`. There is no middle ground and that is intentional.
 
-Page gutters: `--space-6` on mobile, `--space-16` from 1024px up.
-Content max width: `72rem`. Prose max width: `38rem`.
+Page gutters start at `--space-6` on mobile and grow fluidly to `5.5rem` on
+large televisions. Content max width: `96rem`. Prose max width: `38rem`.
 
 ## 6. The poster grid is exempt
 
@@ -175,9 +203,14 @@ in a way that is hard to diagnose. The grid's job is density and speed.
 Rules for the grid, which override §4 and §5:
 
 - Card titles use `--font-ui` at `--text-small`, never the display serif.
-- Grid gap is `--space-3`, not the chrome spacing scale.
-- Cards carry no accent colour at rest. Gold appears on hover and focus only,
-  as a 1px `--accent` border and nothing more.
+- At TV width they may scale up to 1rem under the three-metre rule; this is
+  still the small UI register, not a card-specific heading style.
+- Grid gap is `--space-4` on small screens and 20px at TV width. It stays
+  deliberately tighter than chrome spacing.
+- Cards carry no accent colour at rest. Gold appears on hover and focus as a
+  1px `--accent` border. Keyboard or remote focus also keeps the global 2px
+  focus ring around the whole link; it is navigation state, not card chrome,
+  and a one-pixel border alone disappears from a sofa.
 - **One exception, added in M5: the playback progress bar.** A 3px gold rule
   across the bottom of a part-watched poster. It earns its place because it is
   information rather than decoration — it is the entire reason the
@@ -196,12 +229,24 @@ framing a dense, fast, businesslike grid.
 
 ## 7. Texture and imagery
 
-**No external images, ever.** This repository is public and GPL-3.0; every asset
-has to have its licence verified by the maintainer before it lands. No agent
-working on this project fetches decorative imagery from the web.
+**No unverified image, ever.** This repository is public and GPL-3.0; every
+shipped asset has to have its licence verified by the maintainer before it
+lands. No agent working on this project fetches decorative imagery from the
+web. A maintainer-supplied, licence-checked pack may be used under the following
+constraints:
 
-Where a screen needs atmosphere, generate it in CSS. Two authored recipes, both
-inline, neither making a network request:
+- imagery belongs to the chrome only: hero, onboarding, empty and error states;
+- the poster grid remains exempt under §6 — no decorative image, overlay,
+  colour grade or authored photographic treatment is added to it;
+- source files never ship as-is: crop to the rendered aspect ratio, resize for
+  the largest real viewport, then encode as WebP or AVIF before `web-dist`;
+- every image remains legible under the interface's own text and focus states,
+  and is decorative (`alt=""`) unless it conveys information not written
+  elsewhere.
+
+CSS texture remains the fallback when a screen needs atmosphere without a
+maintainer-verified asset. The authored recipes below are inline and make no
+network request:
 
 ```css
 /* Vignette: pulls the eye to the centre of a hero. */
@@ -223,7 +268,8 @@ inline, neither making a network request:
 );
 ```
 
-The one image the app ships is the favicon, authored as SVG in this repository.
+The favicon remains authored as SVG in this repository. Any additional shipped
+image must satisfy the rules above and stay self-hosted.
 
 ## 8. Motion
 
@@ -257,6 +303,14 @@ Everything else uses `--duration-base`.
   8.2:1 and unmistakable. Never remove the outline without replacing it.
 - Use `:focus-visible`, not `:focus`, so mouse users do not see rings.
 - Every interactive target is at least 44×44px, including in the poster grid.
+- Primary actions are at least 56px high. Navigation and secondary controls are
+  at least 52px, rising to 56px on viewports 1280px and wider.
+- Poster cards are at least 160px wide and rise to 192–224px on TV-width
+  viewports. More tiny posters is not more useful content when none can be read.
+- The first D-pad arrow enters at the screen's primary action. Up and down then
+  use spatial navigation; left and right move deterministically inside a film
+  row. Tab remains available and focus is never trapped at an edge. During
+  playback, left and right seek only when focus is not on a discrete control.
 - `--faint` and `--accent-dim` fail normal-text contrast. They are for disabled
   states, decorative rules and borders. This is written down because it is the
   rule most likely to be broken by accident.
@@ -289,12 +343,21 @@ to.
 
 ## 11. Implementation status
 
-Implemented in `web/src/app.css` as of M1. The provisional M0 palette
-(`--color-ink: #0b0b0f`, `--color-helios: #f5a623`) is gone.
+The v1 feature set was published as `v1.0.0`. The current visual system is
+implemented in `web/src/app.css` and the Svelte components; the provisional M0
+palette (`--color-ink: #0b0b0f`, `--color-helios: #f5a623`) is gone.
 
-Colour, type scale and tracking are verified against a running build rather than
-assumed: the hero computes to Playfair Display at `-0.03em`, labels to Inter at
-11px and `+0.18em`, the page background to `#0B0A09` and body text to `#EDE7DC`.
+The running interface now implements the hero-and-rows library, detail page,
+player, onboarding, empty state and settings chrome described above. Poster
+cards keep the §6 exemption: their artwork is untouched, their ratio stays
+`2/3`, and gold appears only for progress and interaction state.
 
-`scripts/contrast.mjs` guards the ratios. The poster grid of §6 does not exist
-yet — it arrives with M3, and §6 is written for whoever builds it.
+Colour, type scale, tracking, target sizes and directional row navigation are
+verified against a running build rather than inferred from source. The
+three-metre pass uses 52–56px controls and 192–224px cards at TV widths, while
+the responsive floor remains usable without horizontal page overflow.
+
+`scripts/contrast.mjs` guards the documented colour ratios. The two photographic
+chrome assets are cropped to their rendered ratio, resized to 1920×1080 and
+encoded as WebP before the frontend build; the licence-checked source pack stays
+outside `web-dist/`.
