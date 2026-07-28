@@ -13,11 +13,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Benitoow/theia-media/internal/activity"
 	"github.com/Benitoow/theia-media/internal/config"
 	"github.com/Benitoow/theia-media/internal/db"
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
+	"github.com/Benitoow/theia-media/internal/updater"
 )
 
 // Options is everything the server needs. A struct rather than a parameter
@@ -28,6 +30,8 @@ type Options struct {
 	Images    *imagecache.Cache
 	FFmpeg    *ffmpeg.Manager
 	State     *db.State
+	Updater   *updater.Updater
+	Activity  *activity.Tracker
 	Web       fs.FS
 	Version   string
 	KeySource config.KeySource
@@ -42,6 +46,8 @@ type Server struct {
 	images    *imagecache.Cache
 	ffmpeg    *ffmpeg.Manager
 	state     *db.State
+	updater   *updater.Updater
+	activity  *activity.Tracker
 	web       fs.FS
 	log       *slog.Logger
 	version   string
@@ -58,6 +64,8 @@ func New(opts Options) *Server {
 		images:    opts.Images,
 		ffmpeg:    opts.FFmpeg,
 		state:     opts.State,
+		updater:   opts.Updater,
+		activity:  opts.Activity,
 		web:       opts.Web,
 		log:       opts.Logger,
 		version:   opts.Version,
@@ -73,6 +81,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/settings", s.handleSettings)
 	mux.HandleFunc("GET /api/onboarding", s.handleOnboarding)
 	mux.HandleFunc("POST /api/onboarding/complete", s.handleCompleteOnboarding)
+	mux.HandleFunc("GET /api/update", s.handleUpdateStatus)
+	mux.HandleFunc("POST /api/update/check", s.handleUpdateCheck)
+	mux.HandleFunc("POST /api/update/apply", s.handleUpdateApply)
 	mux.HandleFunc("GET /api/library/home", s.handleHome)
 	mux.HandleFunc("GET /api/library/movies", s.handleMovies)
 	mux.HandleFunc("GET /api/library/movies/{id}", s.handleMovie)

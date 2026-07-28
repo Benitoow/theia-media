@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
@@ -19,6 +20,7 @@ import (
 	"time"
 
 	theia "github.com/Benitoow/theia-media"
+	"github.com/Benitoow/theia-media/internal/activity"
 	"github.com/Benitoow/theia-media/internal/api"
 	"github.com/Benitoow/theia-media/internal/config"
 	"github.com/Benitoow/theia-media/internal/db"
@@ -27,10 +29,17 @@ import (
 	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
 	"github.com/Benitoow/theia-media/internal/tmdb"
+	"github.com/Benitoow/theia-media/internal/updater"
 )
 
 // version is overwritten at build time with -ldflags "-X main.version=v1.2.3".
+//
+// A build that leaves this as "dev" never updates itself: there is nothing to
+// compare a release against, and guessing would overwrite a working binary.
 var version = "dev"
+
+// updateRepo is where releases are published and where the updater looks.
+const updateRepo = "Benitoow/theia-media"
 
 // tmdbAPIKey is the key official releases ship with, injected by CI from a
 // repository secret:
@@ -137,6 +146,64 @@ func run() error {
 	// time something actually needs to rewrap a file, which for a library of
 	// browser-friendly containers is never.
 	transcoder := ffmpeg.New(filepath.Join(dataDir, "bin"), log)
+	watching := activity.New()
+
+	// Where this binary lives, and the leftover from any previous update. The
+	// outgoing executable cannot be deleted while it is running, so it is
+	// cleared away on the next start instead.
+	execPath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("locating the running binary: %w", err)
+	}
+	updater.CleanPrevious(execPath, log)
+
+	// Declared here and assigned below, so the restart closure can reach the
+	// things it has to release before the replacement binds the port and the
+	// mDNS name. os.Exit skips deferred calls, so they are closed explicitly.
+	var (
+		httpSrv   *http.Server
+		announcer *discovery.Announcer
+	)
+
+	selfUpdater := updater.New(updater.Options{
+		Repo:     updateRepo,
+		Version:  version,
+		ExecPath: execPath,
+		Activity: watching,
+		Logger:   log,
+		// Points the updater at something other than GitHub. This exists so the
+		// whole install-and-restart cycle can be exercised against a local stub
+		// on a real binary, rather than only in unit tests; it is also the hook
+		// anyone mirroring releases internally would need.
+		APIBase: os.Getenv("THEIA_UPDATE_API"),
+		Restart: func() {
+			// The response that triggered this is still on its way to the
+			// browser; losing it would leave the interface showing "installing"
+			// forever.
+			time.Sleep(1500 * time.Millisecond)
+			log.Info("restarting into the new version")
+
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if httpSrv != nil {
+				// Frees the port. A listening socket is released immediately on
+				// close, so the replacement can bind straight away.
+				_ = httpSrv.Shutdown(shutdownCtx)
+			}
+			_ = announcer.Close()
+
+			replacement := exec.Command(execPath, os.Args[1:]...)
+			replacement.Env = os.Environ()
+			replacement.Stdout = os.Stdout
+			replacement.Stderr = os.Stderr
+			if err := replacement.Start(); err != nil {
+				log.Error("the new version could not be started; the previous one is beside it",
+					"error", err, "previous", execPath+".old")
+				os.Exit(1)
+			}
+			os.Exit(0)
+		},
+	})
 
 	// Bind before announcing anything: failing here is the one startup error
 	// users actually hit, and it should not be preceded by a cheerful banner.
@@ -145,13 +212,15 @@ func run() error {
 		return fmt.Errorf("cannot listen on port %d (is Theia already running?): %w", cfg.Port, err)
 	}
 
-	httpSrv := &http.Server{
+	httpSrv = &http.Server{
 		Handler: api.New(api.Options{
 			Config:    cfg,
 			Library:   libraryService,
 			Images:    images,
 			FFmpeg:    transcoder,
 			State:     state,
+			Updater:   selfUpdater,
+			Activity:  watching,
 			Web:       webFS,
 			Version:   version,
 			KeySource: keySource,
@@ -165,7 +234,7 @@ func run() error {
 		ErrorLog:          slog.NewLogLogger(log.Handler(), slog.LevelWarn),
 	}
 
-	announcer, err := discovery.Announce(cfg.Hostname, cfg.Port, log)
+	announcer, err = discovery.Announce(cfg.Hostname, cfg.Port, log)
 	if err != nil {
 		// Not fatal by design. The QR code and the plain IP address are the
 		// reliable ways in; mDNS is the convenience layered on top.
@@ -191,6 +260,10 @@ func run() error {
 			log.Error("the initial scan failed", "error", err)
 		}
 	}()
+
+	// Checks only, never installs. Applying is an explicit action, because a
+	// media server that restarts itself unannounced is one nobody trusts.
+	go selfUpdater.Run(ctx)
 
 	select {
 	case err := <-serveErr:

@@ -6,12 +6,12 @@ paywall. Plug in the machine, open a browser, watch a film.
 Navidrome proved a media server could be one Go binary using 50 MB of RAM with
 an interface people actually enjoy. Theia does the same thing for video.
 
-> **Status: milestone M6.** The server starts, announces itself on the local
+> **Status: milestone M7.** The server starts, announces itself on the local
 > network, shows a QR code on first launch so another device can reach it,
 > scans the directories you point it at, fetches posters, synopses and credits
-> from TMDB, presents the lot as a browsable library, plays films, and
-> remembers where you stopped. Automatic updates and subtitles are still to
-> come. See
+> from TMDB, presents the lot as a browsable library, plays films, remembers
+> where you stopped, and updates itself from GitHub releases. Release
+> packaging and subtitles are still to come. See
 > [docs/DECISIONS.md](docs/DECISIONS.md) for what is coming and what has been
 > deliberately left out, and [docs/design-system.md](docs/design-system.md)
 > before touching the interface.
@@ -125,6 +125,20 @@ requires it — never at launch, and never at all for a library it can play
 directly. It comes from a pinned GitHub release, its SHA-256 is checked before
 it is ever executed, and it lives in the data directory rather than inside the
 Theia binary.
+
+### Updates
+
+Theia checks GitHub for a newer release at startup and every few hours, and says
+so in the settings. **Installing is something you ask for**, not something that
+happens while you are watching something.
+
+A download is only installed once its SHA-256 matches the digest GitHub
+publishes *and* the downloaded binary has been run to confirm it works. If
+either check fails, the update is abandoned and the version you had keeps
+running, untouched. The previous binary is kept beside the new one until the
+next start, so a bad release can be undone by hand.
+
+An update will refuse to install while anything is playing, and say so.
 
 ### Resume
 

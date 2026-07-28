@@ -384,6 +384,76 @@ quiet zone. So the test parses the generated SVG back into a module matrix and
 compares it against the encoder's own bitmap, module by module. A symbol that
 survives that scans, or the encoder is wrong.
 
+## 21. Updating: everything reversible happens first
+
+**The governing rule is that a failed update leaves a working installation.**
+The order of operations is the whole design, and it is deliberate:
+
+1. Fetch the release, find the asset for this platform, read its SHA-256 from
+   the GitHub API. **No digest, no update** — "we could not check it" is not a
+   reason to install something.
+2. Download to a temporary file *beside the executable* — a rename across
+   filesystems is a copy, and a copy is not atomic — with no executable bit.
+3. Verify the digest. Mismatch: delete, stop, nothing has been touched.
+4. Set the executable bit and **run the downloaded binary with `-version`**.
+5. Only now rename the current binary aside and the new one into place.
+
+Step 4 is the one that is easy to leave out. A correct checksum proves the bytes
+match what was published; it says nothing about whether that file runs *here* —
+wrong architecture, a release built from a broken commit. Finding that out
+before the swap is the difference between a failed update and a dead
+installation.
+
+If the second rename fails, the first is undone. An installation with no
+executable at all is the one outcome that must never happen.
+
+## 22. No relay process is needed on Windows
+
+**Measured, not assumed.** The plan called for a helper binary because a running
+`.exe` cannot replace itself. Testing what Windows actually forbids:
+
+| Operation on a running executable | Result |
+|---|---|
+| Rename it | **allowed** |
+| Write a new file at the freed path | **allowed** |
+| Delete it | refused while the process lives |
+| Delete it after the process exits | allowed |
+
+Only deletion is blocked. So the swap is two renames, and the outgoing binary
+sits as `theia.exe.old` until the next start clears it away — which also makes
+it the manual way back if a release turns out to be bad. Verified across two
+chained updates: `.old` appears at the swap, is byte-identical to the previous
+version, and is gone after the restart.
+
+Fewer moving parts on the most dangerous path in the project is worth more than
+following the original plan.
+
+## 23. Updates never interrupt playback, and never happen unannounced
+
+Checking is automatic — at startup and every six hours. **Installing is not.**
+A media server that restarts itself in the middle of an evening is one nobody
+trusts, so the interface says an update is available and waits to be told.
+
+Even then it can refuse. `internal/activity` tracks streaming, and `Apply`
+re-checks at the moment of installing rather than trusting the button press,
+because another device may have started watching since. The two playback paths
+look completely different from the server's side — a remux is one request held
+open for the film's length, direct play is a burst of short range requests with
+long gaps — so the tracker combines in-flight requests with a ninety-second
+memory of the last one. Neither signal alone describes both.
+
+## 24. A build that cannot name itself never updates
+
+Any version string that is not semver — `dev`, a bare commit hash — puts the
+updater in an unsupported state permanently. There is nothing to compare a
+release against, and guessing would overwrite a developer's working binary with
+whatever was published last.
+
+**The asset naming contract**, which M8's release workflow has to honour
+exactly: `theia-<goos>-<goarch>`, with `.exe` appended on Windows. A mismatch
+produces an updater that silently never finds its own binary; `TestAssetName`
+pins it so the two cannot drift apart unnoticed.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

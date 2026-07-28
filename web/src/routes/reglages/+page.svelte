@@ -8,16 +8,44 @@
 	let stats = $state(null);
 	let settings = $state(null);
 	let connect = $state(null);
+	let update = $state(null);
+	let updateBusy = $state(false);
+
+	async function checkUpdate() {
+		updateBusy = true;
+		try {
+			update = await getJSON('/api/update/check', { method: 'POST' });
+		} catch {
+			// The status object carries the explanation; a failed check is not
+			// worth an error banner of its own.
+		} finally {
+			updateBusy = false;
+		}
+	}
+
+	async function applyUpdate() {
+		updateBusy = true;
+		try {
+			const res = await fetch('/api/update/apply', { method: 'POST' });
+			update = await res.json();
+		} catch {
+			// Losing the response does not mean the update failed; the next
+			// poll reports the real state.
+		} finally {
+			updateBusy = false;
+		}
+	}
 	let scanning = $state(false);
 	let scanError = $state(null);
 
 	async function refresh() {
 		try {
-			[health, stats, settings, connect] = await Promise.all([
+			[health, stats, settings, connect, update] = await Promise.all([
 				getJSON('/api/health'),
 				getJSON('/api/library/stats'),
 				getJSON('/api/settings'),
-				getJSON('/api/onboarding')
+				getJSON('/api/onboarding'),
+				getJSON('/api/update')
 			]);
 		} catch {
 			// The layout already shows a dead page well enough; a settings screen
@@ -151,6 +179,78 @@
 				</p>
 			{/if}
 		</section>
+
+		{#if update}
+			<section class="mt-14 border-t border-line pt-14">
+				<div class="mb-5 flex flex-wrap items-baseline justify-between gap-4">
+					<h2 class="label">{t.update.heading}</h2>
+					{#if update.state !== 'unsupported'}
+						<button
+							type="button"
+							onclick={update.state === 'available' ? applyUpdate : checkUpdate}
+							disabled={updateBusy || update.state === 'ready' || update.state === 'downloading'}
+							class="ease-cine cursor-pointer border px-6 py-3 text-label uppercase
+							       transition-colors duration-160 disabled:cursor-not-allowed
+							       disabled:text-faint"
+							class:border-accent={update.state === 'available'}
+							class:text-accent={update.state === 'available'}
+							class:hover:bg-accent={update.state === 'available'}
+							class:hover:text-ink={update.state === 'available'}
+							class:border-line={update.state !== 'available'}
+							class:hover:border-muted={update.state !== 'available'}
+						>
+							{#if updateBusy}
+								{update.state === 'available' ? t.update.installing : t.update.checking}
+							{:else if update.state === 'available'}
+								{t.update.install}
+							{:else}
+								{t.update.check}
+							{/if}
+						</button>
+					{/if}
+				</div>
+
+				<dl class="mb-6 grid gap-x-8 gap-y-3 sm:grid-cols-[11rem_1fr]">
+					<dt class="label">{t.update.current}</dt>
+					<dd class="text-small text-parchment">{update.current_version}</dd>
+					{#if update.latest_version}
+						<dt class="label">{t.update.latest}</dt>
+						<dd class="text-small text-parchment">{update.latest_version}</dd>
+					{/if}
+				</dl>
+
+				<!-- One line saying plainly where things stand. The failed state
+				     says the installed version is untouched, because that is the
+				     first thing anybody wants to know. -->
+				{#if update.state === 'unsupported'}
+					<p class="border-l border-line py-1 pl-5 text-small text-muted">{t.update.unsupported}</p>
+				{:else if update.state === 'available'}
+					<p class="border-l border-accent py-1 pl-5 text-small text-parchment">{t.update.available}</p>
+				{:else if update.state === 'ready'}
+					<p class="border-l border-accent py-1 pl-5 text-small text-parchment">{t.update.ready}</p>
+				{:else if update.state === 'deferred'}
+					<p class="border-l border-warning py-1 pl-5 text-small text-parchment">{t.update.deferred}</p>
+				{:else if update.state === 'failed'}
+					<p class="border-l border-error py-1 pl-5 text-small text-parchment">
+						{t.update.failed}
+						{#if update.message}<span class="text-muted"> — {update.message}</span>{/if}
+					</p>
+				{:else}
+					<p class="text-small text-muted">{update.message || t.update.upToDate}</p>
+				{/if}
+
+				{#if update.release_url && update.state === 'available'}
+					<a
+						href={update.release_url}
+						target="_blank"
+						rel="noreferrer"
+						class="label ease-cine mt-5 inline-block transition-colors duration-160 hover:text-bone"
+					>
+						{t.update.notes} ↗
+					</a>
+				{/if}
+			</section>
+		{/if}
 
 		<p class="micro mt-16 border-t border-line pt-6">{t.settings.milestone}</p>
 	{/if}

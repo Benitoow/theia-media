@@ -78,6 +78,13 @@ func (s *Server) handleStreamDirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Recorded so the updater knows not to restart mid-film. Direct play is a
+	// burst of short range requests rather than one long one, which is why the
+	// tracker also remembers when the last one finished.
+	if s.activity != nil {
+		defer s.activity.Begin()()
+	}
+
 	file, err := os.Open(movie.Path)
 	if err != nil {
 		s.log.Warn("opening a film for direct play failed", "path", movie.Path, "error", err)
@@ -108,6 +115,12 @@ func (s *Server) handleStreamRemux(w http.ResponseWriter, r *http.Request) {
 	movie, ok := s.movieForStream(w, r)
 	if !ok {
 		return
+	}
+
+	// One request held open for the length of the film, so this alone keeps the
+	// updater away for the whole viewing.
+	if s.activity != nil {
+		defer s.activity.Begin()()
 	}
 
 	binary, err := s.ffmpeg.Path(r.Context())

@@ -37,6 +37,27 @@ export const strings = {
 		enter: 'Voir la bibliothèque'
 	},
 
+	update: {
+		heading: 'Mise à jour',
+		current: 'Version installée',
+		latest: 'Dernière version publiée',
+		check: 'Vérifier maintenant',
+		checking: 'Vérification…',
+		install: 'Installer',
+		installing: 'Installation…',
+		upToDate: 'Theia est à jour.',
+		available: 'Une nouvelle version est disponible.',
+		ready: 'Mise à jour installée. Theia redémarre — rechargez la page dans quelques secondes.',
+		deferred:
+			"Mise à jour reportée : une lecture est en cours. Elle sera proposée à nouveau une fois l'écran libre.",
+		failed:
+			"La mise à jour a échoué. La version installée n'a pas été touchée et continue de fonctionner.",
+		unsupported:
+			"Cette version ne se met pas à jour toute seule : elle a été compilée localement et ne peut pas se comparer à une version publiée.",
+		notes: 'Notes de version',
+		lastChecked: 'Dernière vérification'
+	},
+
 	connect: {
 		heading: 'Connecter un appareil',
 		address: 'Adresse sur le réseau local',
@@ -113,7 +134,7 @@ export const strings = {
 		metadata: 'Métadonnées',
 		source: 'Source',
 		milestone:
-			"Jalon M6 — connexion d'un appareil par QR code. La mise à jour automatique arrive au jalon suivant."
+			'Jalon M7 — mise à jour depuis les releases GitHub, vérifiée avant installation.'
 	},
 
 	errors: {
