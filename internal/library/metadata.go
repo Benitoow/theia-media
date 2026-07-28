@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Benitoow/theia-media/internal/scanner"
 	"github.com/Benitoow/theia-media/internal/tmdb"
 )
 
@@ -178,7 +179,9 @@ func (s *Service) enrich(ctx context.Context, report *ScanReport) {
 	now := time.Now()
 	candidates, err := s.store.StaleMetadata(ctx, now, s.metadataBatch)
 	if err != nil {
-		report.Problems = append(report.Problems, err.Error())
+		s.log.Error("could not find films needing metadata", "error", err)
+		report.Problems = append(report.Problems,
+			scanner.Problem{Kind: scanner.KindMetadataUnavailable})
 		return
 	}
 	if len(candidates) == 0 {
@@ -196,22 +199,25 @@ func (s *Service) enrich(ctx context.Context, report *ScanReport) {
 		switch {
 		case err == nil:
 			if err := s.store.SaveMetadata(ctx, candidate.ID, film, time.Now()); err != nil {
-				report.Problems = append(report.Problems, err.Error())
+				s.log.Warn("could not save metadata", "title", candidate.Title, "error", err)
+				report.Problems = append(report.Problems,
+					scanner.Problem{Kind: scanner.KindSaveFailed})
 				continue
 			}
 			report.Enriched++
 
 		case errors.Is(err, tmdb.ErrNotFound):
-			// Ordinary. The film keeps its filename-derived title.
+			// Ordinary, and not a problem: the film keeps the title its
+			// filename gave it. Counted, never reported as something wrong.
 			if err := s.store.MarkMetadataOutcome(ctx, candidate.ID, statusNotFound, time.Now()); err != nil {
-				report.Problems = append(report.Problems, err.Error())
+				s.log.Warn("could not record a metadata miss", "title", candidate.Title, "error", err)
 			}
 			report.NotFound++
 
 		case errors.Is(err, tmdb.ErrUnauthorized):
 			s.log.Error("TMDB rejected the API key, stopping metadata lookups")
 			report.Problems = append(report.Problems,
-				"TMDB rejected the API key; check it in the settings")
+				scanner.Problem{Kind: scanner.KindMetadataKeyRejected})
 			return
 
 		case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
@@ -220,7 +226,7 @@ func (s *Service) enrich(ctx context.Context, report *ScanReport) {
 		default:
 			s.log.Warn("metadata lookup failed", "title", candidate.Title, "error", err)
 			if err := s.store.MarkMetadataOutcome(ctx, candidate.ID, statusError, time.Now()); err != nil {
-				report.Problems = append(report.Problems, err.Error())
+				s.log.Warn("could not record a metadata failure", "title", candidate.Title, "error", err)
 			}
 			report.MetadataErrors++
 		}

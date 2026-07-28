@@ -11,7 +11,6 @@ package scanner
 
 import (
 	"context"
-	"fmt"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -32,9 +31,9 @@ type File struct {
 type Result struct {
 	Files []File
 
-	// Problems encountered along the way, already rendered for display. A scan
-	// with problems still returns everything it did manage to read.
-	Problems []string
+	// Problems encountered along the way. A scan with problems still returns
+	// everything it did manage to read.
+	Problems []Problem
 }
 
 // videoExtensions is what counts as a film. Deliberately generous: a file the
@@ -75,17 +74,24 @@ func Scan(ctx context.Context, roots []string, log *slog.Logger) (Result, error)
 
 		absolute, err := filepath.Abs(root)
 		if err != nil {
-			result.Problems = append(result.Problems, fmt.Sprintf("%s: %v", root, err))
+			log.Warn("a library path could not be resolved", "path", root, "error", err)
+			result.Problems = append(result.Problems,
+				Problem{Kind: KindDirectoryUnreadable, Path: root})
 			continue
 		}
 		info, err := os.Stat(absolute)
 		if err != nil {
+			// Overwhelmingly this is an external drive that is not plugged in.
+			// The error text says GetFileAttributesEx; the user needs to hear
+			// about their drive.
+			log.Warn("a library directory is unreadable", "path", root, "error", err)
 			result.Problems = append(result.Problems,
-				fmt.Sprintf("%s is unreadable, is the drive connected? (%v)", root, err))
+				Problem{Kind: KindDirectoryUnreadable, Path: root})
 			continue
 		}
 		if !info.IsDir() {
-			result.Problems = append(result.Problems, fmt.Sprintf("%s is not a directory", root))
+			result.Problems = append(result.Problems,
+				Problem{Kind: KindNotADirectory, Path: root})
 			continue
 		}
 
@@ -105,7 +111,9 @@ func scanRoot(ctx context.Context, root string, seen map[string]bool, result *Re
 		if err != nil {
 			// Permission denied on one subtree, a vanished symlink, a network
 			// share that dropped. Note it and carry on with the rest.
-			result.Problems = append(result.Problems, fmt.Sprintf("%s: %v", path, err))
+			log.Warn("a directory could not be read", "path", path, "error", err)
+			result.Problems = append(result.Problems,
+				Problem{Kind: KindSubdirectoryUnreadable, Path: path})
 			if entry != nil && entry.IsDir() {
 				return fs.SkipDir
 			}
@@ -134,7 +142,9 @@ func scanRoot(ctx context.Context, root string, seen map[string]bool, result *Re
 
 		info, err := entry.Info()
 		if err != nil {
-			result.Problems = append(result.Problems, fmt.Sprintf("%s: %v", path, err))
+			log.Warn("a file could not be read", "path", path, "error", err)
+			result.Problems = append(result.Problems,
+				Problem{Kind: KindFileUnreadable, Path: path})
 			return nil
 		}
 

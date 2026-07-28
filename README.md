@@ -6,17 +6,14 @@ paywall. Plug in the machine, open a browser, watch a film.
 Navidrome proved a media server could be one Go binary using 50 MB of RAM with
 an interface people actually enjoy. Theia does the same thing for video.
 
-> **Status: milestone M7.** The server starts, announces itself on the local
-> network, shows a QR code on first launch so another device can reach it,
-> scans the directories you point it at, fetches posters, synopses and credits
-> from TMDB, presents the lot as a browsable library, plays films, remembers
-> where you stopped, and updates itself from GitHub releases. Release
-> packaging and subtitles are still to come. See
-> [docs/DECISIONS.md](docs/DECISIONS.md) for what is coming and what has been
-> deliberately left out, and [docs/design-system.md](docs/design-system.md)
-> before touching the interface.
+Point it at a folder of films and it does the rest: finds them, fetches posters
+and synopses, and plays them in a browser on any device in the house.
+
+TV series, subtitles and remote access are deliberately not in this version —
+see [docs/DECISIONS.md](docs/DECISIONS.md) for what was left out and why.
 
 This product uses the TMDB API but is not endorsed or certified by TMDB.
+Theia is free software under the [GPL-3.0](LICENSE).
 
 ---
 
@@ -37,17 +34,25 @@ such as Tailscale or WireGuard. Do not forward the port on your router.
 
 ## Running it
 
-Download the binary for your platform from the releases page and run it:
+Download the binary for your platform from the
+[releases page](https://github.com/Benitoow/theia-media/releases) and run it.
+There is no installer and nothing to configure first.
 
 ```bash
 ./theia
 ```
 
-That is the whole installation. On first launch Theia creates its data
-directory, prints every address it can be reached at, and starts serving:
+On Windows, double-clicking `theia-windows-amd64.exe` is enough. On macOS and
+Linux, mark it executable first:
+
+```bash
+chmod +x theia-linux-amd64 && ./theia-linux-amd64
+```
+
+It prints every address it answers on:
 
 ```
-  Theia 0.1.0
+  Theia v1.0.0
 
   Local     http://localhost:8383
   Network   http://192.168.1.19:8383
@@ -56,7 +61,16 @@ directory, prints every address it can be reached at, and starts serving:
   Data      /home/you/.config/theia
 ```
 
-Open any of those from any device on the same network.
+### First launch
+
+Open the local address and Theia shows a QR code. Point a phone at it and you
+are in — that is the whole setup on a second device.
+
+The code encodes the numeric address rather than `theia.local`, because **that
+name does not resolve on Android** and plenty of TV browsers ignore it too. It
+is offered underneath as a convenience, never as the only way in.
+
+Then tell Theia where your films are, in **Réglages**, and it scans them.
 
 On first launch Theia shows a QR code. Point a phone at it and you are in;
 there is nothing to configure first.
@@ -79,23 +93,24 @@ picked the wrong one; the screen lists the others.
 | `-verbose` | off | Log every HTTP request |
 | `-version` | | Print the version and exit |
 
-Everything except `-data-dir` is also settable in `config.json` inside the data
-directory. `THEIA_DATA_DIR` overrides the location of that directory, which is
-what you want for a portable install on an external drive.
+`THEIA_DATA_DIR` overrides where the configuration, database and cache live,
+which is what you want for a portable install on an external drive.
 
-Point Theia at your films by adding directories to `library_paths`:
+### Settings
 
-```json
-{
-  "port": 8383,
-  "library_paths": ["/media/films", "/mnt/nas/cinema"]
-}
-```
+There are three, all on the **Réglages** page, and deliberately nothing else:
 
-It scans them at startup and whenever you ask it to. Files it cannot identify
-still appear, listed under whatever the filename said — a badly named file is
-better shown than silently dropped, and the same goes for one TMDB has never
-heard of.
+| Setting | What it does |
+|---|---|
+| Watched folders | Where your films are. Add as many as you like |
+| Port | Which port to listen on. Takes effect on the next start |
+| TMDB key | Optional. Yours instead of the one Theia ships with |
+
+They live in `config.json` in the data directory if you would rather edit a
+file. Theia scans the folders at startup and whenever you ask it to. Files it
+cannot identify still appear, listed under whatever the filename said — a badly
+named file is better shown than silently dropped, and the same goes for one TMDB
+has never heard of.
 
 ### Metadata
 
@@ -227,3 +242,25 @@ These are enforced in review and in CI:
 Code, comments and internal error messages are English. The user interface is
 French for v1, kept in `web/src/lib/strings.js` so that adding another language
 is a matter of adding a file rather than editing markup.
+
+Anything the interface shows a user is a code the server sends and the interface
+words — never a message the server wrote. That rule exists because an earlier
+version put Go error strings straight on screen, and people saw
+`GetFileAttributesEx D:\Films: ...` where they should have read "that drive is
+not plugged in".
+
+---
+
+## Licence
+
+GPL-3.0. See [LICENSE](LICENSE).
+
+Theia is free software and will stay that way: the licence is what makes a
+closed, paid fork impossible, which is the entire point of building an
+alternative to Plex.
+
+Metadata comes from [TMDB](https://www.themoviedb.org/). **This product uses the
+TMDB API but is not endorsed or certified by TMDB.**
+
+`ffmpeg`, downloaded on demand rather than bundled, is licensed separately by
+its own authors and is never modified or redistributed by this project.

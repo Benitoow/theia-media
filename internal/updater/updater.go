@@ -37,9 +37,31 @@ const (
 	StateUnsupported State = "unsupported" // a development build cannot update itself
 )
 
+// Reason says why the updater is in the state it is, as a code the interface
+// turns into a sentence.
+//
+// The English text in Message is for the log and for anybody reading the API
+// directly. It must never be the thing a French interface shows a user, which
+// is what Reason is for.
+type Reason string
+
+const (
+	ReasonNone              Reason = ""
+	ReasonUpToDate          Reason = "up_to_date"
+	ReasonNoRelease         Reason = "no_release"
+	ReasonGitHubUnreachable Reason = "github_unreachable"
+	ReasonPlaybackActive    Reason = "playback_active"
+	ReasonNoBinary          Reason = "no_binary_for_platform"
+	ReasonNotVerified       Reason = "download_not_verified"
+	ReasonDidNotRun         Reason = "binary_did_not_run"
+	ReasonReplaceFailed     Reason = "replace_failed"
+	ReasonDevBuild          Reason = "development_build"
+)
+
 // Status is the full picture, safe to serialise straight to the interface.
 type Status struct {
 	State          State      `json:"state"`
+	Reason         Reason     `json:"reason,omitempty"`
 	CurrentVersion string     `json:"current_version"`
 	LatestVersion  string     `json:"latest_version,omitempty"`
 	Available      bool       `json:"available"`
@@ -111,6 +133,7 @@ func New(opts Options) *Updater {
 	// working binary.
 	if _, ok := parseVersion(opts.Version); !ok {
 		u.status.State = StateUnsupported
+		u.status.Reason = ReasonDevBuild
 		u.status.Message = "this is a development build and does not update itself"
 	}
 	return u
@@ -151,6 +174,7 @@ func (u *Updater) Check(ctx context.Context) (Status, error) {
 	if errors.Is(err, ErrNoRelease) {
 		u.setStatus(func(s *Status) {
 			s.State = StateIdle
+			s.Reason = ReasonNoRelease
 			s.Available = false
 			s.Message = "no release has been published yet"
 			s.CheckedAt = &now
@@ -161,6 +185,7 @@ func (u *Updater) Check(ctx context.Context) (Status, error) {
 		u.log.Warn("checking for updates failed", "error", err)
 		u.setStatus(func(s *Status) {
 			s.State = StateIdle
+			s.Reason = ReasonGitHubUnreachable
 			s.Message = "could not reach GitHub to check for updates"
 			s.CheckedAt = &now
 		})
@@ -176,12 +201,15 @@ func (u *Updater) Check(ctx context.Context) (Status, error) {
 		switch {
 		case !comparable:
 			s.State = StateUnsupported
+			s.Reason = ReasonDevBuild
 			s.Message = "the published version cannot be compared with this build"
 		case newer:
 			s.State = StateAvailable
+			s.Reason = ReasonNone
 			s.Message = ""
 		default:
 			s.State = StateIdle
+			s.Reason = ReasonUpToDate
 			s.Message = "this is the latest version"
 		}
 	})
@@ -243,9 +271,10 @@ func (u *Updater) release() {
 	u.mu.Unlock()
 }
 
-func (u *Updater) fail(err error, message string) error {
+func (u *Updater) fail(err error, reason Reason, message string) error {
 	u.setStatus(func(s *Status) {
 		s.State = StateFailed
+		s.Reason = reason
 		s.Message = message
 	})
 	u.log.Error("the update was abandoned; the installed version is unchanged",

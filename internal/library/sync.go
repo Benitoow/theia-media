@@ -31,9 +31,9 @@ type ScanReport struct {
 	NotFound       int `json:"not_found"`
 	MetadataErrors int `json:"metadata_errors"`
 
-	// Directories that could not be read, already rendered for display. A scan
-	// that hit problems still reports everything it did manage to index.
-	Problems []string `json:"problems,omitempty"`
+	// What went wrong, as codes the interface turns into sentences. A scan that
+	// hit problems still reports everything it did manage to index.
+	Problems []scanner.Problem `json:"problems,omitempty"`
 }
 
 // defaultMetadataBatch caps how many TMDB lookups one scan performs.
@@ -256,7 +256,9 @@ func (s *Service) Scan(ctx context.Context, roots []string) (*ScanReport, error)
 		}, generation)
 		if err != nil {
 			// One unwritable row must not cost us the other four thousand.
-			report.Problems = append(report.Problems, err.Error())
+			s.log.Warn("a film could not be saved", "path", file.Path, "error", err)
+			report.Problems = append(report.Problems,
+				scanner.Problem{Kind: scanner.KindSaveFailed, Path: file.Path})
 			continue
 		}
 		if res.inserted {

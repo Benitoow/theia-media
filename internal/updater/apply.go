@@ -42,6 +42,7 @@ func (u *Updater) Apply(ctx context.Context) error {
 	if u.activity != nil && u.activity.Busy() {
 		u.setStatus(func(s *Status) {
 			s.State = StateDeferred
+			s.Reason = ReasonPlaybackActive
 			s.Message = "held back: something is playing"
 		})
 		return ErrPlaybackInProgress
@@ -49,11 +50,12 @@ func (u *Updater) Apply(ctx context.Context) error {
 
 	rel, err := u.latestRelease(ctx)
 	if err != nil {
-		return u.fail(err, "could not read the latest release")
+		return u.fail(err, ReasonGitHubUnreachable, "could not read the latest release")
 	}
 	if newer, ok := isNewer(rel.TagName, u.current); !ok || !newer {
 		u.setStatus(func(s *Status) {
 			s.State = StateIdle
+			s.Reason = ReasonUpToDate
 			s.Message = "this is the latest version"
 		})
 		return nil
@@ -62,11 +64,12 @@ func (u *Updater) Apply(ctx context.Context) error {
 	goos, goarch := currentPlatform()
 	target, digest, err := assetFor(rel, goos, goarch)
 	if err != nil {
-		return u.fail(err, "this release has no verifiable binary for this platform")
+		return u.fail(err, ReasonNoBinary, "this release has no verifiable binary for this platform")
 	}
 
 	u.setStatus(func(s *Status) {
 		s.State = StateDownloading
+		s.Reason = ReasonNone
 		s.LatestVersion = rel.TagName
 		s.Message = ""
 	})
@@ -77,16 +80,16 @@ func (u *Updater) Apply(ctx context.Context) error {
 	dir := filepath.Dir(u.execPath)
 	staged, err := u.download(ctx, target.BrowserDownloadURL, dir, digest)
 	if err != nil {
-		return u.fail(err, "the download could not be verified")
+		return u.fail(err, ReasonNotVerified, "the download could not be verified")
 	}
 	defer os.Remove(staged) // no-op once the rename below succeeds
 
 	if err := u.smokeTest(ctx, staged, rel.TagName); err != nil {
-		return u.fail(err, "the downloaded binary did not run correctly")
+		return u.fail(err, ReasonDidNotRun, "the downloaded binary did not run correctly")
 	}
 
 	if err := u.swap(staged); err != nil {
-		return u.fail(err, "the binary could not be replaced")
+		return u.fail(err, ReasonReplaceFailed, "the binary could not be replaced")
 	}
 
 	u.setStatus(func(s *Status) {

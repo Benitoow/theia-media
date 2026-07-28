@@ -454,6 +454,41 @@ exactly: `theia-<goos>-<goarch>`, with `.exe` appended on Windows. A mismatch
 produces an updater that silently never finds its own binary; `TestAssetName`
 pins it so the two cannot drift apart unnoticed.
 
+## 25. The server never writes what the user reads
+
+**Decided in M8, after finding the rule broken in three places.** Anything shown
+in the interface is a *code* the server sends and the interface words. The
+server's own error strings are for the log and for anybody reading the API
+directly.
+
+The rule exists because the settings page was showing people this:
+
+> `D:\Films is unreadable, is the drive connected? (GetFileAttributesEx D:\Films: Le fichier spécifié est introuvable.)`
+
+A syscall name, wrapped in English, in a French interface, telling somebody
+whose USB drive is unplugged nothing they can act on. Scan problems are now
+`{kind, path}`, update failures carry a `reason` code, and the interface owns
+every sentence. The path still travels, because it is the one technical detail
+that helps: it says *which* drive.
+
+## 26. Three settings, and the fourth one that is not on the page
+
+The spec allows exactly three: watched folders, port, TMDB key. The settings
+page has those three and nothing else, editable, so nobody has to find
+`config.json`.
+
+`hostname` is a fourth field in the configuration file. It is the name announced
+over mDNS, and it exists because announcing *something* is unavoidable and
+hard-coding "theia" would break anybody running two instances. It is
+deliberately not on the settings page: an advanced knob for a file, not a
+setting for a person.
+
+Two behaviours worth writing down. A folder that does not exist is **saved
+anyway** and reported — configuring a drive before plugging it in is a normal
+thing to do, and refusing would be wrong. And a TMDB key is never sent to the
+browser, so an empty field means "leave it alone" rather than "clear it";
+clearing is possible, but only deliberately.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

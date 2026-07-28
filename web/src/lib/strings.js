@@ -37,6 +37,38 @@ export const strings = {
 		enter: 'Voir la bibliothèque'
 	},
 
+	// Scan problems arrive as codes, never as text: the server used to send its
+	// own error strings and the settings page ended up showing people a syscall
+	// name in the middle of a French interface.
+	problems: {
+		directory_unreadable:
+			"Dossier illisible. Si c'est un disque externe, il n'est probablement pas branché.",
+		not_a_directory: "Ce chemin désigne un fichier, pas un dossier.",
+		subdirectory_unreadable: 'Sous-dossier ignoré : Theia n’a pas pu le lire.',
+		file_unreadable: 'Fichier ignoré : Theia n’a pas pu lire ses informations.',
+		save_failed: "Ce fichier n'a pas pu être enregistré dans la bibliothèque.",
+		metadata_unavailable:
+			'Les métadonnées n’ont pas pu être récupérées pour cette analyse. Elles seront réessayées.',
+		metadata_key_rejected:
+			'TMDB a refusé la clé API. Vérifiez-la dans les réglages ; les films restent listés sans affiche.',
+		unknown: 'Un problème inattendu est survenu pendant l’analyse.'
+	},
+
+	updateReasons: {
+		up_to_date: 'Theia est à jour.',
+		no_release: 'Aucune version n’a encore été publiée.',
+		github_unreachable: 'GitHub est injoignable pour l’instant. Réessayez plus tard.',
+		playback_active: 'Une lecture est en cours.',
+		no_binary_for_platform: 'Cette version ne propose pas de binaire pour ce système.',
+		download_not_verified:
+			"Le fichier téléchargé ne correspond pas à l'empreinte publiée. Rien n'a été installé.",
+		binary_did_not_run:
+			"Le fichier téléchargé n'a pas démarré correctement. Rien n'a été installé.",
+		replace_failed:
+			"Le remplacement du binaire a échoué. La version précédente a été remise en place.",
+		development_build: ''
+	},
+
 	update: {
 		heading: 'Mise à jour',
 		current: 'Version installée',
@@ -133,8 +165,27 @@ export const strings = {
 		problems: 'Problèmes rencontrés',
 		metadata: 'Métadonnées',
 		source: 'Source',
-		milestone:
-			'Jalon M7 — mise à jour depuis les releases GitHub, vérifiée avant installation.'
+
+		edit: 'Modifier',
+		cancel: 'Annuler',
+		save: 'Enregistrer',
+		saving: 'Enregistrement…',
+		saved: 'Réglages enregistrés.',
+		saveFailed: "Les réglages n'ont pas pu être enregistrés.",
+		invalidPort: 'Le port doit être un nombre entre 1 et 65535.',
+		addPath: 'Ajouter un dossier',
+		removePath: 'Retirer',
+		pathPlaceholder: 'C:\\Users\\vous\\Videos',
+		portHint: 'Le changement de port ne prendra effet qu’au prochain démarrage de Theia.',
+		portChanged:
+			'Le nouveau port est enregistré, mais Theia écoute toujours sur l’ancien. Redémarrez-le pour appliquer.',
+		missingPaths:
+			'Enregistré, mais ces dossiers sont introuvables pour l’instant — normal si le disque n’est pas branché :',
+		keyLabel: 'Clé TMDB personnelle',
+		keyHint:
+			'Facultatif. Laissez vide pour utiliser la clé fournie avec Theia. Une clé saisie ici est prioritaire.',
+		keyPlaceholder: 'Laisser vide pour utiliser la clé intégrée',
+		milestone: 'Theia v1'
 	},
 
 	errors: {

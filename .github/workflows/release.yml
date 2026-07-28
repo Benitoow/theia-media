@@ -1,0 +1,103 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true # a partial release is worse than none
+      matrix:
+        include:
+          - { goos: windows, goarch: amd64, ext: .exe }
+          - { goos: windows, goarch: arm64, ext: .exe }
+          - { goos: linux, goarch: amd64, ext: '' }
+          - { goos: linux, goarch: arm64, ext: '' }
+          - { goos: darwin, goarch: amd64, ext: '' }
+          - { goos: darwin, goarch: arm64, ext: '' }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      # The asset name is a contract with the updater: internal/updater builds
+      # exactly this string to find its own binary, and TestAssetName pins it.
+      # Renaming anything here produces an updater that silently never finds a
+      # release.
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: |
+          version="${GITHUB_REF_NAME}"
+          mkdir -p dist
+          go build -trimpath \
+            -ldflags "-s -w -X main.version=${version} -X main.tmdbAPIKey=${TMDB_API_KEY}" \
+            -o "dist/theia-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}" \
+            ./cmd/theia
+
+      # The binary has to actually run, and report the version it was tagged
+      # with. Catching a broken build here costs a red pipeline; catching it
+      # after publication costs everybody who updates into it.
+      - name: Check the binary reports its version
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        run: |
+          reported=$(./dist/theia-linux-amd64 -version)
+          echo "reported: $reported"
+          case "$reported" in
+            *"${GITHUB_REF_NAME#v}"*) echo "version matches the tag" ;;
+            *) echo "::error::binary reports '$reported', expected ${GITHUB_REF_NAME}" ; exit 1 ;;
+          esac
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: theia-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/
+          retention-days: 1
+
+  publish:
+    name: Publish the release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: staging
+          merge-multiple: true
+
+      - name: List what will be published
+        run: ls -l staging
+
+      # No separate checksum file: GitHub reports a sha256 digest for every
+      # uploaded asset through its API, and that is what the updater verifies
+      # against before it will install anything.
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "Theia ${GITHUB_REF_NAME}" \
+            --generate-notes \
+            staging/*

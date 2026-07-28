@@ -11,6 +11,68 @@
 	let update = $state(null);
 	let updateBusy = $state(false);
 
+	let editing = $state(false);
+	let saving = $state(false);
+	let saveNotice = $state(null);
+	let draft = $state({ library_paths: [], port: 8383, tmdb_api_key: '' });
+
+	function startEditing() {
+		// The key is never sent to the browser, so the field starts empty and an
+		// empty field means "leave it alone" -- see saveSettings.
+		draft = {
+			library_paths: [...(settings.library_paths ?? [])],
+			port: settings.port,
+			tmdb_api_key: ''
+		};
+		saveNotice = null;
+		editing = true;
+	}
+
+	async function saveSettings() {
+		saving = true;
+		saveNotice = null;
+		try {
+			const body = {
+				library_paths: draft.library_paths,
+				port: Number(draft.port)
+			};
+			// Omitted rather than sent empty: sending "" would clear a key the
+			// user never intended to touch.
+			if (draft.tmdb_api_key.trim() !== '') {
+				body.tmdb_api_key = draft.tmdb_api_key.trim();
+			}
+
+			const res = await fetch('/api/settings', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(body)
+			});
+			const result = await res.json();
+			if (!res.ok) {
+				// Never result.error: the server writes English for its log and
+				// for anybody reading the API, and this interface is French.
+				saveNotice = {
+					ok: false,
+					text: res.status === 400 ? t.settings.invalidPort : t.settings.saveFailed
+				};
+				return;
+			}
+
+			let text = t.settings.saved;
+			if (result.port_changed) text += ' ' + t.settings.portChanged;
+			if (result.missing_paths?.length) {
+				text += ' ' + t.settings.missingPaths + ' ' + result.missing_paths.join(', ');
+			}
+			saveNotice = { ok: true, text };
+			editing = false;
+			await refresh();
+		} catch {
+			saveNotice = { ok: false, text: t.settings.saveFailed };
+		} finally {
+			saving = false;
+		}
+	}
+
 	async function checkUpdate() {
 		updateBusy = true;
 		try {
@@ -132,17 +194,116 @@
 			<dl class="mb-6 grid gap-x-8 gap-y-3 sm:grid-cols-[11rem_1fr]">
 				<dt class="label">{t.settings.films}</dt>
 				<dd class="text-small text-parchment">{stats.movies}</dd>
-				<dt class="label">{t.settings.paths}</dt>
-				<dd class="text-small text-parchment">
+			</dl>
+
+			<!-- The three things the spec allows to be configured, and nothing
+			     else. Editable here so that nobody has to find config.json. -->
+			<div class="border-t border-line pt-6">
+				<div class="mb-4 flex flex-wrap items-baseline justify-between gap-4">
+					<span class="label">{t.settings.paths}</span>
+					{#if !editing}
+						<button type="button" onclick={startEditing} class="label hover:text-bone">
+							{t.settings.edit}
+						</button>
+					{/if}
+				</div>
+
+				{#if !editing}
 					{#if settings.library_paths?.length}
 						{#each settings.library_paths as path (path)}
-							<span class="block break-all">{path}</span>
+							<p class="text-small break-all text-parchment">{path}</p>
 						{/each}
 					{:else}
-						<span class="text-muted">{t.settings.noPaths}</span>
+						<p class="text-small text-muted">{t.settings.noPaths}</p>
 					{/if}
-				</dd>
-			</dl>
+				{:else}
+					<div class="space-y-3">
+						{#each draft.library_paths as _, i (i)}
+							<div class="flex gap-3">
+								<input
+									type="text"
+									bind:value={draft.library_paths[i]}
+									placeholder={t.settings.pathPlaceholder}
+									class="min-w-0 flex-1 border border-line bg-surface px-4 py-2.5 text-small
+									       text-bone placeholder:text-faint focus:border-muted focus:outline-none"
+								/>
+								<button
+									type="button"
+									onclick={() => draft.library_paths.splice(i, 1)}
+									class="label shrink-0 hover:text-error"
+								>
+									{t.settings.removePath}
+								</button>
+							</div>
+						{/each}
+						<button
+							type="button"
+							onclick={() => draft.library_paths.push('')}
+							class="label hover:text-bone"
+						>
+							+ {t.settings.addPath}
+						</button>
+					</div>
+
+					<div class="mt-8 grid gap-6 sm:grid-cols-2">
+						<label class="block">
+							<span class="label">{t.settings.port}</span>
+							<input
+								type="number"
+								min="1"
+								max="65535"
+								bind:value={draft.port}
+								class="mt-2 w-full border border-line bg-surface px-4 py-2.5 text-small
+								       text-bone focus:border-muted focus:outline-none"
+							/>
+							<span class="label mt-2 block normal-case tracking-normal">
+								{t.settings.portHint}
+							</span>
+						</label>
+
+						<label class="block">
+							<span class="label">{t.settings.keyLabel}</span>
+							<input
+								type="password"
+								autocomplete="off"
+								bind:value={draft.tmdb_api_key}
+								placeholder={t.settings.keyPlaceholder}
+								class="mt-2 w-full border border-line bg-surface px-4 py-2.5 text-small
+								       text-bone placeholder:text-faint focus:border-muted focus:outline-none"
+							/>
+							<span class="label mt-2 block normal-case tracking-normal">
+								{t.settings.keyHint}
+							</span>
+						</label>
+					</div>
+
+					<div class="mt-8 flex flex-wrap items-center gap-4">
+						<button
+							type="button"
+							onclick={saveSettings}
+							disabled={saving}
+							class="ease-cine cursor-pointer border border-accent px-6 py-3 text-label
+							       uppercase text-accent transition-colors duration-160
+							       hover:bg-accent hover:text-ink disabled:cursor-not-allowed disabled:text-faint"
+						>
+							{saving ? t.settings.saving : t.settings.save}
+						</button>
+						<button type="button" onclick={() => (editing = false)} class="label hover:text-bone">
+							{t.settings.cancel}
+						</button>
+					</div>
+				{/if}
+
+				{#if saveNotice}
+					<p
+						class="mt-5 border-l py-1 pl-5 text-small text-parchment"
+						class:border-accent={saveNotice.ok}
+						class:border-error={!saveNotice.ok}
+					>
+						{saveNotice.text}
+					</p>
+				{/if}
+			</div>
 
 			{#if stats.last_scan}
 				<dl class="flex flex-wrap gap-x-8 gap-y-2 border-t border-line pt-5">
@@ -157,9 +318,16 @@
 				{#if stats.last_scan.problems?.length}
 					<div class="mt-6 border-l border-warning py-1 pl-5">
 						<p class="label mb-2">{t.settings.problems}</p>
-						<ul class="space-y-1">
-							{#each stats.last_scan.problems as problem (problem)}
-								<li class="text-small break-words text-muted">{problem}</li>
+						<ul class="space-y-3">
+							{#each stats.last_scan.problems as problem (problem.kind + (problem.path ?? ''))}
+								<li class="text-small text-parchment">
+									{t.problems[problem.kind] ?? t.problems.unknown}
+									{#if problem.path}
+										<span class="label mt-1 block break-all normal-case tracking-normal">
+											{problem.path}
+										</span>
+									{/if}
+								</li>
 							{/each}
 						</ul>
 					</div>
@@ -229,14 +397,17 @@
 				{:else if update.state === 'ready'}
 					<p class="border-l border-accent py-1 pl-5 text-small text-parchment">{t.update.ready}</p>
 				{:else if update.state === 'deferred'}
-					<p class="border-l border-warning py-1 pl-5 text-small text-parchment">{t.update.deferred}</p>
+					<p class="border-l border-warning py-1 pl-5 text-small text-parchment">
+						{t.update.deferred}
+					</p>
 				{:else if update.state === 'failed'}
 					<p class="border-l border-error py-1 pl-5 text-small text-parchment">
-						{t.update.failed}
-						{#if update.message}<span class="text-muted"> — {update.message}</span>{/if}
+						{t.updateReasons[update.reason] ?? t.update.failed}
 					</p>
 				{:else}
-					<p class="text-small text-muted">{update.message || t.update.upToDate}</p>
+					<p class="text-small text-muted">
+						{t.updateReasons[update.reason] || t.update.upToDate}
+					</p>
 				{/if}
 
 				{#if update.release_url && update.state === 'available'}
