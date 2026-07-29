@@ -546,6 +546,62 @@ three had overridden the heading style with `!important`. The rule that
 separates the two cases: **tokenise what two screens must agree on, not what one
 screen chooses.**
 
+## 29. The home screen is a personal surface, not a second catalogue
+
+Until now the home screen carried a hero, continue-watching, recently added and
+then **a row per genre** — eight of them, twenty films each. That made sense when
+it was the only way to reach anything. It stopped making sense the moment `/films`
+arrived with search across title, director, genre and year, five sorts and two
+filters over the whole library.
+
+Two screens were answering the same question, and the worse one was the front
+door. So the home screen now answers a narrower one: *what were you watching,
+what is new, and what should you put on tonight.* The genre rows are gone; genre
+browsing belongs to the page built for it, and the rows that remain are short —
+twelve rather than twenty — with a link through to `/films` pre-filtered to match.
+
+Three consequences worth stating:
+
+- **The hero is no longer a fixed slot.** If a film is in progress it takes the
+  hero, with its progress, what is left to watch, and a button that opens the
+  player rather than the detail page. Only when nothing is under way does the
+  recent-and-well-rated pick appear. Somebody who stopped forty minutes into a
+  film last night wants that film, not a recommendation.
+- **Rows carry a code, not a title.** `{kind: "continue"}`, never
+  `{title: "Continuer à regarder"}`. This was a live breach of decision 25 that
+  predated it, and it meant a second interface language would have had to be
+  added in Go.
+- **`Store.Genres` and `Store.ByGenre` were deleted** rather than left behind. A
+  query nothing calls is the same debt as a design token nothing reads.
+
+## 30. Tonight's suggestion is shuffled in Go, not in SQL
+
+The "au hasard ce soir" row must be stable for the evening: `ORDER BY RANDOM()`
+reshuffles on every page load, which turns a suggestion into a slot machine —
+you reload until you like the answer, and the row means nothing.
+
+Seeding the date into a SQL `ORDER BY` took three attempts, and the first two
+failed in ways that read as correct:
+
+1. `(id * constant + seed) % p` — adding the seed shifts every row equally, so
+   the order changes only for a row whose value happens to cross the modulus.
+   With a dozen rows that is almost never: the row showed the same films daily.
+2. `(id * seed) % p` — a date seed is about 2e7, so `id * seed` for a few hundred
+   films never reaches a 2.1e9 modulus. Nothing wraps, and the result is plain
+   id order.
+3. `(id * k) % p` with `k` spread across the full range — this passed every test
+   written for it, and was still wrong. Sorting by a modular multiply and taking
+   the first twelve selects ids at a **fixed stride**. On the real library the
+   row came back `257, 234, 211, 188 …`: every twenty-third film, every time.
+
+That third one is the interesting failure. It was stable, it turned over daily,
+it passed. It was only caught by printing the ids and looking at them.
+
+The row is now built in Go: fetch the eligible ids, shuffle them with a
+date-seeded `math/rand`, fetch the chosen rows. Two queries instead of one, for
+a few hundred integers, in exchange for a shuffle whose correctness is obvious
+rather than argued. `TestTonightIsNotAnArithmeticProgression` guards it.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

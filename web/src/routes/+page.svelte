@@ -66,13 +66,13 @@
 	</ChromeScene>
 {:else}
 	{#if home.hero}
-		<Hero movie={home.hero} />
+		<Hero movie={home.hero} kind={home.hero_kind} />
 	{/if}
 
 	<!-- Pulled up under the hero's fade, so the first row starts inside the
 	     gradient rather than after a visible seam. -->
 	<div class:home-rows={home.hero} class:page-body={!home.hero}>
-		{#each home.rows as row (row.title)}
+		{#each home.rows as row (row.kind)}
 			<Row {row} />
 		{/each}
 	</div>

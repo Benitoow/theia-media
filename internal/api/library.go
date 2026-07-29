@@ -85,12 +85,14 @@ func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, report)
 }
 
-// handleHome returns the hero and the genre rows in one request.
+// handleHome returns the hero and every row in one request.
+//
+// Rows are short by default. The home screen suggests; /films inventories, and
+// the "see all" link on each row is the way from one to the other.
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
-	rows := clamp(intQuery(r, "rows", 8), 1, 20)
-	perRow := clamp(intQuery(r, "per_row", 20), 1, 60)
+	perRow := clamp(intQuery(r, "per_row", 12), 1, 60)
 
-	home, err := s.lib.HomeScreen(r.Context(), rows, perRow)
+	home, err := s.lib.HomeScreen(r.Context(), perRow)
 	if err != nil {
 		s.log.Error("building the home screen failed", "error", err)
 		writeJSONError(w, http.StatusInternalServerError, "could not read the library")

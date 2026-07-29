@@ -38,8 +38,12 @@ The interface is in French.
   still appears when parsing or metadata matching fails.
 - Fetches movie titles, synopses, dates, posters, backdrops, runtime, rating,
   director, genres and cast from TMDB. Images are cached locally.
-- Builds a television-first home screen with a hero, recently added films,
-  genre rows and a continue-watching row.
+- Builds a television-first home screen around what you were watching: a hero
+  that offers to resume the film you left, then continue-watching, recently
+  added, best rated and a nightly suggestion. Each row leads to the full library
+  pre-filtered.
+- Gives the whole catalogue its own page, with search across title, director,
+  genre and year, five sorts and filters by genre and watch state.
 - Shows a detail page for every film, including the source filename and size.
 - Direct-plays browser-ready files with range requests.
 - Remuxes other compatible containers on demand. Video is copied; incompatible
@@ -66,7 +70,7 @@ not to TMDB.
 | Built-in remote access or HTTPS | Theia serves plain HTTP on the LAN. It is not a relay, reverse proxy or VPN. |
 | PWA or native TV/mobile apps | The shipped client is a responsive web interface. |
 | Background-service installer | The binary runs in the foreground. Starting it at boot is left to the operating system. |
-| Search or manual TMDB matching | v1 is browsed through its home rows and detail pages. Renaming a badly matched file makes the next scan look it up again. |
+| Manual TMDB matching | Search exists, over what has already been matched. Correcting a *wrong* match is done by renaming the file, which makes the next scan look it up again. |
 
 The reasoning behind these boundaries lives in
 [the decision record](docs/DECISIONS.md). They are scope decisions, not

@@ -5,6 +5,13 @@
 	import { strings as t } from '$lib/strings.js';
 
 	let { row } = $props();
+
+	// The server says what a row is; this is where it gets its name and its way
+	// through to the library. An unknown kind falls back to the code itself
+	// rather than rendering an empty heading -- a new row kind should look
+	// unfinished, not invisible.
+	const copy = $derived(t.rows[row.kind] ?? { title: row.kind, href: null });
+
 	let scroller = $state();
 	let canScrollLeft = $state(false);
 	let canScrollRight = $state(false);
@@ -61,13 +68,18 @@
 	});
 </script>
 
-<section class="mb-10 lg:mb-14" aria-label={row.title}>
+<section class="mb-10 lg:mb-14" aria-label={copy.title}>
 	<div class="page-shell mb-3 flex items-end justify-between gap-6">
-		<h2 class="section-title">{row.title}</h2>
-		{#if row.genre}
-			<!-- A row shows twenty films. This is the way to the rest of them,
-			     which until now simply did not exist. -->
-			<a href="/films?genre={encodeURIComponent(row.genre)}" class="tv-link label shrink-0">
+		<div class="min-w-0">
+			<h2 class="section-title">{copy.title}</h2>
+			{#if copy.hint}
+				<p class="label mt-1.5">{copy.hint}</p>
+			{/if}
+		</div>
+		{#if copy.href}
+			<!-- A row is a suggestion, not an inventory. This is the way to the
+			     rest, pre-filtered to match what the row was showing. -->
+			<a href={copy.href} class="tv-link label shrink-0">
 				{t.library.seeAll}
 			</a>
 		{/if}
@@ -100,7 +112,7 @@
 			       pt-3 pb-5 lg:gap-5"
 			style="scroll-padding-inline: var(--page-gutter)"
 			role="group"
-			aria-label={row.title}
+			aria-label={copy.title}
 			tabindex="-1"
 			onkeydown={moveInRow}
 			onscroll={updateScrollEdges}

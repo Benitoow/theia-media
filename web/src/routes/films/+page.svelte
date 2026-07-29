@@ -19,11 +19,23 @@
 	let status = $state('all');
 
 	onMount(async () => {
-		// A genre row on the home screen links here pre-filtered, so the deep
-		// link has to survive a reload rather than being lost on mount. Film
-		// detail pages use the same contract for director searches.
-		genre = $page.url.searchParams.get('genre') ?? '';
-		query = $page.url.searchParams.get('q') ?? '';
+		// Every home row links here pre-filtered to match what it was showing, so
+		// the deep link has to survive a reload rather than being lost on mount.
+		// Film detail pages use the same contract for director searches.
+		//
+		// Unknown values are dropped rather than accepted: a hand-edited
+		// ?sort=banana should leave the page in a state its own controls can
+		// describe, not a state no dropdown can show.
+		const params = $page.url.searchParams;
+		const pick = (name, allowed, fallback) => {
+			const raw = params.get(name);
+			return allowed.includes(raw) ? raw : fallback;
+		};
+
+		genre = params.get('genre') ?? '';
+		query = params.get('q') ?? '';
+		sort = pick('sort', ['title', 'year', 'rating', 'added', 'runtime'], 'title');
+		status = pick('status', ['all', 'unseen', 'progress', 'finished'], 'all');
 		try {
 			movies = await getAllMovies((n) => (loaded = n));
 			state = 'ready';

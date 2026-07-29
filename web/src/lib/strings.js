@@ -53,7 +53,34 @@ export const strings = {
 	},
 
 	hero: {
-		details: 'Voir la fiche'
+		details: 'Voir la fiche',
+		resumeEyebrow: 'Vous étiez en train de regarder',
+		resume: 'Reprendre',
+		remaining: (duration) => `Il reste ${duration}`
+	},
+
+	// The server sends a row kind, never a title (decision 25). These are the
+	// sentences, and the link each row offers into the library.
+	rows: {
+		continue: {
+			title: 'Continuer à regarder',
+			href: '/films?status=progress'
+		},
+		recent: {
+			title: 'Récemment ajoutés',
+			href: '/films?sort=added'
+		},
+		top_rated: {
+			title: 'Les mieux notés',
+			href: '/films?sort=rating'
+		},
+		tonight: {
+			title: 'Au hasard ce soir',
+			// No link: the point of this row is that somebody else chose. A way
+			// through to a sorted list would be answering a different question.
+			href: null,
+			hint: 'Une sélection qui change chaque jour'
+		}
 	},
 
 	home: {

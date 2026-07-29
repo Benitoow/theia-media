@@ -1,0 +1,81 @@
+# Working on Theia
+
+Theia is a personal media server in a single Go binary: no configuration, no
+account, no paywall. One user, their own films, their own machine.
+
+## Read these first, every session
+
+Three documents govern this project. Read them before proposing or writing
+anything; they answer most questions that would otherwise be asked again.
+
+| Document | What it settles |
+|---|---|
+| [`docs/spec-fondatrice.md`](docs/spec-fondatrice.md) | What Theia is and what it refuses to be. The scope of v1, and the technical prohibitions. Start here. |
+| [`docs/DECISIONS.md`](docs/DECISIONS.md) | Every decision already taken, with its reasoning and, where it matters, the bug that forced it. Check here before re-opening a question. |
+| [`docs/design-system.md`](docs/design-system.md) | Colour, type, spacing, motion, focus. §6 — *the poster grid is exempt* — is the single most important constraint in the interface. |
+
+If a change contradicts one of them, the document is changed first, in the same
+commit, with the reasoning written down. `DECISIONS.md` is append-only in
+spirit: supersede an entry, do not quietly rewrite it.
+
+## Standing constraints
+
+From the founding spec, §3. These are not preferences:
+
+- **No CGO, ever.** `modernc.org/sqlite`, not `mattn/go-sqlite3`.
+- **No runtime dependency beyond ffmpeg**, which Theia downloads itself, pinned
+  and checksum-verified.
+- **Docker is never required.**
+- **No telemetry, no cloud account.** The only outbound calls Theia may make are
+  to TMDB and to GitHub Releases. Nothing else, ever.
+- **No unverified image.** This repository is public and GPL-3.0. Never fetch
+  decorative imagery from the web; the maintainer supplies licence-checked
+  assets. A screen that needs filling gets CSS texture and a note.
+
+## Language
+
+Code, comments, commit messages and internal error strings are **English**, for
+contributors. The user interface is **French**, and every string it shows lives
+in `web/src/lib/strings.js`.
+
+**The server never writes what the user reads** (decision 25). The API sends
+codes — a scan problem is `{kind, path}`, an update failure carries a `reason`,
+a home row carries a `kind` — and the interface owns every sentence. This rule
+exists because the settings page once showed somebody a Windows syscall name
+wrapped in English in the middle of a French page.
+
+## Building
+
+Go lives at `C:\Users\starx\go-toolchain` and is not on `PATH`.
+
+```bash
+./build.ps1
+```
+
+Use the script. **Never run `npm run build` from `web/` on its own** unless you
+know why: the frontend build wipes `web-dist/`, and `web-dist/.gitkeep` is
+tracked. There is a `postbuild` hook that restores it, but the script is the
+tested path. Deleting that file has turned CI red before.
+
+```bash
+go test ./...              # the whole suite
+node scripts/contrast.mjs  # guards the documented colour ratios
+```
+
+## Verifying
+
+The standard on this project is **report what you verified, not what you
+assumed.** A milestone is not done because the code looks right; it is done when
+it has been run against the real library of 274 films and the result observed.
+
+Two traps already paid for:
+
+- The in-app preview pane does **not** composite frames. `requestAnimationFrame`
+  never fires there, so no CSS animation, transition or smooth scroll advances,
+  and computed styles for a `position: fixed` subtree can be stale. Anything
+  involving motion or hover has to be checked in a real browser, or reported
+  honestly as unverified.
+- Port **8383** is the maintainer's own release binary. Test on **8395**.
+
+If something could not be verified, say so plainly rather than burying it in an
+optimistic summary.

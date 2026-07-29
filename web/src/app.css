@@ -508,6 +508,32 @@
 		}
 	}
 
+	/* How far into the film you are, stated on the hero rather than implied by a
+	   3px rule on a poster. This is chrome, so section 6 does not hold it to the
+	   grid's plainness -- and it is the one number that decides whether tonight
+	   is "finish that" or "start something". */
+	.hero-progress {
+		display: flex;
+		max-width: 34rem;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.hero-progress-track {
+		position: relative;
+		width: 100%;
+		height: 0.25rem;
+		overflow: hidden;
+		border-radius: 999px;
+		background: rgba(237, 231, 220, 0.18);
+	}
+
+	.hero-progress-played {
+		height: 100%;
+		border-radius: 999px;
+		background: var(--color-accent);
+	}
+
 	/* Full-bleed message screens: empty library, unreachable server, welcome. */
 	.chrome-scene {
 		position: relative;

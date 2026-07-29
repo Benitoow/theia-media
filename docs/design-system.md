@@ -30,7 +30,10 @@ The v1 television pass adds three more precise references:
   focus and information that survives three metres of distance are the real
   product constraints.
 - **Netflix contributes one structural idea only:** a strong hero followed by
-  horizontal rows. Its visual language is deliberately not copied.
+  horizontal rows. Its visual language is deliberately not copied — and neither
+  is its purpose. Theia's home screen is not a shop front trying to hold you: it
+  is four short rows about your own library, and every one of them points at the
+  page that does the real browsing. See decision 29.
 - **Squarespace confirms the palette and display register:** warm darkness,
   cinematic imagery and a dramatic serif belong to the chrome, not to the film
   grid.
@@ -474,3 +477,11 @@ places. That was closed:
 - The nav says where you are, keyed off `aria-current` so the fact serves the
   eye and a screen reader at once; `+error.svelte` means a mistyped address gets
   a French screen instead of SvelteKit's untouched English one.
+
+**The home screen, rebuilt after that.** It is now four short rows — continue
+watching, recently added, best rated, tonight's suggestion — instead of a hero
+and eight genre rows. The hero shows the film you left, with how far in you are
+and what is left, and its button opens the player rather than a detail page. The
+grid underneath is unchanged and still exempt under §6: the only gold at rest is
+the 3px progress rule, poster ratio stays `2/3`, and no card title takes the
+display serif. Verified against the 274-film library rather than inferred.

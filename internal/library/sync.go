@@ -118,28 +118,55 @@ func (s *Service) SaveDuration(ctx context.Context, id int64, seconds float64) e
 	return s.store.SaveDuration(ctx, id, seconds)
 }
 
-// Row is one horizontal strip on the home screen.
+// Row kinds. The server names what a row *is*; the interface writes what it is
+// called, per decision 25. Before this the server sent "Continuer à regarder"
+// as a title, which put French in the API and meant a second language would
+// have had to be added in Go.
+const (
+	RowContinue = "continue"
+	RowRecent   = "recent"
+	RowTopRated = "top_rated"
+	RowTonight  = "tonight"
+)
+
+// Hero kinds, same rule.
+const (
+	// HeroResume is a film already under way. It outranks everything else:
+	// somebody who stopped forty minutes into a film last night is far more
+	// likely to want that than anything the library could suggest.
+	HeroResume = "resume"
+	// HeroFeatured is the recent-and-well-rated pick, used when nothing is in
+	// progress.
+	HeroFeatured = "featured"
+)
+
+// Row is one horizontal strip on the home screen. Kind says what it is; the
+// interface decides what it is called and where its "see all" link goes.
 type Row struct {
-	Title  string  `json:"title"`
-	Genre  string  `json:"genre,omitempty"`
+	Kind   string  `json:"kind"`
 	Movies []Movie `json:"movies"`
 }
 
-// Home is everything the home screen needs, in one request: the hero and the
-// rows beneath it. One round trip rather than one per row, because the client
-// cannot know which genres exist until the server tells it.
+// Home is everything the home screen needs, in one request.
 type Home struct {
-	Hero  *Movie `json:"hero"`
-	Rows  []Row  `json:"rows"`
-	Total int    `json:"total"`
+	Hero     *Movie `json:"hero"`
+	HeroKind string `json:"hero_kind,omitempty"`
+	Rows     []Row  `json:"rows"`
+	Total    int    `json:"total"`
 }
 
-// HomeScreen assembles the hero and the genre rows.
+// HomeScreen assembles the home screen.
 //
-// A film appears in every row its genres put it in; deduplicating across rows
-// would leave the later ones thin for no benefit, and seeing a favourite twice
-// under two genres is how every streaming service behaves.
-func (s *Service) HomeScreen(ctx context.Context, rowCount, perRow int) (*Home, error) {
+// The home screen is a personal surface, not a second catalogue. /films already
+// searches, sorts and filters the whole library, so this answers a narrower and
+// more useful question: what were you watching, what is new, and what should you
+// put on tonight. It deliberately no longer lists a row per genre — that was the
+// library pretending to be a shop front, and browsing by genre now belongs to
+// the page built for it.
+//
+// Rows are short for the same reason. Each one carries a way through to /films
+// pre-filtered, which is where an inventory belongs.
+func (s *Service) HomeScreen(ctx context.Context, perRow int) (*Home, error) {
 	total, err := s.store.Count(ctx)
 	if err != nil {
 		return nil, err
@@ -149,45 +176,48 @@ func (s *Service) HomeScreen(ctx context.Context, rowCount, perRow int) (*Home, 
 		return home, nil
 	}
 
-	if hero, err := s.store.Hero(ctx); err == nil {
-		home.Hero = &hero
-	} else if !errors.Is(err, ErrNoSuchMovie) {
+	// The hero is whichever of the two is true right now, never a fixed choice:
+	// a film in progress if there is one, otherwise something worth starting.
+	switch hero, err := s.store.ResumeHero(ctx); {
+	case err == nil:
+		home.Hero, home.HeroKind = &hero, HeroResume
+	case errors.Is(err, ErrNoSuchMovie):
+		if featured, err := s.store.Hero(ctx); err == nil {
+			home.Hero, home.HeroKind = &featured, HeroFeatured
+		} else if !errors.Is(err, ErrNoSuchMovie) {
+			return nil, err
+		}
+	default:
 		return nil, err
 	}
 
-	// Continue watching comes first when there is anything in it. Somebody
-	// opening a media server mid-film wants one click, not a search.
-	inProgress, err := s.store.ContinueWatching(ctx, perRow)
-	if err != nil {
-		return nil, err
-	}
-	if len(inProgress) > 0 {
-		home.Rows = append(home.Rows, Row{Title: "Continuer à regarder", Movies: inProgress})
+	// Seeded with the local date so tonight's suggestion holds for the evening.
+	// See Store.Tonight for why it is not simply random.
+	year, month, day := time.Now().Date()
+	seed := int64(year)*10000 + int64(month)*100 + int64(day)
+
+	// The whole shape of the home screen, in the order it is read. Continue
+	// watching is first and stays first: somebody who stopped mid-film wants one
+	// click, not a search.
+	sources := []struct {
+		kind  string
+		fetch func() ([]Movie, error)
+	}{
+		{RowContinue, func() ([]Movie, error) { return s.store.ContinueWatching(ctx, perRow) }},
+		{RowRecent, func() ([]Movie, error) { return s.store.RecentlyAdded(ctx, perRow) }},
+		{RowTopRated, func() ([]Movie, error) { return s.store.TopRated(ctx, perRow) }},
+		{RowTonight, func() ([]Movie, error) { return s.store.Tonight(ctx, perRow, seed) }},
 	}
 
-	// Recently added next, because it answers the other question people open a
-	// media server with: what is new since last time.
-	recent, err := s.store.RecentlyAdded(ctx, perRow)
-	if err != nil {
-		return nil, err
-	}
-	if len(recent) > 0 {
-		home.Rows = append(home.Rows, Row{Title: "Récemment ajoutés", Movies: recent})
-	}
-
-	genres, err := s.store.Genres(ctx, rowCount)
-	if err != nil {
-		return nil, err
-	}
-	for _, genre := range genres {
-		movies, err := s.store.ByGenre(ctx, genre.Name, perRow)
+	for _, src := range sources {
+		movies, err := src.fetch()
 		if err != nil {
 			return nil, err
 		}
 		if len(movies) == 0 {
 			continue
 		}
-		home.Rows = append(home.Rows, Row{Title: genre.Name, Genre: genre.Name, Movies: movies})
+		home.Rows = append(home.Rows, Row{Kind: src.kind, Movies: movies})
 	}
 	return home, nil
 }

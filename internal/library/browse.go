@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math/rand"
+	"strings"
 )
 
 // ErrNoSuchMovie is returned when an id matches nothing.
@@ -151,59 +153,152 @@ func (s *Store) RecentlyAdded(ctx context.Context, limit int) ([]Movie, error) {
 	return collectMovies(rows, limit)
 }
 
-// Genre is one genre and how many films carry it.
-type Genre struct {
-	Name  string `json:"name"`
-	Count int    `json:"count"`
-}
-
-// Genres returns the genres present in the library, most populated first.
+// TopRated returns the best-rated films first.
 //
-// Genres are stored as a JSON array on the movie row rather than in a join
-// table. json_each unrolls them, which keeps the schema simple and is entirely
-// fast enough: this runs once per home-screen load over a few thousand rows.
-// If the library ever outgrows that, this query is the thing to replace, not
-// the storage.
-func (s *Store) Genres(ctx context.Context, limit int) ([]Genre, error) {
+// A poster is required: this row exists to be looked at, and a placeholder card
+// among nine posters reads as a fault rather than as a film.
+//
+// TMDB's vote count is not stored, so a film rated 8.9 by twelve people ranks
+// alongside one rated 8.9 by twelve thousand. That is tolerable here and would
+// not be on a public catalogue: this is somebody's own shelf of a few hundred
+// films they chose to keep, not the whole of TMDB. If it ever needs fixing, the
+// fix is to store vote_count, not to invent a weighting from what we have.
+func (s *Store) TopRated(ctx context.Context, limit int) ([]Movie, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT je.value AS genre, COUNT(*) AS n
-		FROM movies m, json_each(m.genres_json) je
-		WHERE m.genres_json IS NOT NULL
-		  AND m.genres_json != ''
-		  AND m.genres_json != 'null'
-		GROUP BY je.value
-		HAVING n >= 3
-		ORDER BY n DESC, genre
+		SELECT `+movieColumns+`
+		FROM movies
+		WHERE poster_path IS NOT NULL AND poster_path != ''
+		  AND COALESCE(vote_average, 0) > 0
+		ORDER BY vote_average DESC, added_at DESC, id DESC
 		LIMIT ?`, limit)
 	if err != nil {
-		return nil, fmt.Errorf("listing genres: %w", err)
+		return nil, fmt.Errorf("listing the best rated films: %w", err)
+	}
+	return collectMovies(rows, limit)
+}
+
+// Tonight returns a suggestion: films not yet finished, shuffled by a seed the
+// caller supplies.
+//
+// Stability is the point. ORDER BY RANDOM() reshuffles on every page load, which
+// turns a suggestion into a slot machine — you would reload until you liked the
+// answer, and the row would mean nothing. Seeded with the date, the selection
+// holds for the evening and turns over tomorrow.
+//
+// The shuffle is done here rather than in SQL, in two queries: the eligible ids,
+// then the chosen rows. That is deliberate, after an ORDER BY arithmetic trick
+// produced a stable order that was not remotely random. Sorting by (id * k) mod
+// p and taking the first twelve selects ids at a fixed stride, so on the real
+// 274-film library the row came back as 257, 234, 211, 188 … — every
+// twenty-third film, every time. It reads as random only until you look at it.
+//
+// Two earlier attempts failed more visibly, and are worth recording because they
+// look right on the page: adding the seed shifts every row equally and so almost
+// never changes the order, and multiplying by a raw date seed never reaches the
+// modulus for a few hundred ids, leaving plain id order. A real shuffle has no
+// such edges.
+func (s *Store) Tonight(ctx context.Context, limit int, seed int64) ([]Movie, error) {
+	ids, err := s.eligibleForTonight(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	shuffler := rand.New(rand.NewSource(seed))
+	shuffler.Shuffle(len(ids), func(i, j int) { ids[i], ids[j] = ids[j], ids[i] })
+	if len(ids) > limit {
+		ids = ids[:limit]
+	}
+	return s.byIDs(ctx, ids)
+}
+
+// eligibleForTonight lists what may be suggested: nothing already watched to the
+// end, and nothing without a poster, since this row exists to be looked at.
+func (s *Store) eligibleForTonight(ctx context.Context) ([]int64, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id
+		FROM movies
+		WHERE finished = 0
+		  AND poster_path IS NOT NULL AND poster_path != ''
+		ORDER BY id`)
+	if err != nil {
+		return nil, fmt.Errorf("listing films eligible for tonight: %w", err)
 	}
 	defer rows.Close()
 
-	var out []Genre
+	var ids []int64
 	for rows.Next() {
-		var g Genre
-		if err := rows.Scan(&g.Name, &g.Count); err != nil {
-			return nil, fmt.Errorf("listing genres: %w", err)
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("listing films eligible for tonight: %w", err)
 		}
-		out = append(out, g)
+		ids = append(ids, id)
 	}
-	return out, rows.Err()
+	return ids, rows.Err()
 }
 
-// ByGenre returns films carrying a genre, best rated first so that the start of
-// a row is worth looking at.
-func (s *Store) ByGenre(ctx context.Context, genre string, limit int) ([]Movie, error) {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT `+movieColumns+`
-		FROM movies m
-		WHERE EXISTS (
-			SELECT 1 FROM json_each(m.genres_json) je WHERE je.value = ?
-		)
-		ORDER BY vote_average DESC, title COLLATE NOCASE
-		LIMIT ?`, genre, limit)
-	if err != nil {
-		return nil, fmt.Errorf("listing films in %s: %w", genre, err)
+// byIDs fetches films by id and returns them in the order asked for, which SQL
+// will not do on its own.
+func (s *Store) byIDs(ctx context.Context, ids []int64) ([]Movie, error) {
+	if len(ids) == 0 {
+		return nil, nil
 	}
-	return collectMovies(rows, limit)
+
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT `+movieColumns+` FROM movies WHERE id IN (`+placeholders+`)`, args...)
+	if err != nil {
+		return nil, fmt.Errorf("reading films by id: %w", err)
+	}
+	found, err := collectMovies(rows, len(ids))
+	if err != nil {
+		return nil, err
+	}
+
+	byID := make(map[int64]Movie, len(found))
+	for _, m := range found {
+		byID[m.ID] = m
+	}
+	out := make([]Movie, 0, len(ids))
+	for _, id := range ids {
+		if m, ok := byID[id]; ok {
+			out = append(out, m)
+		}
+	}
+	return out, nil
+}
+
+// ResumeHero returns the most recently watched unfinished film, provided it can
+// carry a hero: artwork and a synopsis, the same bar Hero applies.
+//
+// Separate from ContinueWatching because the requirements differ. The row can
+// show a film with no backdrop — it is a poster among posters. The hero cannot:
+// a hero without artwork is a hole in the top of the screen.
+func (s *Store) ResumeHero(ctx context.Context) (Movie, error) {
+	const query = `
+		SELECT ` + movieColumns + `
+		FROM movies
+		WHERE finished = 0
+		  AND watched_at > 0
+		  AND position_seconds >= ?
+		  AND backdrop_path IS NOT NULL AND backdrop_path != ''
+		  AND overview IS NOT NULL AND overview != ''
+		ORDER BY watched_at DESC, id DESC
+		LIMIT 1`
+
+	m, err := scanMovie(s.db.QueryRowContext(ctx, query, minimumRememberedSeconds))
+	if errors.Is(err, sql.ErrNoRows) {
+		return Movie{}, ErrNoSuchMovie
+	}
+	if err != nil {
+		return Movie{}, fmt.Errorf("choosing a resume hero: %w", err)
+	}
+	return m, nil
 }
