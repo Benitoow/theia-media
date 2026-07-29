@@ -165,11 +165,21 @@
 				<a
 					href="/"
 					class="nav-target nav-brand"
-					aria-label={t.nav.home}
+					aria-label="{t.appName} — {t.nav.home}"
 					aria-current={atHome ? 'page' : undefined}
 				>
-					<span class="brand-orbit" aria-hidden="true"></span>
-					<span class="text-label font-semibold tracking-[0.2em] uppercase">{t.appName}</span>
+					<!-- The wordmark carries the name, so the image is decorative and
+					     the link states both the brand and where it goes. Intrinsic
+					     dimensions are declared so the nav does not reflow while it
+					     loads. -->
+					<img
+						src="/theia-wordmark.webp"
+						alt=""
+						width="410"
+						height="120"
+						class="brand-wordmark"
+						fetchpriority="high"
+					/>
 				</a>
 				<div class="flex items-center">
 					<a

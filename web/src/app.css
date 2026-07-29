@@ -435,32 +435,36 @@
 		box-shadow: 0 0 0.5rem rgba(200, 162, 74, 0.5);
 	}
 
-	/* The brand mark already carries a gold circle. A second one beside it would
-	   be two accents saying one thing, so being home brightens the orbit
-	   instead of adding to it. */
-	.nav-brand[aria-current='page'] .brand-orbit {
-		border-color: var(--color-accent-bright);
-		box-shadow: 0 0 1.5rem rgba(227, 193, 115, 0.45);
+	/* The real wordmark, which replaced the CSS orbit-and-rule stand-in that held
+	   the brand's place until the licence-checked asset was wired up.
+
+	   Sized by height so the nav's rhythm decides, not the image: 1.75rem inside
+	   a 4rem bar, rising with the bar at TV width. The file is cropped to the
+	   letterforms and shipped at three times the rendered height, so it stays
+	   crisp on a 4K panel and still costs 7.4 KB. */
+	.brand-wordmark {
+		width: auto;
+		height: 1.75rem;
+		opacity: 0.92;
+		transition: opacity var(--duration-fast) var(--ease-cine);
 	}
 
-	.brand-orbit {
-		position: relative;
-		display: inline-block;
-		width: 0.85rem;
-		height: 0.85rem;
-		border: 1px solid var(--color-accent);
-		border-radius: 50%;
-		box-shadow: 0 0 1.25rem rgba(200, 162, 74, 0.28);
+	.nav-brand:hover .brand-wordmark,
+	.nav-brand:focus-visible .brand-wordmark {
+		opacity: 1;
 	}
 
-	.brand-orbit::after {
-		content: '';
-		position: absolute;
-		inset: 50% auto auto 50%;
-		width: 1.3rem;
-		height: 1px;
-		background: var(--color-accent-dim);
-		transform: translate(-50%, -50%) rotate(-35deg);
+	/* Being home brightens the mark rather than adding a second gold dot beside
+	   it: the wordmark is already an accent, and §3 keeps the budget at five. */
+	.nav-brand[aria-current='page'] .brand-wordmark {
+		opacity: 1;
+		filter: drop-shadow(0 0 0.85rem rgba(200, 162, 74, 0.4));
+	}
+
+	@media (min-width: 80rem) {
+		.brand-wordmark {
+			height: 2rem;
+		}
 	}
 
 	/* The largest register, and it stays reserved for what fills a viewport: the

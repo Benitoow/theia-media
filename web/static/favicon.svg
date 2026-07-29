@@ -1,8 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
   <!-- The wordmark reduced to its centre. A photographic crop of the logo turns
-       to mush below about 64px -- the letterforms either side of the flare
-       become an ambiguous cross -- so the tab icon is the sun alone, drawn.
-       Larger sizes use the real crop; see apple-touch-icon.png. -->
+       to mush below about 64px, because the letterforms either side of the
+       flare become an ambiguous cross, so the tab icon is the sun alone, drawn.
+       Larger sizes use the real crop; see apple-touch-icon.png.
+
+       Never write a double hyphen in this file. XML forbids it inside a
+       comment, and this icon carried two of them from M2 until v1.5.0. Nothing
+       caught it: the file existed, the server returned it with the right
+       content type, and injected into the page it rendered, because the HTML
+       parser is lenient. A browser decoding it as an *image* uses a strict XML
+       parser, so every tab silently fell back to the default icon for four
+       releases. Loading it into an Image() and waiting for onload is the check
+       that finds this; the file existing is not. -->
   <defs>
     <radialGradient id="core" cx="50%" cy="50%" r="50%">
       <stop offset="0%" stop-color="#FFF6E2"/>
