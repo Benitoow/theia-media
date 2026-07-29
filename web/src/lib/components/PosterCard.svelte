@@ -6,7 +6,16 @@
 	// column to decide.
 	let { movie, fluid = false, legend = null } = $props();
 
-	const poster = $derived(imageURL(movie.metadata?.poster_path, 'w342'));
+	// Landscape artwork, which is what a 16/9 card is for. TMDB's backdrop is
+	// already that shape, so nothing is cropped to fit.
+	const backdrop = $derived(imageURL(movie.metadata?.backdrop_path, 'w780'));
+
+	// Only reached by a film that has a poster and no backdrop. On the 274-film
+	// library that is nobody -- artwork arrives in pairs or not at all -- but a
+	// portrait poster stretched to fill a landscape box would lose its title to
+	// the crop, so it is contained rather than covered when it does happen.
+	const poster = $derived(backdrop ? null : imageURL(movie.metadata?.poster_path, 'w342'));
+
 	const title = $derived(displayTitle(movie));
 	const year = $derived(displayYear(movie));
 	const secondary = $derived(legend ?? year ?? '—');
@@ -26,11 +35,10 @@
 </script>
 
 <!--
-	Deliberately plain. Section 6 of the design system exempts the grid from the
-	rest of the identity: no display serif, no negative space, no gold at rest.
-	TMDB posters already carry a hundred competing art directions, and framing
-	them dramatically makes a grid that is slow to scan. Gold appears on hover
-	and focus only, as one pixel of border.
+	Wide landscape cards, per §6 of the design system as rewritten. The card is
+	still restrained -- no display serif, no gold at rest beyond the progress
+	rule -- but it is no longer a bare 2:3 poster: it shows the film's own
+	backdrop at 16/9, with corners from the same family as every other panel.
 -->
 <a
 	href="/film/{movie.id}"
@@ -39,34 +47,25 @@
 	title={title}
 	data-poster-card
 >
-	<div
-		class="poster-frame relative aspect-[2/3] overflow-hidden rounded-sm border border-transparent
-		       bg-surface
-		       group-hover:border-accent group-focus-visible:border-accent"
-	>
-		{#if poster}
-			<img
-				src={poster}
-				alt=""
-				loading="lazy"
-				decoding="async"
-				class="h-full w-full object-cover"
-			/>
+	<div class="poster-frame">
+		{#if backdrop}
+			<img src={backdrop} alt="" loading="lazy" decoding="async" class="poster-art" />
+		{:else if poster}
+			<img src={poster} alt="" loading="lazy" decoding="async" class="poster-art poster-art--fit" />
 		{:else}
-			<!-- No poster is a normal state: TMDB did not recognise the file, or
-			     has no artwork. The title still has to be readable. -->
-			<div class="flex h-full items-center justify-center p-3">
-				<span class="line-clamp-4 text-center text-small text-muted">{title}</span>
+			<!-- No artwork is a normal state: TMDB did not recognise the file, or
+			     has none. The title still has to be readable. -->
+			<div class="poster-fallback">
+				<span class="line-clamp-3 text-center text-small text-muted">{title}</span>
 			</div>
 		{/if}
 
 		{#if watched}
-			<!-- The one accent the grid carries at rest, allowed by section 6 of
-			     the design system because it is information rather than
-			     decoration: it says how far in you are, which is the whole point
-			     of the row it appears in. -->
-			<div class="absolute inset-x-0 bottom-0 h-[3px] bg-ink/70">
-				<div class="h-full bg-accent" style="width: {percent}%"></div>
+			<!-- The one accent the grid carries at rest, allowed by §6 because it
+			     is information rather than decoration: it says how far in you are,
+			     which is the whole point of the row it appears in. -->
+			<div class="poster-progress">
+				<div class="poster-progress-played" style="width: {percent}%"></div>
 			</div>
 		{/if}
 	</div>

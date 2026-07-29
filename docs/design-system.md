@@ -122,7 +122,7 @@ the brand rather than alarming.
 
 `--font-display` is for hero titles, film titles on a detail page, and empty-state
 headlines. Nothing else. `--font-ui` is for everything else without exception:
-nav, labels, body copy, buttons, metadata, the poster grid.
+nav, labels, body copy, buttons, metadata, the card grid.
 
 The first family in each stack is self-hosted; the remaining system fonts are
 deliberate fallbacks. See §10 for the shipped files.
@@ -157,7 +157,7 @@ a viewing-distance layer without inventing a third type register:
 
 - chrome body copy scales from 16px to 19px;
 - row headings scale from 18px to 24px and stay in the UI sans;
-- poster titles scale from `--text-small` (14px) to 16px, still in the UI sans;
+- card titles scale from `--text-small` (14px) to 16px, still in the UI sans;
 - tracked labels scale from 11px to 13px. They remain metadata, never the only
   wording on a primary action.
 
@@ -176,7 +176,7 @@ and this section was rewritten to describe what actually ships. See
 
 The rhythm the ramp was trying to express still holds, and is the real rule:
 **chrome breathes, dense surfaces do not.** Hero and full-bleed message screens
-work in multiples of 4rem and up. The poster grid and settings rows work between
+work in multiples of 4rem and up. The card grid and settings rows work between
 0.5rem and 1.5rem. There is no middle ground and that is intentional.
 
 What *is* tokenised is the page frame, because those are contracts rather than
@@ -202,49 +202,103 @@ from `--text-display`, for a page with work to do underneath its heading;
 page. Before these existed, three screens reached for `.hero-title` and then
 shouted it back down with an `!important` arbitrary value.
 
-## 6. The poster grid is exempt
+## 6. The card grid is exempt
 
 **This is the most important constraint in the document.**
 
 Everything above governs the *chrome*: nav, hero, empty states, the QR onboarding
-screen, settings, error states. It does **not** govern the poster grid.
+screen, settings, error states. It does **not** govern the card grid.
 
-TMDB posters arrive with their own typography, colour and contrast — a hundred
+Cover art arrives with its own typography, colour and contrast — a hundred
 competing art directions in a hundred rectangles. Applying a dramatic serif and
 generous negative space on top of that produces something slow to scan and ugly
 in a way that is hard to diagnose. The grid's job is density and speed.
 
-Rules for the grid, which override §4 and §5:
+### 6.1 Cards are wide, landscape and generously rounded
 
-- Card titles use `--font-ui` at `--text-small`, never the display serif.
-- At TV width they may scale up to 1rem under the three-metre rule; this is
-  still the small UI register, not a card-specific heading style.
-- Grid gap is `--space-4` on small screens and 20px at TV width. It stays
-  deliberately tighter than chrome spacing.
+**This replaces the locked `2/3` portrait poster that stood from M3 to v1.3.0.**
+The change was a deliberate change of direction by the maintainer, not a
+correction — the old rule was coherent, it was simply not the look wanted. Do not
+reinstate the portrait card because an older comment or commit still describes
+it. See `DECISIONS.md` 33.
+
+- **Aspect ratio is `16 / 9`.** Fixed, on every card, in both the home rows and
+  the library grid.
+- **The artwork is the film's backdrop**, at `w780`, because a backdrop is
+  already 16/9 and so is not cropped to fit. Posters are not used on cards.
+- **Corners use `--radius-card`** — `clamp(1rem, 1.6vw, 1.375rem)`. The interface
+  rounds two ways: pills at `999px` for anything you press, and a panel radius
+  from `1rem` up for anything you look at. A card belongs to the second family,
+  scaled slightly down for a smaller box. The old `4px` is gone.
+- **Widths.** Row cards are `clamp(14rem, 19vw, 19rem)`, rising to
+  `clamp(16rem, 17vw, 21rem)` past 80rem. The library grid is
+  `auto-fill minmax(12rem, 1fr)`, and `15rem` past 64rem. The minimum is what a
+  backdrop needs to stay identifiable, not what fits the most columns: below
+  about 12rem a landscape still is a smudge, and a grid of smudges scans slower
+  than a grid of fewer readable ones.
+- **Wider does not mean sparser.** A 16/9 card is far shorter than the 2:3 poster
+  it replaced, so more rows fit. Measured on the 274-film library at 1280×800:
+  before, six columns of 432px-tall cards put **11 films on screen**; after, four
+  columns of 192px-tall cards put **17**. Any future change to these numbers is
+  to be checked the same way, not reasoned about.
+
+Artwork that is missing is a normal state, and the fallbacks are ordered:
+
+1. the backdrop, covering the frame;
+2. failing that, the poster, **contained** rather than covering — a portrait
+   image cropped to fill a landscape box loses its title off the top and bottom.
+   On the current library this case is empty: artwork arrives in pairs or not at
+   all;
+3. failing both, the title as text on `--surface`. Never a broken-image icon.
+
+**A real 2:3 poster still exists** — on the film detail page, which has the room
+for it. It takes `--radius-card` like everything else. What changed is that cards
+show backdrops; posters were not banished from the interface.
+
+### 6.2 Everything else about a card
+
+Rules that override §4 and §5:
+
+- Card titles use `--font-ui` at `--text-small`, never the display serif. At TV
+  width they may scale up to 1rem under the three-metre rule; this is still the
+  small UI register, not a card-specific heading style.
+- Grid gap is `clamp(0.9rem, 1.6vw, 1.5rem)`, deliberately tighter than chrome
+  spacing.
 - Cards carry no accent colour at rest. Gold appears on hover and focus as a
   1px `--accent` border. Keyboard or remote focus also keeps the global 2px
   focus ring around the whole link; it is navigation state, not card chrome,
   and a one-pixel border alone disappears from a sofa.
 - **One exception, added in M5: the playback progress bar.** A 3px gold rule
-  across the bottom of a part-watched poster. It earns its place because it is
+  across the bottom of a part-watched card. It earns its place because it is
   information rather than decoration — it is the entire reason the
   "continue watching" row exists — and because no amount of hover state can
   convey it. It is drawn only for films actually part-watched: never at zero,
   never on a finished film. Nothing else in the grid may take this exemption
   without being written down here first.
-- Poster aspect ratio is locked to `2/3`. Never crop, never letterbox.
-- Card chrome is minimal: poster, title, one compact legend. Home rows use the
+- Card chrome is minimal: artwork, title, one compact legend. Home rows use the
   year. On `/films`, the legend follows the active sort — year, rating, date
   added or runtime — and stays visible at rest. It is never revealed only on
   hover: a library operated with a D-pad cannot hide useful information behind
   a mouse gesture. Title sorting keeps the year as its useful secondary value.
   The legend stays in the muted UI register with no accent; everything else
   belongs on the detail page.
-- While a poster loads, the card shows `--surface` with a subtle shimmer, never
+- While artwork loads, the card shows `--surface` with a subtle shimmer, never
   a spinner and never a broken-image icon.
 
 The transition between the two worlds is the point: dramatic, near-empty chrome
 framing a dense, fast, businesslike grid.
+
+### 6.3 Rows scroll without a scrollbar
+
+Home rows hide the native scrollbar entirely (`.scrollbar-hidden`). The Windows
+default is a wide grey slab that cuts a row in half, and thinned to 6px it was
+still a second, worse answer to a question the chevrons already answer.
+
+Nothing is lost, and this is the check to repeat before changing it: a mouse gets
+the hover chevrons, a trackpad and a touchscreen swipe, a keyboard and a D-pad
+move card by card through the row's own arrow handling. The chevrons stay
+`tabindex="-1"` and outside the directional-navigation graph, so they add no
+stops to either.
 
 **The library page follows the same split.** Its toolbar — search, sort, genre,
 watch state — is chrome and carries the treatment: a rounded bar, glass, the
@@ -255,11 +309,14 @@ between the two screens except its width, which the grid column decides, and the
 contextual legend defined above.
 
 **Page loading uses the page's silhouette, never a brand spinner.** The home
-screen, library grid and film detail render quiet poster, toolbar and text
-blocks immediately while their first API request is pending. These skeletons
-use `--surface` and `--raised`, share the real poster ratio and spacing, and
-shimmer only when reduced motion is not requested. They describe structure,
-not fake content, and expose one polite loading status to assistive technology.
+screen, library grid and film detail render quiet card, toolbar and text blocks
+immediately while their first API request is pending. These skeletons use
+`--surface` and `--raised`, and must be kept in step with the real card by hand:
+they carry the same `16 / 9`, the same `--radius-card` and the same column
+minimums, because a silhouette that does not match what replaces it makes the
+page visibly jump at the moment it finishes loading. They shimmer only when
+reduced motion is not requested, describe structure rather than fake content, and
+expose one polite loading status to assistive technology.
 
 ## 6b. The player is chrome, and it gets out of the way
 
@@ -300,7 +357,7 @@ web. A maintainer-supplied, licence-checked pack may be used under the following
 constraints:
 
 - imagery belongs to the chrome only: hero, onboarding, empty and error states;
-- the poster grid remains exempt under §6 — no decorative image, overlay,
+- the card grid remains exempt under §6 — no decorative image, overlay,
   colour grade or authored photographic treatment is added to it;
 - source files never ship as-is: crop to the rendered aspect ratio, resize for
   the largest real viewport, then encode as WebP or AVIF before `web-dist`;
@@ -370,7 +427,7 @@ document first.
 Hero type and full-bleed message content fade up 16px on entrance at
 `--duration-slow`, via `.enter`. `.enter-2` and `.enter-3` stagger by 90ms each
 so a heading leads its own paragraph instead of the block arriving as one slab.
-Everything else uses `--duration-base`. **The poster grid never animates in** —
+Everything else uses `--duration-base`. **The card grid never animates in** —
 a hundred cards fading up is a slideshow, not a library (§6).
 
 **Every animation must be wrapped in a reduced-motion guard.** Not optional:
@@ -402,7 +459,7 @@ rather than here:
 - Focus ring: `2px solid var(--accent)` with `2px` offset. Gold on near-black is
   8.2:1 and unmistakable. Never remove the outline without replacing it.
 - Use `:focus-visible`, not `:focus`, so mouse users do not see rings.
-- Every interactive target is at least 44×44px, including in the poster grid.
+- Every interactive target is at least 44×44px, including in the card grid.
 - Primary actions are at least 56px high. Navigation and secondary controls are
   at least 52px, rising to 56px on viewports 1280px and wider.
 - Poster cards are at least 160px wide and rise to 192–224px on TV-width
@@ -454,9 +511,10 @@ implemented in `web/src/app.css` and the Svelte components; the provisional M0
 palette (`--color-ink: #0b0b0f`, `--color-helios: #f5a623`) is gone.
 
 The running interface now implements the hero-and-rows library, detail page,
-player, onboarding, empty state and settings chrome described above. Poster
-cards keep the §6 exemption: their artwork is untouched, their ratio stays
-`2/3`, and gold appears only for progress and interaction state.
+player, onboarding, empty state and settings chrome described above. Cards keep
+the §6 exemption: their artwork is untouched, and gold appears only for progress
+and interaction state. Their ratio is `16 / 9` as of §6.1 — earlier revisions of
+this paragraph said `2/3`, which was true until v1.3.0.
 
 Colour, type scale, tracking, target sizes and directional row navigation are
 verified against a running build rather than inferred from source. The
@@ -492,9 +550,10 @@ places. That was closed:
 watching, recently added, best rated, tonight's suggestion — instead of a hero
 and eight genre rows. The hero shows the film you left, with how far in you are
 and what is left, and its button opens the player rather than a detail page. The
-grid underneath is unchanged and still exempt under §6: the only gold at rest is
-the 3px progress rule, poster ratio stays `2/3`, and no card title takes the
-display serif. Verified against the 274-film library rather than inferred.
+grid underneath was unchanged at the time and still exempt under §6: the only
+gold at rest is the 3px progress rule and no card title takes the display serif.
+Verified against the 274-film library rather than inferred. The card shape itself
+changed later — see below.
 
 **The interface language layer, added after profiles.** French is the default
 and English ships as a second complete catalogue. The choice is local to each

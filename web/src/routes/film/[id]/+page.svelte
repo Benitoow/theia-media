@@ -85,7 +85,7 @@
 				<!-- Poster keeps the grid's locked 2:3 and its plainness. -->
 				<div class="w-48 shrink-0 self-start lg:w-56 2xl:w-64">
 					<div
-						class="aspect-[2/3] overflow-hidden rounded-sm border border-line bg-surface
+						class="aspect-[2/3] overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface
 						       shadow-[0_1.75rem_4rem_rgba(0,0,0,0.42)]"
 					>
 						{#if poster}

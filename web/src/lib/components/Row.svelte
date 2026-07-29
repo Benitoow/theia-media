@@ -108,7 +108,7 @@
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<div
 			bind:this={scroller}
-			class="scrollbar-thin flex snap-x snap-mandatory gap-4 overflow-x-auto px-[var(--page-gutter)]
+			class="scrollbar-hidden flex snap-x snap-mandatory gap-4 overflow-x-auto px-[var(--page-gutter)]
 			       pt-3 pb-5 lg:gap-5"
 			style="scroll-padding-inline: var(--page-gutter)"
 			role="group"

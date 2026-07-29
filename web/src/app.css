@@ -130,6 +130,13 @@
 	--glass: rgba(19, 18, 17, 0.72);
 	--glass-strong: rgba(11, 10, 9, 0.88);
 
+	/* Card corners. The interface rounds two ways: pills at 999px for anything
+	   you press, and a generous panel radius starting at 1rem for anything you
+	   look at. A card belongs to the second family, scaled down a little for a
+	   smaller box. It replaces the near-square 4px the poster grid used to
+	   carry -- see §6. */
+	--radius-card: clamp(1rem, 1.6vw, 1.375rem);
+
 	/* The one texture that is wired up: .grain on <body> in app.html. Section 7
 	   of the design system keeps the vignette and glow recipes on file, but they
 	   are not declared here -- Hero.svelte authors its own halo, positioned
@@ -687,14 +694,18 @@
 		padding-inline: var(--page-gutter);
 	}
 
+	/* Kept in step with .poster-card and .poster-frame by hand. A skeleton whose
+	   silhouette does not match what replaces it is worse than no skeleton: the
+	   page visibly jumps at the moment it finishes loading. */
 	.skeleton-card {
-		width: clamp(10rem, 11.5vw, 13rem);
+		width: clamp(14rem, 19vw, 19rem);
 		flex: 0 0 auto;
 	}
 
 	.skeleton-poster {
 		width: 100%;
-		aspect-ratio: 2 / 3;
+		aspect-ratio: 16 / 9;
+		border-radius: var(--radius-card);
 	}
 
 	.skeleton-card-title {
@@ -726,10 +737,17 @@
 		border-radius: clamp(1rem, 4vw, 999px);
 	}
 
+	/* Mirrors .library-grid, including its 64rem step below. */
 	.skeleton-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
 		gap: clamp(0.9rem, 1.6vw, 1.5rem);
+	}
+
+	@media (min-width: 64rem) {
+		.skeleton-grid {
+			grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+		}
 	}
 
 	.skeleton-grid .skeleton-card {
@@ -755,9 +773,12 @@
 		padding-bottom: 5rem;
 	}
 
+	/* The detail page keeps a real 2:3 poster -- a poster is that shape, and that
+	   page has the room. Only the cards went landscape. */
 	.skeleton-detail-poster {
 		width: 100%;
 		aspect-ratio: 2 / 3;
+		border-radius: var(--radius-card);
 	}
 
 	.skeleton-detail-copy {
@@ -814,16 +835,26 @@
 		}
 	}
 
+	/* Wide landscape cards, §6 as rewritten. A 16/9 card is much shorter than the
+	   2:3 poster it replaces, so a wider card does not cost density: on a 1265px
+	   viewport the library went from six columns of tall cards to four of short
+	   ones, and roughly the same number of films stayed on screen. */
 	.poster-card {
 		position: relative;
 		display: block;
-		width: clamp(10rem, 11.5vw, 13rem);
+		width: clamp(14rem, 19vw, 19rem);
 		flex-shrink: 0;
 		color: var(--color-bone);
 		text-decoration: none;
 	}
 
 	.poster-frame {
+		position: relative;
+		aspect-ratio: 16 / 9;
+		overflow: hidden;
+		border: 1px solid transparent;
+		border-radius: var(--radius-card);
+		background: var(--color-surface);
 		transition:
 			border-color var(--duration-fast) var(--ease-cine),
 			transform var(--duration-base) var(--ease-cine),
@@ -832,8 +863,42 @@
 
 	.poster-card:hover .poster-frame,
 	.poster-card:focus-visible .poster-frame {
+		border-color: var(--color-accent);
 		transform: translateY(-0.35rem);
 		box-shadow: 0 1.2rem 2.8rem rgba(0, 0, 0, 0.38);
+	}
+
+	.poster-art {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	/* A portrait poster in a landscape frame: contained, not cropped. Covering
+	   would cut the title off the top and bottom of the artwork. */
+	.poster-art--fit {
+		object-fit: contain;
+	}
+
+	.poster-fallback {
+		display: flex;
+		height: 100%;
+		align-items: center;
+		justify-content: center;
+		padding: 0.75rem;
+	}
+
+	.poster-progress {
+		position: absolute;
+		inset-inline: 0;
+		bottom: 0;
+		height: 3px;
+		background: rgba(11, 10, 9, 0.7);
+	}
+
+	.poster-progress-played {
+		height: 100%;
+		background: var(--color-accent);
 	}
 
 	.poster-card--fluid {
@@ -936,15 +1001,19 @@
 		color: var(--color-bone);
 	}
 
+	/* Sized for 16/9 cards. The minimum is what a backdrop needs to stay
+	   identifiable rather than what would fit the most columns: below about
+	   12rem a landscape still is a smudge, and a grid of smudges is slower to
+	   scan than a grid of fewer, readable ones. */
 	.library-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
 		gap: clamp(0.9rem, 1.6vw, 1.5rem);
 	}
 
 	@media (min-width: 64rem) {
 		.library-grid {
-			grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+			grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
 		}
 	}
 
@@ -1510,25 +1579,18 @@
 		}
 	}
 
-	/* Horizontal rows scroll, and the default Windows scrollbar is a wide grey
-	   slab that cuts the row in half. This is not a Tailwind utility -- there
-	   is no scrollbar plugin here -- so it is written out. */
-	.scrollbar-thin {
-		scrollbar-width: thin;
-		scrollbar-color: var(--color-line) transparent;
+	/* Rows scroll without showing it. The default Windows scrollbar is a wide
+	   grey slab that cuts a row in half, and even thinned to 6px it was a
+	   second, uglier answer to a question the chevrons already answer better.
+	   Nothing is lost: a mouse gets the chevrons, a trackpad and a touchscreen
+	   swipe, a keyboard and a D-pad move by card through the row's own arrow
+	   handling. This is not a Tailwind utility -- there is no scrollbar plugin
+	   here -- so it is written out. */
+	.scrollbar-hidden {
+		scrollbar-width: none;
 	}
-	.scrollbar-thin::-webkit-scrollbar {
-		height: 6px;
-	}
-	.scrollbar-thin::-webkit-scrollbar-track {
-		background: transparent;
-	}
-	.scrollbar-thin::-webkit-scrollbar-thumb {
-		background: var(--color-line);
-		border-radius: 3px;
-	}
-	.scrollbar-thin:hover::-webkit-scrollbar-thumb {
-		background: var(--color-raised);
+	.scrollbar-hidden::-webkit-scrollbar {
+		display: none;
 	}
 
 	/* Film grain over the whole page. Kept under 0.05 opacity: past that it
@@ -1551,7 +1613,7 @@
 	}
 
 	.poster-card {
-		width: clamp(12rem, 11vw, 14rem);
+		width: clamp(16rem, 17vw, 21rem);
 	}
 }
 

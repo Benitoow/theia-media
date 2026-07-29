@@ -672,6 +672,60 @@ rows nor downloads them again. Supporting per-language metadata later would
 need its own cache model and quota decision; it is not smuggled into an
 interface preference.
 
+## 33. Cards are 16/9 landscape; the locked 2:3 poster is retired
+
+**A change of direction by the maintainer, not a correction.** The `2/3` portrait
+poster was locked in §6 from M3 and held until v1.3.0. It was coherent and it was
+verified; it was simply not the look wanted. Recorded here so that the next
+session does not read an old commit, an old screenshot or the phrase "never crop,
+never letterbox" and quietly restore it.
+
+The new reference is §6.1 of the design system. In short: `16 / 9`, the film's
+**backdrop** rather than its poster, and `--radius-card`
+(`clamp(1rem, 1.6vw, 1.375rem)`) instead of the old 4px.
+
+Three things made it work rather than merely look different:
+
+- **The artwork already exists at the right shape.** TMDB ships a 16/9
+  `backdrop_path`, so nothing is cropped to fit — which matters, because the old
+  rule's "never crop" instinct was right even though its ratio is gone. On the
+  274-film library 257 films (93.8%) carry a backdrop, and **not one carries a
+  poster without one**: artwork arrives in pairs or not at all. The remaining 17
+  are unmatched files that fall through to the title as text, exactly as before.
+- **Wider cards did not cost density, they gained it.** This was the real risk and
+  it was measured rather than assumed, at 1280×800 on the full library: six
+  columns of 432px-tall portrait cards put **11 films on screen**; four columns of
+  192px-tall landscape cards put **17**. A 16/9 card is short, so more rows fit
+  than the lost columns cost.
+- **The radius came from the family already in the interface** rather than being
+  invented: pills at `999px` for what you press, a panel radius from `1rem` up for
+  what you look at. A card is the second kind.
+
+Two consequences worth stating:
+
+- **A real 2:3 poster still exists**, on the film detail page, which has the room
+  for it. Posters were not banished; cards simply stopped using them.
+- **Skeletons must be kept in step by hand.** They carry the same ratio, radius
+  and column minimums as the real card. A silhouette that does not match what
+  replaces it makes the page jump at the moment it finishes loading, which is
+  worse than showing no skeleton.
+
+## 34. Rows hide the native scrollbar
+
+The horizontal scrollbar under a home row is gone. The Windows default is a wide
+grey slab that cuts a row in half, and thinning it to 6px left a second, worse
+answer to a question the hover chevrons already answer.
+
+The check before ever reversing this is that every input still has a way to move
+a row, and all four do: a mouse gets the chevrons, a trackpad and a touchscreen
+swipe, a keyboard and a D-pad move card by card through the row's own arrow
+handling. The chevrons stay `tabindex="-1"` and outside the directional-navigation
+graph, so hiding the bar added no focus stops.
+
+Verified on the real library: the three rows that genuinely overflow report
+3394px of content in 1265px of visible width with **zero** scrollbar height, and
+each still renders its chevron. The one row too short to scroll renders none.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

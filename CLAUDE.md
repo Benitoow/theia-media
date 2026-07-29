@@ -12,7 +12,7 @@ anything; they answer most questions that would otherwise be asked again.
 |---|---|
 | [`docs/spec-fondatrice.md`](docs/spec-fondatrice.md) | What Theia is and what it refuses to be. The scope of v1, and the technical prohibitions. Start here. |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Every decision already taken, with its reasoning and, where it matters, the bug that forced it. Check here before re-opening a question. |
-| [`docs/design-system.md`](docs/design-system.md) | Colour, type, spacing, motion, focus. §6 — *the poster grid is exempt* — is the single most important constraint in the interface. |
+| [`docs/design-system.md`](docs/design-system.md) | Colour, type, spacing, motion, focus. §6 — *the card grid is exempt* — is the single most important constraint in the interface. |
 
 If a change contradicts one of them, the document is changed first, in the same
 commit, with the reasoning written down. `DECISIONS.md` is append-only in
