@@ -35,15 +35,15 @@
 			radial-gradient(circle at 75% 28%, rgba(200,162,74,0.13), transparent 28rem)"
 	></div>
 
-	<div class="page-shell w-full pt-36 pb-28 lg:pt-44 lg:pb-36">
+	<div class="page-shell page-body--hero w-full">
 		<div class="max-w-[52rem]">
 			{#if movie.metadata?.genres?.length}
-				<span class="label">{movie.metadata.genres.slice(0, 3).join(' · ')}</span>
+				<span class="label enter">{movie.metadata.genres.slice(0, 3).join(' · ')}</span>
 			{/if}
 
-			<h1 class="hero-title mt-4 mb-7">{title}</h1>
+			<h1 class="hero-title enter mt-4 mb-7">{title}</h1>
 
-			<div class="mb-7 flex flex-wrap items-center gap-x-6 gap-y-3">
+			<div class="enter enter-2 mb-7 flex flex-wrap items-center gap-x-6 gap-y-3">
 				{#if year}<span class="label">{year}</span>{/if}
 				{#if runtime}<span class="label">{runtime}</span>{/if}
 				{#if movie.metadata?.director}<span class="label">{movie.metadata.director}</span>{/if}
@@ -55,12 +55,16 @@
 			</div>
 
 			{#if movie.metadata?.overview}
-				<p class="tv-copy mb-9 max-w-[42rem] line-clamp-3">
+				<p class="tv-copy enter enter-2 mb-9 max-w-[42rem] line-clamp-3">
 					{movie.metadata.overview}
 				</p>
 			{/if}
 
-			<a href="/film/{movie.id}" class="tv-action tv-action--primary" data-remote-default>
+			<a
+				href="/film/{movie.id}"
+				class="tv-action tv-action--primary enter enter-3"
+				data-remote-default
+			>
 				<span>{t.hero.details}</span>
 				<span aria-hidden="true">→</span>
 			</a>

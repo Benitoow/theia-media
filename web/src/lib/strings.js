@@ -261,6 +261,22 @@ export const strings = {
 	errors: {
 		scanFailed: "L'analyse n'a pas pu être menée à son terme.",
 		scanBusy: 'Une analyse est déjà en cours.'
+	},
+
+	// The frontend is a single-page app: the Go server answers every unknown
+	// path with index.html and the client router decides. So a mistyped address
+	// lands here rather than on a server 404, and without this screen it landed
+	// on SvelteKit's own -- untouched, unstyled and in English.
+	notFound: {
+		eyebrow: 'Page introuvable',
+		title: 'Cette adresse ne mène nulle part',
+		body:
+			"Le lien est peut-être incomplet, ou la page a changé de nom. La bibliothèque, elle, n'a pas bougé.",
+		crash: 'Une erreur inattendue',
+		crashBody:
+			"L'interface s'est arrêtée sur une erreur. Recharger la page suffit presque toujours ; si le problème revient, le serveur est peut-être à redémarrer.",
+		home: 'Retour à l’accueil',
+		reload: 'Recharger'
 	}
 };
 

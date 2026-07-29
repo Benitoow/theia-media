@@ -524,6 +524,28 @@ focus. A slider ArrowRight advances exactly ten seconds rather than firing both
 the slider and window handlers. The same build was checked at 1600×900 and
 390×844 with no horizontal page overflow.
 
+## 28. Spacing stays Tailwind's; no parallel token ramp
+
+`docs/design-system.md` §5 declared a `--space-1…48` ramp from the very first
+draft. It was never implemented. The code had always used Tailwind's own 4px
+scale and fluid `clamp()`, and nobody had noticed the document was describing a
+system that did not exist.
+
+Two ways out: implement the ramp everywhere, or delete it and describe reality.
+
+Reality won. Tailwind already ships a coherent 4px scale; adding `--space-*` on
+top would mean two ladders for one job, kept in step by hand, with no way to
+tell which one a given number came from. The ramp bought nothing that
+`mb-14`/`gap-4` did not already buy, and cost a synchronisation duty forever.
+
+What *was* worth tokenising is the page frame, because those are contracts
+between screens rather than matters of taste — and unlike spacing, they had
+visibly drifted. `--nav-offset`, `.page-body` and `.page-title` were added for
+exactly that reason: four screens had each guessed their own top padding and
+three had overridden the heading style with `!important`. The rule that
+separates the two cases: **tokenise what two screens must agree on, not what one
+screen chooses.**
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
@@ -533,6 +555,7 @@ the slider and window handlers. The same build was checked at 1600×900 and
   rewrite.
 - **Updater:** built from the documented GitHub Releases pattern — check the
   API, download, swap atomically, restart — rather than ported from Hermes,
-  whose source was not available. The Windows case needs care: a running `.exe`
-  cannot overwrite itself, so it takes a small relay process that waits for the
-  parent to exit, replaces the file and relaunches.
+  whose source was not available. This section originally assumed Windows would
+  need a relay process to replace a running `.exe`; testing showed it does not,
+  because Windows allows a running executable to be *renamed*. See decision 22,
+  which supersedes that assumption.

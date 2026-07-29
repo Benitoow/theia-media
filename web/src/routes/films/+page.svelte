@@ -6,6 +6,7 @@
 	import PosterCard from '$lib/components/PosterCard.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
+	import ChromeScene from '$lib/components/ChromeScene.svelte';
 
 	/** @type {'loading' | 'ready' | 'offline'} */
 	let state = $state('loading');
@@ -153,99 +154,108 @@
 	<title>{t.library.title} — {t.appName}</title>
 </svelte:head>
 
-<main class="page-shell pt-32 pb-16 lg:pt-40">
-	{#if state === 'loading'}
-		<LoadingSkeleton
-			variant="library"
-			label={t.library.loadingProgress(loaded)}
-		/>
-	{:else if state === 'offline'}
-		<div class="chrome-panel max-w-2xl p-8 sm:p-12">
-			<span class="label text-error">{t.home.unreachableTitle}</span>
-			<p class="tv-copy mt-5 border-l border-error pl-6">{t.home.unreachable}</p>
-			<button type="button" onclick={() => location.reload()} class="tv-action mt-8 cursor-pointer">
-				{t.home.retry}
-			</button>
-		</div>
-	{:else}
-		<header class="mb-10">
-			<h1 class="hero-title !text-[clamp(2.5rem,5.5vw,4.5rem)]">{t.library.title}</h1>
-			<p class="label mt-4">
-				{filtering
-					? t.library.countFiltered(filtered.length, movies.length)
-					: t.library.countAll(movies.length)}
-			</p>
-		</header>
-
-		<!-- The toolbar is chrome, so it may carry treatment; the grid below it
-		     stays plain, as section 6 of the design system requires. -->
-		<div class="library-toolbar">
-			<div class="library-search">
-				<Icon name="search" size={18} class="shrink-0 text-muted" />
-				<input
-					type="search"
-					bind:value={query}
-					placeholder={t.library.searchPlaceholder}
-					aria-label={t.library.search}
-					class="library-search-input"
-				/>
-				{#if query}
-					<button type="button" onclick={() => (query = '')} class="player-icon-button !min-h-10 !min-w-10">
-						<Icon name="close" size={16} label={t.library.clear} />
-					</button>
-				{/if}
-			</div>
-
-			<div class="library-selects">
-				<label class="library-select">
-					<span class="label">{t.library.sort}</span>
-					<select bind:value={sort}>
-						{#each sortOptions as option (option.value)}
-							<option value={option.value}>{option.label}</option>
-						{/each}
-					</select>
-				</label>
-
-				<label class="library-select">
-					<span class="label">{t.library.genre}</span>
-					<select bind:value={genre}>
-						<option value="">{t.library.allGenres}</option>
-						{#each genres as name (name)}
-							<option value={name}>{name}</option>
-						{/each}
-					</select>
-				</label>
-
-				<label class="library-select">
-					<span class="label">{t.library.status}</span>
-					<select bind:value={status}>
-						{#each statusOptions as option (option.value)}
-							<option value={option.value}>{option.label}</option>
-						{/each}
-					</select>
-				</label>
-			</div>
-		</div>
-
-		{#if filtered.length === 0}
-			<div class="py-24 text-center">
-				<p class="section-title mb-3">{t.library.noResults}</p>
-				<p class="tv-copy mb-8 text-muted">{t.library.noResultsBody}</p>
-				<button type="button" onclick={reset} class="tv-action cursor-pointer">
-					{t.library.reset}
-				</button>
-			</div>
+<!--
+	The unreachable-server screen is full-bleed, so it sits outside the page
+	shell rather than inside it. It used to be a hand-built panel here while the
+	home screen used ChromeScene for the identical state; one state, two screens,
+	already drifting apart.
+-->
+{#if state === 'offline'}
+	<ChromeScene
+		image="/chrome/theia-offline.webp"
+		eyebrow={t.appName}
+		title={t.home.unreachableTitle}
+		body={t.home.unreachable}
+		tone="error"
+	>
+		<button type="button" onclick={() => location.reload()} class="tv-action cursor-pointer" data-remote-default>
+			{t.home.retry}
+		</button>
+	</ChromeScene>
+{:else}
+	<main class="page-shell page-body">
+		{#if state === 'loading'}
+			<LoadingSkeleton variant="library" label={t.library.loadingProgress(loaded)} />
 		{:else}
-			<!--
-				A wrapping grid rather than the home screen's scrolling rows: this
-				is the page for finding one film among hundreds, and a row you
-				have to drag through is the wrong shape for that.
-			-->
-			<div class="library-grid">
-				{#each filtered as movie (movie.id)}
-					<PosterCard {movie} fluid legend={cardLegend(movie)} />
-				{/each}
+			<header class="mb-10">
+				<h1 class="page-title enter">{t.library.title}</h1>
+				<p class="label enter enter-2 mt-4">
+					{filtering
+						? t.library.countFiltered(filtered.length, movies.length)
+						: t.library.countAll(movies.length)}
+				</p>
+			</header>
+
+			<!-- The toolbar is chrome, so it may carry treatment; the grid below it
+			     stays plain, as section 6 of the design system requires. -->
+			<div class="library-toolbar">
+				<div class="library-search">
+					<Icon name="search" size={18} class="shrink-0 text-muted" />
+					<input
+						type="search"
+						bind:value={query}
+						placeholder={t.library.searchPlaceholder}
+						aria-label={t.library.search}
+						class="library-search-input"
+					/>
+					{#if query}
+						<button type="button" onclick={() => (query = '')} class="player-icon-button !min-h-10 !min-w-10">
+							<Icon name="close" size={16} label={t.library.clear} />
+						</button>
+					{/if}
+				</div>
+
+				<div class="library-selects">
+					<label class="library-select">
+						<span class="label">{t.library.sort}</span>
+						<select bind:value={sort}>
+							{#each sortOptions as option (option.value)}
+								<option value={option.value}>{option.label}</option>
+							{/each}
+						</select>
+					</label>
+
+					<label class="library-select">
+						<span class="label">{t.library.genre}</span>
+						<select bind:value={genre}>
+							<option value="">{t.library.allGenres}</option>
+							{#each genres as name (name)}
+								<option value={name}>{name}</option>
+							{/each}
+						</select>
+					</label>
+
+					<label class="library-select">
+						<span class="label">{t.library.status}</span>
+						<select bind:value={status}>
+							{#each statusOptions as option (option.value)}
+								<option value={option.value}>{option.label}</option>
+							{/each}
+						</select>
+					</label>
+				</div>
 			</div>
+
+			{#if filtered.length === 0}
+				<div class="py-24 text-center">
+					<p class="section-title mb-3">{t.library.noResults}</p>
+					<p class="tv-copy mb-8 text-muted">{t.library.noResultsBody}</p>
+					<button type="button" onclick={reset} class="tv-action cursor-pointer">
+						{t.library.reset}
+					</button>
+				</div>
+			{:else}
+				<!--
+					A wrapping grid rather than the home screen's scrolling rows: this
+					is the page for finding one film among hundreds, and a row you
+					have to drag through is the wrong shape for that.
+				-->
+				<div class="library-grid">
+					{#each filtered as movie (movie.id)}
+						<PosterCard {movie} fluid legend={cardLegend(movie)} />
+					{/each}
+				</div>
+			{/if}
 		{/if}
-	{/if}
-</main>
+	</main>
+{/if}

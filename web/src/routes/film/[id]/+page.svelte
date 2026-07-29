@@ -104,17 +104,14 @@
 
 				<div class="min-w-0 flex-1 pb-2">
 					{#if meta.genres?.length}
-						<span class="label">{meta.genres.join(' · ')}</span>
+						<span class="label enter">{meta.genres.join(' · ')}</span>
 					{/if}
 
-					<h1
-						class="mt-4 mb-7 max-w-[14ch] font-display text-[clamp(3.25rem,6.8vw,7.5rem)]
-						       leading-[0.9] font-normal tracking-[-0.04em] text-balance"
-					>
+					<h1 class="page-title page-title--feature enter mt-4 mb-7">
 						{displayTitle(movie)}
 					</h1>
 
-					<div class="mb-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+					<div class="enter enter-2 mb-8 flex flex-wrap items-center gap-x-6 gap-y-3">
 						{#if displayYear(movie)}<span class="label">{displayYear(movie)}</span>{/if}
 						{#if formatRuntime(meta.runtime_minutes)}
 							<span class="label">{formatRuntime(meta.runtime_minutes)}</span>

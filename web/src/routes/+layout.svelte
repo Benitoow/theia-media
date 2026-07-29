@@ -1,8 +1,17 @@
 <script>
 	import '../app.css';
+	import { page } from '$app/stores';
 	import { strings as t } from '$lib/strings.js';
 
 	let { children } = $props();
+
+	// Which link is lit. `/film/<id>` deliberately lights nothing: it is reached
+	// as readily from the home rows as from the library, and claiming one of
+	// them would be a guess dressed as a fact.
+	const path = $derived($page.url.pathname);
+	const atHome = $derived(path === '/');
+	const inLibrary = $derived(path === '/films' || path.startsWith('/films/'));
+	const inSettings = $derived(path === '/reglages' || path.startsWith('/reglages/'));
 
 	// The pill keeps a light scrim over arbitrary hero artwork, then strengthens
 	// once the page moves so it never becomes a hard opaque band.
@@ -117,13 +126,30 @@
 
 <div class="site-nav-wrap">
 	<nav class="site-nav" data-scrolled={scrolled} aria-label="Navigation principale">
-		<a href="/" class="nav-target" aria-label={t.nav.home}>
+		<a
+			href="/"
+			class="nav-target nav-brand"
+			aria-label={t.nav.home}
+			aria-current={atHome ? 'page' : undefined}
+		>
 			<span class="brand-orbit" aria-hidden="true"></span>
 			<span class="text-label font-semibold tracking-[0.2em] uppercase">{t.appName}</span>
 		</a>
 		<div class="flex items-center">
-			<a href="/films" class="nav-target label">{t.nav.library}</a>
-			<a href="/reglages" class="nav-target label">{t.nav.settings}</a>
+			<a
+				href="/films"
+				class="nav-target nav-link label"
+				aria-current={inLibrary ? 'page' : undefined}
+			>
+				{t.nav.library}
+			</a>
+			<a
+				href="/reglages"
+				class="nav-target nav-link label"
+				aria-current={inSettings ? 'page' : undefined}
+			>
+				{t.nav.settings}
+			</a>
 		</div>
 	</nav>
 </div>

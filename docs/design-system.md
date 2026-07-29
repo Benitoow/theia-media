@@ -162,31 +162,42 @@ The test is blunt: the main action, current row and focused film must be
 identifiable from three metres away on a 1080p screen. A desktop screenshot at
 100% zoom is not evidence that this passes.
 
-## 5. Spacing
+## 5. Spacing and the page frame
 
-4px base. The scale is deliberately gappy at the top — hero screens need room
-that a 4/8/12/16 ramp cannot express.
+4px base, and it is **Tailwind's scale**, not a parallel one. An earlier draft of
+this document declared a `--space-1…48` ramp that was never implemented; the code
+had always used Tailwind's utilities and fluid `clamp()`. Rather than build a
+second system that would have to be kept in step by hand, the ramp was deleted
+and this section was rewritten to describe what actually ships. See
+`DECISIONS.md` for the reasoning.
+
+The rhythm the ramp was trying to express still holds, and is the real rule:
+**chrome breathes, dense surfaces do not.** Hero and full-bleed message screens
+work in multiples of 4rem and up. The poster grid and settings rows work between
+0.5rem and 1.5rem. There is no middle ground and that is intentional.
+
+What *is* tokenised is the page frame, because those are contracts rather than
+taste — every screen has to agree on them or they drift:
 
 ```css
---space-1: 0.25rem;   /*  4px */
---space-2: 0.5rem;    /*  8px */
---space-3: 0.75rem;   /* 12px */
---space-4: 1rem;      /* 16px */
---space-6: 1.5rem;    /* 24px */
---space-8: 2rem;      /* 32px */
---space-12: 3rem;     /* 48px */
---space-16: 4rem;     /* 64px */
---space-24: 6rem;     /* 96px */
---space-32: 8rem;     /* 128px */
---space-48: 12rem;    /* 192px */
+--page-gutter: clamp(1.5rem, 4vw, 5.5rem);  /* phone to television */
+--content-wide: 96rem;                      /* content max width */
+--nav-height: 4rem;                         /* 4.5rem at TV width */
+--nav-offset: calc(var(--nav-height) + 2rem);
 ```
 
-Hero and empty-state screens start at `--space-24` for vertical rhythm. Dense
-surfaces — the poster grid, settings rows — live between `--space-2` and
-`--space-6`. There is no middle ground and that is intentional.
+`--nav-offset` exists because the nav floats over the page, so every screen has
+to start below it. Four screens each guessed their own top padding — `pt-32`,
+`pt-36`, `pt-32 lg:pt-40`, `pt-36 lg:pt-44` — and no two agreed. Two classes now
+own it: `.page-body` for a normal page, `.page-body--hero` for a screen whose
+content hangs off the bottom of a full viewport. Prose max width stays `38rem`.
 
-Page gutters start at `--space-6` on mobile and grow fluidly to `5.5rem` on
-large televisions. Content max width: `96rem`. Prose max width: `38rem`.
+Headings follow the same principle. `.hero-title` is the largest register and
+stays reserved for what fills a viewport. `.page-title` is one step down, sized
+from `--text-display`, for a page with work to do underneath its heading;
+`.page-title--feature` is its one exception, for a film's own title on its own
+page. Before these existed, three screens reached for `.hero-title` and then
+shouted it back down with an `!important` arbitrary value.
 
 ## 6. The poster grid is exempt
 
@@ -296,7 +307,14 @@ constraints:
 
 CSS texture remains the fallback when a screen needs atmosphere without a
 maintainer-verified asset. The authored recipes below are inline and make no
-network request:
+network request.
+
+**Only the grain is wired up**, as `--texture-grain` in `app.css`, applied by
+`.grain` on `<body>` in `app.html`. The vignette and glow are recipes on file,
+not live tokens: they were declared in `:root` for months with no consumer, and
+`Hero.svelte` authors its own halo positioned differently on purpose. A token
+nothing reads is a token that rots, so they were removed from the stylesheet and
+kept here. Paste one in when a screen needs it.
 
 ```css
 /* Vignette: pulls the eye to the centre of a hero. */
@@ -327,14 +345,23 @@ Slow and eased, never bouncy. The reference for timing is a camera move, not a
 UI toast.
 
 ```css
---ease: cubic-bezier(0.16, 1, 0.3, 1);   /* expo-out: fast start, long settle */
---duration-fast: 160ms;    /* hover, focus ring */
+--ease-cine: cubic-bezier(0.16, 1, 0.3, 1);  /* expo-out: fast start, long settle */
+--duration-fast: 160ms;    /* hover, focus ring, a control answering a press */
 --duration-base: 320ms;    /* panels, cards, state changes */
 --duration-slow: 700ms;    /* hero and first-paint entrances */
 ```
 
-Hero type and empty-state content fade up 16px on entrance at `--duration-slow`.
-Everything else uses `--duration-base`.
+These are real tokens in `app.css`. They were not, for a long time: the three
+durations were written out as literals in thirty-two places, which is how a
+stray fourth value ended up sitting beside the fast one with nobody able to say
+why. Reach for the token; if a new duration seems necessary, change this
+document first.
+
+Hero type and full-bleed message content fade up 16px on entrance at
+`--duration-slow`, via `.enter`. `.enter-2` and `.enter-3` stagger by 90ms each
+so a heading leads its own paragraph instead of the block arriving as one slab.
+Everything else uses `--duration-base`. **The poster grid never animates in** —
+a hundred cards fading up is a slideshow, not a library (§6).
 
 **Every animation must be wrapped in a reduced-motion guard.** Not optional:
 
@@ -342,10 +369,23 @@ Everything else uses `--duration-base`.
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
   }
 }
 ```
+
+Two traps this guard sets, both of which have to be handled at the animation
+rather than here:
+
+- **An entrance needs `animation-fill-mode: both`.** The guard collapses the
+  duration to nothing; without a forwards fill the element is left at its `from`
+  state, so an accessibility preference would blank the page. `.enter` sets it.
+- **A looping shimmer needs `animation: none`**, declared before the guard on
+  the element itself. Collapsing a loop to 0.01ms leaves it stopped at an
+  arbitrary frame rather than at rest. The loading skeleton does this, and its
+  resting state is a flat `--surface`.
 
 ## 9. Focus and accessibility
 
@@ -415,3 +455,22 @@ the responsive floor remains usable without horizontal page overflow.
 chrome assets are cropped to their rendered ratio, resized to 1920×1080 and
 encoded as WebP before the frontend build; the licence-checked source pack stays
 outside `web-dist/`.
+
+**The shared layer, added after `v1.1.0`.** Three passes of feature work had each
+built their own plumbing, and the document had drifted ahead of the code in two
+places. That was closed:
+
+- `--duration-fast/base/slow` are real tokens; the thirty-two literals are gone.
+- `--nav-offset`, `.page-body` and `.page-body--hero` own the top of every page,
+  which four screens used to guess independently.
+- `.page-title` and `.page-title--feature` own page headings, which three
+  screens used to override with `!important`.
+- The `--space-1…48` ramp this document declared but never shipped is gone from
+  §5, replaced by a description of what the code actually does.
+- `--texture-glow` and `--texture-vignette` were declared with no consumer and
+  are now recipes in §7 rather than dead tokens.
+- The §8 entrance exists at last, as `.enter`, with the fill-mode and
+  looping-animation traps of the reduced-motion guard written down beside it.
+- The nav says where you are, keyed off `aria-current` so the fact serves the
+  eye and a screen reader at once; `+error.svelte` means a mistyped address gets
+  a French screen instead of SvelteKit's untouched English one.

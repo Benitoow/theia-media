@@ -141,13 +141,8 @@
 	<title>{t.settings.heading} — {t.appName}</title>
 </svelte:head>
 
-<main class="settings-page page-shell max-w-6xl pt-36 pb-20">
-	<h1
-		class="mb-14 font-display text-[clamp(3.5rem,8vw,7rem)] leading-[0.92] font-normal
-		       tracking-[-0.04em]"
-	>
-		{t.settings.heading}
-	</h1>
+<main class="settings-page page-shell page-body max-w-6xl">
+	<h1 class="page-title enter mb-14">{t.settings.heading}</h1>
 
 	{#if settings && stats}
 		<!-- The welcome screen shows this once. Keeping it reachable afterwards

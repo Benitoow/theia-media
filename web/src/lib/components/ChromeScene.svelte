@@ -31,19 +31,21 @@
 	<div class="page-shell relative w-full py-32 lg:py-40">
 		<div class="max-w-2xl">
 			{#if eyebrow}
-				<span class="label" class:text-error={tone === 'error'}>{eyebrow}</span>
+				<span class="label enter" class:text-error={tone === 'error'}>{eyebrow}</span>
 			{/if}
 
-			<h1 class="hero-title mt-5 mb-7">{title}</h1>
+			<h1 class="hero-title enter mt-5 mb-7">{title}</h1>
 
 			{#if body}
-				<p class="tv-copy mb-9 max-w-prose" class:border-l={tone === 'error'}
+				<p class="tv-copy enter enter-2 mb-9 max-w-prose" class:border-l={tone === 'error'}
 					class:border-error={tone === 'error'} class:pl-6={tone === 'error'}>
 					{body}
 				</p>
 			{/if}
 
-			{@render children?.()}
+			<div class="enter enter-3">
+				{@render children?.()}
+			</div>
 		</div>
 	</div>
 </section>

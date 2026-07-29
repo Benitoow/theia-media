@@ -516,7 +516,7 @@
 		<!-- Resuming has to be the obvious choice without hiding the other one. -->
 		<div class="player-message">
 			<span class="label">{t.player.continueWatching}</span>
-			<h2 class="hero-title mt-4 mb-3 !text-[clamp(2.25rem,5vw,4rem)]">{displayTitle(movie)}</h2>
+			<h2 class="page-title mx-auto mt-4 mb-3">{displayTitle(movie)}</h2>
 			<p class="tv-copy mb-10">{t.player.resumeAt} {formatTime(offset)}</p>
 			<div class="flex flex-wrap items-center justify-center gap-5">
 				<button
