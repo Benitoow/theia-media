@@ -4,6 +4,8 @@
 	import { getJSON, imageURL, displayTitle, displayYear, formatRuntime } from '$lib/api.js';
 	import { strings as t, formatSize } from '$lib/strings.js';
 	import Player from '$lib/components/Player.svelte';
+	import Icon from '$lib/components/Icon.svelte';
+	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
 
 	/** @type {'loading' | 'ready' | 'missing'} */
 	let state = $state('loading');
@@ -13,6 +15,17 @@
 	const meta = $derived(movie?.metadata ?? {});
 	const backdrop = $derived(imageURL(meta.backdrop_path, 'w1280'));
 	const poster = $derived(imageURL(meta.poster_path, 'w342'));
+	const resumable = $derived(
+		movie?.progress?.position_seconds > 0 && !movie?.progress?.finished
+	);
+	const resumeMinutes = $derived(
+		resumable ? Math.max(1, Math.floor(movie.progress.position_seconds / 60)) : 0
+	);
+	const progressPercent = $derived(
+		resumable && movie.progress.duration_seconds > 0
+			? Math.min(100, (movie.progress.position_seconds / movie.progress.duration_seconds) * 100)
+			: 0
+	);
 
 	onMount(async () => {
 		try {
@@ -22,6 +35,11 @@
 			state = 'missing';
 		}
 	});
+
+	function syncProgress(progress) {
+		if (!movie || !progress) return;
+		movie = { ...movie, progress };
+	}
 </script>
 
 <svelte:head>
@@ -29,10 +47,7 @@
 </svelte:head>
 
 {#if state === 'loading'}
-	<div class="flex min-h-screen flex-col items-center justify-center gap-5">
-		<span class="brand-orbit" aria-hidden="true"></span>
-		<span class="label">{t.home.loading}</span>
-	</div>
+	<LoadingSkeleton variant="detail" label={t.home.loading} />
 {:else if state === 'missing'}
 	<div class="page-shell flex min-h-screen items-center justify-center py-32">
 		<div class="chrome-panel max-w-xl p-8 text-center sm:p-12">
@@ -63,15 +78,28 @@
 		<div class="page-shell relative z-10 -mt-52 pb-20">
 			<div class="flex flex-col gap-10 md:flex-row md:items-end md:gap-14">
 				<!-- Poster keeps the grid's locked 2:3 and its plainness. -->
-				<div
-					class="w-48 shrink-0 self-start overflow-hidden rounded-sm border border-line bg-surface
-					       shadow-[0_1.75rem_4rem_rgba(0,0,0,0.42)] lg:w-56 2xl:w-64"
-				>
-					<div class="aspect-[2/3]">
+				<div class="w-48 shrink-0 self-start lg:w-56 2xl:w-64">
+					<div
+						class="aspect-[2/3] overflow-hidden rounded-sm border border-line bg-surface
+						       shadow-[0_1.75rem_4rem_rgba(0,0,0,0.42)]"
+					>
 						{#if poster}
 							<img src={poster} alt="" decoding="async" class="h-full w-full object-cover" />
 						{/if}
 					</div>
+
+					{#if resumable && movie.progress.duration_seconds > 0}
+						<div
+							class="film-progress"
+							role="progressbar"
+							aria-label={t.film.progress}
+							aria-valuemin="0"
+							aria-valuemax="100"
+							aria-valuenow={Math.round(progressPercent)}
+						>
+							<span style="width: {progressPercent}%"></span>
+						</div>
+					{/if}
 				</div>
 
 				<div class="min-w-0 flex-1 pb-2">
@@ -91,7 +119,16 @@
 						{#if formatRuntime(meta.runtime_minutes)}
 							<span class="label">{formatRuntime(meta.runtime_minutes)}</span>
 						{/if}
-						{#if meta.director}<span class="label">{meta.director}</span>{/if}
+						{#if meta.director}
+							<a
+								href="/films?q={encodeURIComponent(meta.director)}"
+								class="film-director-link label"
+								aria-label={t.film.moreByDirector(meta.director)}
+							>
+								<span>{meta.director}</span>
+								<span aria-hidden="true">→</span>
+							</a>
+						{/if}
 						{#if meta.vote_average}
 							<span class="text-label tracking-[0.18em] text-accent uppercase">
 								{meta.vote_average.toFixed(1)}
@@ -105,8 +142,8 @@
 						class="tv-action tv-action--primary mb-12 cursor-pointer"
 						data-remote-default
 					>
-						<span aria-hidden="true">▶</span>
-						<span>{t.player.play}</span>
+						<Icon name="play" size={18} />
+						<span>{resumable ? t.player.resumeAtMinutes(resumeMinutes) : t.player.play}</span>
 					</button>
 
 					{#if meta.status === 'not_found'}
@@ -155,6 +192,6 @@
 	</article>
 
 	{#if playing}
-		<Player {movie} onclose={() => (playing = false)} />
+		<Player {movie} onprogress={syncProgress} onclose={() => (playing = false)} />
 	{/if}
 {/if}

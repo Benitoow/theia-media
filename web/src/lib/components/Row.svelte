@@ -1,8 +1,13 @@
 <script>
+	import { onMount } from 'svelte';
 	import PosterCard from './PosterCard.svelte';
+	import Icon from './Icon.svelte';
 	import { strings as t } from '$lib/strings.js';
 
 	let { row } = $props();
+	let scroller = $state();
+	let canScrollLeft = $state(false);
+	let canScrollRight = $state(false);
 
 	// TV remotes generally report left/right as keyboard arrows. Keep native
 	// Tab navigation, but make a row usable without asking for a hidden Tab key.
@@ -26,6 +31,34 @@
 			behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
 		});
 	}
+
+	function updateScrollEdges() {
+		if (!scroller) return;
+		const max = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+		canScrollLeft = scroller.scrollLeft > 2;
+		canScrollRight = scroller.scrollLeft < max - 2;
+	}
+
+	function scrollRow(direction) {
+		if (!scroller) return;
+		scroller.scrollBy({
+			left: direction * Math.max(320, scroller.clientWidth * 0.78),
+			behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+		});
+	}
+
+	onMount(() => {
+		updateScrollEdges();
+		const observer =
+			typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updateScrollEdges);
+		observer?.observe(scroller);
+		window.addEventListener('resize', updateScrollEdges);
+
+		return () => {
+			observer?.disconnect();
+			window.removeEventListener('resize', updateScrollEdges);
+		};
+	});
 </script>
 
 <section class="mb-10 lg:mb-14" aria-label={row.title}>
@@ -46,20 +79,50 @@
 		of half of two. Padding lives on the scroller, not a parent, otherwise
 		the first and last cards sit flush against the viewport edge.
 	-->
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-	<div
-		class="scrollbar-thin flex snap-x snap-mandatory gap-4 overflow-x-auto px-[var(--page-gutter)]
-		       pt-3 pb-5 lg:gap-5"
-		style="scroll-padding-inline: var(--page-gutter)"
-		role="group"
-		aria-label={row.title}
-		tabindex="-1"
-		onkeydown={moveInRow}
-	>
-		{#each row.movies as movie (movie.id)}
-			<div class="snap-start">
-				<PosterCard {movie} />
-			</div>
-		{/each}
+	<div class="row-scroll-frame">
+		{#if canScrollLeft}
+			<button
+				type="button"
+				class="row-scroll-button row-scroll-button--left"
+				tabindex="-1"
+				aria-label={t.library.scrollPrevious}
+				onpointerdown={(event) => event.preventDefault()}
+				onclick={() => scrollRow(-1)}
+			>
+				<Icon name="chevronLeft" size={28} />
+			</button>
+		{/if}
+
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+		<div
+			bind:this={scroller}
+			class="scrollbar-thin flex snap-x snap-mandatory gap-4 overflow-x-auto px-[var(--page-gutter)]
+			       pt-3 pb-5 lg:gap-5"
+			style="scroll-padding-inline: var(--page-gutter)"
+			role="group"
+			aria-label={row.title}
+			tabindex="-1"
+			onkeydown={moveInRow}
+			onscroll={updateScrollEdges}
+		>
+			{#each row.movies as movie (movie.id)}
+				<div class="snap-start">
+					<PosterCard {movie} />
+				</div>
+			{/each}
+		</div>
+
+		{#if canScrollRight}
+			<button
+				type="button"
+				class="row-scroll-button row-scroll-button--right"
+				tabindex="-1"
+				aria-label={t.library.scrollNext}
+				onpointerdown={(event) => event.preventDefault()}
+				onclick={() => scrollRow(1)}
+			>
+				<Icon name="chevronRight" size={28} />
+			</button>
+		{/if}
 	</div>
 </section>

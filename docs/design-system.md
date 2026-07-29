@@ -219,8 +219,13 @@ Rules for the grid, which override §4 and §5:
   never on a finished film. Nothing else in the grid may take this exemption
   without being written down here first.
 - Poster aspect ratio is locked to `2/3`. Never crop, never letterbox.
-- Card chrome is minimal: poster, title, year. Everything else belongs on the
-  detail page.
+- Card chrome is minimal: poster, title, one compact legend. Home rows use the
+  year. On `/films`, the legend follows the active sort — year, rating, date
+  added or runtime — and stays visible at rest. It is never revealed only on
+  hover: a library operated with a D-pad cannot hide useful information behind
+  a mouse gesture. Title sorting keeps the year as its useful secondary value.
+  The legend stays in the muted UI register with no accent; everything else
+  belongs on the detail page.
 - While a poster loads, the card shows `--surface` with a subtle shimmer, never
   a spinner and never a broken-image icon.
 
@@ -232,7 +237,15 @@ watch state — is chrome and carries the treatment: a rounded bar, glass, the
 label register. The grid beneath it is a wrapping `auto-fill` grid of the same
 plain cards, because that page exists to find one film among hundreds and a row
 you have to drag through is the wrong shape for it. Nothing about a card changes
-between the two screens except its width, which the grid column decides.
+between the two screens except its width, which the grid column decides, and the
+contextual legend defined above.
+
+**Page loading uses the page's silhouette, never a brand spinner.** The home
+screen, library grid and film detail render quiet poster, toolbar and text
+blocks immediately while their first API request is pending. These skeletons
+use `--surface` and `--raised`, share the real poster ratio and spacing, and
+shimmer only when reduced motion is not requested. They describe structure,
+not fake content, and expose one polite loading status to assistive technology.
 
 ## 6b. The player is chrome, and it gets out of the way
 
@@ -255,6 +268,14 @@ a player.
   the timestamp under the pointer.
 - **Scrims, not a wash.** Two gradients, top and bottom, so the text has a floor
   without dimming the film.
+- **Keyboard shortcuts are discoverable.** `?` opens an in-player help panel,
+  also reachable from an icon button in the control bar. While it is open the
+  underlying controls are inert, Tab stays inside the panel, Escape closes the
+  help before it closes the player, and focus returns to the control that
+  opened it. If the panel overflows on a short screen, vertical arrows,
+  Page Up/Down and Home/End scroll the help itself rather than controlling the
+  film underneath; its heading and close control remain pinned so the active
+  focus never leaves the viewport.
 
 ## 7. Texture and imagery
 
@@ -340,6 +361,10 @@ Everything else uses `--duration-base`.
   use spatial navigation; left and right move deterministically inside a film
   row. Tab remains available and focus is never trapped at an edge. During
   playback, left and right seek only when focus is not on a discrete control.
+- Fine-pointer desktop users may reveal scroll chevrons by hovering a home row.
+  They are supplemental controls with `tabindex="-1"` and sit outside the row's
+  directional-navigation handler, so they do not add stops to either Tab or the
+  D-pad graph. Touch layouts do not render them.
 - `--faint` and `--accent-dim` fail normal-text contrast. They are for disabled
   states, decorative rules and borders. This is written down because it is the
   rule most likely to be broken by accident.

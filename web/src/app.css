@@ -424,6 +424,247 @@
 		background: linear-gradient(to bottom, transparent, var(--color-ink) 8rem);
 	}
 
+	/* First-paint silhouettes. They carry the real page rhythm while the API is
+	   pending, rather than asking a spinner to stand in for an entire screen. */
+	.page-skeleton {
+		min-height: 100svh;
+		overflow: hidden;
+	}
+
+	.skeleton-block,
+	.skeleton-detail-hero {
+		position: relative;
+		display: block;
+		overflow: hidden;
+		border: 1px solid rgba(237, 231, 220, 0.04);
+		border-radius: 0.35rem;
+		background: var(--color-surface);
+	}
+
+	.skeleton-block::after,
+	.skeleton-detail-hero::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			105deg,
+			transparent 20%,
+			rgba(237, 231, 220, 0.055) 42%,
+			rgba(237, 231, 220, 0.09) 50%,
+			rgba(237, 231, 220, 0.055) 58%,
+			transparent 80%
+		);
+		transform: translateX(-100%);
+		animation: theia-shimmer 1.6s var(--ease-cine) infinite;
+	}
+
+	@keyframes theia-shimmer {
+		to {
+			transform: translateX(100%);
+		}
+	}
+
+	.skeleton-hero {
+		display: flex;
+		min-height: 72svh;
+		align-items: center;
+		background:
+			linear-gradient(to top, var(--color-ink), transparent 55%),
+			linear-gradient(115deg, var(--color-surface), var(--color-raised) 52%, var(--color-ink));
+	}
+
+	.skeleton-hero-copy {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.85rem;
+		padding-top: 5rem;
+	}
+
+	.skeleton-label {
+		width: 8rem;
+		height: 0.75rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.skeleton-title {
+		width: min(38rem, 76vw);
+		height: clamp(2.7rem, 7vw, 5.75rem);
+	}
+
+	.skeleton-title--short {
+		width: min(25rem, 54vw);
+		margin-bottom: 0.8rem;
+	}
+
+	.skeleton-copy {
+		width: min(34rem, 72vw);
+		height: 0.9rem;
+	}
+
+	.skeleton-copy--short {
+		width: min(25rem, 54vw);
+	}
+
+	.skeleton-action {
+		width: 11rem;
+		height: 3.5rem;
+		margin-top: 1.2rem;
+		border-radius: 999px;
+	}
+
+	.skeleton-home-rows {
+		position: relative;
+		z-index: 1;
+		margin-top: -4rem;
+		padding-top: 2rem;
+		background: linear-gradient(to bottom, transparent, var(--color-ink) 6rem);
+	}
+
+	.skeleton-row {
+		margin-bottom: clamp(2.5rem, 4vw, 4rem);
+	}
+
+	.skeleton-row-title {
+		width: 11rem;
+		height: 1.35rem;
+		margin-bottom: 1rem;
+	}
+
+	.skeleton-poster-strip {
+		display: flex;
+		gap: clamp(1rem, 1.5vw, 1.25rem);
+		overflow: hidden;
+		padding-inline: var(--page-gutter);
+	}
+
+	.skeleton-card {
+		width: clamp(10rem, 11.5vw, 13rem);
+		flex: 0 0 auto;
+	}
+
+	.skeleton-poster {
+		width: 100%;
+		aspect-ratio: 2 / 3;
+	}
+
+	.skeleton-card-title {
+		width: 78%;
+		height: 0.85rem;
+		margin-top: 0.75rem;
+	}
+
+	.skeleton-card-legend {
+		width: 35%;
+		height: 0.65rem;
+		margin-top: 0.45rem;
+	}
+
+	.skeleton-library {
+		padding-bottom: 4rem;
+	}
+
+	.skeleton-library-title {
+		width: min(28rem, 72vw);
+		height: clamp(2.75rem, 5.5vw, 4.5rem);
+		margin-bottom: 1rem;
+	}
+
+	.skeleton-toolbar {
+		width: 100%;
+		height: clamp(4rem, 10vw, 7rem);
+		margin-block: clamp(2rem, 4vw, 3rem);
+		border-radius: clamp(1rem, 4vw, 999px);
+	}
+
+	.skeleton-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+		gap: clamp(0.9rem, 1.6vw, 1.5rem);
+	}
+
+	.skeleton-grid .skeleton-card {
+		width: 100%;
+	}
+
+	.skeleton-detail-hero {
+		min-height: 68svh;
+		border: 0;
+		border-radius: 0;
+		background:
+			linear-gradient(to top, var(--color-ink) 2%, transparent 56%),
+			linear-gradient(115deg, var(--color-surface), var(--color-raised) 58%, var(--color-ink));
+	}
+
+	.skeleton-detail {
+		position: relative;
+		z-index: 1;
+		display: grid;
+		grid-template-columns: clamp(12rem, 15vw, 16rem) minmax(0, 1fr);
+		gap: clamp(2.5rem, 4vw, 3.5rem);
+		margin-top: -13rem;
+		padding-bottom: 5rem;
+	}
+
+	.skeleton-detail-poster {
+		width: 100%;
+		aspect-ratio: 2 / 3;
+	}
+
+	.skeleton-detail-copy {
+		display: flex;
+		max-width: 52rem;
+		flex-direction: column;
+		align-items: flex-start;
+		align-self: end;
+		gap: 0.85rem;
+		padding-bottom: 0.5rem;
+	}
+
+	.skeleton-detail-title {
+		width: min(42rem, 72vw);
+		max-width: 100%;
+		height: clamp(3rem, 6vw, 6rem);
+	}
+
+	.skeleton-detail-title--short {
+		width: min(27rem, 52vw);
+		margin-bottom: 1rem;
+	}
+
+	.skeleton-metadata {
+		width: min(25rem, 60vw);
+		max-width: 100%;
+		height: 0.8rem;
+		margin-bottom: 0.8rem;
+	}
+
+	@media (max-width: 47.99rem) {
+		.skeleton-detail {
+			grid-template-columns: 1fr;
+			gap: 1.5rem;
+			margin-top: -8rem;
+		}
+
+		.skeleton-detail-poster {
+			width: 10rem;
+		}
+
+		.skeleton-detail-copy {
+			align-self: start;
+			padding-top: 1rem;
+		}
+
+		.skeleton-detail-title {
+			width: 100%;
+			height: 2.75rem;
+		}
+
+		.skeleton-detail-copy .skeleton-copy {
+			display: none;
+		}
+	}
+
 	.poster-card {
 		position: relative;
 		display: block;
@@ -560,8 +801,94 @@
 		white-space: nowrap;
 	}
 
-	.poster-year {
+	.poster-legend {
 		margin-top: 0.25rem;
+	}
+
+	.film-progress {
+		width: 100%;
+		height: 0.25rem;
+		overflow: hidden;
+		margin-top: 0.75rem;
+		border-radius: 999px;
+		background: var(--color-line);
+	}
+
+	.film-progress > span {
+		display: block;
+		height: 100%;
+		background: var(--color-accent);
+	}
+
+	.film-director-link {
+		display: inline-flex;
+		min-block-size: var(--target-min);
+		align-items: center;
+		gap: 0.65rem;
+		text-decoration: none;
+		transition: color 160ms var(--ease-cine);
+	}
+
+	.film-director-link:hover {
+		color: var(--color-bone);
+	}
+
+	.row-scroll-frame {
+		position: relative;
+	}
+
+	.row-scroll-button {
+		display: none;
+	}
+
+	@media (any-hover: hover) and (any-pointer: fine) {
+		.row-scroll-button {
+			position: absolute;
+			z-index: 3;
+			top: 42%;
+			display: inline-flex;
+			width: var(--target-min);
+			height: var(--target-min);
+			align-items: center;
+			justify-content: center;
+			border: 1px solid rgba(237, 231, 220, 0.18);
+			border-radius: 999px;
+			background: rgba(11, 10, 9, 0.84);
+			color: var(--color-bone);
+			box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.35);
+			opacity: 0;
+			visibility: hidden;
+			pointer-events: none;
+			cursor: pointer;
+			transform: translateY(-50%) scale(0.9);
+			transition:
+				opacity 160ms var(--ease-cine),
+				transform 160ms var(--ease-cine),
+				background-color 160ms var(--ease-cine),
+				color 160ms var(--ease-cine);
+			-webkit-backdrop-filter: blur(12px);
+			backdrop-filter: blur(12px);
+		}
+
+		.row-scroll-button--left {
+			left: max(0.75rem, calc(var(--page-gutter) - 1.75rem));
+		}
+
+		.row-scroll-button--right {
+			right: max(0.75rem, calc(var(--page-gutter) - 1.75rem));
+		}
+
+		.row-scroll-frame:hover .row-scroll-button {
+			opacity: 1;
+			visibility: visible;
+			pointer-events: auto;
+			transform: translateY(-50%) scale(1);
+		}
+
+		.row-scroll-button:hover {
+			background: var(--color-bone);
+			color: var(--color-ink);
+		}
 	}
 
 	.settings-page > section {
@@ -863,6 +1190,145 @@
 		text-align: center;
 	}
 
+	.player-shortcuts {
+		position: absolute;
+		z-index: 5;
+		width: min(48rem, calc(100vw - 2rem));
+		max-height: calc(100svh - 2rem);
+		overflow-y: auto;
+		border: 1px solid rgba(237, 231, 220, 0.16);
+		border-radius: clamp(1rem, 2vw, 1.75rem);
+		padding: clamp(1.35rem, 3vw, 2.5rem);
+		background:
+			linear-gradient(135deg, rgba(237, 231, 220, 0.04), transparent 56%),
+			rgba(19, 18, 17, 0.96);
+		box-shadow:
+			0 0 0 100vmax rgba(0, 0, 0, 0.64),
+			0 2rem 6rem rgba(0, 0, 0, 0.58);
+		-webkit-backdrop-filter: blur(24px);
+		backdrop-filter: blur(24px);
+	}
+
+	.player-shortcuts-header {
+		position: sticky;
+		z-index: 1;
+		top: 0;
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1.5rem;
+		padding-bottom: 0.75rem;
+		background: rgba(22, 21, 20, 0.98);
+		box-shadow: 0 -2rem 0 2rem rgba(22, 21, 20, 0.98);
+	}
+
+	.player-shortcuts-header h2 {
+		margin-top: 0.55rem;
+		font-family: var(--font-display);
+		font-size: clamp(2.25rem, 5vw, 4rem);
+		font-weight: 400;
+		letter-spacing: -0.025em;
+		line-height: 1;
+	}
+
+	.player-shortcuts-intro {
+		max-width: 38rem;
+		margin-top: 1.25rem;
+	}
+
+	.player-shortcuts-list {
+		display: grid;
+		gap: 0;
+		margin-top: clamp(1.5rem, 3vw, 2.25rem);
+	}
+
+	.player-shortcuts-list > div {
+		display: grid;
+		grid-template-columns: minmax(10rem, 0.75fr) minmax(0, 1.4fr);
+		align-items: center;
+		gap: 1.5rem;
+		border-top: 1px solid var(--color-line);
+		padding-block: 0.8rem;
+	}
+
+	.player-shortcuts-list dt {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+	}
+
+	.player-shortcuts-list kbd {
+		display: inline-flex;
+		min-width: 2.5rem;
+		min-height: 2.25rem;
+		align-items: center;
+		justify-content: center;
+		border: 1px solid rgba(237, 231, 220, 0.18);
+		border-radius: 0.45rem;
+		padding-inline: 0.7rem;
+		background: rgba(237, 231, 220, 0.08);
+		color: var(--color-bone);
+		font-family: var(--font-ui);
+		font-size: clamp(0.75rem, 0.9vw, 0.9rem);
+		font-weight: 600;
+		box-shadow: inset 0 -2px rgba(0, 0, 0, 0.28);
+	}
+
+	.player-shortcuts-list dd {
+		color: var(--color-parchment);
+		font-size: clamp(0.875rem, 1vw, 1rem);
+		line-height: 1.45;
+	}
+
+	.player-shortcuts-hint {
+		border-top: 1px solid var(--color-line);
+		padding-top: 1rem;
+		color: var(--color-muted);
+		font-size: var(--text-small);
+		line-height: 1.5;
+	}
+
+	/* A 720p television is the baseline, not an edge case. Keep the whole
+	   shortcut map visible there so a remote user never has to discover that
+	   an apparently static panel can scroll. */
+	@media (max-height: 48rem) and (min-width: 40rem) {
+		.player-shortcuts {
+			padding: 1.25rem 2rem;
+		}
+
+		.player-shortcuts-header h2 {
+			margin-top: 0.25rem;
+			font-size: 3rem;
+		}
+
+		.player-shortcuts-intro {
+			margin-top: 0.75rem;
+		}
+
+		.player-shortcuts-list {
+			margin-top: 1rem;
+		}
+
+		.player-shortcuts-list > div {
+			padding-block: 0.45rem;
+		}
+
+		.player-shortcuts-list kbd {
+			min-height: 2rem;
+		}
+
+		.player-shortcuts-hint {
+			padding-top: 0.65rem;
+		}
+	}
+
+	@media (max-width: 39.99rem) {
+		.player-shortcuts-list > div {
+			grid-template-columns: 1fr;
+			gap: 0.65rem;
+		}
+	}
+
 	.player-busy {
 		position: absolute;
 		z-index: 1;
@@ -935,6 +1401,11 @@
 @media (prefers-reduced-motion: reduce) {
 	html {
 		scroll-behavior: auto;
+	}
+
+	.skeleton-block::after,
+	.skeleton-detail-hero::after {
+		animation: none;
 	}
 
 	*,

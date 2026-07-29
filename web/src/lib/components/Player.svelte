@@ -4,7 +4,7 @@
 	import { strings as t } from '$lib/strings.js';
 	import Icon from './Icon.svelte';
 
-	let { movie, onclose } = $props();
+	let { movie, onclose, onprogress } = $props();
 
 	/** @type {'checking' | 'resume' | 'playing' | 'preparing' | 'failed'} */
 	let phase = $state('checking');
@@ -32,6 +32,9 @@
 	let seeking = $state(false);
 	let buffered = $state(0);
 	let waiting = $state(false);
+	let helpOpen = $state(false);
+	/** @type {HTMLElement} */
+	let helpPanel = $state();
 
 	// While a scrub is in progress the bar follows the pointer rather than the
 	// video, otherwise the handle fights the person dragging it.
@@ -55,6 +58,7 @@
 	let saveTimer;
 	let lastSaved = 0;
 	let returnFocus;
+	let helpReturnFocus;
 	let previousBodyOverflow;
 
 	onMount(async () => {
@@ -216,12 +220,15 @@
 		lastSaved = seconds;
 
 		try {
-			await fetch(`/api/library/movies/${movie.id}/progress`, {
+			const response = await fetch(`/api/library/movies/${movie.id}/progress`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ position_seconds: seconds, duration_seconds: duration }),
 				keepalive: true
 			});
+			if (!response.ok) return;
+			const saved = await response.json();
+			onprogress?.(saved);
 		} catch {
 			// A lost position is not worth interrupting playback over.
 		}
@@ -252,12 +259,75 @@
 		showControls();
 	}
 
+	function isHelpKey(event) {
+		return (
+			!event.altKey &&
+			!event.ctrlKey &&
+			!event.metaKey &&
+			(event.key === '?' || (event.code === 'Slash' && event.shiftKey))
+		);
+	}
+
+	function openHelp(trigger = document.activeElement) {
+		helpReturnFocus = trigger instanceof HTMLElement ? trigger : shell;
+		helpOpen = true;
+		controlsVisible = true;
+		clearTimeout(idleTimer);
+
+		tick().then(() => {
+			const close = helpPanel?.querySelector('[data-shortcuts-close]');
+			if (close instanceof HTMLElement) close.focus();
+		});
+	}
+
+	function closeHelp() {
+		helpOpen = false;
+		showControls();
+
+		tick().then(() => {
+			if (helpReturnFocus instanceof HTMLElement && helpReturnFocus.isConnected) {
+				helpReturnFocus.focus();
+			} else {
+				shell?.focus();
+			}
+		});
+	}
+
+	function scrollHelp(event) {
+		if (!helpPanel) return false;
+		const amount = Math.max(160, helpPanel.clientHeight * 0.72);
+		const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+
+		switch (event.key) {
+			case 'ArrowDown':
+				helpPanel.scrollBy({ top: 72, behavior });
+				return true;
+			case 'ArrowUp':
+				helpPanel.scrollBy({ top: -72, behavior });
+				return true;
+			case 'PageDown':
+				helpPanel.scrollBy({ top: amount, behavior });
+				return true;
+			case 'PageUp':
+				helpPanel.scrollBy({ top: -amount, behavior });
+				return true;
+			case 'Home':
+				helpPanel.scrollTo({ top: 0, behavior });
+				return true;
+			case 'End':
+				helpPanel.scrollTo({ top: helpPanel.scrollHeight, behavior });
+				return true;
+			default:
+				return false;
+		}
+	}
+
 	function showControls() {
 		controlsVisible = true;
 		clearTimeout(idleTimer);
 		// Paused, seeking or buffering means the person is looking at the
 		// controls, so they stay.
-		if (paused || seeking || waiting) return;
+		if (paused || seeking || waiting || helpOpen) return;
 
 		idleTimer = setTimeout(() => {
 			// Focus cannot be left sitting on a control that is about to become
@@ -279,6 +349,31 @@
 		// Any key is a sign of life. Somebody navigating the bar with a remote
 		// must never have it disappear mid-press.
 		showControls();
+
+		if (isHelpKey(event) && (helpOpen || phase === 'playing')) {
+			event.preventDefault();
+			if (helpOpen) closeHelp();
+			else openHelp();
+			return;
+		}
+
+		if (helpOpen) {
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				closeHelp();
+			} else if (scrollHelp(event)) {
+				event.preventDefault();
+			} else if (
+				(event.key === ' ' || event.key === 'Enter') &&
+				document.activeElement instanceof HTMLButtonElement &&
+				helpPanel?.contains(document.activeElement)
+			) {
+				// Let the panel's own close button keep its native activation.
+			} else if (event.key !== 'Tab') {
+				event.preventDefault();
+			}
+			return;
+		}
 
 		if (event.key === 'Escape' && !document.fullscreenElement) {
 			event.preventDefault();
@@ -327,12 +422,23 @@
 			setVolume(Math.max(0, Math.min(1, volume + (event.key === 'ArrowUp' ? 0.1 : -0.1))));
 			showControls();
 		}
+		if (event.key === 'Home') {
+			event.preventDefault();
+			seekTo(0);
+		}
+		if (event.key === 'End') {
+			event.preventDefault();
+			seekTo(duration - 5);
+		}
 	}
 
 	function trapDialogFocus(event) {
 		if (event.key !== 'Tab' || !shell) return;
 
-		const focusable = [...shell.querySelectorAll(
+		const scope = helpOpen ? helpPanel : shell;
+		if (!scope) return;
+
+		const focusable = [...scope.querySelectorAll(
 			'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), ' +
 			'textarea:not(:disabled), summary, [role="slider"], [tabindex]:not([tabindex="-1"])'
 		)].filter((element) => element instanceof HTMLElement && element.tabIndex >= 0
@@ -346,10 +452,10 @@
 		const first = focusable[0];
 		const last = focusable[focusable.length - 1];
 		const active = document.activeElement;
-		if (event.shiftKey && (active === first || !shell.contains(active))) {
+		if (event.shiftKey && (active === first || !scope.contains(active))) {
 			event.preventDefault();
 			last.focus();
-		} else if (!event.shiftKey && (active === last || !shell.contains(active))) {
+		} else if (!event.shiftKey && (active === last || !scope.contains(active))) {
 			event.preventDefault();
 			first.focus();
 		}
@@ -359,6 +465,15 @@
 		if (phase !== 'playing') return;
 		saveTimer = setInterval(() => save(), 5000);
 		return () => clearInterval(saveTimer);
+	});
+
+	$effect(() => {
+		if (phase !== 'playing' && helpOpen) {
+			// Preparation and error states replace the controls entirely. Do
+			// not leave a hidden help panel consuming Escape behind them.
+			helpOpen = false;
+			helpReturnFocus = null;
+		}
 	});
 
 	$effect(() => {
@@ -434,6 +549,7 @@
 			<!-- svelte-ignore a11y_media_has_caption -->
 			<video
 				bind:this={video}
+				inert={helpOpen}
 				src={source}
 				autoplay
 				playsinline
@@ -462,7 +578,7 @@
 		<div class="player-scrim player-scrim--top" class:player-hidden={hidden}></div>
 		<div class="player-scrim player-scrim--bottom" class:player-hidden={hidden}></div>
 
-		<header class="player-top" class:player-hidden={hidden}>
+		<header class="player-top" class:player-hidden={hidden} inert={helpOpen}>
 			<button type="button" onclick={() => { save(true); onclose(); }} class="player-icon-button">
 				<Icon name="back" label={t.player.close} />
 			</button>
@@ -474,7 +590,7 @@
 			</div>
 		</header>
 
-		<div class="player-controls" class:player-hidden={hidden}>
+		<div class="player-controls" class:player-hidden={hidden} inert={helpOpen}>
 			<!--
 				Custom controls rather than the browser's, for one reason that
 				matters: a remuxed stream is a pipe with no length, so the native
@@ -561,10 +677,60 @@
 					/>
 				</div>
 
+				{#if phase === 'playing'}
+					<button
+						type="button"
+						onclick={(event) => openHelp(event.currentTarget)}
+						class="player-icon-button"
+					>
+						<Icon name="help" label={t.player.shortcuts.open} />
+					</button>
+				{/if}
+
 				<button type="button" onclick={toggleFullscreen} class="player-icon-button">
 					<Icon name="fullscreen" label={t.player.fullscreen} />
 				</button>
 			</div>
 		</div>
+
+		{#if helpOpen && phase === 'playing'}
+			<section
+				bind:this={helpPanel}
+				class="player-shortcuts"
+				aria-labelledby="player-shortcuts-title"
+			>
+				<div class="player-shortcuts-header">
+					<div>
+						<span class="label">{t.appName}</span>
+						<h2 id="player-shortcuts-title">{t.player.shortcuts.title}</h2>
+					</div>
+					<button
+						type="button"
+						onclick={closeHelp}
+						class="player-icon-button"
+						data-shortcuts-close
+					>
+						<Icon name="close" label={t.player.shortcuts.close} />
+					</button>
+				</div>
+
+				<p class="tv-copy player-shortcuts-intro">{t.player.shortcuts.intro}</p>
+
+				<dl class="player-shortcuts-list">
+					{#each t.player.shortcuts.items as shortcut (shortcut.action)}
+						<div>
+							<dt>
+								{#each shortcut.keys as key (key)}
+									<kbd>{key}</kbd>
+								{/each}
+							</dt>
+							<dd>{shortcut.action}</dd>
+						</div>
+					{/each}
+				</dl>
+
+				<p class="player-shortcuts-hint">{t.player.shortcuts.scrubHint}</p>
+			</section>
+		{/if}
 	{/if}
 </div>

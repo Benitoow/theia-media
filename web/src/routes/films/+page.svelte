@@ -1,10 +1,11 @@
 <script>
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import { getAllMovies, searchKey, displayTitle, displayYear } from '$lib/api.js';
+	import { getAllMovies, searchKey, displayTitle, displayYear, formatRuntime } from '$lib/api.js';
 	import { strings as t } from '$lib/strings.js';
 	import PosterCard from '$lib/components/PosterCard.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
 
 	/** @type {'loading' | 'ready' | 'offline'} */
 	let state = $state('loading');
@@ -18,8 +19,10 @@
 
 	onMount(async () => {
 		// A genre row on the home screen links here pre-filtered, so the deep
-		// link has to survive a reload rather than being lost on mount.
+		// link has to survive a reload rather than being lost on mount. Film
+		// detail pages use the same contract for director searches.
 		genre = $page.url.searchParams.get('genre') ?? '';
+		query = $page.url.searchParams.get('q') ?? '';
 		try {
 			movies = await getAllMovies((n) => (loaded = n));
 			state = 'ready';
@@ -121,6 +124,29 @@
 		{ value: 'progress', label: t.library.statusInProgress },
 		{ value: 'finished', label: t.library.statusFinished }
 	];
+
+	const addedDate = new Intl.DateTimeFormat('fr-FR', {
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric'
+	});
+
+	function cardLegend(movie) {
+		switch (sort) {
+			case 'rating':
+				return movie.metadata?.vote_average
+					? t.library.ratingLegend(movie.metadata.vote_average)
+					: '—';
+			case 'added': {
+				const date = new Date(movie.added_at);
+				return Number.isNaN(date.getTime()) ? '—' : addedDate.format(date);
+			}
+			case 'runtime':
+				return formatRuntime(movie.metadata?.runtime_minutes) ?? '—';
+			default:
+				return displayYear(movie) ?? '—';
+		}
+	}
 </script>
 
 <svelte:head>
@@ -129,10 +155,10 @@
 
 <main class="page-shell pt-32 pb-16 lg:pt-40">
 	{#if state === 'loading'}
-		<div class="flex min-h-[50vh] flex-col items-center justify-center gap-5">
-			<span class="brand-orbit" aria-hidden="true"></span>
-			<span class="label">{t.library.loading}{loaded ? ` (${loaded})` : ''}</span>
-		</div>
+		<LoadingSkeleton
+			variant="library"
+			label={t.library.loadingProgress(loaded)}
+		/>
 	{:else if state === 'offline'}
 		<div class="chrome-panel max-w-2xl p-8 sm:p-12">
 			<span class="label text-error">{t.home.unreachableTitle}</span>
@@ -217,7 +243,7 @@
 			-->
 			<div class="library-grid">
 				{#each filtered as movie (movie.id)}
-					<PosterCard {movie} fluid />
+					<PosterCard {movie} fluid legend={cardLegend(movie)} />
 				{/each}
 			</div>
 		{/if}

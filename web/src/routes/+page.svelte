@@ -6,6 +6,7 @@
 	import Hero from '$lib/components/Hero.svelte';
 	import Row from '$lib/components/Row.svelte';
 	import ChromeScene from '$lib/components/ChromeScene.svelte';
+	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
 
 	/** @type {'loading' | 'ready' | 'offline'} */
 	let state = $state('loading');
@@ -38,10 +39,7 @@
 </svelte:head>
 
 {#if state === 'loading'}
-	<div class="flex min-h-screen flex-col items-center justify-center gap-5 px-6">
-		<span class="brand-orbit" aria-hidden="true"></span>
-		<span class="label">{t.home.loading}</span>
-	</div>
+	<LoadingSkeleton variant="home" label={t.home.loading} />
 {:else if state === 'offline'}
 	<ChromeScene
 		image="/chrome/theia-offline.webp"

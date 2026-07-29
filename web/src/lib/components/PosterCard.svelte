@@ -4,11 +4,12 @@
 	// fluid lets the card fill a grid cell instead of carrying its own width.
 	// Rows want a fixed size so a strip reads evenly; the library grid wants the
 	// column to decide.
-	let { movie, fluid = false } = $props();
+	let { movie, fluid = false, legend = null } = $props();
 
 	const poster = $derived(imageURL(movie.metadata?.poster_path, 'w342'));
 	const title = $derived(displayTitle(movie));
 	const year = $derived(displayYear(movie));
+	const secondary = $derived(legend ?? year ?? '—');
 
 	// Only drawn for a film actually part-watched. A bar at zero on every card
 	// would be noise, and one on a finished film would be a lie.
@@ -71,5 +72,5 @@
 	</div>
 
 	<p class="poster-title">{title}</p>
-	<p class="poster-year label">{year ?? '—'}</p>
+	<p class="poster-legend label">{secondary}</p>
 </a>

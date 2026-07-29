@@ -20,6 +20,8 @@ export const strings = {
 	library: {
 		title: 'Tous les films',
 		loading: 'Chargement de la bibliothèque…',
+		loadingProgress: (n) =>
+			n > 0 ? `Chargement de la bibliothèque… ${n} films reçus` : 'Chargement de la bibliothèque…',
 		search: 'Rechercher',
 		searchPlaceholder: 'Titre, réalisateur, genre…',
 		clear: 'Effacer',
@@ -42,6 +44,10 @@ export const strings = {
 		noResultsBody: 'Essayez un autre mot, ou retirez un filtre.',
 		reset: 'Tout réafficher',
 		seeAll: 'Tout voir',
+		scrollPrevious: 'Faire défiler la rangée vers la gauche',
+		scrollNext: 'Faire défiler la rangée vers la droite',
+		ratingLegend: (rating) =>
+			`${rating.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 10`,
 		unwatchedBadge: 'Jamais lu',
 		finishedBadge: 'Vu'
 	},
@@ -152,6 +158,7 @@ export const strings = {
 		close: 'Fermer le lecteur',
 
 		resume: 'Reprendre',
+		resumeAtMinutes: (minutes) => `Reprendre à ${minutes} min`,
 		resumeAt: 'Vous vous étiez arrêté à',
 		fromStart: 'Reprendre du début',
 		continueWatching: 'Continuer à regarder',
@@ -166,7 +173,25 @@ export const strings = {
 		noFfmpeg:
 			"Ce fichier doit être réencapsulé, mais aucune version de ffmpeg n'est disponible pour cette plateforme.",
 		failed:
-			"Ce fichier n'a pas pu être lu. Son format n'est probablement pas pris en charge par la v1."
+			"Ce fichier n'a pas pu être lu. Son format n'est probablement pas pris en charge par la v1.",
+
+		shortcuts: {
+			open: 'Afficher les raccourcis clavier',
+			close: 'Fermer l’aide des raccourcis',
+			title: 'Raccourcis clavier',
+			intro: 'Ces touches fonctionnent pendant la lecture, sans ouvrir les contrôles.',
+			items: [
+				{ keys: ['Espace'], action: 'Lecture ou pause' },
+				{ keys: ['←', '→'], action: 'Reculer ou avancer de 10 secondes' },
+				{ keys: ['↓', '↑'], action: 'Baisser ou augmenter le volume' },
+				{ keys: ['M'], action: 'Couper ou rétablir le son' },
+				{ keys: ['F'], action: 'Entrer ou sortir du plein écran' },
+				{ keys: ['Début', 'Fin'], action: 'Aller au début ou à la fin du film' },
+				{ keys: ['?'], action: 'Afficher ou masquer cette aide' }
+			],
+			scrubHint:
+				'Sur la barre de lecture, Maj avec ← ou → saute de 60 secondes.'
+		}
 	},
 
 	film: {
@@ -179,6 +204,8 @@ export const strings = {
 		year: 'Année',
 		file: 'Fichier',
 		size: 'Taille',
+		progress: 'Progression dans le film',
+		moreByDirector: (director) => `Voir les autres films de ${director}`,
 		noOverview: "Aucun synopsis n'est disponible pour ce film.",
 		unmatched:
 			"Ce fichier n'a pas été identifié sur TMDB. Il reste listé sous le nom que porte le fichier ; " +
