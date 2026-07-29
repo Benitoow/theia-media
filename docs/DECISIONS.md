@@ -726,6 +726,46 @@ Verified on the real library: the three rows that genuinely overflow report
 3394px of content in 1265px of visible width with **zero** scrollbar height, and
 each still renders its chevron. The one row too short to scroll renders none.
 
+## 35. Choosing a profile is a screen, not a pill in the nav
+
+The profile model from decision 31 is unchanged: same `playback_progress` table,
+same `X-Theia-Profile` header, same `localStorage` selection, same absence of
+any password or permission. **Only the way in changed.**
+
+The first implementation put the active profile in the navigation bar, as an
+avatar and a name beside "Films" and "Réglages". Three things were wrong with
+that, and they are the same three constraints the rest of the interface has
+followed since M6:
+
+- **A D-pad lands on the wrong thing.** The first arrow key entering the page
+  reached a row of navigation links. Choosing who is watching is the question
+  the app opens with, and it deserves the focus, not fourth place in a pill.
+- **It fails the three-metre rule.** A 2rem avatar and an 11px tracked name are
+  legible at a desk and not from a sofa. The chooser now uses the same scale as
+  the rest of the chrome: cards of 240×303px at 1280 wide, and the title in
+  Playfair at 112px.
+- **It did not fit.** Four targets in one pill overflowed the viewport at the
+  documented 320px floor by 35px, and `overflow-x: hidden` turned that into a
+  control nobody could reach. Removing it left three targets, which fit once
+  their horizontal padding is tightened below 26rem.
+
+So `/profils` is now a full screen with the nav suppressed for that route only.
+It appears on arrival when a profile is needed — the existing `needsSelection`
+guard, untouched — and is reached from a new **Profils** section in settings the
+rest of the time. Profile management (add, rename, photo, delete) stays behind
+the same "Gérer les profils" toggle on that screen rather than moving to
+settings: one place for everything about profiles is easier to describe than
+two.
+
+The way out is deliberate. A "Retour" link appears **only when a profile is
+already active**. Arriving here because the app needs an answer must not offer a
+way to leave without giving one.
+
+Verified against the running binary with three profiles: the D-pad enters on a
+card and moves between them, Enter selects and returns to where you came from,
+`localStorage` follows, and the same film reports 0 / 1200 / 5400 seconds for
+profiles 1 / 2 / 3 — the isolation of decision 31 survived the rework intact.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

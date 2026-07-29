@@ -295,6 +295,9 @@ export const strings = {
 		language: 'Langue',
 		languageHint:
 			'Ce choix reste dans ce navigateur. Il traduit l’interface sans retélécharger ni retraduire les métadonnées TMDB déjà en cache.',
+		profilesHint:
+			'Chaque profil garde sa propre reprise de lecture. Comme la langue, le profil choisi appartient à ce navigateur et non au serveur : changer de profil sur la télévision ne change rien sur un portable.',
+		profilesAction: 'Changer de profil',
 		server: 'Serveur',
 		version: 'Version',
 		port: 'Port',

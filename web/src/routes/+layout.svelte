@@ -6,7 +6,6 @@
 	import { i18n } from '$lib/i18n/index.svelte.js';
 	import { strings as t } from '$lib/strings.js';
 	import { profileSession } from '$lib/profiles.svelte.js';
-	import ProfileAvatar from '$lib/components/ProfileAvatar.svelte';
 
 	let { children } = $props();
 
@@ -18,12 +17,6 @@
 	const inLibrary = $derived(path === '/films' || path.startsWith('/films/'));
 	const inSettings = $derived(path === '/reglages' || path.startsWith('/reglages/'));
 	const inProfiles = $derived(path === '/profils' || path.startsWith('/profils/'));
-	const profileName = $derived(profileSession.active?.name || t.profiles.defaultName);
-	const profileHref = $derived(
-		inProfiles
-			? '/profils'
-			: `/profils?return=${encodeURIComponent($page.url.pathname + $page.url.search)}`
-	);
 
 	// The pill keeps a light scrim over arbitrary hero artwork, then strengthens
 	// once the page moves so it never becomes a hard opaque band.
@@ -161,44 +154,42 @@
 		<span class="label">{t.profiles.loading}</span>
 	</main>
 {:else}
-	<div class="site-nav-wrap">
-		<nav class="site-nav" data-scrolled={scrolled} aria-label={t.a11y.mainNavigation}>
-			<a
-				href="/"
-				class="nav-target nav-brand"
-				aria-label={t.nav.home}
-				aria-current={atHome ? 'page' : undefined}
-			>
-				<span class="brand-orbit" aria-hidden="true"></span>
-				<span class="text-label font-semibold tracking-[0.2em] uppercase">{t.appName}</span>
-			</a>
-			<div class="flex items-center">
+	<!--
+		No nav on the profile chooser. "Who is watching?" is a question with one
+		job, and a D-pad landing on a row of navigation links instead of on a face
+		is the whole reason the old pill did not work. Every other screen keeps it.
+	-->
+	{#if !inProfiles}
+		<div class="site-nav-wrap">
+			<nav class="site-nav" data-scrolled={scrolled} aria-label={t.a11y.mainNavigation}>
 				<a
-					href="/films"
-					class="nav-target nav-link label"
-					aria-current={inLibrary ? 'page' : undefined}
+					href="/"
+					class="nav-target nav-brand"
+					aria-label={t.nav.home}
+					aria-current={atHome ? 'page' : undefined}
 				>
-					{t.nav.library}
+					<span class="brand-orbit" aria-hidden="true"></span>
+					<span class="text-label font-semibold tracking-[0.2em] uppercase">{t.appName}</span>
 				</a>
-				<a
-					href="/reglages"
-					class="nav-target nav-link label"
-					aria-current={inSettings ? 'page' : undefined}
-				>
-					{t.nav.settings}
-				</a>
-				<a
-					href={profileHref}
-					class="nav-target nav-profile"
-					aria-label={t.profiles.switchTo(profileName)}
-					aria-current={inProfiles ? 'page' : undefined}
-				>
-					<ProfileAvatar profile={profileSession.active} />
-					<span class="nav-profile-name">{profileName}</span>
-				</a>
-			</div>
-		</nav>
-	</div>
+				<div class="flex items-center">
+					<a
+						href="/films"
+						class="nav-target nav-link label"
+						aria-current={inLibrary ? 'page' : undefined}
+					>
+						{t.nav.library}
+					</a>
+					<a
+						href="/reglages"
+						class="nav-target nav-link label"
+						aria-current={inSettings ? 'page' : undefined}
+					>
+						{t.nav.settings}
+					</a>
+				</div>
+			</nav>
+		</div>
+	{/if}
 
 	{#if profileSession.active || profileSession.unreachable || inProfiles}
 		{@render children()}
@@ -230,34 +221,8 @@
 		color: var(--color-muted);
 	}
 
-	.nav-profile {
-		display: inline-flex;
-		gap: 0.6rem;
-		align-items: center;
-		padding-inline: 0.75rem;
-		color: var(--color-parchment);
-		text-decoration: none;
-	}
-
-	.nav-profile-name {
-		max-width: 8rem;
-		overflow: hidden;
-		font-size: var(--text-label);
-		font-weight: 600;
-		letter-spacing: 0.12em;
-		text-overflow: ellipsis;
-		text-transform: uppercase;
-		white-space: nowrap;
-	}
-
-	@media (max-width: 42rem) {
-		.nav-profile-name {
-			position: absolute;
-			width: 1px;
-			height: 1px;
-			overflow: hidden;
-			clip: rect(0 0 0 0);
-			clip-path: inset(50%);
-		}
-	}
+	/* The profile pill that used to live here is gone: it is a full screen now,
+	   reached from settings or shown on arrival. Its small-screen rule went with
+	   it, and so did the 320px overflow it caused -- three nav targets fit where
+	   four did not. */
 </style>

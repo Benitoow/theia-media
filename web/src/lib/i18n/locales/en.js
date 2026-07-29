@@ -295,6 +295,9 @@ export const strings = {
 		language: 'Language',
 		languageHint:
 			'This choice stays in this browser. It translates the interface without downloading or retranslating cached TMDB metadata.',
+		profilesHint:
+			'Each profile keeps its own resume position. Like the language, the selected profile belongs to this browser rather than to the server: switching profile on the television changes nothing on a laptop.',
+		profilesAction: 'Switch profile',
 		server: 'Server',
 		version: 'Version',
 		port: 'Port',

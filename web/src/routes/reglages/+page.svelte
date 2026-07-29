@@ -3,7 +3,9 @@
 	import { getJSON } from '$lib/api.js';
 	import { i18n } from '$lib/i18n/index.svelte.js';
 	import { strings as t, formatUptime } from '$lib/strings.js';
+	import { profileSession } from '$lib/profiles.svelte.js';
 	import ConnectPanel from '$lib/components/ConnectPanel.svelte';
+	import ProfileAvatar from '$lib/components/ProfileAvatar.svelte';
 
 	let health = $state(null);
 	let stats = $state(null);
@@ -175,6 +177,25 @@
 						{locale.label}
 					</button>
 				{/each}
+			</div>
+		</section>
+
+		<!-- The way back to the chooser, now that the nav no longer carries a
+		     profile pill. Settings is where you go to change something, and this
+		     is a something you change rarely. -->
+		<section class="mb-14 border-b border-line pb-14">
+			<h2 class="label mb-5">{t.nav.profiles}</h2>
+			<p class="text-small mb-6 max-w-prose text-muted">{t.settings.profilesHint}</p>
+			<div class="flex flex-wrap items-center gap-5">
+				<span class="flex items-center gap-3">
+					<ProfileAvatar profile={profileSession.active} />
+					<span class="text-small text-parchment">
+						{profileSession.active?.name || t.profiles.defaultName}
+					</span>
+				</span>
+				<a href="/profils?return=%2Freglages" class="tv-action">
+					{t.settings.profilesAction}
+				</a>
 			</div>
 		</section>
 

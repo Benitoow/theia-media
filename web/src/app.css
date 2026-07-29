@@ -400,6 +400,21 @@
 		background: rgba(237, 231, 220, 0.08);
 	}
 
+	/* At the 320px floor the three remaining targets still ran past the pill's
+	   rounded edge -- the profile chip moving to its own screen removed the worst
+	   of it, not all of it. The horizontal padding is what gives way. The 52px
+	   block size and the labels, which are what §9 actually requires, are
+	   untouched. */
+	@media (max-width: 26rem) {
+		.site-nav {
+			padding-inline: 0.25rem;
+		}
+
+		.nav-target {
+			padding-inline: 0.5rem;
+		}
+	}
+
 	/* Where you are. Keyed off aria-current rather than a class, so the fact is
 	   stated once and serves both a screen reader and the eye.
 

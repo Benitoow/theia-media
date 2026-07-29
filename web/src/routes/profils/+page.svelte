@@ -144,176 +144,201 @@
 	<title>{t.profiles.title} — {t.appName}</title>
 </svelte:head>
 
-<main class="profiles-page page-shell page-body">
-	<header class="profiles-heading enter">
-		<span class="label text-accent">{t.profiles.eyebrow}</span>
-		<h1 class="page-title mt-4">{t.profiles.title}</h1>
-		<p class="tv-copy mt-5 max-w-prose text-muted">{t.profiles.body}</p>
-	</header>
+<!--
+	A full screen with one question on it. The nav is suppressed by the layout for
+	this route: the first thing a remote's arrow key should land on is a face, not
+	a row of links.
+-->
+<main class="chooser">
+	<div class="chooser-inner page-shell">
+		<header class="chooser-heading enter">
+			<span class="label text-accent">{t.profiles.eyebrow}</span>
+			<h1 class="hero-title mt-5">{t.profiles.title}</h1>
+			<p class="tv-copy enter enter-2 mt-6 max-w-prose text-muted">{t.profiles.body}</p>
+		</header>
 
-	{#if profileSession.ready && profileSession.profiles.length}
-		<section class="profile-grid mt-12" aria-label={t.profiles.listLabel}>
-			{#each profileSession.profiles as profile (profile.id)}
+		{#if profileSession.ready && profileSession.profiles.length}
+			<section class="profile-grid enter enter-2" aria-label={t.profiles.listLabel}>
+				{#each profileSession.profiles as profile (profile.id)}
+					<button
+						type="button"
+						class:profile-card--active={active?.id === profile.id}
+						class="profile-card"
+						onclick={() => choose(profile)}
+						onkeydown={(event) => chooseWithRemote(event, profile)}
+						data-remote-default={active?.id === profile.id || (!active && profile.is_default) ? true : undefined}
+					>
+						<ProfileAvatar {profile} large />
+						<span class="profile-card-name">{displayName(profile)}</span>
+						{#if active?.id === profile.id}
+							<span class="profile-current">{t.profiles.current}</span>
+						{/if}
+					</button>
+				{/each}
+			</section>
+
+			<div class="profiles-actions enter enter-3">
 				<button
 					type="button"
-					class:profile-card--active={active?.id === profile.id}
-					class="profile-card"
-					onclick={() => choose(profile)}
-					onkeydown={(event) => chooseWithRemote(event, profile)}
-					data-remote-default={active?.id === profile.id || (!active && profile.is_default) ? true : undefined}
+					class="tv-action cursor-pointer"
+					onclick={() => {
+						managing = !managing;
+						confirmingDelete = null;
+						noticeCode = null;
+						syncDrafts();
+					}}
 				>
-					<ProfileAvatar {profile} large />
-					<span class="profile-card-name">{displayName(profile)}</span>
-					{#if active?.id === profile.id}
-						<span class="profile-current">{t.profiles.current}</span>
-					{/if}
+					{managing ? t.profiles.done : t.profiles.manage}
 				</button>
-			{/each}
-		</section>
+				<!-- Only when somebody is already chosen. Arriving here because a
+				     profile is *required* must not offer a way to leave without
+				     answering the question. -->
+				{#if active}
+					<a href={returnTo} class="tv-link label">{t.nav.back}</a>
+				{/if}
+			</div>
 
-		<div class="profiles-actions mt-10">
-			<button
-				type="button"
-				class="tv-action cursor-pointer"
-				onclick={() => {
-					managing = !managing;
-					confirmingDelete = null;
-					noticeCode = null;
-					syncDrafts();
-				}}
-			>
-				{managing ? t.profiles.done : t.profiles.manage}
-			</button>
-		</div>
+			{#if managing}
+				<section class="profile-management mt-14 border-t border-line pt-12">
+					<div class="management-copy">
+						<h2 class="section-title">{t.profiles.manage}</h2>
+						<p class="text-small mt-3 text-muted">{t.profiles.manageHint}</p>
+					</div>
 
-		{#if managing}
-			<section class="profile-management mt-14 border-t border-line pt-12">
-				<div class="management-copy">
-					<h2 class="section-title">{t.profiles.manage}</h2>
-					<p class="text-small mt-3 text-muted">{t.profiles.manageHint}</p>
-				</div>
+					<form class="new-profile mt-8" onsubmit={createProfile}>
+						<label>
+							<span class="label">{t.profiles.newName}</span>
+							<input
+								type="text"
+								bind:value={newName}
+								maxlength="40"
+								autocomplete="off"
+								placeholder={t.profiles.namePlaceholder}
+								required
+							/>
+						</label>
+						<button
+							type="submit"
+							class="tv-action tv-action--primary cursor-pointer"
+							disabled={busyID === 'new'}
+						>
+							{busyID === 'new' ? t.profiles.adding : t.profiles.add}
+						</button>
+					</form>
 
-				<form class="new-profile mt-8" onsubmit={createProfile}>
-					<label>
-						<span class="label">{t.profiles.newName}</span>
-						<input
-							type="text"
-							bind:value={newName}
-							maxlength="40"
-							autocomplete="off"
-							placeholder={t.profiles.namePlaceholder}
-							required
-						/>
-					</label>
-					<button
-						type="submit"
-						class="tv-action tv-action--primary cursor-pointer"
-						disabled={busyID === 'new'}
-					>
-						{busyID === 'new' ? t.profiles.adding : t.profiles.add}
-					</button>
-				</form>
-
-				<div class="editor-list mt-10">
-					{#each profileSession.profiles as profile (profile.id)}
-						<article class="profile-editor">
-							<div class="editor-avatar">
-								<ProfileAvatar {profile} />
-							</div>
-							<label class="editor-name">
-								<span class="label">{t.profiles.name}</span>
-								<input
-									type="text"
-									bind:value={draftNames[profile.id]}
-									maxlength="40"
-									autocomplete="off"
-									placeholder={profile.is_default
-										? t.profiles.defaultName
-										: t.profiles.namePlaceholder}
-									required
-								/>
-							</label>
-							<div class="editor-buttons">
-								<button
-									type="button"
-									class="label"
-									onclick={() => rename(profile)}
-									disabled={busyID === profile.id}
-								>
-									{t.profiles.rename}
-								</button>
-								<label class="label upload-button">
-									{profile.has_avatar ? t.profiles.replacePhoto : t.profiles.addPhoto}
+					<div class="editor-list mt-10">
+						{#each profileSession.profiles as profile (profile.id)}
+							<article class="profile-editor">
+								<div class="editor-avatar">
+									<ProfileAvatar {profile} />
+								</div>
+								<label class="editor-name">
+									<span class="label">{t.profiles.name}</span>
 									<input
-										type="file"
-										accept="image/jpeg,image/png,image/webp"
-										onchange={(event) => upload(profile, event)}
-										disabled={busyID === profile.id}
+										type="text"
+										bind:value={draftNames[profile.id]}
+										maxlength="40"
+										autocomplete="off"
+										placeholder={profile.is_default
+											? t.profiles.defaultName
+											: t.profiles.namePlaceholder}
+										required
 									/>
 								</label>
-								{#if profile.has_avatar}
+								<div class="editor-buttons">
 									<button
 										type="button"
 										class="label"
-										onclick={() => removeAvatar(profile)}
+										onclick={() => rename(profile)}
 										disabled={busyID === profile.id}
 									>
-										{t.profiles.removePhoto}
+										{t.profiles.rename}
 									</button>
-								{/if}
-								{#if !profile.is_default}
-									<button
-										type="button"
-										class="label delete-button"
-										onclick={() => removeProfile(profile)}
-										disabled={busyID === profile.id}
-									>
-										{confirmingDelete === profile.id
-											? t.profiles.confirmDelete
-											: t.profiles.delete}
-									</button>
-								{/if}
-							</div>
-						</article>
-					{/each}
-				</div>
+									<label class="label upload-button">
+										{profile.has_avatar ? t.profiles.replacePhoto : t.profiles.addPhoto}
+										<input
+											type="file"
+											accept="image/jpeg,image/png,image/webp"
+											onchange={(event) => upload(profile, event)}
+											disabled={busyID === profile.id}
+										/>
+									</label>
+									{#if profile.has_avatar}
+										<button
+											type="button"
+											class="label"
+											onclick={() => removeAvatar(profile)}
+											disabled={busyID === profile.id}
+										>
+											{t.profiles.removePhoto}
+										</button>
+									{/if}
+									{#if !profile.is_default}
+										<button
+											type="button"
+											class="label delete-button"
+											onclick={() => removeProfile(profile)}
+											disabled={busyID === profile.id}
+										>
+											{confirmingDelete === profile.id
+												? t.profiles.confirmDelete
+												: t.profiles.delete}
+										</button>
+									{/if}
+								</div>
+							</article>
+						{/each}
+					</div>
 
-				{#if notice}
-					<p
-						class:error-notice={!['profile_saved', 'avatar_saved', 'avatar_removed', 'profile_deleted'].includes(
-							noticeCode
-						)}
-						class="profile-notice mt-7"
-						role="status"
-					>
-						{notice}
-					</p>
-				{/if}
-			</section>
+					{#if notice}
+						<p
+							class:error-notice={!['profile_saved', 'avatar_saved', 'avatar_removed', 'profile_deleted'].includes(
+								noticeCode
+							)}
+							class="profile-notice mt-7"
+							role="status"
+						>
+							{notice}
+						</p>
+					{/if}
+				</section>
+			{/if}
 		{/if}
-	{/if}
+	</div>
 </main>
 
 <style>
-	.profiles-page {
-		max-width: var(--content-wide);
-		min-height: 70vh;
+	/* Fills the viewport and centres, because there is nothing else to look at
+	   and no nav above it. `svh` rather than `vh`: on a phone the dynamic
+	   toolbar would otherwise push the faces under the fold. */
+	.chooser {
+		display: grid;
+		min-height: 100svh;
+		align-content: center;
+		padding-block: clamp(3rem, 8vh, 7rem);
 	}
 
-	.profiles-heading {
+	.chooser-inner {
+		width: 100%;
+	}
+
+	.chooser-heading {
 		max-width: 46rem;
 	}
 
+	/* Deliberately large. This is read from a sofa and pointed at with a remote,
+	   so the target is the whole card and the card is nearer 200px than 100. */
 	.profile-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(9.5rem, 13rem));
-		gap: clamp(1rem, 2vw, 2rem);
+		grid-template-columns: repeat(auto-fit, minmax(9.5rem, 12rem));
+		gap: clamp(1.25rem, 2.5vw, 2.25rem);
+		margin-top: clamp(2.5rem, 5vh, 4rem);
 	}
 
 	.profile-card {
 		position: relative;
-		min-height: 12rem;
 		cursor: pointer;
+		border-radius: var(--radius-card);
 		color: var(--color-bone);
 		text-align: left;
 	}
@@ -355,7 +380,9 @@
 	.profiles-actions {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 1rem;
+		align-items: center;
+		gap: 1rem 1.75rem;
+		margin-top: clamp(2rem, 4vh, 3rem);
 	}
 
 	.profile-management {
