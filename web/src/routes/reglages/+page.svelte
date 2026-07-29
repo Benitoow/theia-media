@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { getJSON } from '$lib/api.js';
+	import { i18n } from '$lib/i18n/index.svelte.js';
 	import { strings as t, formatUptime } from '$lib/strings.js';
 	import ConnectPanel from '$lib/components/ConnectPanel.svelte';
 
@@ -50,27 +51,38 @@
 			const result = await res.json();
 			if (!res.ok) {
 				// Never result.error: the server writes English for its log and
-				// for anybody reading the API, and this interface is French.
+				// for anybody reading the API. The interface owns its language.
 				saveNotice = {
 					ok: false,
-					text: res.status === 400 ? t.settings.invalidPort : t.settings.saveFailed
+					code: res.status === 400 ? 'invalidPort' : 'saveFailed'
 				};
 				return;
 			}
 
-			let text = t.settings.saved;
-			if (result.port_changed) text += ' ' + t.settings.portChanged;
-			if (result.missing_paths?.length) {
-				text += ' ' + t.settings.missingPaths + ' ' + result.missing_paths.join(', ');
-			}
-			saveNotice = { ok: true, text };
+			saveNotice = {
+				ok: true,
+				portChanged: Boolean(result.port_changed),
+				missingPaths: result.missing_paths ?? []
+			};
 			editing = false;
 			await refresh();
 		} catch {
-			saveNotice = { ok: false, text: t.settings.saveFailed };
+			saveNotice = { ok: false, code: 'saveFailed' };
 		} finally {
 			saving = false;
 		}
+	}
+
+	function saveNoticeText(notice) {
+		if (!notice) return '';
+		if (!notice.ok) return t.settings[notice.code] ?? t.settings.saveFailed;
+
+		const parts = [t.settings.saved];
+		if (notice.portChanged) parts.push(t.settings.portChanged);
+		if (notice.missingPaths?.length) {
+			parts.push(`${t.settings.missingPaths} ${notice.missingPaths.join(', ')}`);
+		}
+		return parts.join(' ');
 	}
 
 	async function checkUpdate() {
@@ -122,7 +134,7 @@
 			await getJSON('/api/library/scan', { method: 'POST' });
 			await refresh();
 		} catch (e) {
-			scanError = e.status === 409 ? t.errors.scanBusy : t.errors.scanFailed;
+			scanError = e.status === 409 ? 'scanBusy' : 'scanFailed';
 		} finally {
 			scanning = false;
 		}
@@ -145,6 +157,27 @@
 	<h1 class="page-title enter mb-14">{t.settings.heading}</h1>
 
 	{#if settings && stats}
+		<!-- A browser preference, deliberately outside the server settings PUT:
+		     changing language on the TV must not change somebody else's laptop. -->
+		<section class="mb-14 border-b border-line pb-14">
+			<h2 class="label mb-5">{t.settings.interface}</h2>
+			<p class="text-small mb-5 max-w-prose text-muted">{t.settings.languageHint}</p>
+			<div class="flex flex-wrap gap-3" role="group" aria-label={t.settings.language}>
+				{#each i18n.available as locale (locale.code)}
+					<button
+						type="button"
+						lang={locale.lang}
+						class="tv-action cursor-pointer"
+						class:tv-action--primary={i18n.locale === locale.code}
+						aria-pressed={i18n.locale === locale.code}
+						onclick={() => i18n.setLocale(locale.code)}
+					>
+						{locale.label}
+					</button>
+				{/each}
+			</div>
+		</section>
+
 		<!-- The welcome screen shows this once. Keeping it reachable afterwards
 		     is what you want the evening a second device turns up. -->
 		{#if connect}
@@ -186,7 +219,9 @@
 			</div>
 
 			{#if scanError}
-				<p class="mb-5 border-l border-error py-1 pl-5 text-small text-parchment">{scanError}</p>
+				<p class="mb-5 border-l border-error py-1 pl-5 text-small text-parchment">
+					{t.errors[scanError] ?? t.errors.scanFailed}
+				</p>
 			{/if}
 
 			<dl class="mb-6 grid gap-x-8 gap-y-3 sm:grid-cols-[11rem_1fr]">
@@ -297,7 +332,7 @@
 						class:border-accent={saveNotice.ok}
 						class:border-error={!saveNotice.ok}
 					>
-						{saveNotice.text}
+						{saveNoticeText(saveNotice)}
 					</p>
 				{/if}
 			</div>
@@ -336,11 +371,15 @@
 			<h2 class="label mb-5">{t.settings.metadata}</h2>
 			{#if settings.tmdb.configured}
 				<p class="text-small text-parchment">
-					TMDB · <span class="text-muted">{t.settings.source} {settings.tmdb.source}</span>
+					TMDB ·
+					<span class="text-muted">
+						{t.settings.source}
+						{t.settings.keySources[settings.tmdb.source] ?? t.settings.keySources.unknown}
+					</span>
 				</p>
 			{:else}
 				<p class="border-l border-warning py-1 pl-5 text-small text-parchment">
-					{settings.tmdb.advice}
+					{t.settings.noKeyAdvice}
 				</p>
 			{/if}
 		</section>

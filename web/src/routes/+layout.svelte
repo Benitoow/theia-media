@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { i18n } from '$lib/i18n/index.svelte.js';
 	import { strings as t } from '$lib/strings.js';
 	import { profileSession } from '$lib/profiles.svelte.js';
 	import ProfileAvatar from '$lib/components/ProfileAvatar.svelte';
@@ -29,7 +30,12 @@
 	let scrolled = $state(false);
 
 	onMount(async () => {
+		i18n.bootstrap();
 		await profileSession.bootstrap();
+	});
+
+	$effect(() => {
+		document.documentElement.lang = i18n.htmlLang;
 	});
 
 	// The layout survives client-side navigation. Keep this guard reactive so
@@ -156,7 +162,7 @@
 	</main>
 {:else}
 	<div class="site-nav-wrap">
-		<nav class="site-nav" data-scrolled={scrolled} aria-label="Navigation principale">
+		<nav class="site-nav" data-scrolled={scrolled} aria-label={t.a11y.mainNavigation}>
 			<a
 				href="/"
 				class="nav-target nav-brand"
@@ -210,7 +216,7 @@
 	<footer class="mt-16 border-t border-line py-10">
 		<div class="page-shell">
 			<p class="micro max-w-prose leading-relaxed text-muted">
-				This product uses the TMDB API but is not endorsed or certified by TMDB.
+				{t.tmdbAttribution}
 			</p>
 		</div>
 	</footer>

@@ -11,7 +11,7 @@
 	let phase = $state('checking');
 	let info = $state(null);
 	let source = $state(null);
-	let failure = $state(null);
+	let failureCode = $state(null);
 	let triedRemux = $state(false);
 
 	/** @type {HTMLVideoElement} */
@@ -52,6 +52,7 @@
 	const position = $derived(scrubbing ? scrubValue : offset + elapsed);
 	const hidden = $derived(!controlsVisible && phase === 'playing');
 	const isRemux = $derived(info?.mode === 'remux');
+	const failure = $derived(failureCode ? (t.player[failureCode] ?? t.player.failed) : null);
 	const progressPercent = $derived(duration > 0 ? Math.min(100, (position / duration) * 100) : 0);
 	const bufferedPercent = $derived(duration > 0 ? Math.min(100, (buffered / duration) * 100) : 0);
 	const remaining = $derived(duration > 0 ? Math.max(0, duration - position) : 0);
@@ -75,7 +76,7 @@
 			info = await getJSON(`/api/stream/${movie.id}/info`, undefined, playbackProfileID);
 		} catch {
 			phase = 'failed';
-			failure = t.player.unavailable;
+			failureCode = 'unavailable';
 			return;
 		}
 
@@ -121,7 +122,7 @@
 		triedRemux = true;
 		if (!info?.ffmpeg_supported) {
 			phase = 'failed';
-			failure = t.player.noFfmpeg;
+			failureCode = 'noFfmpeg';
 			return;
 		}
 		// The offset belongs here rather than only in start(), because seeking
@@ -213,7 +214,7 @@
 			return;
 		}
 		phase = 'failed';
-		failure = t.player.failed;
+		failureCode = 'failed';
 	}
 
 	async function save(force = false, at = null) {

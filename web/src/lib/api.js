@@ -4,6 +4,7 @@
 // on disk, and nothing in the interface ever makes an external request.
 
 import { activeProfileID } from '$lib/profiles.svelte.js';
+import { formatRuntime as formatLocalizedRuntime } from '$lib/i18n/index.svelte.js';
 
 // Fetches from Theia with the browser's freely selected progress namespace.
 // The third argument freezes a profile for long-lived flows such as the player.
@@ -88,11 +89,7 @@ export function formatTime(seconds) {
 	return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
-/** Runtime as "2 h 18" or "94 min". */
+/** Runtime in the active interface language. */
 export function formatRuntime(minutes) {
-	if (!minutes) return null;
-	if (minutes < 60) return `${minutes} min`;
-	const h = Math.floor(minutes / 60);
-	const m = minutes % 60;
-	return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, '0')}`;
+	return formatLocalizedRuntime(minutes);
 }

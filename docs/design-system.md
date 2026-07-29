@@ -418,7 +418,9 @@ rather than here:
 - `--faint` and `--accent-dim` fail normal-text contrast. They are for disabled
   states, decorative rules and borders. This is written down because it is the
   rule most likely to be broken by accident.
-- The interface is French; `<html lang="fr">` is already set and stays set.
+- The interface defaults to French and also ships in English. `<html lang>`,
+  visible copy, accessible names and locale-sensitive formatters follow the
+  active browser language immediately; none of them waits for a reload.
 
 ## 10. Fonts, as shipped
 
@@ -431,8 +433,8 @@ They are self-hosted, not linked. The packages come from npm
 those ship Cyrillic, Vietnamese and Latin-Extended alongside Latin, and while a
 browser would only download the subset it needs, every subset would still be
 embedded in the binary. `web/src/app.css` declares the two `@font-face` rules by
-hand against the Latin files only. That range covers French completely, accents
-and the OE ligature included.
+hand against the Latin files only. That range covers both shipped interface
+languages completely, French accents and the OE ligature included.
 
 Cost: two WOFF2 files, 85 KB together, hashed into `_app/immutable/` and so
 covered by the immutable cache header the Go server already sets.
@@ -483,7 +485,8 @@ places. That was closed:
   looping-animation traps of the reduced-motion guard written down beside it.
 - The nav says where you are, keyed off `aria-current` so the fact serves the
   eye and a screen reader at once; `+error.svelte` means a mistyped address gets
-  a French screen instead of SvelteKit's untouched English one.
+  a catalogued screen in the active language instead of SvelteKit's untouched
+  built-in one.
 
 **The home screen, rebuilt after that.** It is now four short rows — continue
 watching, recently added, best rated, tonight's suggestion — instead of a hero
@@ -492,3 +495,11 @@ and what is left, and its button opens the player rather than a detail page. The
 grid underneath is unchanged and still exempt under §6: the only gold at rest is
 the 3px progress rule, poster ratio stays `2/3`, and no card title takes the
 display serif. Verified against the 274-film library rather than inferred.
+
+**The interface language layer, added after profiles.** French is the default
+and English ships as a second complete catalogue. The choice is local to each
+browser, and changing it updates copy, accessible names, `<html lang>` and
+formatters without replacing the current page or losing focus. Catalogue parity
+is a frontend build check. TMDB titles, synopses, genres and credits already
+cached as `fr-FR` do not change and are not fetched again: they are film data,
+not interface chrome.

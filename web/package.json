@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
+    "check:i18n": "node scripts/check-locales.mjs",
+    "prebuild": "npm run check:i18n",
     "build": "vite build",
     "postbuild": "node scripts/keep-webdist.mjs",
     "preview": "vite preview"

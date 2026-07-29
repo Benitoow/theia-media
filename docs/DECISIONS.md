@@ -642,13 +642,43 @@ no photo falls back to a CSS Theia mark. Twelve profiles, forty Unicode
 characters per name and an 8 MiB upload ceiling are deliberate
 unauthenticated-LAN bounds, not account policy.
 
+## 32. Interface language belongs to the browser, not the server
+
+French remains the default interface language and English ships beside it.
+The selection is stored in the browser's `localStorage`, not in `config.json`,
+SQLite or a profile. Two devices can therefore use different languages against
+the same server; changing a television to English cannot switch a laptop's
+interface underneath somebody who is using it. Like the profile id in decision
+31, this is local client state, not an account preference or an authentication
+credential.
+
+The catalogues live in `web/src/lib/i18n/locales/`. Adding a language means
+adding one catalogue with the same shape, not adding conditions throughout the
+components. The frontend build runs `web/scripts/check-locales.mjs` and fails
+when a catalogue loses a key, changes a value type or drifts from a formatter's
+signature. A half-translated build is a broken build, not a runtime fallback
+strategy.
+
+Changing language does not reload the application. Visible copy, page titles,
+accessible names and `<html lang>` follow the active catalogue immediately, as
+do locale-sensitive dates, ratings, durations, uptime and file sizes. Keeping
+the words reactive while leaving an `aria-label` or a formatter frozen in
+French would be cosmetic translation rather than internationalisation.
+
+This boundary stops at Theia's own interface. TMDB metadata has already been
+requested and cached as `fr-FR`: titles, synopses, genres and credit roles are
+library data, not catalogue strings. A language switch neither translates those
+rows nor downloads them again. Supporting per-language metadata later would
+need its own cache model and quota decision; it is not smuggled into an
+interface preference.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
 - **Language:** code, comments and internal error messages in English, for
-  contributors. User interface in French, isolated in
-  `web/src/lib/strings.js` so a second language is a new file rather than a
-  rewrite.
+  contributors. The interface defaults to French and includes English; both
+  catalogues live under `web/src/lib/i18n/locales/` and must pass the parity
+  check described in decision 32.
 - **Updater:** built from the documented GitHub Releases pattern — check the
   API, download, swap atomically, restart — rather than ported from Hermes,
   whose source was not available. This section originally assumed Windows would

@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { getJSON, imageURL, displayTitle, displayYear, formatRuntime } from '$lib/api.js';
-	import { strings as t, formatSize } from '$lib/strings.js';
+	import { strings as t, formatDecimal, formatSize } from '$lib/strings.js';
 	import Player from '$lib/components/Player.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
@@ -133,7 +133,7 @@
 						{/if}
 						{#if meta.vote_average}
 							<span class="text-label tracking-[0.18em] text-accent uppercase">
-								{meta.vote_average.toFixed(1)}
+								{formatDecimal(meta.vote_average)}
 							</span>
 						{/if}
 					</div>

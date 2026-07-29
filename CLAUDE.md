@@ -35,14 +35,27 @@ From the founding spec, §3. These are not preferences:
 ## Language
 
 Code, comments, commit messages and internal error strings are **English**, for
-contributors. The user interface is **French**, and every string it shows lives
-in `web/src/lib/strings.js`.
+contributors. The user interface ships in **French and English**, with French as
+the default. User-facing copy and locale-specific formatters live in
+`web/src/lib/i18n/locales/fr.js` and `web/src/lib/i18n/locales/en.js`. A new
+language is a new catalogue, not a hunt through Svelte markup.
 
 **The server never writes what the user reads** (decision 25). The API sends
 codes — a scan problem is `{kind, path}`, an update failure carries a `reason`,
 a home row carries a `kind` — and the interface owns every sentence. This rule
 exists because the settings page once showed somebody a Windows syscall name
 wrapped in English in the middle of a French page.
+
+The selected interface language belongs to the browser and is stored in
+`localStorage`; it is not a server setting and not a profile permission.
+Language changes are live: visible copy, accessible names, document `lang`,
+dates, numbers, durations and file sizes must all follow the active catalogue
+without a reload. `web/scripts/check-locales.mjs` guards catalogue parity during
+the frontend build.
+
+TMDB metadata is a separate data concern. Existing titles, synopses, genres and
+credits were fetched and cached as `fr-FR`; switching the interface does not
+translate them and must not trigger a TMDB re-fetch.
 
 ## Building
 
@@ -58,8 +71,9 @@ tracked. There is a `postbuild` hook that restores it, but the script is the
 tested path. Deleting that file has turned CI red before.
 
 ```bash
-go test ./...              # the whole suite
-node scripts/contrast.mjs  # guards the documented colour ratios
+go test ./...                       # the whole suite
+node scripts/contrast.mjs           # guards the documented colour ratios
+node web/scripts/check-locales.mjs  # guards French/English catalogue parity
 ```
 
 ## Verifying

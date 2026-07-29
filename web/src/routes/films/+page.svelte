@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { getAllMovies, searchKey, displayTitle, displayYear, formatRuntime } from '$lib/api.js';
+	import { i18n } from '$lib/i18n/index.svelte.js';
 	import { strings as t } from '$lib/strings.js';
 	import PosterCard from '$lib/components/PosterCard.svelte';
 	import Icon from '$lib/components/Icon.svelte';
@@ -63,9 +64,13 @@
 		}))
 	);
 
+	const collator = $derived(
+		new Intl.Collator(i18n.localeTag, { sensitivity: 'base', numeric: true })
+	);
+
 	const genres = $derived(
 		[...new Set(movies.flatMap((m) => m.metadata?.genres ?? []))].sort((a, b) =>
-			a.localeCompare(b, 'fr')
+			collator.compare(a, b)
 		)
 	);
 
@@ -94,7 +99,7 @@
 				})
 				.map(({ movie }) => movie);
 
-			const byTitle = (a, b) => displayTitle(a).localeCompare(displayTitle(b), 'fr');
+			const byTitle = (a, b) => collator.compare(displayTitle(a), displayTitle(b));
 			switch (sort) {
 				case 'year':
 					// Films with no year sink rather than leading the list.
@@ -123,26 +128,28 @@
 		status = 'all';
 	}
 
-	const sortOptions = [
+	const sortOptions = $derived([
 		{ value: 'title', label: t.library.sortTitle },
 		{ value: 'year', label: t.library.sortYear },
 		{ value: 'rating', label: t.library.sortRating },
 		{ value: 'added', label: t.library.sortAdded },
 		{ value: 'runtime', label: t.library.sortRuntime }
-	];
+	]);
 
-	const statusOptions = [
+	const statusOptions = $derived([
 		{ value: 'all', label: t.library.statusAll },
 		{ value: 'unseen', label: t.library.statusUnseen },
 		{ value: 'progress', label: t.library.statusInProgress },
 		{ value: 'finished', label: t.library.statusFinished }
-	];
+	]);
 
-	const addedDate = new Intl.DateTimeFormat('fr-FR', {
-		day: 'numeric',
-		month: 'short',
-		year: 'numeric'
-	});
+	const addedDate = $derived(
+		new Intl.DateTimeFormat(i18n.localeTag, {
+			day: 'numeric',
+			month: 'short',
+			year: 'numeric'
+		})
+	);
 
 	function cardLegend(movie) {
 		switch (sort) {

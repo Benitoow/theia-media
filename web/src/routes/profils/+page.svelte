@@ -43,7 +43,7 @@
 
 	function syncDrafts() {
 		draftNames = Object.fromEntries(
-			profileSession.profiles.map((profile) => [profile.id, displayName(profile)])
+			profileSession.profiles.map((profile) => [profile.id, profile.name ?? ''])
 		);
 	}
 
@@ -65,7 +65,7 @@
 		try {
 			const created = await profileSession.create(newName);
 			newName = '';
-			draftNames[created.id] = displayName(created);
+			draftNames[created.id] = created.name ?? '';
 		} catch (error) {
 			noticeCode = error.code || 'profile_create_failed';
 		} finally {
@@ -78,7 +78,7 @@
 		busyID = profile.id;
 		try {
 			const updated = await profileSession.rename(profile.id, draftNames[profile.id] ?? '');
-			draftNames[profile.id] = displayName(updated);
+			draftNames[profile.id] = updated.name ?? '';
 			noticeCode = 'profile_saved';
 		} catch (error) {
 			noticeCode = error.code || 'profile_update_failed';
@@ -227,6 +227,9 @@
 									bind:value={draftNames[profile.id]}
 									maxlength="40"
 									autocomplete="off"
+									placeholder={profile.is_default
+										? t.profiles.defaultName
+										: t.profiles.namePlaceholder}
 									required
 								/>
 							</label>

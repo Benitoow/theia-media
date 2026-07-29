@@ -13,7 +13,7 @@ choose the folders, watch.
 
 The v1 scope is complete and published as
 [v1.0.0](https://github.com/Benitoow/theia-media/releases/tag/v1.0.0).
-The interface is in French.
+The interface is available in French and English. French remains the default.
 
 > [!WARNING]
 > **Theia has no authentication. Never expose its port directly to the
@@ -55,6 +55,9 @@ The interface is in French.
 - Offers freely selectable household profiles, each with its own playback
   progress and continue-watching row. A profile may use a local photo or the
   built-in Theia mark; it is not an account and has no password.
+- Offers French and English interface catalogues. The language can be changed
+  immediately from Settings and is remembered by that browser, without changing
+  the language on another television, phone or computer.
 - Shows a numeric LAN address and QR code on first launch. `theia.local` is a
   convenience, never the only route.
 - Checks GitHub Releases for updates and installs one only when asked. An update
@@ -148,7 +151,8 @@ before making it executable.
    Theia.
 2. Scan the QR code to open it on another device, or use the numeric network
    address printed in the terminal.
-3. Open **Réglages**, add one or more movie folders, save, then start a scan.
+3. Open **Réglages / Settings**, add one or more movie folders, save, then start
+   a scan.
 
 The QR code contains an IP address. That is intentional: `theia.local` does not
 resolve on Android and is unreliable in some smart-TV browsers. If the first
@@ -157,7 +161,7 @@ adapters, the welcome and settings screens list the other candidates.
 
 ## Configuration
 
-There are three settings in the interface:
+The server has three persisted settings:
 
 | Setting | Purpose |
 | --- | --- |
@@ -167,6 +171,17 @@ There are three settings in the interface:
 
 `hostname` is a fourth field in `config.json`. It controls the mDNS name
 (`<hostname>.local`) and is intentionally file-only.
+
+The Settings screen also offers an interface-language selector. It is not a
+server setting: French is the default, English is included, and the selection
+is kept in that browser's `localStorage`. Two devices may therefore use
+different interface languages against the same Theia server.
+
+Changing this selector translates Theia's own controls, labels, messages,
+formatters and accessibility names. It does not translate movie content already
+cached from TMDB. Existing titles, synopses, genres and credits remain in the
+`fr-FR` metadata stored locally, and switching the interface does not download
+them again.
 
 The data directory is created on first launch:
 
@@ -258,7 +273,7 @@ and the frontend ship inside the binary.
 | Media | Direct file serving or on-demand FFmpeg remux |
 | Distribution | Windows, macOS and Linux; `amd64` and `arm64` |
 | Updates | GitHub Releases, digest verification, atomic executable swap |
-| Interface language | French |
+| Interface language | French by default, English included; browser-local selection |
 
 ## Build from source
 
@@ -323,10 +338,12 @@ time; they do not live in this repository.
 go test ./...
 go vet ./...
 node scripts/contrast.mjs
+node web/scripts/check-locales.mjs
 ```
 
-CI also builds the frontend and cross-compiles all six release targets with
-`CGO_ENABLED=0`.
+The frontend build also rejects French and English catalogues whose keys, value
+types or formatter signatures no longer match. CI builds that frontend and
+cross-compiles all six release targets with `CGO_ENABLED=0`.
 
 ## Repository map
 
@@ -345,6 +362,7 @@ internal/stream/     direct-play/remux decisions
 internal/tmdb/       TMDB client and result matching
 internal/updater/    release checks and reversible self-update
 web/                 SvelteKit source
+web/src/lib/i18n/    reactive locale state and French/English catalogues
 web-dist/            generated static frontend embedded into the binary
 docs/                founding spec, design system and decision record
 assets/              licensed source imagery and brand assets

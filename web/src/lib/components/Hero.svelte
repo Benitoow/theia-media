@@ -1,6 +1,6 @@
 <script>
 	import { imageURL, displayTitle, displayYear, formatRuntime } from '$lib/api.js';
-	import { strings as t } from '$lib/strings.js';
+	import { strings as t, formatDecimal } from '$lib/strings.js';
 
 	// kind comes from the server: 'resume' when this film is already under way,
 	// 'featured' when nothing is and it is simply worth starting. The hero is
@@ -71,7 +71,7 @@
 				{#if movie.metadata?.director}<span class="label">{movie.metadata.director}</span>{/if}
 				{#if movie.metadata?.vote_average}
 					<span class="text-label tracking-[0.18em] text-accent uppercase">
-						{movie.metadata.vote_average.toFixed(1)}
+						{formatDecimal(movie.metadata.vote_average)}
 					</span>
 				{/if}
 			</div>
