@@ -385,6 +385,37 @@
 		text-wrap: balance;
 	}
 
+	/* Full-bleed message screens: empty library, unreachable server, welcome. */
+	.chrome-scene {
+		position: relative;
+		z-index: 0;
+		display: flex;
+		min-height: 100svh;
+		align-items: center;
+		overflow: hidden;
+		isolation: isolate;
+	}
+
+	.chrome-scene-image {
+		position: absolute;
+		z-index: -2;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: 68% center;
+		opacity: 0.65;
+	}
+
+	.chrome-scene-veil {
+		position: absolute;
+		z-index: -1;
+		inset: 0;
+		background:
+			linear-gradient(to right, var(--color-ink) 8%, rgba(11, 10, 9, 0.86) 46%, rgba(11, 10, 9, 0.18) 100%),
+			linear-gradient(to top, var(--color-ink), transparent 45%);
+	}
+
 	.home-rows {
 		position: relative;
 		z-index: 10;
@@ -413,6 +444,110 @@
 	.poster-card:focus-visible .poster-frame {
 		transform: translateY(-0.35rem);
 		box-shadow: 0 1.2rem 2.8rem rgba(0, 0, 0, 0.38);
+	}
+
+	.poster-card--fluid {
+		width: 100%;
+	}
+
+	/* -----------------------------------------------------------------------
+	   Library
+	   -----------------------------------------------------------------------
+	   The toolbar is chrome and may carry treatment. The grid underneath it is
+	   not: section 6 of the design system keeps posters dense and plain, and
+	   this is the screen where that matters most -- it exists to find one film
+	   among hundreds.
+	   ----------------------------------------------------------------------- */
+	.library-toolbar {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: clamp(0.75rem, 1.5vw, 1.25rem);
+		margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+		border: 1px solid var(--color-line);
+		border-radius: 999px;
+		padding: 0.4rem 0.5rem 0.4rem 1.1rem;
+		background: rgba(19, 18, 17, 0.6);
+	}
+
+	.library-search {
+		display: flex;
+		min-width: min(100%, 15rem);
+		flex: 1 1 16rem;
+		align-items: center;
+		gap: 0.65rem;
+	}
+
+	.library-search-input {
+		width: 100%;
+		border: 0;
+		background: transparent;
+		color: var(--color-bone);
+		font-size: clamp(0.9375rem, 1vw, 1.0625rem);
+		outline: none;
+	}
+
+	.library-search-input::placeholder {
+		color: var(--color-faint);
+	}
+
+	/* The browser draws its own clear button on search inputs, in a shape that
+	   belongs to no design system. The one beside it is ours. */
+	.library-search-input::-webkit-search-cancel-button {
+		appearance: none;
+	}
+
+	.library-selects {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+	}
+
+	.library-select {
+		display: inline-flex;
+		min-block-size: var(--target-min);
+		align-items: center;
+		gap: 0.5rem;
+		border-radius: 999px;
+		padding-inline: 0.9rem;
+		background: rgba(237, 231, 220, 0.05);
+		cursor: pointer;
+		transition: background-color 160ms var(--ease-cine);
+	}
+
+	.library-select:hover,
+	.library-select:focus-within {
+		background: rgba(237, 231, 220, 0.1);
+	}
+
+	/* Native selects, deliberately: they are the one control every platform
+	   already knows how to open with a remote, a thumb or a keyboard. Only the
+	   frame is restyled. */
+	.library-select select {
+		border: 0;
+		background: transparent;
+		color: var(--color-bone);
+		font-size: clamp(0.8125rem, 0.9vw, 0.9375rem);
+		font-weight: 500;
+		cursor: pointer;
+		outline: none;
+	}
+
+	.library-select select option {
+		background: var(--color-surface);
+		color: var(--color-bone);
+	}
+
+	.library-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+		gap: clamp(0.9rem, 1.6vw, 1.5rem);
+	}
+
+	@media (min-width: 64rem) {
+		.library-grid {
+			grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+		}
 	}
 
 	.poster-title {
@@ -450,6 +585,306 @@
 	.settings-page button {
 		border-radius: 999px;
 		padding-inline: 1rem;
+	}
+
+	/* -----------------------------------------------------------------------
+	   Player
+	   -----------------------------------------------------------------------
+	   The picture fills the frame and everything else floats over it, which is
+	   the difference between a player and a video in a box. Section 6 of the
+	   design system does not apply here: this is chrome, and it may carry
+	   treatment.
+	   ----------------------------------------------------------------------- */
+	.player {
+		position: fixed;
+		inset: 0;
+		z-index: 50;
+		display: grid;
+		place-items: center;
+		overflow: hidden;
+		background: #000;
+	}
+
+	.player-video {
+		width: 100%;
+		height: 100%;
+		cursor: pointer;
+		object-fit: contain;
+	}
+
+	/* Hiding the controls has to hide the cursor too, or the pointer sits over
+	   a film like a smudge. */
+	.player--idle {
+		cursor: none;
+	}
+
+	/* Put on each piece of furniture by the component, rather than inherited
+	   through a `.player--idle .thing` descendant selector.
+
+	   Both work. This one is here because the state is stated on the element it
+	   applies to, which survives someone later moving a control out of the bar
+	   without noticing it was only hidden by virtue of its ancestor.
+
+	   Declared after .player-controls and friends: same specificity, so order
+	   is what settles it. */
+	.player-hidden {
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	/* Scrims rather than a flat wash: the text needs a floor to sit on, and a
+	   full-frame darkening would dim the film itself. */
+	.player-scrim {
+		position: absolute;
+		inset-inline: 0;
+		pointer-events: none;
+		transition: opacity 320ms var(--ease-cine);
+	}
+
+	.player-scrim--top {
+		top: 0;
+		height: 9rem;
+		background: linear-gradient(to bottom, rgba(0, 0, 0, 0.72), transparent);
+	}
+
+	.player-scrim--bottom {
+		bottom: 0;
+		height: 14rem;
+		background: linear-gradient(to top, rgba(0, 0, 0, 0.86), rgba(0, 0, 0, 0.45) 42%, transparent);
+	}
+
+	.player-top {
+		position: absolute;
+		inset-inline: 0;
+		top: 0;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: clamp(0.75rem, 1.6vw, 1.5rem) clamp(0.75rem, 2vw, 2rem);
+		transition: opacity 320ms var(--ease-cine);
+	}
+
+	.player-title {
+		color: var(--color-bone);
+		font-size: clamp(1rem, 1.3vw, 1.375rem);
+		font-weight: 600;
+		letter-spacing: -0.01em;
+	}
+
+	.player-controls {
+		position: absolute;
+		inset-inline: 0;
+		bottom: 0;
+		display: flex;
+		flex-direction: column;
+		gap: clamp(0.5rem, 1vw, 0.9rem);
+		padding: 0 clamp(0.75rem, 2vw, 2rem) clamp(0.75rem, 1.8vw, 1.75rem);
+		transition: opacity 320ms var(--ease-cine);
+	}
+
+	.player-buttons {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: clamp(0.15rem, 0.6vw, 0.5rem);
+	}
+
+	.player-icon-button {
+		display: inline-flex;
+		min-block-size: var(--target-min);
+		min-inline-size: var(--target-min);
+		align-items: center;
+		justify-content: center;
+		border: 0;
+		border-radius: 999px;
+		background: transparent;
+		color: var(--color-bone);
+		cursor: pointer;
+		transition:
+			background-color 160ms var(--ease-cine),
+			color 160ms var(--ease-cine),
+			transform 160ms var(--ease-cine);
+	}
+
+	.player-icon-button:hover {
+		background: rgba(237, 231, 220, 0.12);
+	}
+
+	.player-icon-button:active {
+		transform: scale(0.94);
+	}
+
+	/* One filled control, and it is the one people reach for. Bone rather than
+	   gold keeps the accent meaning "look here" elsewhere. */
+	.player-icon-button--primary {
+		min-block-size: 3.75rem;
+		min-inline-size: 3.75rem;
+		margin-inline-end: 0.35rem;
+		background: var(--color-bone);
+		color: var(--color-ink);
+	}
+
+	.player-icon-button--primary:hover {
+		background: #fff;
+	}
+
+	.player-time {
+		margin-inline-start: 0.6rem;
+		color: var(--color-bone);
+		font-size: clamp(0.8125rem, 0.9vw, 0.9375rem);
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+	}
+
+	.player-remaining {
+		margin-inline-start: 0.75rem;
+		color: var(--color-faint);
+	}
+
+	.player-volume {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
+	/* Collapsed until asked for: a volume slider permanently open is furniture,
+	   and a TV remote adjusts volume with its own buttons anyway. */
+	.volume-slider {
+		width: 0;
+		min-block-size: auto;
+		height: 0.25rem;
+		padding: 0;
+		opacity: 0;
+		transition:
+			width 200ms var(--ease-cine),
+			opacity 200ms var(--ease-cine);
+		accent-color: var(--color-accent);
+		cursor: pointer;
+	}
+
+	.player-volume:hover .volume-slider,
+	.player-volume:focus-within .volume-slider {
+		width: clamp(4rem, 7vw, 6.5rem);
+		opacity: 1;
+	}
+
+	/* -----------------------------------------------------------------------
+	   Scrub bar
+	   -----------------------------------------------------------------------
+	   A generous hit area around a thin bar: the line is 4px because that reads
+	   as precision, but the target is 24px because a thumb is not a mouse. */
+	.scrub {
+		position: relative;
+		display: flex;
+		align-items: center;
+		height: 1.5rem;
+		cursor: pointer;
+		touch-action: none;
+	}
+
+	.scrub--disabled {
+		cursor: default;
+		opacity: 0.55;
+	}
+
+	.scrub-track {
+		position: relative;
+		width: 100%;
+		height: 0.25rem;
+		overflow: hidden;
+		border-radius: 999px;
+		background: rgba(237, 231, 220, 0.18);
+		transition: height 160ms var(--ease-cine);
+	}
+
+	.scrub:hover .scrub-track,
+	.scrub:focus-visible .scrub-track {
+		height: 0.4rem;
+	}
+
+	/* What is downloaded ahead, so it is obvious what can be seeked into
+	   without waiting. */
+	.scrub-buffered {
+		position: absolute;
+		inset-block: 0;
+		left: 0;
+		background: rgba(237, 231, 220, 0.28);
+		transition: width 320ms linear;
+	}
+
+	.scrub-played {
+		position: absolute;
+		inset-block: 0;
+		left: 0;
+		background: var(--color-accent);
+	}
+
+	.scrub-handle {
+		position: absolute;
+		top: 50%;
+		width: 0.9rem;
+		height: 0.9rem;
+		border-radius: 50%;
+		background: var(--color-accent);
+		box-shadow: 0 0 0 0.35rem rgba(200, 162, 74, 0.18);
+		opacity: 0;
+		pointer-events: none;
+		transform: translate(-50%, -50%) scale(0.6);
+		transition:
+			opacity 160ms var(--ease-cine),
+			transform 160ms var(--ease-cine);
+	}
+
+	.scrub:hover .scrub-handle,
+	.scrub:focus-visible .scrub-handle {
+		opacity: 1;
+		transform: translate(-50%, -50%) scale(1);
+	}
+
+	.scrub-preview {
+		position: absolute;
+		bottom: 1.9rem;
+		padding: 0.3rem 0.55rem;
+		border-radius: 0.4rem;
+		background: var(--glass-strong);
+		color: var(--color-bone);
+		font-size: 0.75rem;
+		font-variant-numeric: tabular-nums;
+		pointer-events: none;
+		transform: translateX(-50%);
+		white-space: nowrap;
+	}
+
+	.player-message {
+		position: relative;
+		z-index: 1;
+		max-width: min(46rem, 90vw);
+		padding: clamp(1.5rem, 4vw, 3rem);
+		text-align: center;
+	}
+
+	.player-busy {
+		position: absolute;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.player-spinner {
+		width: 2.25rem;
+		height: 2.25rem;
+		border: 2px solid rgba(237, 231, 220, 0.2);
+		border-top-color: var(--color-accent);
+		border-radius: 50%;
+		animation: theia-spin 900ms linear infinite;
+	}
+
+	@keyframes theia-spin {
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	/* Horizontal rows scroll, and the default Windows scrollbar is a wide grey

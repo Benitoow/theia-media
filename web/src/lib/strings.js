@@ -12,8 +12,38 @@ export const strings = {
 
 	nav: {
 		home: 'Accueil',
+		library: 'Films',
 		settings: 'Réglages',
 		back: 'Retour'
+	},
+
+	library: {
+		title: 'Tous les films',
+		loading: 'Chargement de la bibliothèque…',
+		search: 'Rechercher',
+		searchPlaceholder: 'Titre, réalisateur, genre…',
+		clear: 'Effacer',
+		sort: 'Trier',
+		sortTitle: 'Titre',
+		sortYear: 'Plus récents',
+		sortRating: 'Mieux notés',
+		sortAdded: 'Ajoutés récemment',
+		sortRuntime: 'Durée',
+		genre: 'Genre',
+		allGenres: 'Tous les genres',
+		status: 'Visionnage',
+		statusAll: 'Tous',
+		statusUnseen: 'Jamais commencés',
+		statusInProgress: 'En cours',
+		statusFinished: 'Terminés',
+		countAll: (n) => (n === 1 ? '1 film' : `${n} films`),
+		countFiltered: (shown, total) => `${shown} sur ${total} films`,
+		noResults: 'Aucun film ne correspond',
+		noResultsBody: 'Essayez un autre mot, ou retirez un filtre.',
+		reset: 'Tout réafficher',
+		seeAll: 'Tout voir',
+		unwatchedBadge: 'Jamais lu',
+		finishedBadge: 'Vu'
 	},
 
 	hero: {
@@ -25,8 +55,10 @@ export const strings = {
 		emptyTitle: 'Aucun film, pour l’instant',
 		emptyBody:
 			'Ajoutez un ou plusieurs dossiers depuis les réglages, puis lancez une analyse. Theia s’occupe du reste.',
+		unreachableTitle: 'Serveur injoignable',
 		unreachable:
-			"La page est chargée mais l'API ne répond pas. Le serveur a probablement été arrêté."
+			"La page est chargée mais l'API ne répond pas. Le serveur a probablement été arrêté.",
+		retry: 'Réessayer'
 	},
 
 	welcome: {
@@ -104,21 +136,32 @@ export const strings = {
 		virtual: 'carte virtuelle'
 	},
 
+	// Most of these are accessible names on icon buttons rather than visible
+	// text. They still belong here: a screen reader reads them aloud, and a
+	// button whose only label is a shape is a button nobody can describe.
 	player: {
 		play: 'Lire',
-		resume: 'Reprendre à',
-		fromStart: 'Depuis le début',
-		close: 'Fermer',
 		pause: 'Pause',
+		back10: 'Reculer de 10 secondes',
+		forward10: 'Avancer de 10 secondes',
+		position: 'Position dans le film',
+		volume: 'Volume',
 		mute: 'Couper le son',
 		unmute: 'Rétablir le son',
 		fullscreen: 'Plein écran',
-		seeking: 'Repositionnement…',
+		close: 'Fermer le lecteur',
+
+		resume: 'Reprendre',
+		resumeAt: 'Vous vous étiez arrêté à',
+		fromStart: 'Reprendre du début',
 		continueWatching: 'Continuer à regarder',
+
+		buffering: 'Mise en mémoire tampon…',
+		seeking: 'Repositionnement…',
+		remuxBadge: 'Réencapsulé à la volée',
 		preparing:
 			'Préparation de la lecture — ffmpeg est téléchargé une seule fois, cela peut prendre un moment.',
-		remuxNotice:
-			"Ce fichier est réencapsulé à la volée : la barre de progression n'est pas encore disponible.",
+
 		unavailable: "La lecture n'a pas pu être préparée.",
 		noFfmpeg:
 			"Ce fichier doit être réencapsulé, mais aucune version de ffmpeg n'est disponible pour cette plateforme.",

@@ -1,5 +1,6 @@
 <script>
 	import PosterCard from './PosterCard.svelte';
+	import { strings as t } from '$lib/strings.js';
 
 	let { row } = $props();
 
@@ -30,6 +31,13 @@
 <section class="mb-10 lg:mb-14" aria-label={row.title}>
 	<div class="page-shell mb-3 flex items-end justify-between gap-6">
 		<h2 class="section-title">{row.title}</h2>
+		{#if row.genre}
+			<!-- A row shows twenty films. This is the way to the rest of them,
+			     which until now simply did not exist. -->
+			<a href="/films?genre={encodeURIComponent(row.genre)}" class="tv-link label shrink-0">
+				{t.library.seeAll}
+			</a>
+		{/if}
 	</div>
 
 	<!--

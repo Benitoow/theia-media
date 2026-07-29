@@ -1,7 +1,10 @@
 <script>
 	import { imageURL, displayTitle, displayYear } from '$lib/api.js';
 
-	let { movie } = $props();
+	// fluid lets the card fill a grid cell instead of carrying its own width.
+	// Rows want a fixed size so a strip reads evenly; the library grid wants the
+	// column to decide.
+	let { movie, fluid = false } = $props();
 
 	const poster = $derived(imageURL(movie.metadata?.poster_path, 'w342'));
 	const title = $derived(displayTitle(movie));
@@ -31,6 +34,7 @@
 <a
 	href="/film/{movie.id}"
 	class="poster-card group"
+	class:poster-card--fluid={fluid}
 	title={title}
 	data-poster-card
 >

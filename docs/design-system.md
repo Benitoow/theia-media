@@ -227,6 +227,35 @@ Rules for the grid, which override §4 and §5:
 The transition between the two worlds is the point: dramatic, near-empty chrome
 framing a dense, fast, businesslike grid.
 
+**The library page follows the same split.** Its toolbar — search, sort, genre,
+watch state — is chrome and carries the treatment: a rounded bar, glass, the
+label register. The grid beneath it is a wrapping `auto-fill` grid of the same
+plain cards, because that page exists to find one film among hundreds and a row
+you have to drag through is the wrong shape for it. Nothing about a card changes
+between the two screens except its width, which the grid column decides.
+
+## 6b. The player is chrome, and it gets out of the way
+
+The picture fills the frame; everything else floats over it. A video boxed inside
+a header, a strip of text buttons and a page background is a preview window, not
+a player.
+
+- **Controls are icons**, drawn on one 24-unit grid at one stroke weight in
+  `Icon.svelte`, never text. `LIRE` and `COUPER LE SON` spelled out read as a
+  debug panel. The words survive as accessible names, which is where they belong.
+- **One filled control**, the play button, in `--bone` rather than gold: the
+  accent still has to mean "look here" everywhere else on the screen.
+- **The furniture hides** after three seconds of no pointer, no key and no state
+  change, and takes the cursor with it. It comes back on any sign of life. It
+  never hides while paused, seeking or buffering, and never with focus stranded
+  on a control — focus moves to the dialog first.
+- **The scrub bar shows three things**: played in gold, buffered in a lighter
+  bone, and the rest. The bar itself is 4px because that reads as precision; its
+  hit area is 24px because a thumb is not a mouse. A hover anywhere on it shows
+  the timestamp under the pointer.
+- **Scrims, not a wash.** Two gradients, top and bottom, so the text has a floor
+  without dimming the film.
+
 ## 7. Texture and imagery
 
 **No unverified image, ever.** This repository is public and GPL-3.0; every

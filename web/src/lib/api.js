@@ -33,6 +33,40 @@ export function displayYear(movie) {
 	return movie?.metadata?.release_date?.slice(0, 4) || movie?.year || null;
 }
 
+/**
+ * Fetches the whole library, one page at a time.
+ *
+ * The endpoint caps a page at 500, so a library larger than that takes several
+ * requests. Everything then lives in memory and search, sorting and filtering
+ * happen in the browser, which is what makes them instant. That trade holds for
+ * a few thousand films on a LAN; past that the sorting belongs in SQL, and the
+ * place to change it is here.
+ */
+export async function getAllMovies(onProgress) {
+	const pageSize = 500;
+	let offset = 0;
+	let total = Infinity;
+	const movies = [];
+
+	while (offset < total) {
+		const page = await getJSON(`/api/library/movies?limit=${pageSize}&offset=${offset}`);
+		total = page.total ?? page.movies.length;
+		movies.push(...page.movies);
+		offset += pageSize;
+		onProgress?.(movies.length, total);
+		if (!page.movies.length) break; // never spin on an endpoint that stops paging
+	}
+	return movies;
+}
+
+/** Strips accents and case so "Amelie" finds "Amélie". */
+export function searchKey(value) {
+	return (value ?? '')
+		.normalize('NFD')
+		.replace(/\p{Diacritic}/gu, '')
+		.toLowerCase();
+}
+
 /** A playback timestamp as "1:23:45" or "4:07". */
 export function formatTime(seconds) {
 	if (!Number.isFinite(seconds) || seconds < 0) return '0:00';

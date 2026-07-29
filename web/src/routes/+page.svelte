@@ -5,6 +5,7 @@
 	import { strings as t } from '$lib/strings.js';
 	import Hero from '$lib/components/Hero.svelte';
 	import Row from '$lib/components/Row.svelte';
+	import ChromeScene from '$lib/components/ChromeScene.svelte';
 
 	/** @type {'loading' | 'ready' | 'offline'} */
 	let state = $state('loading');
@@ -42,39 +43,29 @@
 		<span class="label">{t.home.loading}</span>
 	</div>
 {:else if state === 'offline'}
-	<div class="page-shell flex min-h-screen items-center justify-center py-32">
-		<div class="chrome-panel max-w-2xl p-8 sm:p-12">
-			<span class="label text-error">{t.appName}</span>
-			<p class="tv-copy mt-5 max-w-prose border-l border-error pl-6">
-				{t.home.unreachable}
-			</p>
-		</div>
-	</div>
+	<ChromeScene
+		image="/chrome/theia-offline.webp"
+		eyebrow={t.appName}
+		title={t.home.unreachableTitle}
+		body={t.home.unreachable}
+		tone="error"
+	>
+		<button type="button" onclick={() => location.reload()} class="tv-action cursor-pointer" data-remote-default>
+			{t.home.retry}
+		</button>
+	</ChromeScene>
 {:else if home.total === 0}
-	<section class="relative isolate flex min-h-screen items-center overflow-hidden">
-		<img
-			src="/chrome/theia-empty.webp"
-			alt=""
-			class="absolute inset-0 -z-20 h-full w-full object-cover object-[68%_center] opacity-65"
-		/>
-		<div
-			class="absolute inset-0 -z-10"
-			style="background:
-				linear-gradient(to right, var(--color-ink) 8%, rgba(11,10,9,0.86) 46%, rgba(11,10,9,0.18) 100%),
-				linear-gradient(to top, var(--color-ink), transparent 45%)"
-		></div>
-		<div class="page-shell py-36">
-			<div class="max-w-2xl">
-				<span class="label">{t.tagline}</span>
-				<h1 class="hero-title mt-5 mb-7">{t.home.emptyTitle}</h1>
-				<p class="tv-copy mb-9 max-w-prose">{t.home.emptyBody}</p>
-				<a href="/reglages" class="tv-action tv-action--primary" data-remote-default>
-					<span>{t.nav.settings}</span>
-					<span aria-hidden="true">→</span>
-				</a>
-			</div>
-		</div>
-	</section>
+	<ChromeScene
+		image="/chrome/theia-empty.webp"
+		eyebrow={t.tagline}
+		title={t.home.emptyTitle}
+		body={t.home.emptyBody}
+	>
+		<a href="/reglages" class="tv-action tv-action--primary" data-remote-default>
+			<span>{t.nav.settings}</span>
+			<span aria-hidden="true">→</span>
+		</a>
+	</ChromeScene>
 {:else}
 	{#if home.hero}
 		<Hero movie={home.hero} />

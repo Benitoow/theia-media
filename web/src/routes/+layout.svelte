@@ -121,9 +121,10 @@
 			<span class="brand-orbit" aria-hidden="true"></span>
 			<span class="text-label font-semibold tracking-[0.2em] uppercase">{t.appName}</span>
 		</a>
-		<a href="/reglages" class="nav-target label">
-			{t.nav.settings}
-		</a>
+		<div class="flex items-center">
+			<a href="/films" class="nav-target label">{t.nav.library}</a>
+			<a href="/reglages" class="nav-target label">{t.nav.settings}</a>
+		</div>
 	</nav>
 </div>
 
