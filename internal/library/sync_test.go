@@ -10,6 +10,8 @@ import (
 	"github.com/Benitoow/theia-media/internal/db"
 )
 
+const testProfileID int64 = 1
+
 // newTestService builds a service over a real migrated database in a temporary
 // directory, and a library root to put files in.
 func newTestService(t *testing.T) (*Service, string) {
@@ -62,7 +64,7 @@ func TestScanIndexesVideoFiles(t *testing.T) {
 		t.Errorf("problems = %v, want none", report.Problems)
 	}
 
-	movies, err := service.List(t.Context(), 100, 0)
+	movies, err := service.List(t.Context(), testProfileID, 100, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +107,7 @@ func TestScanIgnoresWhatIsNotAFilm(t *testing.T) {
 		t.Fatalf("Scan returned an unexpected error: %v", err)
 	}
 	if report.Found != 1 {
-		movies, _ := service.List(t.Context(), 100, 0)
+		movies, _ := service.List(t.Context(), testProfileID, 100, 0)
 		var got []string
 		for _, m := range movies {
 			got = append(got, m.FileName)
@@ -158,7 +160,7 @@ func TestDeletedFilesLeaveTheLibrary(t *testing.T) {
 		t.Errorf("removed = %d, want 1", report.Removed)
 	}
 
-	movies, err := service.List(t.Context(), 100, 0)
+	movies, err := service.List(t.Context(), testProfileID, 100, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +234,7 @@ func TestBadlyNamedFilesStillLand(t *testing.T) {
 			report.Found, report.Added, report.Problems)
 	}
 
-	movies, err := service.List(t.Context(), 100, 0)
+	movies, err := service.List(t.Context(), testProfileID, 100, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

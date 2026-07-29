@@ -94,23 +94,23 @@ func (s *Service) Count(ctx context.Context) (int, error) {
 }
 
 // List returns a page of the library, ordered by title.
-func (s *Service) List(ctx context.Context, limit, offset int) ([]Movie, error) {
-	return s.store.List(ctx, limit, offset)
+func (s *Service) List(ctx context.Context, profileID int64, limit, offset int) ([]Movie, error) {
+	return s.store.List(ctx, profileID, limit, offset)
 }
 
 // Get returns one film.
-func (s *Service) Get(ctx context.Context, id int64) (Movie, error) {
-	return s.store.Get(ctx, id)
+func (s *Service) Get(ctx context.Context, profileID, id int64) (Movie, error) {
+	return s.store.Get(ctx, profileID, id)
 }
 
 // SaveProgress records where a viewer got to.
-func (s *Service) SaveProgress(ctx context.Context, id int64, position, duration float64) (Progress, error) {
-	return s.store.SaveProgress(ctx, id, position, duration, time.Now())
+func (s *Service) SaveProgress(ctx context.Context, profileID, id int64, position, duration float64) (Progress, error) {
+	return s.store.SaveProgress(ctx, profileID, id, position, duration, time.Now())
 }
 
 // ResetProgress forgets a viewing position.
-func (s *Service) ResetProgress(ctx context.Context, id int64) error {
-	return s.store.ResetProgress(ctx, id)
+func (s *Service) ResetProgress(ctx context.Context, profileID, id int64) error {
+	return s.store.ResetProgress(ctx, profileID, id)
 }
 
 // SaveDuration records a duration learned from probing a file.
@@ -166,7 +166,7 @@ type Home struct {
 //
 // Rows are short for the same reason. Each one carries a way through to /films
 // pre-filtered, which is where an inventory belongs.
-func (s *Service) HomeScreen(ctx context.Context, perRow int) (*Home, error) {
+func (s *Service) HomeScreen(ctx context.Context, profileID int64, perRow int) (*Home, error) {
 	total, err := s.store.Count(ctx)
 	if err != nil {
 		return nil, err
@@ -178,11 +178,11 @@ func (s *Service) HomeScreen(ctx context.Context, perRow int) (*Home, error) {
 
 	// The hero is whichever of the two is true right now, never a fixed choice:
 	// a film in progress if there is one, otherwise something worth starting.
-	switch hero, err := s.store.ResumeHero(ctx); {
+	switch hero, err := s.store.ResumeHero(ctx, profileID); {
 	case err == nil:
 		home.Hero, home.HeroKind = &hero, HeroResume
 	case errors.Is(err, ErrNoSuchMovie):
-		if featured, err := s.store.Hero(ctx); err == nil {
+		if featured, err := s.store.Hero(ctx, profileID); err == nil {
 			home.Hero, home.HeroKind = &featured, HeroFeatured
 		} else if !errors.Is(err, ErrNoSuchMovie) {
 			return nil, err
@@ -203,10 +203,10 @@ func (s *Service) HomeScreen(ctx context.Context, perRow int) (*Home, error) {
 		kind  string
 		fetch func() ([]Movie, error)
 	}{
-		{RowContinue, func() ([]Movie, error) { return s.store.ContinueWatching(ctx, perRow) }},
-		{RowRecent, func() ([]Movie, error) { return s.store.RecentlyAdded(ctx, perRow) }},
-		{RowTopRated, func() ([]Movie, error) { return s.store.TopRated(ctx, perRow) }},
-		{RowTonight, func() ([]Movie, error) { return s.store.Tonight(ctx, perRow, seed) }},
+		{RowContinue, func() ([]Movie, error) { return s.store.ContinueWatching(ctx, profileID, perRow) }},
+		{RowRecent, func() ([]Movie, error) { return s.store.RecentlyAdded(ctx, profileID, perRow) }},
+		{RowTopRated, func() ([]Movie, error) { return s.store.TopRated(ctx, profileID, perRow) }},
+		{RowTonight, func() ([]Movie, error) { return s.store.Tonight(ctx, profileID, perRow, seed) }},
 	}
 
 	for _, src := range sources {

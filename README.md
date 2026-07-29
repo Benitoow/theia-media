@@ -19,8 +19,10 @@ The interface is in French.
 > **Theia has no authentication. Never expose its port directly to the
 > internet.** It listens on the local network, and anyone who can reach it can
 > browse and stream the library, change settings, start a scan and install an
-> available update. Use it on a trusted home network. For access away from
-> home, use a VPN; do not forward port `8383` on the router.
+> available update. They can also select, create, rename or remove any household
+> profile: profiles separate viewing history, not permissions. Use Theia on a
+> trusted home network. For access away from home, use a VPN; do not forward
+> port `8383` on the router.
 
 ## See it
 
@@ -50,6 +52,9 @@ The interface is in French.
   audio is converted to AAC.
 - Saves playback position, resumes a film and lets remuxed streams seek by
   restarting at the requested timestamp.
+- Offers freely selectable household profiles, each with its own playback
+  progress and continue-watching row. A profile may use a local photo or the
+  built-in Theia mark; it is not an account and has no password.
 - Shows a numeric LAN address and QR code on first launch. `theia.local` is a
   convenience, never the only route.
 - Checks GitHub Releases for updates and installs one only when asked. An update
@@ -66,7 +71,7 @@ not to TMDB.
 | TV series | The catalogue model is films only. There are no seasons or episodes. |
 | Subtitles | Neither external nor embedded subtitle tracks are exposed in the player. |
 | Video transcoding | MPEG-2, VC-1 and other video codecs that need re-encoding are refused instead of pinning the CPU for hours. |
-| Accounts, profiles or permissions | There is no login and no per-user history. See the warning above; it is not decorative. |
+| Accounts or permissions | Profiles only separate viewing history. There is no login, password or access control, and anyone on the LAN may switch or edit them. See the warning above; it is not decorative. |
 | Built-in remote access or HTTPS | Theia serves plain HTTP on the LAN. It is not a relay, reverse proxy or VPN. |
 | PWA or native TV/mobile apps | The shipped client is a responsive web interface. |
 | Background-service installer | The binary runs in the foreground. Starting it at boot is left to the operating system. |
@@ -227,9 +232,10 @@ flowchart LR
 ```
 
 The compiled frontend lives inside the Go executable. A normal request serves
-the SvelteKit application; `/api/*` handles the catalogue, settings, playback,
-onboarding and updater. SQLite stores metadata and progress. Movie files are
-read from their original folders and are never imported into a second library.
+the SvelteKit application; `/api/*` handles the catalogue, profiles, settings,
+playback, onboarding and updater. SQLite stores metadata, local profile photos
+and per-profile progress. Movie files are read from their original folders and
+are never imported into a second library.
 
 The only outbound internet destinations in the application are:
 
@@ -333,6 +339,7 @@ internal/discovery/  LAN address ranking, mDNS and QR generation
 internal/ffmpeg/     pinned download, probing and remux process
 internal/imagecache/ lazy TMDB artwork cache
 internal/library/    catalogue, scans, metadata and playback progress
+internal/profile/    cosmetic household profiles and local avatar processing
 internal/scanner/    filesystem walk and media-file filtering
 internal/stream/     direct-play/remux decisions
 internal/tmdb/       TMDB client and result matching

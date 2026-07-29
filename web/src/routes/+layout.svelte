@@ -1,7 +1,11 @@
 <script>
 	import '../app.css';
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { strings as t } from '$lib/strings.js';
+	import { profileSession } from '$lib/profiles.svelte.js';
+	import ProfileAvatar from '$lib/components/ProfileAvatar.svelte';
 
 	let { children } = $props();
 
@@ -12,10 +16,32 @@
 	const atHome = $derived(path === '/');
 	const inLibrary = $derived(path === '/films' || path.startsWith('/films/'));
 	const inSettings = $derived(path === '/reglages' || path.startsWith('/reglages/'));
+	const inProfiles = $derived(path === '/profils' || path.startsWith('/profils/'));
+	const profileName = $derived(profileSession.active?.name || t.profiles.defaultName);
+	const profileHref = $derived(
+		inProfiles
+			? '/profils'
+			: `/profils?return=${encodeURIComponent($page.url.pathname + $page.url.search)}`
+	);
 
 	// The pill keeps a light scrim over arbitrary hero artwork, then strengthens
 	// once the page moves so it never becomes a hard opaque band.
 	let scrolled = $state(false);
+
+	onMount(async () => {
+		await profileSession.bootstrap();
+	});
+
+	// The layout survives client-side navigation. Keep this guard reactive so
+	// leaving the chooser without selecting somebody cannot strand another page
+	// behind an eternal loading message.
+	$effect(() => {
+		if (!profileSession.needsSelection || inProfiles) return;
+		const destination = `/profils?return=${encodeURIComponent(
+			$page.url.pathname + $page.url.search
+		)}`;
+		goto(destination, { replaceState: true });
+	});
 
 	const remoteFocusable = [
 		'a[href]',
@@ -124,47 +150,108 @@
 	onkeydown={navigateByRemote}
 />
 
-<div class="site-nav-wrap">
-	<nav class="site-nav" data-scrolled={scrolled} aria-label="Navigation principale">
-		<a
-			href="/"
-			class="nav-target nav-brand"
-			aria-label={t.nav.home}
-			aria-current={atHome ? 'page' : undefined}
-		>
-			<span class="brand-orbit" aria-hidden="true"></span>
-			<span class="text-label font-semibold tracking-[0.2em] uppercase">{t.appName}</span>
-		</a>
-		<div class="flex items-center">
+{#if !profileSession.ready}
+	<main class="profile-bootstrap" aria-live="polite">
+		<span class="label">{t.profiles.loading}</span>
+	</main>
+{:else}
+	<div class="site-nav-wrap">
+		<nav class="site-nav" data-scrolled={scrolled} aria-label="Navigation principale">
 			<a
-				href="/films"
-				class="nav-target nav-link label"
-				aria-current={inLibrary ? 'page' : undefined}
+				href="/"
+				class="nav-target nav-brand"
+				aria-label={t.nav.home}
+				aria-current={atHome ? 'page' : undefined}
 			>
-				{t.nav.library}
+				<span class="brand-orbit" aria-hidden="true"></span>
+				<span class="text-label font-semibold tracking-[0.2em] uppercase">{t.appName}</span>
 			</a>
-			<a
-				href="/reglages"
-				class="nav-target nav-link label"
-				aria-current={inSettings ? 'page' : undefined}
-			>
-				{t.nav.settings}
-			</a>
-		</div>
-	</nav>
-</div>
-
-{@render children()}
-
-<!--
-	TMDB's terms require this to be visible in the application. Keeping it in the
-	layout means it survives every page added from here on without anyone having
-	to remember it.
--->
-<footer class="mt-16 border-t border-line py-10">
-	<div class="page-shell">
-		<p class="micro max-w-prose leading-relaxed text-muted">
-			This product uses the TMDB API but is not endorsed or certified by TMDB.
-		</p>
+			<div class="flex items-center">
+				<a
+					href="/films"
+					class="nav-target nav-link label"
+					aria-current={inLibrary ? 'page' : undefined}
+				>
+					{t.nav.library}
+				</a>
+				<a
+					href="/reglages"
+					class="nav-target nav-link label"
+					aria-current={inSettings ? 'page' : undefined}
+				>
+					{t.nav.settings}
+				</a>
+				<a
+					href={profileHref}
+					class="nav-target nav-profile"
+					aria-label={t.profiles.switchTo(profileName)}
+					aria-current={inProfiles ? 'page' : undefined}
+				>
+					<ProfileAvatar profile={profileSession.active} />
+					<span class="nav-profile-name">{profileName}</span>
+				</a>
+			</div>
+		</nav>
 	</div>
-</footer>
+
+	{#if profileSession.active || profileSession.unreachable || inProfiles}
+		{@render children()}
+	{:else}
+		<main class="profile-bootstrap" aria-live="polite">
+			<span class="label">{t.profiles.loading}</span>
+		</main>
+	{/if}
+
+	<!--
+		TMDB's terms require this to be visible in the application. Keeping it in the
+		layout means it survives every page added from here on without anyone having
+		to remember it.
+	-->
+	<footer class="mt-16 border-t border-line py-10">
+		<div class="page-shell">
+			<p class="micro max-w-prose leading-relaxed text-muted">
+				This product uses the TMDB API but is not endorsed or certified by TMDB.
+			</p>
+		</div>
+	</footer>
+{/if}
+
+<style>
+	.profile-bootstrap {
+		display: grid;
+		min-height: 100vh;
+		place-items: center;
+		color: var(--color-muted);
+	}
+
+	.nav-profile {
+		display: inline-flex;
+		gap: 0.6rem;
+		align-items: center;
+		padding-inline: 0.75rem;
+		color: var(--color-parchment);
+		text-decoration: none;
+	}
+
+	.nav-profile-name {
+		max-width: 8rem;
+		overflow: hidden;
+		font-size: var(--text-label);
+		font-weight: 600;
+		letter-spacing: 0.12em;
+		text-overflow: ellipsis;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+
+	@media (max-width: 42rem) {
+		.nav-profile-name {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+			clip: rect(0 0 0 0);
+			clip-path: inset(50%);
+		}
+	}
+</style>

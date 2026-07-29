@@ -3,6 +3,7 @@ package library
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -58,14 +59,18 @@ func finishedRule(position, duration float64) bool {
 //
 // The duration is taken from the row when the caller does not know one -- the
 // player knows it for a direct stream and usually not for a remuxed one.
-func (s *Store) SaveProgress(ctx context.Context, id int64, position, duration float64, now time.Time) (Progress, error) {
+func (s *Store) SaveProgress(ctx context.Context, profileID, id int64, position, duration float64, now time.Time) (Progress, error) {
 	if position < 0 {
 		position = 0
 	}
 
 	var stored sql.NullFloat64
-	if err := s.db.QueryRowContext(ctx,
-		`SELECT duration_seconds FROM movies WHERE id = ?`, id).Scan(&stored); err != nil {
+	var isDefault int
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT m.duration_seconds, p.is_default
+		FROM movies AS m
+		JOIN profiles AS p ON p.id = ?
+		WHERE m.id = ?`, profileID, id).Scan(&stored, &isDefault); err != nil {
 		if err == sql.ErrNoRows {
 			return Progress{}, ErrNoSuchMovie
 		}
@@ -92,15 +97,45 @@ func (s *Store) SaveProgress(ctx context.Context, id int64, position, duration f
 		durationValue = duration
 	}
 
-	if _, err := s.db.ExecContext(ctx, `
-		UPDATE movies SET
-			position_seconds = ?,
-			duration_seconds = COALESCE(?, duration_seconds),
-			watched_at       = ?,
-			finished         = ?
-		WHERE id = ?`,
-		remembered, durationValue, watchedAt, boolToInt(finished), id,
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Progress{}, fmt.Errorf("saving progress for film %d: %w", id, err)
+	}
+	defer tx.Rollback() //nolint:errcheck // no-op after Commit
+
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO playback_progress
+			(profile_id, movie_id, position_seconds, watched_at, finished)
+		VALUES (?, ?, ?, ?, ?)
+		ON CONFLICT(profile_id, movie_id) DO UPDATE SET
+			position_seconds = excluded.position_seconds,
+			watched_at       = excluded.watched_at,
+			finished         = excluded.finished`,
+		profileID, id, remembered, watchedAt, boolToInt(finished),
 	); err != nil {
+		return Progress{}, fmt.Errorf("saving progress for film %d: %w", id, err)
+	}
+
+	if isDefault != 0 {
+		// v1.2 reads these legacy columns. Keeping them in step makes the
+		// updater's executable rollback real rather than ceremonial.
+		_, err = tx.ExecContext(ctx, `
+			UPDATE movies SET
+				position_seconds = ?,
+				duration_seconds = COALESCE(?, duration_seconds),
+				watched_at       = ?,
+				finished         = ?
+			WHERE id = ?`,
+			remembered, durationValue, watchedAt, boolToInt(finished), id)
+	} else {
+		_, err = tx.ExecContext(ctx,
+			`UPDATE movies SET duration_seconds = COALESCE(?, duration_seconds) WHERE id = ?`,
+			durationValue, id)
+	}
+	if err != nil {
+		return Progress{}, fmt.Errorf("saving progress for film %d: %w", id, err)
+	}
+	if err := tx.Commit(); err != nil {
 		return Progress{}, fmt.Errorf("saving progress for film %d: %w", id, err)
 	}
 
@@ -114,14 +149,38 @@ func (s *Store) SaveProgress(ctx context.Context, id int64, position, duration f
 
 // ResetProgress forgets where a viewer got to, which is what "start from the
 // beginning" does. The duration is kept: it describes the file, not the viewing.
-func (s *Store) ResetProgress(ctx context.Context, id int64) error {
-	res, err := s.db.ExecContext(ctx,
-		`UPDATE movies SET position_seconds = 0, watched_at = 0, finished = 0 WHERE id = ?`, id)
+func (s *Store) ResetProgress(ctx context.Context, profileID, id int64) error {
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("resetting progress for film %d: %w", id, err)
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
+	defer tx.Rollback() //nolint:errcheck // no-op after Commit
+
+	var isDefault int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT p.is_default
+		FROM movies AS m
+		JOIN profiles AS p ON p.id = ?
+		WHERE m.id = ?`, profileID, id).Scan(&isDefault); errors.Is(err, sql.ErrNoRows) {
 		return ErrNoSuchMovie
+	} else if err != nil {
+		return fmt.Errorf("resetting progress for film %d: %w", id, err)
+	}
+
+	_, err = tx.ExecContext(ctx,
+		`DELETE FROM playback_progress WHERE profile_id = ? AND movie_id = ?`, profileID, id)
+	if err != nil {
+		return fmt.Errorf("resetting progress for film %d: %w", id, err)
+	}
+	if isDefault != 0 {
+		if _, err := tx.ExecContext(ctx,
+			`UPDATE movies SET position_seconds = 0, watched_at = 0, finished = 0 WHERE id = ?`,
+			id); err != nil {
+			return fmt.Errorf("resetting progress for film %d: %w", id, err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("resetting progress for film %d: %w", id, err)
 	}
 	return nil
 }
@@ -142,15 +201,15 @@ func (s *Store) SaveDuration(ctx context.Context, id int64, seconds float64) err
 
 // ContinueWatching returns films that were started and not finished, most
 // recently watched first.
-func (s *Store) ContinueWatching(ctx context.Context, limit int) ([]Movie, error) {
+func (s *Store) ContinueWatching(ctx context.Context, profileID int64, limit int) ([]Movie, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT `+movieColumns+`
-		FROM movies
-		WHERE finished = 0
-		  AND watched_at > 0
-		  AND position_seconds >= ?
-		ORDER BY watched_at DESC, id DESC
-		LIMIT ?`, minimumRememberedSeconds, limit)
+		`+profileProgressJoin+`
+		WHERE COALESCE(p.finished, 0) = 0
+		  AND COALESCE(p.watched_at, 0) > 0
+		  AND COALESCE(p.position_seconds, 0) >= ?
+		ORDER BY p.watched_at DESC, m.id DESC
+		LIMIT ?`, profileID, minimumRememberedSeconds, limit)
 	if err != nil {
 		return nil, fmt.Errorf("listing films in progress: %w", err)
 	}

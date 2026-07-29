@@ -308,6 +308,13 @@ constraints:
   and is decorative (`alt=""`) unless it conveys information not written
   elsewhere.
 
+Profile photos are runtime user data, not shipped decoration. They stay inside
+Theia's local SQLite database, are cropped square and re-encoded to 512px JPEG
+after applying JPEG orientation, and appear only in the profile chrome. They
+never enter the film grid or the repository. When no photo exists, the
+interface draws the Theia orbit mark from CSS; it does not invent or download
+an avatar.
+
 CSS texture remains the fallback when a screen needs atmosphere without a
 maintainer-verified asset. The authored recipes below are inline and make no
 network request.

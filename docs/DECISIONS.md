@@ -602,6 +602,46 @@ date-seeded `math/rand`, fetch the chosen rows. Two queries instead of one, for
 a few hundred integers, in exchange for a shuffle whose correctness is obvious
 rather than argued. `TestTonightIsNotAnArithmeticProgression` guards it.
 
+## 31. Household profiles separate progress; they do not create accounts
+
+The founding scope excluded multi-user accounts and permissions. That remains
+true. The post-v1 profile selector adds a much smaller thing: a name, an
+optional local photo and an independent playback history. There is no password,
+PIN, role, token or ownership rule. Anyone who can reach Theia on the LAN may
+select and edit every profile, exactly as decision 6 already allows them to edit
+every setting.
+
+The selected profile belongs to the browser, not to the server. Its integer id
+is kept in `localStorage` and sent as `X-Theia-Profile` on requests that read or
+write personal playback state. This avoids the broken alternative where
+changing profile on the television would also change it on a laptop mid-film.
+The header is a selector, not an authentication credential. An absent header
+uses the default profile for v1.2 client compatibility; a malformed or stale
+explicit id fails instead of silently contaminating the default history.
+
+Progress moved conceptually out of `movies` into
+`playback_progress(profile_id, movie_id)`. File duration stays on `movies`
+because it describes the media, not the viewer. Migration 0005 creates one
+language-neutral default profile (`name IS NULL`) and copies the existing
+single-viewer history into it, so the frontend can call that profile
+`Profil principal`, `Default profile` or a future locale without localised text
+in SQLite.
+
+The three legacy progress columns remain for one release cycle. The updater
+keeps the previous executable as a rollback target, and v1.2 still selects
+those columns; dropping them would make rollback fail at startup. New default
+profile writes are mirrored to the old columns, and a SQLite trigger mirrors
+old-binary writes back into the default profile after a rollback. Other
+profiles remain in the new table untouched until the newer binary returns.
+
+Uploaded portraits are bounded, decoded, corrected from their JPEG EXIF
+orientation, centre-cropped and re-encoded as 512×512 JPEG before their bytes
+enter SQLite. This strips metadata and prevents the profile endpoint from
+becoming an arbitrary-file host. The immutable URL includes an avatar version;
+no photo falls back to a CSS Theia mark. Twelve profiles, forty Unicode
+characters per name and an 8 MiB upload ceiling are deliberate
+unauthenticated-LAN bounds, not account policy.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
