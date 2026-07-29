@@ -275,6 +275,104 @@ and the frontend ship inside the binary.
 | Updates | GitHub Releases, digest verification, atomic executable swap |
 | Interface language | French by default, English included; browser-local selection |
 
+## Why Theia is small
+
+Three decisions account for almost all of it, and they were taken in the
+founding spec rather than discovered later.
+
+**One binary, and nothing beside it.** The Go server, the SQLite driver, the
+compiled Svelte frontend and both WOFF2 fonts are linked into a single
+executable with `go:embed`. There is no application server to install, no
+`node_modules` on the host, no web server in front and no separate database
+process. Copying one file onto a machine is the whole installation.
+
+**No CGO.** The database driver is `modernc.org/sqlite`, a pure-Go
+implementation, so `CGO_ENABLED=0` holds everywhere. That is what makes a static
+cross-compiled binary possible for six targets from one CI job, and it is why
+there is no libc version to match on the target machine.
+
+**No language runtime.** Go compiles to native code. Nothing needs .NET, a JVM,
+Python or Node.js present at run time.
+
+The one runtime dependency is **FFmpeg**, and only for files that need
+remuxing. Theia downloads a pinned, checksum-verified build on first need — not
+on first launch — into its own data directory. A library of browser-ready files
+never triggers the download at all.
+
+### Measured, not estimated
+
+Taken on Windows 11 (`amd64`) against the development library of **274 films**,
+using the binary built from this repository. Reproduce them with
+`Get-Process theia` and `Get-ChildItem` on the data directory.
+
+| Measurement | Value |
+| --- | --- |
+| Binary on disk | **13.5 MB** (release assets are 12–13 MB per platform) |
+| Resident memory, just started | **18.8 MB** |
+| Resident memory, after serving the home screen and all 274 films | **23.5 MB** |
+| Resident memory, during direct playback | **23.8 MB** — unchanged |
+| CPU for 20 MB of direct playback | **0.02 s**, streamed at 405 MB/s |
+| SQLite database, 274 films indexed | **0.52 MB** |
+| Cached TMDB images, 139 fetched so far | **6.9 MB**, grows lazily |
+| FFmpeg, once downloaded | **79 MB** — larger than Theia itself |
+
+Direct playback costs essentially nothing because it is a file being served over
+a range request; the process does not grow and the CPU barely registers. Remuxed
+playback is different and does spend CPU, on FFmpeg rather than on Theia.
+
+**Recommended for a household library of a few hundred films:** any x86-64 or
+arm64 machine with **512 MB of free RAM** and **1 GB of free disk** beyond the
+media itself — roughly twenty times the memory measured above, which is the
+headroom, not the requirement. A `linux/arm64` build ships, so a single-board
+computer is in scope on paper; nothing smaller than the Windows machine above
+has been tested, and that is worth saying rather than implying.
+
+The constraint that dominates is neither CPU nor memory: it is whether a file
+can be **direct-played or remuxed**. A codec that would need re-encoding is
+refused rather than attempted, so Theia never becomes the process that pins a
+CPU for three hours. See [Playback contract](#playback-contract).
+
+## How Theia compares
+
+Theia is not trying to beat Plex, Jellyfin or Emby. It does far less than any of
+them on purpose. This table is here so the trade is legible before you install
+anything — several rows go against Theia, and they are the rows most people
+should weigh most heavily.
+
+| | **Theia** | **Plex** | **Jellyfin** | **Emby** |
+| --- | --- | --- | --- | --- |
+| Licence | GPL-3.0 | Proprietary | GPL-2.0 | Server closed-source since 3.5.3 (2018) |
+| Cost | Free, no tier above it | Free tier; Plex Pass paid | Free, [no premium features](https://github.com/jellyfin/jellyfin) | Free tier; [Emby Premiere](https://emby.media/premiere.html) paid |
+| Runtime dependency | None (FFmpeg on demand) | Bundled | .NET | .NET / Mono |
+| External database | No, one SQLite file | No | No | No |
+| Account required | **None at all** | A plex.tv account claims the server; [claiming sends its private and public IP to plex.tv](https://support.plex.tv/articles/218136308-why-is-there-an-unclaimed-media-server-on-my-network/) | Local accounts, self-hosted | Local accounts; optional Emby Connect |
+| Authentication | **None** — LAN only, by design | Yes, per user | Yes, per user | Yes, per user |
+| Updates | GitHub Releases, SHA-256 digest verified, atomic swap, rollback kept | In-app / packaged | Package manager, Docker | In-app / packaged |
+| Configuration to start | None | Guided setup | Guided setup | Guided setup |
+| **TV series** | **No** — films only | Yes | Yes | Yes |
+| **Live TV and DVR** | **No** | Yes (Plex Pass) | Yes | Yes (Premiere) |
+| **Video transcoding** | **No** — refused, not attempted | Yes, incl. hardware | Yes, incl. hardware | Yes, incl. hardware |
+| **Client apps** | **Browser only** | TV, mobile, console, browser | TV, mobile, browser | TV, mobile, browser |
+| **Plugin ecosystem** | **None** | Yes | Yes | Yes |
+| Multi-user | Local profiles, separate resume, no passwords | Full user management | Full user management | Full user management |
+
+**On the sizes.** Only Theia's figures above were measured. Plex, Jellyfin and
+Emby were not installed on the same machine, so no install-size comparison is
+claimed here — the structural difference is the row that matters: they ship a
+bundled runtime and Theia does not.
+
+**Read the bold rows first.** If you want series, live TV, hardware transcoding
+or an app on your television, one of the other three is the right answer and
+Theia is not. Theia is for one person with a folder of films who wants a single
+file to run and nothing to sign into.
+
+Sources: [Jellyfin](https://github.com/jellyfin/jellyfin),
+[Plex server claiming](https://support.plex.tv/articles/218136308-why-is-there-an-unclaimed-media-server-on-my-network/),
+[Plex local-network authentication](https://support.plex.tv/articles/200890058-authentication-for-local-network-access/),
+[Emby licensing history](https://en.wikipedia.org/wiki/Emby).
+Competitor details were correct when checked in July 2026; their projects move,
+so verify anything you are deciding on.
+
 ## Build from source
 
 Use Go `1.26.5` and Node.js `22`, the versions used by the module and CI.
