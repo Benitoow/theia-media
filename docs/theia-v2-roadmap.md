@@ -113,6 +113,24 @@ son outil dédié plutôt que d'exécuter une spec devinée) :
   jusqu'ici. À trancher explicitement : combien de ce scope maintenant, et
   combien attend la vraie passe d'optimisation matérielle.
 
+Interview tranchée le 31/07/2026 — le jalon est promptable tel quel :
+- **Regroupement par nom de base identique** : deux fichiers portant le
+  même nom sans extension (hors casse et hors extension) sont une seule
+  fiche avec plusieurs fichiers dessous.
+- **Sélection manuelle** : le choix du fichier se fait sur la page du film,
+  pas d'auto-sélection par qualité au lancement.
+- **Qualité vidéo à la demande éjectée vers V2-M6** : le transcodage live
+  rouvre le chantier optimisation matérielle, pas de demi-mesure dans M1.
+  Le multi-fichier + pistes audio du même fichier couvrent le besoin.
+
+Point d'attention relevé sur la vraie bibliothèque (282 fichiers) pendant
+l'interview : plusieurs paires du même film n'ont pas le nom de base brut
+identique (`2001 A Space Odyssey 1968.mkv` / `2001_A_Space_Odyssey_1968_720p.mp4`,
+`1917 2019 REMASTERED 1080p BluRay.mkv` / `1917.mkv`). La règle de
+comparaison exacte (normalisation des séparateurs, tolérance sur l'année)
+est à fixer au moment de l'implémentation — le parser existant
+`internal/library/parse.go` est le candidat naturel.
+
 ### V2-M2 — Profils, nouvelle mouture
 Selon captures d'écran à fournir (§3). Réutilise le modèle de données
 existant.
