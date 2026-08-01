@@ -463,7 +463,10 @@ assets/              licensed source imagery and brand assets
 Read [docs/spec-fondatrice.md](docs/spec-fondatrice.md) first. Read
 [docs/design-system.md](docs/design-system.md) before changing the interface.
 Read [docs/DECISIONS.md](docs/DECISIONS.md) before reopening a scope argument
-the code has already settled.
+the code has already settled. V2 work starts from the shared
+[roadmap](docs/theia-v2-roadmap.md), then follows the dedicated
+[backend](docs/theia-v2-backend.md) or [frontend](docs/theia-v2-frontend.md)
+track; neither track is a list of features already shipped.
 
 ## Licence and attribution
 

@@ -82,10 +82,35 @@ Même discipline que v1 : un jalon à la fois, checkpoint avant de continuer,
 jamais deux agents en parallèle sur le même territoire frontend sans
 synchronisation explicite (séquencer, pas paralléliser).
 
+### Deux pistes, un seul contrat produit
+
+La V2 est livrée dans deux pistes explicites :
+
+- [`theia-v2-backend.md`](theia-v2-backend.md) est la file de travail backend,
+  actuellement prise en charge avec Codex.
+- [`theia-v2-frontend.md`](theia-v2-frontend.md) est la file de travail frontend,
+  destinée à Claude une fois le backend correspondant fusionné.
+
+On avance **jalon par jalon et backend d'abord**. Finir `M1-BE` ne termine pas
+V2-M1 : cela publie un contrat vérifié que `M1-FE` peut consommer plus tard.
+Chaque handoff backend contient les endpoints et payloads réels, les migrations,
+les erreurs attendues, le hash du commit et ce qui a été vérifié sur la vraie
+bibliothèque. Si ce contrat change, les deux pistes et `DECISIONS.md` changent
+dans le même commit. Claude ne doit jamais reconstruire l'état du backend à
+partir d'une ancienne conversation.
+
+| Jalon | Backend | Frontend | Blocage actuel |
+|---|---|---|---|
+| V2-M1 — fichiers et qualités | Prochain chantier | Attend `M1-BE` | Prêt ; association à figer et tester dans `M1-BE` |
+| V2-M2 — profils | Attend les références | Attend les références | Screenshots et croquis du mainteneur |
+| V2-M3 — séries | Backlog | Attend `M3-BE` | À cadrer après M2 |
+| V2-M4 — accès distant | Bloqué | Bloqué | Modèle de sécurité/authentification |
+| V2-M5 — logo/navigation | Aucun chantier backend | Backlog | Direction artistique |
+| V2-M6 — optimisation matérielle | Différé | Attend `M6-BE` | À ouvrir après stabilisation du reste |
+
 ### V2-M1 — Dédoublonnage de fichiers + sélection de qualité
-Le chantier resté en suspens depuis plusieurs sessions. Réel flou de scope
-qui justifie la technique d'interview (Claude Code pose les questions via
-son outil dédié plutôt que d'exécuter une spec devinée) :
+Le chantier resté en suspens depuis plusieurs sessions. Le flux visible est
+maintenant tranché ; la règle technique d'association appartient à `M1-BE` :
 - Un film = une fiche, plusieurs fichiers possibles dessous, sélection sur
   la page du film.
 - Qualité audio sélectionnable (a minima) — probablement gratuit une fois
@@ -101,8 +126,10 @@ Interview tranchée le 31/07/2026 — le jalon est promptable tel quel :
 - **Regroupement par nom de base identique** : deux fichiers portant le
   même nom sans extension (hors casse et hors extension) sont une seule
   fiche avec plusieurs fichiers dessous.
-- **Sélection manuelle** : le choix du fichier se fait sur la page du film,
-  pas d'auto-sélection par qualité au lancement.
+- **Une fiche, puis choix manuel** : le catalogue garde une seule carte par
+  film. L'utilisateur ouvre sa fiche, voit les fichiers disponibles et choisit
+  celui à lire. Aucun sélecteur avant la fiche et aucune sélection automatique
+  par qualité au lancement.
 - **Qualité vidéo à la demande éjectée vers V2-M6** : le transcodage live
   rouvre le chantier optimisation matérielle, pas de demi-mesure dans M1.
   Le multi-fichier + pistes audio du même fichier couvrent le besoin.

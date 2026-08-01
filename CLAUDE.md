@@ -5,7 +5,7 @@ account, no paywall. One user, their own films, their own machine.
 
 ## Read these first, every session
 
-Three documents govern this project. Read them before proposing or writing
+Three documents govern every change. Read them before proposing or writing
 anything; they answer most questions that would otherwise be asked again.
 
 | Document | What it settles |
@@ -13,6 +13,20 @@ anything; they answer most questions that would otherwise be asked again.
 | [`docs/spec-fondatrice.md`](docs/spec-fondatrice.md) | What Theia is and what it refuses to be. The scope of v1, and the technical prohibitions. Start here. |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Every decision already taken, with its reasoning and, where it matters, the bug that forced it. Check here before re-opening a question. |
 | [`docs/design-system.md`](docs/design-system.md) | Colour, type, spacing, motion, focus. §6 — *the card grid is exempt* — is the single most important constraint in the interface. |
+
+V2 work has three additional coordination documents:
+
+| Document | What it settles |
+|---|---|
+| [`docs/theia-v2-roadmap.md`](docs/theia-v2-roadmap.md) | Product order, shared scope, blockers and milestone status. |
+| [`docs/theia-v2-backend.md`](docs/theia-v2-backend.md) | Backend work, API/data handoffs and evidence that must be published before frontend work starts. |
+| [`docs/theia-v2-frontend.md`](docs/theia-v2-frontend.md) | Frontend work waiting behind each backend handoff, including visual and D-pad acceptance criteria. |
+
+The current V2 delivery split is deliberate: Codex advances the backend first,
+milestone by milestone; Claude consumes the merged, documented contract for the
+frontend afterwards. A frontend agent must read the backend handoff for its
+milestone instead of inferring the API from old code or conversation history.
+Any backend contract change updates both track documents in the same commit.
 
 If a change contradicts one of them, the document is changed first, in the same
 commit, with the reasoning written down. `DECISIONS.md` is append-only in
