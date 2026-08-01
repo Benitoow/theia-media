@@ -786,6 +786,29 @@ was later reversed. They are history, not an invitation to recreate the
 feature. Any future multi-viewer work starts as a new scoped decision, not by
 resurrecting the retired API or database model.
 
+## 37. V2 backend and frontend advance as sequential, documented tracks
+
+V2 milestones remain product milestones, but their implementation is split
+into a backend track and a frontend track. The maintainer currently advances
+the backend with Codex, milestone by milestone, then hands the merged result to
+Claude for the corresponding frontend. This is sequencing, not two agents
+editing the same surface in parallel.
+
+The shared roadmap owns product scope. `theia-v2-backend.md` owns data, API,
+migration and runtime work; `theia-v2-frontend.md` owns the interface that
+consumes those contracts. A backend milestone is not handed off by saying that
+it is done. Its merge must document the exact endpoints and payloads, errors,
+migration impact, verification evidence and commit hash. Any breaking contract
+change updates the frontend track and this decision log in the same commit.
+
+Frontend work starts from merged `main` and the published handoff, never from
+an external conversation or an inferred response shape. The product milestone
+is complete only after both tracks have been verified. For V2-M1, the visible
+flow is fixed now: one catalogue card and one film page, with the available
+files chosen manually on that page. The mechanism that associates files with a
+film remains a backend decision and must prefer an unmerged duplicate over a
+silent false merge.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
