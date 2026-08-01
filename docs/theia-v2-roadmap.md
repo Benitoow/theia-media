@@ -103,7 +103,7 @@ Interview tranchée le 31/07/2026 — le jalon est promptable tel quel :
   fiche avec plusieurs fichiers dessous.
 - **Sélection manuelle** : le choix du fichier se fait sur la page du film,
   pas d'auto-sélection par qualité au lancement.
-- **Qualité vidéo à la demande éjectée vers V2-M5** : le transcodage live
+- **Qualité vidéo à la demande éjectée vers V2-M6** : le transcodage live
   rouvre le chantier optimisation matérielle, pas de demi-mesure dans M1.
   Le multi-fichier + pistes audio du même fichier couvrent le besoin.
 
@@ -115,25 +115,39 @@ comparaison exacte (normalisation des séparateurs, tolérance sur l'année)
 est à fixer au moment de l'implémentation — le parser existant
 `internal/library/parse.go` est le candidat naturel.
 
-### V2-M2 — Séries
+### V2-M2 — Profils, nouvelle mouture
+Les profils reviennent en V2 pour séparer l'expérience et la progression des
+membres du foyer, mais l'ancienne implémentation ne sert pas de point de départ.
+Le chantier repart d'une base vierge : pas de résurrection de l'écran, de l'API
+ou du modèle visuel retirés après v1.5.0.
+
+Le frontend est bloqué jusqu'à réception des screenshots et croquis fournis par
+le mainteneur. Ces références deviennent le contrat visuel du jalon : structure,
+hiérarchie, interactions D-pad et rendu à trois mètres doivent les respecter,
+pas être improvisés par l'agent. Les comportements précis et le nouveau modèle
+de données seront cadrés avec ces références avant la première ligne de code.
+Tant que la décision zéro-authentification reste en vigueur, un profil n'est ni
+un compte, ni une permission.
+
+### V2-M3 — Séries
 Le plus gros morceau du backlog, mérite son propre cycle multi-session
 complet façon M0-M8, pas une phase parmi d'autres. Modèle série/saison/
 épisode, parsing `SxxExx`, endpoints TMDB TV, enchaînement automatique
 d'épisode, "continuer à regarder" adapté aux séries.
 
-### V2-M3 — Accès distant hors réseau local
+### V2-M4 — Accès distant hors réseau local
 Identifié dès le tout premier message comme LE différentiateur manquant
 face à Plex. Jamais commencé. Implique de vraies décisions de sécurité
 (la décision #6 "zéro authentification" ne peut plus tenir telle quelle
 si Theia devient joignable depuis internet) — probablement le chantier qui
 demande le plus de réflexion en amont avant tout prompt.
 
-### V2-M4 — Logo et identité de nav
+### V2-M5 — Logo et identité de nav
 Vrai travail de direction artistique, pas un câblage technique. À traiter
 comme la conception du logo initial (plusieurs pistes, validation avant
 implémentation), pas comme une correction de bug.
 
-### V2-M5 — Optimisation matérielle
+### V2-M6 — Optimisation matérielle
 CPU/GPU, iGPU inclus. Explicitement "plus tard" depuis le premier message
 de ce projet. Ne pas commencer avant que tout le reste soit stable, et
 probablement à coupler avec la partie qualité vidéo de V2-M1 si elle a été
