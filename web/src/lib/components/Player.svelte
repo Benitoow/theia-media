@@ -1,7 +1,6 @@
 <script>
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { apiFetch, getJSON, formatTime, displayTitle } from '$lib/api.js';
-	import { activeProfileID } from '$lib/profiles.svelte.js';
 	import { strings as t } from '$lib/strings.js';
 	import Icon from './Icon.svelte';
 
@@ -62,18 +61,14 @@
 	let returnFocus;
 	let helpReturnFocus;
 	let previousBodyOverflow;
-	let playbackProfileID;
 
 	onMount(async () => {
-		// Freeze the viewer for this playback. A profile switch in another tab
-		// must not move the next keepalive save into somebody else's history.
-		playbackProfileID = activeProfileID();
 		returnFocus = document.activeElement;
 		previousBodyOverflow = document.body.style.overflow;
 		document.body.style.overflow = 'hidden';
 
 		try {
-			info = await getJSON(`/api/stream/${movie.id}/info`, undefined, playbackProfileID);
+			info = await getJSON(`/api/stream/${movie.id}/info`);
 		} catch {
 			phase = 'failed';
 			failureCode = 'unavailable';
@@ -231,7 +226,7 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ position_seconds: seconds, duration_seconds: duration }),
 				keepalive: true
-			}, playbackProfileID);
+			});
 			if (!response.ok) return;
 			const saved = await response.json();
 			onprogress?.(saved);
@@ -537,11 +532,7 @@
 				<button
 					type="button"
 					onclick={async () => {
-						await apiFetch(
-							`/api/library/movies/${movie.id}/progress`,
-							{ method: 'DELETE' },
-							playbackProfileID
-						);
+						await apiFetch(`/api/library/movies/${movie.id}/progress`, { method: 'DELETE' });
 						start(0);
 					}}
 					class="tv-action cursor-pointer"

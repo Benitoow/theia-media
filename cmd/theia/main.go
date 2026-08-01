@@ -28,7 +28,6 @@ import (
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
-	"github.com/Benitoow/theia-media/internal/profile"
 	"github.com/Benitoow/theia-media/internal/tmdb"
 	"github.com/Benitoow/theia-media/internal/updater"
 )
@@ -128,7 +127,6 @@ func run() error {
 
 	store := library.NewStore(database)
 	libraryService := library.NewService(store, tmdbClient, log)
-	profiles := profile.NewStore(database)
 	state := db.NewState(database)
 
 	// An installation that already has a library has, by definition, already
@@ -218,7 +216,6 @@ func run() error {
 		Handler: api.New(api.Options{
 			Config:    cfg,
 			Library:   libraryService,
-			Profiles:  profiles,
 			Images:    images,
 			FFmpeg:    transcoder,
 			State:     state,

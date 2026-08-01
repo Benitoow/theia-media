@@ -139,7 +139,7 @@ func (s *Store) Count(ctx context.Context) (int, error) {
 
 // List returns films ordered by title. The ordering is NOCASE so that "the
 // matrix" and "The Matrix" do not end up in different halves of the list.
-func (s *Store) List(ctx context.Context, profileID int64, limit, offset int) ([]Movie, error) {
+func (s *Store) List(ctx context.Context, limit, offset int) ([]Movie, error) {
 	// Asking for more than the ceiling gets you the ceiling. An earlier version
 	// fell back to the default here, so limit=600 quietly returned 100 rows and
 	// the caller had no way to tell a short page from the end of the library.
@@ -156,9 +156,9 @@ func (s *Store) List(ctx context.Context, profileID int64, limit, offset int) ([
 
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT `+movieColumns+`
-		`+profileProgressJoin+`
-		ORDER BY m.title COLLATE NOCASE, m.year
-		LIMIT ? OFFSET ?`, profileID, limit, offset)
+		FROM movies
+		ORDER BY title COLLATE NOCASE, year
+		LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("listing the library: %w", err)
 	}

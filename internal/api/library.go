@@ -17,14 +17,10 @@ type moviesResponse struct {
 
 // handleMovies returns a page of the library, ordered by title.
 func (s *Server) handleMovies(w http.ResponseWriter, r *http.Request) {
-	profileID, ok := s.selectedProfileID(w, r)
-	if !ok {
-		return
-	}
 	limit := intQuery(r, "limit", 100)
 	offset := intQuery(r, "offset", 0)
 
-	movies, err := s.lib.List(r.Context(), profileID, limit, offset)
+	movies, err := s.lib.List(r.Context(), limit, offset)
 	if err != nil {
 		s.log.Error("listing the library failed", "error", err)
 		writeJSONError(w, http.StatusInternalServerError, "could not read the library")
@@ -94,13 +90,9 @@ func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
 // Rows are short by default. The home screen suggests; /films inventories, and
 // the "see all" link on each row is the way from one to the other.
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
-	profileID, ok := s.selectedProfileID(w, r)
-	if !ok {
-		return
-	}
 	perRow := clamp(intQuery(r, "per_row", 12), 1, 60)
 
-	home, err := s.lib.HomeScreen(r.Context(), profileID, perRow)
+	home, err := s.lib.HomeScreen(r.Context(), perRow)
 	if err != nil {
 		s.log.Error("building the home screen failed", "error", err)
 		writeJSONError(w, http.StatusInternalServerError, "could not read the library")
@@ -111,17 +103,13 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 
 // handleMovie returns one film.
 func (s *Server) handleMovie(w http.ResponseWriter, r *http.Request) {
-	profileID, ok := s.selectedProfileID(w, r)
-	if !ok {
-		return
-	}
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid film id")
 		return
 	}
 
-	movie, err := s.lib.Get(r.Context(), profileID, id)
+	movie, err := s.lib.Get(r.Context(), id)
 	switch {
 	case errors.Is(err, library.ErrNoSuchMovie):
 		writeJSONError(w, http.StatusNotFound, "no such film")

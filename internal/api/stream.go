@@ -39,11 +39,7 @@ type streamInfoResponse struct {
 // and running ffmpeg means downloading it. Asking "how will this play" must not
 // cost 80 MB for a library that never needs it.
 func (s *Server) handleStreamInfo(w http.ResponseWriter, r *http.Request) {
-	profileID, ok := s.selectedProfileID(w, r)
-	if !ok {
-		return
-	}
-	movie, ok := s.movieForStream(w, r, profileID)
+	movie, ok := s.movieForStream(w, r)
 	if !ok {
 		return
 	}
@@ -77,11 +73,7 @@ func (s *Server) handleStreamInfo(w http.ResponseWriter, r *http.Request) {
 // the browser's seek bar work: it asks for the byte range around the timestamp
 // and gets a 206 back.
 func (s *Server) handleStreamDirect(w http.ResponseWriter, r *http.Request) {
-	profileID, ok := s.selectedProfileID(w, r)
-	if !ok {
-		return
-	}
-	movie, ok := s.movieForStream(w, r, profileID)
+	movie, ok := s.movieForStream(w, r)
 	if !ok {
 		return
 	}
@@ -120,11 +112,7 @@ func (s *Server) handleStreamDirect(w http.ResponseWriter, r *http.Request) {
 // The response is a pipe, so there is no Content-Length and no byte-range
 // seeking; the player seeks by asking for a new stream with ?t=.
 func (s *Server) handleStreamRemux(w http.ResponseWriter, r *http.Request) {
-	profileID, ok := s.selectedProfileID(w, r)
-	if !ok {
-		return
-	}
-	movie, ok := s.movieForStream(w, r, profileID)
+	movie, ok := s.movieForStream(w, r)
 	if !ok {
 		return
 	}
@@ -221,14 +209,14 @@ func (s *Server) handleStreamRemux(w http.ResponseWriter, r *http.Request) {
 
 // movieForStream resolves the id and checks the file is one we are allowed to
 // serve. Writes the error response itself and reports whether to continue.
-func (s *Server) movieForStream(w http.ResponseWriter, r *http.Request, profileID int64) (library.Movie, bool) {
+func (s *Server) movieForStream(w http.ResponseWriter, r *http.Request) (library.Movie, bool) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid film id")
 		return library.Movie{}, false
 	}
 
-	movie, err := s.lib.Get(r.Context(), profileID, id)
+	movie, err := s.lib.Get(r.Context(), id)
 	switch {
 	case errors.Is(err, library.ErrNoSuchMovie):
 		writeJSONError(w, http.StatusNotFound, "no such film")

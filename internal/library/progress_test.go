@@ -3,8 +3,6 @@ package library
 import (
 	"testing"
 	"time"
-
-	"github.com/Benitoow/theia-media/internal/profile"
 )
 
 func TestFinishedRule(t *testing.T) {
@@ -53,7 +51,7 @@ func TestSaveProgressIgnoresAGlance(t *testing.T) {
 	}
 	id := onlyMovie(t, service).ID
 
-	got, err := service.SaveProgress(t.Context(), testProfileID, id, 12, 7200)
+	got, err := service.SaveProgress(t.Context(), id, 12, 7200)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +59,7 @@ func TestSaveProgressIgnoresAGlance(t *testing.T) {
 		t.Errorf("position = %v, want 0 for a glance", got.PositionSeconds)
 	}
 
-	rows, err := service.store.ContinueWatching(t.Context(), testProfileID, 10)
+	rows, err := service.store.ContinueWatching(t.Context(), 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,11 +76,11 @@ func TestProgressRoundTripsAndAppearsInTheRow(t *testing.T) {
 	}
 	id := onlyMovie(t, service).ID
 
-	if _, err := service.SaveProgress(t.Context(), testProfileID, id, 1800, 10140); err != nil {
+	if _, err := service.SaveProgress(t.Context(), id, 1800, 10140); err != nil {
 		t.Fatal(err)
 	}
 
-	movie, err := service.Get(t.Context(), testProfileID, id)
+	movie, err := service.Get(t.Context(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +97,7 @@ func TestProgressRoundTripsAndAppearsInTheRow(t *testing.T) {
 		t.Error("watched_at was not recorded")
 	}
 
-	rows, err := service.store.ContinueWatching(t.Context(), testProfileID, 10)
+	rows, err := service.store.ContinueWatching(t.Context(), 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,17 +114,17 @@ func TestFinishingRemovesAFilmFromTheRow(t *testing.T) {
 	}
 	id := onlyMovie(t, service).ID
 
-	if _, err := service.SaveProgress(t.Context(), testProfileID, id, 3000, 9660); err != nil {
+	if _, err := service.SaveProgress(t.Context(), id, 3000, 9660); err != nil {
 		t.Fatal(err)
 	}
-	if rows, _ := service.store.ContinueWatching(t.Context(), testProfileID, 10); len(rows) != 1 {
+	if rows, _ := service.store.ContinueWatching(t.Context(), 10); len(rows) != 1 {
 		t.Fatalf("expected the film to be in the row before finishing")
 	}
 
-	if _, err := service.SaveProgress(t.Context(), testProfileID, id, 9660, 9660); err != nil {
+	if _, err := service.SaveProgress(t.Context(), id, 9660, 9660); err != nil {
 		t.Fatal(err)
 	}
-	rows, err := service.store.ContinueWatching(t.Context(), testProfileID, 10)
+	rows, err := service.store.ContinueWatching(t.Context(), 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,14 +143,14 @@ func TestRewatchingBringsAFilmBack(t *testing.T) {
 	}
 	id := onlyMovie(t, service).ID
 
-	if _, err := service.SaveProgress(t.Context(), testProfileID, id, 9000, 9000); err != nil {
+	if _, err := service.SaveProgress(t.Context(), id, 9000, 9000); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.SaveProgress(t.Context(), testProfileID, id, 300, 9000); err != nil {
+	if _, err := service.SaveProgress(t.Context(), id, 300, 9000); err != nil {
 		t.Fatal(err)
 	}
 
-	rows, err := service.store.ContinueWatching(t.Context(), testProfileID, 10)
+	rows, err := service.store.ContinueWatching(t.Context(), 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,14 +167,14 @@ func TestResetProgressStartsFromTheBeginning(t *testing.T) {
 	}
 	id := onlyMovie(t, service).ID
 
-	if _, err := service.SaveProgress(t.Context(), testProfileID, id, 2000, 8400); err != nil {
+	if _, err := service.SaveProgress(t.Context(), id, 2000, 8400); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.ResetProgress(t.Context(), testProfileID, id); err != nil {
+	if err := service.ResetProgress(t.Context(), id); err != nil {
 		t.Fatal(err)
 	}
 
-	movie, err := service.Get(t.Context(), testProfileID, id)
+	movie, err := service.Get(t.Context(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,7 +195,7 @@ func TestContinueWatchingIsOrderedByMostRecent(t *testing.T) {
 	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
 		t.Fatal(err)
 	}
-	movies, err := service.List(t.Context(), testProfileID, 10, 0)
+	movies, err := service.List(t.Context(), 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -207,13 +205,13 @@ func TestContinueWatchingIsOrderedByMostRecent(t *testing.T) {
 	// indistinguishable -- the same trap as decisions 7c and 13.
 	base := time.Now().Add(-time.Hour)
 	for i, m := range movies {
-		if _, err := service.store.SaveProgress(t.Context(), testProfileID, m.ID, 600, 7200,
+		if _, err := service.store.SaveProgress(t.Context(), m.ID, 600, 7200,
 			base.Add(time.Duration(i)*time.Minute)); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	rows, err := service.store.ContinueWatching(t.Context(), testProfileID, 10)
+	rows, err := service.store.ContinueWatching(t.Context(), 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -226,103 +224,9 @@ func TestContinueWatchingIsOrderedByMostRecent(t *testing.T) {
 	}
 }
 
-func TestPlaybackProgressIsSeparatedByProfile(t *testing.T) {
-	service, root := newTestService(t)
-	writeFile(t, root, "Arrival (2016).mkv")
-	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
-		t.Fatal(err)
-	}
-	id := onlyMovie(t, service).ID
-
-	second, err := profile.NewStore(service.store.db).Create(t.Context(), "Sam")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := service.SaveProgress(t.Context(), testProfileID, id, 1200, 6960); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := service.SaveProgress(t.Context(), second.ID, id, 2400, 0); err != nil {
-		t.Fatal(err)
-	}
-
-	firstMovie, err := service.Get(t.Context(), testProfileID, id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	secondMovie, err := service.Get(t.Context(), second.ID, id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if firstMovie.Progress.PositionSeconds != 1200 {
-		t.Errorf("default position = %v, want 1200", firstMovie.Progress.PositionSeconds)
-	}
-	if secondMovie.Progress.PositionSeconds != 2400 {
-		t.Errorf("second position = %v, want 2400", secondMovie.Progress.PositionSeconds)
-	}
-	if firstMovie.Progress.DurationSeconds != 6960 || secondMovie.Progress.DurationSeconds != 6960 {
-		t.Errorf("duration is not shared: default=%v second=%v, want 6960",
-			firstMovie.Progress.DurationSeconds, secondMovie.Progress.DurationSeconds)
-	}
-
-	firstRows, err := service.store.ContinueWatching(t.Context(), testProfileID, 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-	secondRows, err := service.store.ContinueWatching(t.Context(), second.ID, 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(firstRows) != 1 || firstRows[0].Progress.PositionSeconds != 1200 {
-		t.Errorf("default continue row = %+v, want its own progress", firstRows)
-	}
-	if len(secondRows) != 1 || secondRows[0].Progress.PositionSeconds != 2400 {
-		t.Errorf("second continue row = %+v, want its own progress", secondRows)
-	}
-}
-
-func TestLegacyProgressBridgeKeepsRollbackCompatible(t *testing.T) {
-	service, root := newTestService(t)
-	writeFile(t, root, "Moon (2009).mkv")
-	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
-		t.Fatal(err)
-	}
-	id := onlyMovie(t, service).ID
-
-	// New default-profile writes remain visible to the v1.2 columns.
-	if _, err := service.SaveProgress(t.Context(), testProfileID, id, 900, 5820); err != nil {
-		t.Fatal(err)
-	}
-	var legacyPosition float64
-	if err := service.store.db.QueryRowContext(t.Context(),
-		`SELECT position_seconds FROM movies WHERE id = ?`, id).Scan(&legacyPosition); err != nil {
-		t.Fatal(err)
-	}
-	if legacyPosition != 900 {
-		t.Errorf("legacy position = %v, want 900", legacyPosition)
-	}
-
-	// An old executable writing after a rollback is mirrored back into the
-	// default profile by the migration trigger.
-	if _, err := service.store.db.ExecContext(t.Context(), `
-		UPDATE movies
-		SET position_seconds = 1800, watched_at = unixepoch(), finished = 0
-		WHERE id = ?`, id); err != nil {
-		t.Fatal(err)
-	}
-	movie, err := service.Get(t.Context(), testProfileID, id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if movie.Progress.PositionSeconds != 1800 {
-		t.Errorf("profile position after legacy write = %v, want 1800",
-			movie.Progress.PositionSeconds)
-	}
-}
-
 func onlyMovie(t *testing.T, s *Service) Movie {
 	t.Helper()
-	movies, err := s.List(t.Context(), testProfileID, 10, 0)
+	movies, err := s.List(t.Context(), 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

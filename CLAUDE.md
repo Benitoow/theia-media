@@ -47,7 +47,7 @@ exists because the settings page once showed somebody a Windows syscall name
 wrapped in English in the middle of a French page.
 
 The selected interface language belongs to the browser and is stored in
-`localStorage`; it is not a server setting and not a profile permission.
+`localStorage`; it is not a server setting.
 Language changes are live: visible copy, accessible names, document `lang`,
 dates, numbers, durations and file sizes must all follow the active catalogue
 without a reload. `web/scripts/check-locales.mjs` guards catalogue parity during
@@ -59,7 +59,7 @@ translate them and must not trigger a TMDB re-fetch.
 
 ## Building
 
-Go lives at `C:\Users\starx\go-toolchain` and is not on `PATH`.
+Go lives at `C:\Users\starx\go-toolchain\go` and is not on `PATH`.
 
 ```bash
 ./build.ps1

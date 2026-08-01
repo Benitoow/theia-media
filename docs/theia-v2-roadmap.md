@@ -27,11 +27,6 @@ Ajouts post-v1 livrés et publiés :
 - README technique : légèreté mesurée sur le vrai binaire, tableau
   comparatif sourcé face à Plex/Jellyfin/Emby.
 
-Retiré après implémentation, à refaire différemment (voir §3) :
-- Système de profils (implémenté par un second agent, écran jugé mal
-  intégré, supprimé proprement en v1.5.0 — modèle de données bien conçu,
-  c'est la présentation qui ne convenait pas).
-
 ---
 
 ## 2. Leçons retenues (pour tout futur agent)
@@ -78,17 +73,6 @@ inexistant).
 - **`web/static/icon-512.png`** (208 Ko) : embarqué dans le binaire,
   référencé nulle part, aucun manifeste PWA dans le projet. À trancher :
   retirer, ou construire le manifeste qui le justifie.
-- **Refonte des profils** : nouvelle direction donnée à l'oral, à confirmer
-  par captures d'écran avant implémentation :
-  - Avatar de profil en haut à droite de la nav.
-  - Clic → menu déroulant sous l'avatar (pas un écran plein page) avec
-    "Changer de profil" et "Gérer le profil".
-  - Gestion du profil actif : modification du pseudo et de la photo depuis
-    ce même menu.
-  - Le modèle de données existant (table de progression par profil,
-    en-tête `X-Theia-Profile`, migration avec rollback) reste valable —
-    seule la présentation change, comme la dernière fois. Ne pas
-    réimplémenter tant que les captures ne sont pas fournies.
 
 ---
 
@@ -119,7 +103,7 @@ Interview tranchée le 31/07/2026 — le jalon est promptable tel quel :
   fiche avec plusieurs fichiers dessous.
 - **Sélection manuelle** : le choix du fichier se fait sur la page du film,
   pas d'auto-sélection par qualité au lancement.
-- **Qualité vidéo à la demande éjectée vers V2-M6** : le transcodage live
+- **Qualité vidéo à la demande éjectée vers V2-M5** : le transcodage live
   rouvre le chantier optimisation matérielle, pas de demi-mesure dans M1.
   Le multi-fichier + pistes audio du même fichier couvrent le besoin.
 
@@ -131,29 +115,25 @@ comparaison exacte (normalisation des séparateurs, tolérance sur l'année)
 est à fixer au moment de l'implémentation — le parser existant
 `internal/library/parse.go` est le candidat naturel.
 
-### V2-M2 — Profils, nouvelle mouture
-Selon captures d'écran à fournir (§3). Réutilise le modèle de données
-existant.
-
-### V2-M3 — Séries
+### V2-M2 — Séries
 Le plus gros morceau du backlog, mérite son propre cycle multi-session
 complet façon M0-M8, pas une phase parmi d'autres. Modèle série/saison/
 épisode, parsing `SxxExx`, endpoints TMDB TV, enchaînement automatique
 d'épisode, "continuer à regarder" adapté aux séries.
 
-### V2-M4 — Accès distant hors réseau local
+### V2-M3 — Accès distant hors réseau local
 Identifié dès le tout premier message comme LE différentiateur manquant
 face à Plex. Jamais commencé. Implique de vraies décisions de sécurité
 (la décision #6 "zéro authentification" ne peut plus tenir telle quelle
 si Theia devient joignable depuis internet) — probablement le chantier qui
 demande le plus de réflexion en amont avant tout prompt.
 
-### V2-M5 — Logo et identité de nav
+### V2-M4 — Logo et identité de nav
 Vrai travail de direction artistique, pas un câblage technique. À traiter
 comme la conception du logo initial (plusieurs pistes, validation avant
 implémentation), pas comme une correction de bug.
 
-### V2-M6 — Optimisation matérielle
+### V2-M5 — Optimisation matérielle
 CPU/GPU, iGPU inclus. Explicitement "plus tard" depuis le premier message
 de ce projet. Ne pas commencer avant que tout le reste soit stable, et
 probablement à coupler avec la partie qualité vidéo de V2-M1 si elle a été

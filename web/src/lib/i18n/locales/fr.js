@@ -27,55 +27,7 @@ export const strings = {
 		home: 'Accueil',
 		library: 'Films',
 		settings: 'Réglages',
-		profiles: 'Profils',
 		back: 'Retour'
-	},
-
-	profiles: {
-		eyebrow: 'Dans ce foyer',
-		title: 'Qui regarde ?',
-		body:
-			'Les profils séparent la reprise de lecture. Ce ne sont pas des comptes : aucun mot de passe, et toute personne sur le réseau local peut choisir ou modifier n’importe quel profil.',
-		loading: 'Chargement des profils…',
-		listLabel: 'Choisir un profil',
-		defaultName: 'Profil principal',
-		current: 'Profil actif',
-		switchTo: (name) => `Changer de profil — ${name}`,
-		manage: 'Gérer les profils',
-		manageHint:
-			'La photo reste dans la base locale de Theia. Elle est recadrée et allégée avant d’être enregistrée.',
-		done: 'Terminer',
-		name: 'Nom',
-		newName: 'Nouveau profil',
-		namePlaceholder: 'Prénom ou surnom',
-		add: 'Ajouter',
-		adding: 'Ajout…',
-		rename: 'Enregistrer le nom',
-		addPhoto: 'Ajouter une photo',
-		replacePhoto: 'Remplacer la photo',
-		removePhoto: 'Retirer la photo',
-		delete: 'Supprimer',
-		confirmDelete: 'Confirmer la suppression',
-		notices: {
-			profile_saved: 'Nom enregistré.',
-			avatar_saved: 'Photo enregistrée.',
-			avatar_removed: 'Photo retirée.',
-			profile_deleted: 'Profil supprimé. Les films n’ont pas été touchés.',
-			invalid_profile_name: 'Le nom doit contenir entre 1 et 40 caractères.',
-			invalid_profile_payload: "La modification envoyée n'est pas valide.",
-			profile_not_found: "Ce profil n'existe plus. Rechargez la liste.",
-			profile_limit_reached: 'Le nombre maximal de profils est atteint.',
-			default_profile: 'Le profil principal ne peut pas être supprimé.',
-			last_profile: 'Le dernier profil ne peut pas être supprimé.',
-			avatar_too_large: 'Cette image est trop lourde. Choisissez un fichier de moins de 8 Mo.',
-			invalid_avatar: 'Utilisez une image JPEG, PNG ou WebP valide.',
-			profile_create_failed: "Le profil n'a pas pu être ajouté.",
-			profile_update_failed: "Le profil n'a pas pu être modifié.",
-			profile_delete_failed: "Le profil n'a pas pu être supprimé.",
-			avatar_save_failed: "La photo n'a pas pu être enregistrée.",
-			avatar_delete_failed: "La photo n'a pas pu être retirée.",
-			unknown: "La modification n'a pas pu être enregistrée."
-		}
 	},
 
 	library: {
@@ -295,9 +247,6 @@ export const strings = {
 		language: 'Langue',
 		languageHint:
 			'Ce choix reste dans ce navigateur. Il traduit l’interface sans retélécharger ni retraduire les métadonnées TMDB déjà en cache.',
-		profilesHint:
-			'Chaque profil garde sa propre reprise de lecture. Comme la langue, le profil choisi appartient à ce navigateur et non au serveur : changer de profil sur la télévision ne change rien sur un portable.',
-		profilesAction: 'Changer de profil',
 		server: 'Serveur',
 		version: 'Version',
 		port: 'Port',

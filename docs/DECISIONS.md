@@ -645,12 +645,11 @@ unauthenticated-LAN bounds, not account policy.
 ## 32. Interface language belongs to the browser, not the server
 
 French remains the default interface language and English ships beside it.
-The selection is stored in the browser's `localStorage`, not in `config.json`,
-SQLite or a profile. Two devices can therefore use different languages against
-the same server; changing a television to English cannot switch a laptop's
-interface underneath somebody who is using it. Like the profile id in decision
-31, this is local client state, not an account preference or an authentication
-credential.
+The selection is stored in the browser's `localStorage`, not in `config.json`
+or SQLite. Two devices can therefore use different languages against the same
+server; changing a television to English cannot switch a laptop's interface
+underneath somebody who is using it. This is local client state, not an account
+preference or an authentication credential.
 
 The catalogues live in `web/src/lib/i18n/locales/`. Adding a language means
 adding one catalogue with the same shape, not adding conditions throughout the
@@ -765,6 +764,27 @@ Verified against the running binary with three profiles: the D-pad enters on a
 card and moves between them, Enter selects and returns to where you came from,
 `localStorage` follows, and the same film reports 0 / 1200 / 5400 seconds for
 profiles 1 / 2 / 3 — the isolation of decision 31 survived the rework intact.
+
+## 36. Household profiles are removed; playback is single-viewer again
+
+**Supersedes decisions 31 and 35 after v1.5.0.** The feature is removed rather
+than redesigned. The selector, management screen, local photos, browser
+selection, `X-Theia-Profile` header and profile API no longer exist. Theia is
+again one library with one playback position per film, matching the founding
+scope and the warning that there are no accounts.
+
+Progress is stored in the original columns on `movies`. Those columns were kept
+in sync with the default profile throughout v1.3.0-v1.5.0 specifically for
+rollback compatibility, so the main viewing history survives the return to the
+single-viewer model. The cleanup migration then removes `playback_progress`,
+the profile rows, uploaded avatar bytes and their trigger. Histories belonging
+to additional profiles are deliberately deleted; silently merging several
+people's positions into one would corrupt the one state that remains.
+
+The old decisions stay here because this log records what shipped and why it
+was later reversed. They are history, not an invitation to recreate the
+feature. Any future multi-viewer work starts as a new scoped decision, not by
+resurrecting the retired API or database model.
 
 ## 8. Logistics
 

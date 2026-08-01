@@ -365,13 +365,6 @@ constraints:
   and is decorative (`alt=""`) unless it conveys information not written
   elsewhere.
 
-Profile photos are runtime user data, not shipped decoration. They stay inside
-Theia's local SQLite database, are cropped square and re-encoded to 512px JPEG
-after applying JPEG orientation, and appear only in the profile chrome. They
-never enter the film grid or the repository. When no photo exists, the
-interface draws the Theia orbit mark from CSS; it does not invent or download
-an avatar.
-
 CSS texture remains the fallback when a screen needs atmosphere without a
 maintainer-verified asset. The authored recipes below are inline and make no
 network request.
@@ -555,7 +548,7 @@ gold at rest is the 3px progress rule and no card title takes the display serif.
 Verified against the 274-film library rather than inferred. The card shape itself
 changed later — see below.
 
-**The interface language layer, added after profiles.** French is the default
+**The interface language layer.** French is the default
 and English ships as a second complete catalogue. The choice is local to each
 browser, and changing it updates copy, accessible names, `<html lang>` and
 formatters without replacing the current page or losing focus. Catalogue parity

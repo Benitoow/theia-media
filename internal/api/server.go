@@ -19,7 +19,6 @@ import (
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
-	"github.com/Benitoow/theia-media/internal/profile"
 	"github.com/Benitoow/theia-media/internal/updater"
 )
 
@@ -28,7 +27,6 @@ import (
 type Options struct {
 	Config    *config.Config
 	Library   *library.Service
-	Profiles  *profile.Store
 	Images    *imagecache.Cache
 	FFmpeg    *ffmpeg.Manager
 	State     *db.State
@@ -45,7 +43,6 @@ type Options struct {
 type Server struct {
 	cfg       *config.Config
 	lib       *library.Service
-	profiles  *profile.Store
 	images    *imagecache.Cache
 	ffmpeg    *ffmpeg.Manager
 	state     *db.State
@@ -64,7 +61,6 @@ func New(opts Options) *Server {
 	return &Server{
 		cfg:       opts.Config,
 		lib:       opts.Library,
-		profiles:  opts.Profiles,
 		images:    opts.Images,
 		ffmpeg:    opts.FFmpeg,
 		state:     opts.State,
@@ -84,13 +80,6 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("GET /api/settings", s.handleSettings)
 	mux.HandleFunc("PUT /api/settings", s.handleUpdateSettings)
-	mux.HandleFunc("GET /api/profiles", s.handleProfiles)
-	mux.HandleFunc("POST /api/profiles", s.handleCreateProfile)
-	mux.HandleFunc("PATCH /api/profiles/{id}", s.handleRenameProfile)
-	mux.HandleFunc("DELETE /api/profiles/{id}", s.handleDeleteProfile)
-	mux.HandleFunc("PUT /api/profiles/{id}/avatar", s.handleSaveProfileAvatar)
-	mux.HandleFunc("DELETE /api/profiles/{id}/avatar", s.handleDeleteProfileAvatar)
-	mux.HandleFunc("GET /api/profiles/{id}/avatar/{version}", s.handleProfileAvatar)
 	mux.HandleFunc("GET /api/onboarding", s.handleOnboarding)
 	mux.HandleFunc("POST /api/onboarding/complete", s.handleCompleteOnboarding)
 	mux.HandleFunc("GET /api/update", s.handleUpdateStatus)

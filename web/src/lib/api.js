@@ -3,19 +3,14 @@
 // Images go through Theia rather than straight to TMDB: the server caches them
 // on disk, and nothing in the interface ever makes an external request.
 
-import { activeProfileID } from '$lib/profiles.svelte.js';
 import { formatRuntime as formatLocalizedRuntime } from '$lib/i18n/index.svelte.js';
 
-// Fetches from Theia with the browser's freely selected progress namespace.
-// The third argument freezes a profile for long-lived flows such as the player.
-export async function apiFetch(path, options, selectedProfile = activeProfileID()) {
-	const headers = new Headers(options?.headers);
-	if (selectedProfile) headers.set('X-Theia-Profile', String(selectedProfile));
-	return fetch(path, { ...options, headers });
+export async function apiFetch(path, options) {
+	return fetch(path, options);
 }
 
-export async function getJSON(path, options, selectedProfile) {
-	const res = await apiFetch(path, options, selectedProfile);
+export async function getJSON(path, options) {
+	const res = await apiFetch(path, options);
 	if (!res.ok) {
 		const error = new Error(`HTTP ${res.status}`);
 		error.status = res.status;
