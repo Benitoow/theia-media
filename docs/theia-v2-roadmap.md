@@ -101,7 +101,7 @@ partir d'une ancienne conversation.
 
 | Jalon | Backend | Frontend | Blocage actuel |
 |---|---|---|---|
-| V2-M1 — fichiers et qualités | Prochain chantier | Attend `M1-BE` | Prêt ; association à figer et tester dans `M1-BE` |
+| V2-M1 — fichiers et qualités | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Prêt sur le contrat M1-BE | Aucun blocage backend ; reste `M1-FE` |
 | V2-M2 — profils | Attend les références | Attend les références | Screenshots et croquis du mainteneur |
 | V2-M3 — séries | Backlog | Attend `M3-BE` | À cadrer après M2 |
 | V2-M4 — accès distant | Bloqué | Bloqué | Modèle de sécurité/authentification |
@@ -113,9 +113,8 @@ Le chantier resté en suspens depuis plusieurs sessions. Le flux visible est
 maintenant tranché ; la règle technique d'association appartient à `M1-BE` :
 - Un film = une fiche, plusieurs fichiers possibles dessous, sélection sur
   la page du film.
-- Qualité audio sélectionnable (a minima) — probablement gratuit une fois
-  le multi-fichier en place, si plusieurs pistes existent déjà dans un même
-  fichier.
+- Qualité audio sélectionnable dans les pistes réellement mesurées du fichier ;
+  une sélection explicite passe par le remux pour garantir la piste.
 - Qualité vidéo à la demande sur un fichier unique (ex : lire un REMUX
   2160p en 720p60) implique un vrai transcodage à la volée — ce n'est pas
   gratuit, ça rouvre le chantier "optimisation CPU/GPU" mis de côté
@@ -134,13 +133,16 @@ Interview tranchée le 31/07/2026 — le jalon est promptable tel quel :
   rouvre le chantier optimisation matérielle, pas de demi-mesure dans M1.
   Le multi-fichier + pistes audio du même fichier couvrent le besoin.
 
-Point d'attention relevé sur la vraie bibliothèque (282 fichiers) pendant
-l'interview : plusieurs paires du même film n'ont pas le nom de base brut
+Point d'attention relevé pendant l'interview : plusieurs paires du même film
+n'ont pas le nom de base brut
 identique (`2001 A Space Odyssey 1968.mkv` / `2001_A_Space_Odyssey_1968_720p.mp4`,
 `1917 2019 REMASTERED 1080p BluRay.mkv` / `1917.mkv`). La règle de
-comparaison exacte (normalisation des séparateurs, tolérance sur l'année)
-est à fixer au moment de l'implémentation — le parser existant
-`internal/library/parse.go` est le candidat naturel.
+comparaison est maintenant codée et vérifiée dans M1-BE : parser `titre + année`
+quand l'année existe, nom de base exact quand elle manque, conflit TMDB bloquant
+et `tmdb_id` identique comme preuve finale. La copie actuelle de la base passe
+de 274 lignes fichier à 248 films / 274 fichiers, dont 25 films multi-fichiers,
+sans perdre métadonnées ni progression. Le contrat complet est dans
+`theia-v2-backend.md`.
 
 ### V2-M2 — Profils, nouvelle mouture
 Les profils reviennent en V2 pour séparer l'expérience et la progression des

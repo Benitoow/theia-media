@@ -200,6 +200,49 @@ func TestAnUnreadableRootDoesNotEmptyTheLibrary(t *testing.T) {
 	}
 }
 
+func TestSaveFailureDoesNotPruneFilesThatWereNotSeen(t *testing.T) {
+	service, root := newTestService(t)
+	writeFile(t, root, "Keeper (1980).mkv")
+	victim := writeFile(t, root, "Victim (1990).mkv")
+	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Force exactly one database write to fail on the next pass. Pruning after
+	// a partial save would turn a recoverable row error into silent data loss.
+	if _, err := service.store.db.ExecContext(t.Context(), `
+		CREATE TRIGGER reject_bad_movie_file
+		BEFORE INSERT ON movie_files
+		WHEN NEW.file_name = 'Bad (2000).mkv'
+		BEGIN
+			SELECT RAISE(FAIL, 'forced test failure');
+		END`); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(victim); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, root, "Bad (2000).mkv")
+
+	report, err := service.Scan(t.Context(), []string{root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(report.Problems) == 0 {
+		t.Fatal("forced save failure was not reported")
+	}
+	if report.Removed != 0 {
+		t.Errorf("removed = %d, want zero after any scan problem", report.Removed)
+	}
+	movies, err := service.List(t.Context(), 10, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(movies) != 2 {
+		t.Errorf("library has %d films, want keeper plus unpruned victim", len(movies))
+	}
+}
+
 func TestScanWithNoConfiguredDirectories(t *testing.T) {
 	service, _ := newTestService(t)
 

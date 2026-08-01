@@ -25,6 +25,7 @@ type ScanReport struct {
 	Added   int `json:"added"`
 	Updated int `json:"updated"`
 	Removed int `json:"removed"`
+	Merged  int `json:"merged"`
 
 	// Metadata lookups performed during this pass.
 	Enriched       int `json:"enriched"`
@@ -101,6 +102,32 @@ func (s *Service) List(ctx context.Context, limit, offset int) ([]Movie, error) 
 // Get returns one film.
 func (s *Service) Get(ctx context.Context, id int64) (Movie, error) {
 	return s.store.Get(ctx, id)
+}
+
+// GetMovieFile resolves a playable file inside a film.
+func (s *Service) GetMovieFile(ctx context.Context, movieID, fileID int64) (MovieFile, error) {
+	return s.store.GetMovieFile(ctx, movieID, fileID)
+}
+
+// SaveFileMedia records characteristics measured by ffmpeg.
+func (s *Service) SaveFileMedia(ctx context.Context, movieID, fileID int64, media FileMedia) (MovieFile, error) {
+	return s.store.SaveFileMedia(ctx, movieID, fileID, media)
+}
+
+// MarkFileMediaError records an explicit inspection failure.
+func (s *Service) MarkFileMediaError(ctx context.Context, movieID, fileID int64) error {
+	return s.store.MarkFileMediaError(ctx, movieID, fileID)
+}
+
+// AudioTrack resolves a stable track id under the requested movie and file.
+func (s *Service) AudioTrack(ctx context.Context, movieID, fileID, trackID int64) (AudioTrack, error) {
+	return s.store.AudioTrack(ctx, movieID, fileID, trackID)
+}
+
+// Consolidate merges duplicates that have a proven identity. It is exposed so
+// startup can finish a data migration before the HTTP server becomes visible.
+func (s *Service) Consolidate(ctx context.Context) (int, error) {
+	return s.store.Consolidate(ctx)
 }
 
 // SaveProgress records where a viewer got to.
@@ -298,24 +325,41 @@ func (s *Service) Scan(ctx context.Context, roots []string) (*ScanReport, error)
 		}
 	}
 
-	// Only prune when the walk completed without trouble. A disconnected drive
-	// looks exactly like an emptied one from here, and wiping a library because
-	// a USB cable came loose is not a recoverable mistake.
-	if len(found.Problems) == 0 {
+	// Only prune when both the walk and every database write completed without
+	// trouble. A disconnected drive or a rejected row looks like a missing file
+	// from here; turning either into deletions would compound a recoverable error.
+	if len(report.Problems) == 0 {
 		removed, err := s.store.DeleteNotSeenIn(ctx, generation)
 		if err != nil {
 			return nil, err
 		}
 		report.Removed = removed
 	} else {
-		s.log.Warn("skipping removal of missing files, some directories could not be read",
-			"problems", len(found.Problems))
+		s.log.Warn("skipping removal of missing files, the scan reported problems",
+			"problems", len(report.Problems))
 	}
+
+	// Parsed title + year can merge variants without a network call. Running
+	// this before metadata also collapses existing rows migrated from v1.
+	merged, err := s.store.Consolidate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	report.Merged += merged
 
 	// Metadata comes last, so that the library is complete and browsable before
 	// a single network request is made. A TMDB outage delays posters; it never
 	// delays knowing what you own.
 	s.enrich(ctx, report)
+
+	// TMDB identity resolves the hard but real cases: a yearless filename or a
+	// localized title that parsed differently. It is authoritative only after a
+	// successful lookup, so this second pass remains conservative.
+	merged, err = s.store.Consolidate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	report.Merged += merged
 
 	report.Duration = time.Since(startedAt)
 	report.Seconds = report.Duration.Seconds()
@@ -325,6 +369,7 @@ func (s *Service) Scan(ctx context.Context, roots []string) (*ScanReport, error)
 		"added", report.Added,
 		"updated", report.Updated,
 		"removed", report.Removed,
+		"merged", report.Merged,
 		"enriched", report.Enriched,
 		"not_found", report.NotFound,
 		"problems", len(report.Problems),

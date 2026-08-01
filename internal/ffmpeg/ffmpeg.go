@@ -30,9 +30,15 @@ import (
 	"time"
 )
 
-// ErrUnsupportedPlatform means no pinned build exists for this OS and
-// architecture. Direct play still works; only remuxing is unavailable.
-var ErrUnsupportedPlatform = errors.New("ffmpeg: no build is pinned for this platform")
+var (
+	// ErrUnsupportedPlatform means no pinned build exists for this OS and
+	// architecture. Direct play still works; only remuxing is unavailable.
+	ErrUnsupportedPlatform = errors.New("ffmpeg: no build is pinned for this platform")
+
+	// ErrMediaUnreadable distinguishes a file ffmpeg could not identify as
+	// video from a failure to download or execute ffmpeg itself.
+	ErrMediaUnreadable = errors.New("ffmpeg: media is unreadable")
+)
 
 // releaseTag is an immutable git tag, which matters more than it looks.
 //
@@ -224,17 +230,42 @@ func verify(path, want string) error {
 	return nil
 }
 
-// MediaInfo is what ffmpeg reported about a file.
+// MediaInfo is what ffmpeg measured about a file. VideoCodec and AudioCodec
+// remain as compatibility shortcuts for the first streams; V2-M1 consumers use
+// Video and AudioStreams so a human can choose a real audio track.
 type MediaInfo struct {
-	VideoCodec string        `json:"video_codec"`
-	AudioCodec string        `json:"audio_codec"`
-	Duration   time.Duration `json:"-"`
-	Seconds    float64       `json:"duration_seconds"`
+	Container    string        `json:"container,omitempty"`
+	VideoCodec   string        `json:"video_codec"`
+	AudioCodec   string        `json:"audio_codec"`
+	Video        VideoStream   `json:"video"`
+	AudioStreams []AudioStream `json:"audio_streams"`
+	Duration     time.Duration `json:"-"`
+	Seconds      float64       `json:"duration_seconds"`
+}
+
+type VideoStream struct {
+	StreamIndex int    `json:"stream_index"`
+	Codec       string `json:"codec"`
+	Width       int    `json:"width,omitempty"`
+	Height      int    `json:"height,omitempty"`
+}
+
+type AudioStream struct {
+	StreamIndex int    `json:"stream_index"`
+	Codec       string `json:"codec"`
+	Language    string `json:"language,omitempty"`
+	Title       string `json:"title,omitempty"`
+	Channels    string `json:"channels,omitempty"`
+	Default     bool   `json:"default"`
 }
 
 var (
 	// "  Stream #0:1(eng): Audio: ac3, 48000 Hz, 5.1(side), fltp, 448 kb/s"
-	streamPattern = regexp.MustCompile(`Stream #\d+:\d+(?:\[[^\]]*\])?(?:\([^)]*\))?: (Video|Audio): ([A-Za-z0-9_]+)`)
+	streamPattern     = regexp.MustCompile(`^\s*Stream #\d+:(\d+)(?:\[[^\]]*\])?(?:\(([^)]*)\))?: (Video|Audio|Subtitle|Data|Attachment): ([A-Za-z0-9_]+)(.*)$`)
+	inputPattern      = regexp.MustCompile(`^Input #\d+,\s*(.+?),\s+from\s`)
+	resolutionPattern = regexp.MustCompile(`(?:^|,\s)(\d{2,5})x(\d{2,5})(?:\s|\[|,|$)`)
+	channelsPattern   = regexp.MustCompile(`\d+\s*Hz,\s*(mono|stereo|\d+(?:\.\d+)?(?:\([^)]*\))?)`)
+	metadataPattern   = regexp.MustCompile(`^\s*(title|language)\s*:\s*(.*?)\s*$`)
 	// "  Duration: 00:01:30.05, start: 0.000000, bitrate: 1234 kb/s"
 	durationPattern = regexp.MustCompile(`Duration: (\d+):(\d\d):(\d\d)\.(\d+)`)
 )
@@ -252,33 +283,129 @@ func (m *Manager) Probe(ctx context.Context, path string) (MediaInfo, error) {
 	}
 
 	cmd := exec.CommandContext(ctx, binary, "-hide_banner", "-i", path)
-	output, _ := cmd.CombinedOutput() // non-zero exit is the documented behaviour
+	output, runErr := cmd.CombinedOutput()
+	if err := ctx.Err(); err != nil {
+		return MediaInfo{}, err
+	}
+	// A normal probe exits non-zero because no output file was requested. A
+	// failure to start the verified executable is different: callers must not
+	// blame the media file or cache a false inspection error.
+	var exitErr *exec.ExitError
+	if runErr != nil && !errors.As(runErr, &exitErr) {
+		return MediaInfo{}, fmt.Errorf("ffmpeg: starting probe: %w", runErr)
+	}
 
 	info := parseProbeOutput(string(output))
 	if info.VideoCodec == "" {
-		return info, fmt.Errorf("ffmpeg: no video stream found in %s", filepath.Base(path))
+		return info, fmt.Errorf("%w: no video stream found in %s", ErrMediaUnreadable, filepath.Base(path))
 	}
+	info.Container = canonicalContainer(info.Container, filepath.Ext(path))
 	return info, nil
+}
+
+// canonicalContainer turns ffmpeg's demuxer aliases into the name a person can
+// use to distinguish files. For example, MP4 probes as
+// "mov,mp4,m4a,3gp,3g2,mj2" and MKV as "matroska,webm"; returning that whole
+// implementation list would be accurate and useless.
+func canonicalContainer(format, extension string) string {
+	format = strings.ToLower(strings.TrimSpace(format))
+	extension = strings.TrimPrefix(strings.ToLower(extension), ".")
+	aliases := map[string][]string{
+		"mp4":  {"mov", "mp4"},
+		"m4v":  {"mov", "mp4"},
+		"mov":  {"mov"},
+		"mkv":  {"matroska"},
+		"webm": {"webm"},
+		"ts":   {"mpegts"},
+		"m2ts": {"mpegts"},
+		"mts":  {"mpegts"},
+		"avi":  {"avi"},
+	}
+	for _, candidate := range aliases[extension] {
+		for _, reported := range strings.Split(format, ",") {
+			if strings.TrimSpace(reported) == candidate {
+				switch extension {
+				case "m4v":
+					return "mp4"
+				case "mkv":
+					return "matroska"
+				default:
+					return extension
+				}
+			}
+		}
+	}
+	if before, _, found := strings.Cut(format, ","); found {
+		return strings.TrimSpace(before)
+	}
+	return format
 }
 
 // parseProbeOutput reads the stream table ffmpeg prints. Split out from Probe
 // so the parsing -- regexes over free text, the fragile half -- can be tested
 // without spawning anything.
 func parseProbeOutput(output string) MediaInfo {
-	var info MediaInfo
+	info := MediaInfo{AudioStreams: []AudioStream{}}
+	currentAudio := -1
 
-	for _, match := range streamPattern.FindAllStringSubmatch(output, -1) {
-		codec := strings.ToLower(match[2])
-		switch match[1] {
-		case "Video":
-			// First stream of each kind wins. A file with several audio tracks
-			// gets its first one, which matches what the remux maps.
-			if info.VideoCodec == "" {
-				info.VideoCodec = codec
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSuffix(line, "\r")
+		if info.Container == "" {
+			if match := inputPattern.FindStringSubmatch(line); match != nil {
+				info.Container = strings.ToLower(strings.TrimSpace(match[1]))
 			}
-		case "Audio":
-			if info.AudioCodec == "" {
-				info.AudioCodec = codec
+		}
+
+		if match := streamPattern.FindStringSubmatch(line); match != nil {
+			streamIndex, _ := strconv.Atoi(match[1])
+			language := strings.ToLower(strings.TrimSpace(match[2]))
+			kind := match[3]
+			codec := strings.ToLower(match[4])
+			rest := match[5]
+			currentAudio = -1
+
+			switch kind {
+			case "Video":
+				if info.VideoCodec == "" {
+					info.VideoCodec = codec
+					info.Video = VideoStream{StreamIndex: streamIndex, Codec: codec}
+					if size := resolutionPattern.FindStringSubmatch(rest); size != nil {
+						info.Video.Width, _ = strconv.Atoi(size[1])
+						info.Video.Height, _ = strconv.Atoi(size[2])
+					}
+				}
+			case "Audio":
+				track := AudioStream{
+					StreamIndex: streamIndex,
+					Codec:       codec,
+					Language:    language,
+					Default:     strings.Contains(strings.ToLower(rest), "(default)"),
+				}
+				if channels := channelsPattern.FindStringSubmatch(rest); channels != nil {
+					track.Channels = strings.ToLower(channels[1])
+				}
+				info.AudioStreams = append(info.AudioStreams, track)
+				currentAudio = len(info.AudioStreams) - 1
+				if info.AudioCodec == "" {
+					info.AudioCodec = codec
+				}
+			}
+			continue
+		}
+
+		// ffmpeg prints per-stream title/language on following Metadata lines.
+		// currentAudio is reset by every next stream, so subtitle metadata cannot
+		// leak into the preceding audio track.
+		if currentAudio >= 0 {
+			if match := metadataPattern.FindStringSubmatch(line); match != nil {
+				switch strings.ToLower(match[1]) {
+				case "title":
+					info.AudioStreams[currentAudio].Title = strings.TrimSpace(match[2])
+				case "language":
+					if info.AudioStreams[currentAudio].Language == "" {
+						info.AudioStreams[currentAudio].Language = strings.ToLower(strings.TrimSpace(match[2]))
+					}
+				}
 			}
 		}
 	}
@@ -287,9 +414,9 @@ func parseProbeOutput(output string) MediaInfo {
 		h, _ := strconv.Atoi(d[1])
 		mn, _ := strconv.Atoi(d[2])
 		s, _ := strconv.Atoi(d[3])
-		info.Duration = time.Duration(h)*time.Hour +
-			time.Duration(mn)*time.Minute + time.Duration(s)*time.Second
-		info.Seconds = info.Duration.Seconds()
+		fraction, _ := strconv.ParseFloat("0."+d[4], 64)
+		info.Seconds = float64(h*3600+mn*60+s) + fraction
+		info.Duration = time.Duration(info.Seconds * float64(time.Second))
 	}
 	return info
 }

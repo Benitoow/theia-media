@@ -30,7 +30,10 @@ Contraintes communes à tous les écrans :
 
 ### M1-FE — Choix du fichier sur la fiche film
 
-**Statut : attend le handoff M1-BE.**
+**Statut : prêt à démarrer à partir du commit backend
+[`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e),
+publié par la [PR #4](https://github.com/Benitoow/theia-media/pull/4), dès qu'il
+est présent sur `main`.**
 
 Une seule carte représente le film dans le catalogue. Après ouverture de la
 fiche, l'utilisateur voit les fichiers réellement renvoyés par l'API et choisit
@@ -42,6 +45,44 @@ fichier et, lorsqu'elle existe, de la piste audio choisie.
 partiellement inconnues, fichier disparu et lecture refusée. Les libellés de
 qualité ne doivent pas inventer une résolution ou une piste que le backend n'a
 pas détectée.
+
+Contrat à consommer, sans le réinventer :
+
+1. charger `GET /api/library/movies/{movie_id}` ; `files` n'existe que sur cette
+   fiche, pas dans les cartes de `/films` ou de l'accueil ;
+2. afficher `file_name`, taille, `extension` et uniquement les caractéristiques
+   dont `media.status == "ok"` ; aucun chemin serveur n'est renvoyé ;
+3. pour un fichier `pending`, appeler explicitement
+   `POST /api/library/movies/{movie_id}/files/{file_id}/inspect`, avec un état de
+   préparation visible ; un résultat `error` reste retentable ;
+4. laisser l'utilisateur choisir le fichier, puis éventuellement une entrée de
+   `media.audio_tracks` par son `id` ; ne jamais transmettre `stream_index` ;
+5. appeler `GET /api/stream/{movie_id}/files/{file_id}/info`, avec
+   `?audio={audio_track_id}` lorsqu'une piste a été choisie ;
+6. si `mode == "direct"`, lire
+   `/api/stream/{movie_id}/files/{file_id}` ; si `mode == "remux"`, lire
+   `/api/stream/{movie_id}/files/{file_id}/remux`, en conservant `audio` et `t` ;
+   si `mode == "unsupported"`, traduire `reason_code` et ne pas lancer le
+   lecteur.
+
+Une piste explicitement choisie force le mode remux, y compris sur un MP4 : la
+route directe ne peut pas garantir quelle piste le navigateur activera. Les
+routes historiques sans `file_id` restent uniquement le filet de compatibilité
+du frontend actuel ; M1-FE ne doit pas construire dessus.
+
+États obligatoires à maqueter et tester au D-pad :
+
+- un seul fichier `pending`, puis `ok` ;
+- deux fichiers de résolutions mesurées différentes ;
+- plusieurs pistes audio, avec langue, titre, codec et défaut éventuellement
+  absents ;
+- `media_unreadable`, `media_not_inspected`, `file_not_found`,
+  `audio_track_not_found`, `video_transcode_required` et `ffmpeg_unavailable` ;
+- progression commune conservée quand l'utilisateur change de fichier.
+
+La fixture complète, les payloads `info`, les codes HTTP et les limites sont
+dans la section M1-BE de `theia-v2-backend.md`. Le frontend traduit les codes ;
+il n'affiche aucune prose technique du serveur.
 
 ### M2-FE — Profils, nouvelle mouture
 

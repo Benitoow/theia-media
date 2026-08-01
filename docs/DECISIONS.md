@@ -809,6 +809,50 @@ files chosen manually on that page. The mechanism that associates files with a
 film remains a backend decision and must prefer an unmerged duplicate over a
 silent false merge.
 
+## 38. A film owns files; selection stays manual and media inspection stays explicit
+
+**Decided and verified in V2-M1-BE.** `movies` is now the film identity, its
+metadata and its one playback position. `movie_files` owns the playable paths,
+and `movie_file_audio_tracks` owns the measured tracks beneath a file. The
+oldest film id survives a consolidation so existing links and progress do not
+move; the newest recognised metadata and most recently watched progress are
+copied before duplicate rows are deleted.
+
+Association is deliberately layered. A known path wins first. A unique unseen
+file with identical size and modification time is a move/rename. Parsed title
+plus non-zero year may group files unless existing TMDB ids conflict. With no
+year, only an identical base name outside case and extension is accepted. An
+identical non-zero TMDB id is the final proof for yearless or localized names.
+No fuzzy title score, resolution token, file size or « probably the same film »
+heuristic is allowed to merge two records.
+
+The server exposes stable film, file and audio-track ids and validates their
+ownership in that order. Absolute paths no longer cross the JSON boundary, and
+the resolved file must remain under a configured library root after symlink or
+junction resolution. The existing routes without a file id remain temporarily
+bound to the primary file so the v1 frontend keeps working during the backend-
+first handoff.
+
+File inspection is an explicit `POST`, not a side effect of opening a detail or
+asking for stream info. This preserves the first-need ffmpeg rule: a read-only
+page cannot unexpectedly fetch the binary. Measured data is invalidated when
+the file size or modification time changes. A renamed identity clears its old
+TMDB payload before enrichment, and any scanner or SQLite write problem blocks
+the deletion pass. Choosing an audio track forces a remux even for a directly
+playable MP4, because direct play cannot guarantee which embedded track the
+browser will activate. A local ffmpeg preparation failure is distinct from an
+unreadable media file and is never cached against that file. The user still
+chooses every file manually; no primary, resolution or bitrate becomes an
+automatic quality policy. Live video quality conversion remains M6.
+
+On the copied real database, startup consolidated 26 duplicate rows into 25
+multi-file films: 274 file rows became 248 film cards while all 274 files, all
+metadata states and the existing 60/240-second progress survived. Six valid
+playback clips from the real `_Tests` directory then exercised direct play,
+audio-copy remux, AC3-to-AAC remux and unsupported MPEG-2. A separate two-audio-
+track fixture proved that selecting the French track maps only its stored ffmpeg
+stream index. The original database hash and timestamp did not change.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

@@ -88,6 +88,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/library/home", s.handleHome)
 	mux.HandleFunc("GET /api/library/movies", s.handleMovies)
 	mux.HandleFunc("GET /api/library/movies/{id}", s.handleMovie)
+	mux.HandleFunc("POST /api/library/movies/{id}/files/{file_id}/inspect", s.handleInspectMovieFile)
 	mux.HandleFunc("PUT /api/library/movies/{id}/progress", s.handleSaveProgress)
 	mux.HandleFunc("DELETE /api/library/movies/{id}/progress", s.handleResetProgress)
 	mux.HandleFunc("GET /api/library/stats", s.handleLibraryStats)
@@ -96,6 +97,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/stream/{id}/info", s.handleStreamInfo)
 	mux.HandleFunc("GET /api/stream/{id}/remux", s.handleStreamRemux)
 	mux.HandleFunc("GET /api/stream/{id}", s.handleStreamDirect)
+	mux.HandleFunc("GET /api/stream/{id}/files/{file_id}/info", s.handleMovieFileStreamInfo)
+	mux.HandleFunc("GET /api/stream/{id}/files/{file_id}/remux", s.handleMovieFileStreamRemux)
+	mux.HandleFunc("GET /api/stream/{id}/files/{file_id}", s.handleMovieFileStreamDirect)
 	mux.Handle("/", s.staticHandler())
 	return s.logRequests(mux)
 }
