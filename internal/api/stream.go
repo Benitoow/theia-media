@@ -16,10 +16,16 @@ import (
 )
 
 type streamInfoResponse struct {
-	ID        int64  `json:"id"`
-	Mode      string `json:"mode"`
-	Reason    string `json:"reason,omitempty"`
-	Container string `json:"container"`
+	ID           int64  `json:"id"`
+	MovieID      int64  `json:"movie_id,omitempty"`
+	FileID       int64  `json:"file_id,omitempty"`
+	AudioTrackID int64  `json:"audio_track_id,omitempty"`
+	Mode         string `json:"mode"`
+	Reason       string `json:"reason,omitempty"`
+	ReasonCode   string `json:"reason_code,omitempty"`
+	Container    string `json:"container"`
+	MediaStatus  string `json:"media_status,omitempty"`
+	VideoRisky   bool   `json:"video_risky,omitempty"`
 
 	// Whether ffmpeg is already on disk. The interface uses it to warn that the
 	// first remux will pause to download 80 MB, rather than looking frozen.
@@ -60,7 +66,7 @@ func (s *Server) handleStreamInfo(w http.ResponseWriter, r *http.Request) {
 		Mode:            string(decision.Mode),
 		Reason:          decision.Reason,
 		Container:       strings.TrimPrefix(strings.ToLower(filepath.Ext(movie.Path)), "."),
-		FFmpegReady:     s.ffmpeg.Available(),
+		FFmpegReady:     s.ffmpeg != nil && s.ffmpeg.Available(),
 		FFmpegSupported: ffmpeg.Supported(),
 		DurationSeconds: duration,
 		Progress:        &progress,
@@ -186,20 +192,23 @@ func (s *Server) handleStreamRemux(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "the stream could not be started")
 		return
 	}
-	// Killed by the context when the viewer navigates away; without this an
-	// abandoned tab would leave an ffmpeg running until the film ended.
-	defer func() {
-		_ = cmd.Wait()
-	}()
 
 	w.Header().Set("Content-Type", "video/mp4")
 	w.Header().Set("Cache-Control", "private, no-store")
 	w.WriteHeader(http.StatusOK)
 
-	if _, err := io.Copy(w, stdout); err != nil {
+	_, copyErr := io.Copy(w, stdout)
+	waitErr := cmd.Wait()
+	if copyErr != nil {
 		// The overwhelmingly common cause is the viewer closing the tab, which
-		// is not worth an error line.
-		s.log.Debug("the remux stream ended early", "error", err)
+		// cancels the request context and kills ffmpeg. Wait above reaps it before
+		// this handler returns.
+		s.log.Debug("the remux stream ended early", "error", copyErr)
+		return
+	}
+	if waitErr != nil {
+		s.log.Warn("ffmpeg ended the remux with an error",
+			"film", movie.Title, "error", waitErr, "message", strings.TrimSpace(stderr.String()))
 		return
 	}
 	if msg := strings.TrimSpace(stderr.String()); msg != "" {
@@ -229,23 +238,27 @@ func (s *Server) movieForStream(w http.ResponseWriter, r *http.Request) (library
 
 	// The path comes from our own database rather than from the request, so
 	// this is belt and braces -- but it is the check that stops a tampered row
-	// from turning the player into a file server for the whole disk.
-	if !s.withinLibrary(movie.Path) {
+	// from turning the player into a file server for the whole disk. Keep the
+	// resolved path: opening the unresolved symlink after checking its target
+	// would reintroduce a check/open race.
+	resolved, inside := s.resolvedLibraryPath(movie.Path)
+	if !inside {
 		s.log.Error("refused to stream a file outside every configured library directory",
 			"path", movie.Path)
 		writeJSONError(w, http.StatusForbidden, "this file is outside the library")
 		return library.Movie{}, false
 	}
+	movie.Path = resolved
 	return movie, true
 }
 
-func (s *Server) withinLibrary(path string) bool {
-	target, err := filepath.Abs(path)
+func (s *Server) resolvedLibraryPath(path string) (string, bool) {
+	target, err := resolvedPath(path)
 	if err != nil {
-		return false
+		return "", false
 	}
 	for _, root := range s.cfg.LibraryPaths {
-		base, err := filepath.Abs(root)
+		base, err := resolvedPath(root)
 		if err != nil {
 			continue
 		}
@@ -254,10 +267,36 @@ func (s *Server) withinLibrary(path string) bool {
 			continue
 		}
 		if rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-			return true
+			return target, true
 		}
 	}
-	return false
+	return "", false
+}
+
+// resolvedPath closes the symlink/junction hole in a plain filepath.Rel check.
+// The file is about to be opened, so failure to resolve an existing target is
+// a refusal rather than a reason to fall back to the lexical path.
+func resolvedPath(path string) (string, error) {
+	absolute, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	resolved, err := filepath.EvalSymlinks(absolute)
+	if err == nil {
+		return resolved, nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+
+	// A file can disappear between the scan and playback. Resolve its existing
+	// parent so containment is still checked through junctions/symlinks, then
+	// let os.Open produce the useful media_file_unavailable response.
+	parent, parentErr := filepath.EvalSymlinks(filepath.Dir(absolute))
+	if parentErr != nil {
+		return "", err
+	}
+	return filepath.Join(parent, filepath.Base(absolute)), nil
 }
 
 // contentTypeFor maps a container to what the browser should be told it is.

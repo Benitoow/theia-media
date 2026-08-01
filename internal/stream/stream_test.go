@@ -44,6 +44,13 @@ func TestDecide(t *testing.T) {
 			wantMode: ModeDirect,
 		},
 		{
+			name:     "a silent H.264 MP4 still plays directly",
+			path:     "f.mp4",
+			video:    "h264",
+			audio:    "",
+			wantMode: ModeDirect,
+		},
+		{
 			// The case decision 1 exists for. Remuxing without touching the
 			// audio would produce a film with a picture and no sound.
 			name:      "H.264 and AC3 in a MKV remuxes and re-encodes the audio",
@@ -158,5 +165,26 @@ func TestRemuxArgsSeekBeforeInput(t *testing.T) {
 	}
 	if args[ss+1] != "90.000" {
 		t.Errorf("seek = %q, want 90.000", args[ss+1])
+	}
+}
+
+func TestRemuxArgsForAudioMapsOnlyTheSelectedAbsoluteStream(t *testing.T) {
+	args := RemuxArgsForAudio("/films/f.mkv",
+		Decision{Mode: ModeRemux, Audio: AudioTranscode}, 0, 4)
+
+	indices := make([]int, 0, 2)
+	for i, arg := range args {
+		if arg == "-map" {
+			indices = append(indices, i)
+		}
+	}
+	if len(indices) != 2 {
+		t.Fatalf("args = %v, want two map arguments", args)
+	}
+	if got := args[indices[0]+1]; got != "0:v:0" {
+		t.Errorf("video map = %q, want 0:v:0", got)
+	}
+	if got := args[indices[1]+1]; got != "0:4" {
+		t.Errorf("audio map = %q, want selected absolute stream 0:4", got)
 	}
 }

@@ -35,8 +35,18 @@ func TestParseProbeOutput(t *testing.T) {
 	if info.AudioCodec != "ac3" {
 		t.Errorf("audio = %q, want ac3", info.AudioCodec)
 	}
-	if want := 12 * time.Second; info.Duration != want {
+	if want := 12*time.Second + 30*time.Millisecond; info.Duration != want {
 		t.Errorf("duration = %v, want %v", info.Duration, want)
+	}
+	if info.Container != "matroska,webm" {
+		t.Errorf("container = %q, want matroska,webm", info.Container)
+	}
+	if info.Video.StreamIndex != 0 || info.Video.Width != 640 || info.Video.Height != 360 {
+		t.Errorf("video stream = %+v, want stream 0 at 640x360", info.Video)
+	}
+	if len(info.AudioStreams) != 1 || info.AudioStreams[0].StreamIndex != 1 ||
+		!info.AudioStreams[0].Default || info.AudioStreams[0].Channels != "mono" {
+		t.Errorf("audio streams = %+v, want default mono stream 1", info.AudioStreams)
 	}
 }
 
@@ -49,6 +59,8 @@ func TestParseProbeOutputHandlesLanguageTagsAndMultipleTracks(t *testing.T) {
   Stream #0:0(eng): Video: hevc (Main 10), yuv420p10le(tv), 3840x2160
   Stream #0:1(eng): Audio: truehd, 48000 Hz, 7.1, s32 (24 bit)
   Stream #0:2(fre): Audio: ac3, 48000 Hz, 5.1(side), fltp, 640 kb/s
+    Metadata:
+      title           : Français 5.1
   Stream #0:3(fre): Subtitle: subrip`
 
 	info := parseProbeOutput(output)
@@ -58,7 +70,20 @@ func TestParseProbeOutputHandlesLanguageTagsAndMultipleTracks(t *testing.T) {
 	if info.AudioCodec != "truehd" {
 		t.Errorf("audio = %q, want the first track (truehd)", info.AudioCodec)
 	}
-	if want := 2*time.Hour + 35*time.Minute + 12*time.Second; info.Duration != want {
+	if info.Video.Width != 3840 || info.Video.Height != 2160 {
+		t.Errorf("video dimensions = %dx%d, want 3840x2160", info.Video.Width, info.Video.Height)
+	}
+	if len(info.AudioStreams) != 2 {
+		t.Fatalf("audio streams = %+v, want two", info.AudioStreams)
+	}
+	if first := info.AudioStreams[0]; first.StreamIndex != 1 || first.Language != "eng" || first.Channels != "7.1" {
+		t.Errorf("first audio stream = %+v", first)
+	}
+	if second := info.AudioStreams[1]; second.StreamIndex != 2 || second.Language != "fre" ||
+		second.Channels != "5.1(side)" || second.Title != "Français 5.1" {
+		t.Errorf("second audio stream = %+v", second)
+	}
+	if want := 2*time.Hour + 35*time.Minute + 12*time.Second + 450*time.Millisecond; info.Duration != want {
 		t.Errorf("duration = %v, want %v", info.Duration, want)
 	}
 }
@@ -71,6 +96,24 @@ Remux H264 AC3.mkv: Invalid data found when processing input`
 
 	if info := parseProbeOutput(output); info.VideoCodec != "" {
 		t.Errorf("video = %q, want empty for unreadable input", info.VideoCodec)
+	}
+}
+
+func TestCanonicalContainerUsesTheFileExtensionToResolveFFmpegAliases(t *testing.T) {
+	tests := []struct {
+		format, extension, want string
+	}{
+		{"mov,mp4,m4a,3gp,3g2,mj2", ".mp4", "mp4"},
+		{"mov,mp4,m4a,3gp,3g2,mj2", ".m4v", "mp4"},
+		{"matroska,webm", ".mkv", "matroska"},
+		{"matroska,webm", ".webm", "webm"},
+		{"mpegts", ".ts", "ts"},
+	}
+	for _, tt := range tests {
+		if got := canonicalContainer(tt.format, tt.extension); got != tt.want {
+			t.Errorf("canonicalContainer(%q, %q) = %q, want %q",
+				tt.format, tt.extension, got, tt.want)
+		}
 	}
 }
 

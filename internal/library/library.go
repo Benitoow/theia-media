@@ -9,12 +9,12 @@ import (
 	"time"
 )
 
-// Movie is one film file, as Theia currently understands it. Everything TMDB
-// will supply -- poster, synopsis, cast -- arrives in M2 and is deliberately
-// absent rather than present and empty.
+// Movie is one film people browse. The legacy file fields identify its primary
+// file and remain in the JSON contract until the existing frontend has moved to
+// Files. The database source of truth for playable files is movie_files.
 type Movie struct {
 	ID         int64     `json:"id"`
-	Path       string    `json:"path"`
+	Path       string    `json:"-"`
 	FileName   string    `json:"file_name"`
 	SizeBytes  int64     `json:"size_bytes"`
 	ModifiedAt time.Time `json:"modified_at"`
@@ -27,8 +27,9 @@ type Movie struct {
 	Title string `json:"title"`
 	Year  int    `json:"year,omitempty"`
 
-	Metadata Metadata `json:"metadata"`
-	Progress Progress `json:"progress"`
+	Metadata Metadata    `json:"metadata"`
+	Progress Progress    `json:"progress"`
+	Files    []MovieFile `json:"files,omitempty"`
 
 	AddedAt   time.Time `json:"added_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -63,69 +64,17 @@ type upsertResult struct {
 	inserted bool
 }
 
-// Upsert records a file, inserting it or refreshing what is already there. The
-// path is the identity: the same path seen twice is one film, not two.
+// Upsert records a file, inserting it or refreshing what is already there.
+// movie_files owns path identity; conservative association decides whether a
+// new path belongs under an existing film.
 func (s *Store) Upsert(ctx context.Context, m Movie, generation int64) (upsertResult, error) {
-	now := time.Now().Unix()
-
-	var year any
-	if m.Year != 0 {
-		year = m.Year
-	}
-
-	// first_seen_scan is written on insert and never touched again, so comparing
-	// it against the running generation says exactly which of the two branches
-	// SQLite took -- no timestamp comparison, no same-second ambiguity.
-	var firstSeen int64
-	err := s.db.QueryRowContext(ctx, `
-		INSERT INTO movies
-			(path, file_name, size_bytes, modified_at, title, year,
-			 first_seen_scan, last_seen_scan, added_at, updated_at)
-		VALUES
-			(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(path) DO UPDATE SET
-			file_name      = excluded.file_name,
-			size_bytes     = excluded.size_bytes,
-			modified_at    = excluded.modified_at,
-			title          = excluded.title,
-			year           = excluded.year,
-			last_seen_scan = excluded.last_seen_scan,
-			updated_at     = excluded.updated_at,
-
-			-- Renaming a file is how a user corrects a bad match. When the
-			-- parsed title or year changes, whatever TMDB returned for the old
-			-- name is now wrong, so the row goes back in the lookup queue
-			-- instead of waiting out its ninety days. IS NOT is null-safe here;
-			-- = would leave rows with an unknown year untouched.
-			metadata_status = CASE
-				WHEN movies.title IS NOT excluded.title OR movies.year IS NOT excluded.year
-				THEN 'pending' ELSE movies.metadata_status END,
-			metadata_fetched_at = CASE
-				WHEN movies.title IS NOT excluded.title OR movies.year IS NOT excluded.year
-				THEN 0 ELSE movies.metadata_fetched_at END
-		RETURNING first_seen_scan`,
-		m.Path, m.FileName, m.SizeBytes, m.ModifiedAt.Unix(), m.Title, year,
-		generation, generation, now, now,
-	).Scan(&firstSeen)
-	if err != nil {
-		return upsertResult{}, fmt.Errorf("saving %s: %w", m.Path, err)
-	}
-	return upsertResult{inserted: firstSeen == generation}, nil
+	return s.upsertFile(ctx, m, generation)
 }
 
 // DeleteNotSeenIn removes rows the given scan did not touch, which is how a
 // deleted or moved file leaves the library.
 func (s *Store) DeleteNotSeenIn(ctx context.Context, generation int64) (int, error) {
-	res, err := s.db.ExecContext(ctx,
-		`DELETE FROM movies WHERE last_seen_scan < ?`, generation)
-	if err != nil {
-		return 0, fmt.Errorf("removing files that have disappeared: %w", err)
-	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("removing files that have disappeared: %w", err)
-	}
-	return int(n), nil
+	return s.deleteFilesNotSeenIn(ctx, generation)
 }
 
 // Count returns how many films are in the library.

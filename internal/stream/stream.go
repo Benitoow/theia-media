@@ -118,12 +118,12 @@ func Decide(path, videoCodec, audioCodec string) Decision {
 	}
 
 	// A friendly container holding friendly streams needs nothing at all.
-	if browserContainers[ext] && browserVideo[video] && browserAudio[audio] {
+	if browserContainers[ext] && browserVideo[video] && (audio == "" || browserAudio[audio]) {
 		return Decision{Mode: ModeDirect, Reason: "the file plays as it is"}
 	}
 
 	decision := Decision{Mode: ModeRemux, Audio: AudioCopy, VideoRisky: riskyVideo[video]}
-	if !browserAudio[audio] {
+	if audio != "" && !browserAudio[audio] {
 		// The case decision 1 exists for: an ordinary H.264 + AC3 MKV would
 		// otherwise remux into a film with a picture and no sound. Re-encoding
 		// audio costs about one core; re-encoding video is the furnace v1
@@ -142,6 +142,17 @@ func Decide(path, videoCodec, audioCodec string) Decision {
 // rewind and write its index at the end, which a pipe cannot do, and empty_moov
 // so the browser can start decoding before the file is finished.
 func RemuxArgs(path string, d Decision, startSeconds float64) []string {
+	return remuxArgs(path, d, startSeconds, nil)
+}
+
+// RemuxArgsForAudio maps one absolute ffmpeg stream index. The index comes
+// from a server-side inspection record, never directly from an arbitrary path
+// or free-form map expression supplied by the browser.
+func RemuxArgsForAudio(path string, d Decision, startSeconds float64, streamIndex int) []string {
+	return remuxArgs(path, d, startSeconds, &streamIndex)
+}
+
+func remuxArgs(path string, d Decision, startSeconds float64, audioStreamIndex *int) []string {
 	args := []string{"-hide_banner", "-loglevel", "error"}
 
 	// -ss before -i seeks by keyframe without decoding what came before, which
@@ -150,10 +161,15 @@ func RemuxArgs(path string, d Decision, startSeconds float64) []string {
 		args = append(args, "-ss", formatSeconds(startSeconds))
 	}
 
+	audioMap := "0:a:0?"
+	if audioStreamIndex != nil {
+		audioMap = "0:" + strconv.Itoa(*audioStreamIndex)
+	}
+
 	args = append(args,
 		"-i", path,
 		"-map", "0:v:0",
-		"-map", "0:a:0?",
+		"-map", audioMap,
 		"-c:v", "copy",
 	)
 

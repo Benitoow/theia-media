@@ -129,6 +129,16 @@ func run() error {
 	libraryService := library.NewService(store, tmdbClient, log)
 	state := db.NewState(database)
 
+	// V2-M1 migrates one-row-per-file installations without changing film ids.
+	// Consolidate proven duplicates before the API becomes visible, so an
+	// upgraded catalogue never flashes the old duplicate cards while the
+	// background scan is starting.
+	if merged, err := libraryService.Consolidate(ctx); err != nil {
+		return err
+	} else if merged > 0 {
+		log.Info("consolidated duplicate film records", "merged", merged)
+	}
+
 	// An installation that already has a library has, by definition, already
 	// been set up -- somebody pointed it at a folder and watched it scan. The
 	// welcome screen exists for a first launch, not for everyone upgrading into

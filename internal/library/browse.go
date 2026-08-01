@@ -93,6 +93,10 @@ func (s *Store) Get(ctx context.Context, id int64) (Movie, error) {
 	if err != nil {
 		return Movie{}, fmt.Errorf("reading film %d: %w", id, err)
 	}
+	m.Files, err = s.MovieFiles(ctx, id)
+	if err != nil {
+		return Movie{}, err
+	}
 	return m, nil
 }
 
