@@ -400,9 +400,8 @@
 		background: rgba(237, 231, 220, 0.08);
 	}
 
-	/* At the 320px floor the three remaining targets still ran past the pill's
-	   rounded edge -- the profile chip moving to its own screen removed the worst
-	   of it, not all of it. The horizontal padding is what gives way. The 52px
+	/* At the 320px floor the three nav targets need less horizontal padding to
+	   remain inside the pill's rounded edge. The 52px
 	   block size and the labels, which are what §9 actually requires, are
 	   untouched. */
 	@media (max-width: 26rem) {

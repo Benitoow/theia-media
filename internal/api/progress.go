@@ -24,10 +24,6 @@ type progressRequest struct {
 // one UPDATE, no read-modify-write, and a malformed body is a 400 rather than
 // anything that could interrupt playback.
 func (s *Server) handleSaveProgress(w http.ResponseWriter, r *http.Request) {
-	profileID, ok := s.selectedProfileID(w, r)
-	if !ok {
-		return
-	}
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid film id")
@@ -40,7 +36,7 @@ func (s *Server) handleSaveProgress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	progress, err := s.lib.SaveProgress(r.Context(), profileID, id, body.PositionSeconds, body.DurationSeconds)
+	progress, err := s.lib.SaveProgress(r.Context(), id, body.PositionSeconds, body.DurationSeconds)
 	switch {
 	case errors.Is(err, library.ErrNoSuchMovie):
 		writeJSONError(w, http.StatusNotFound, "no such film")
@@ -56,17 +52,13 @@ func (s *Server) handleSaveProgress(w http.ResponseWriter, r *http.Request) {
 // handleResetProgress forgets a viewing position, which is what "start from the
 // beginning" does.
 func (s *Server) handleResetProgress(w http.ResponseWriter, r *http.Request) {
-	profileID, ok := s.selectedProfileID(w, r)
-	if !ok {
-		return
-	}
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid film id")
 		return
 	}
 
-	switch err := s.lib.ResetProgress(r.Context(), profileID, id); {
+	switch err := s.lib.ResetProgress(r.Context(), id); {
 	case errors.Is(err, library.ErrNoSuchMovie):
 		writeJSONError(w, http.StatusNotFound, "no such film")
 		return

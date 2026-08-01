@@ -5,7 +5,6 @@ go 1.26.5
 require (
 	github.com/hashicorp/mdns v1.0.7
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
-	golang.org/x/image v0.44.0
 	modernc.org/sqlite v1.54.0
 )
 

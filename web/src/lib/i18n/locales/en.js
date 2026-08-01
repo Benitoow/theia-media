@@ -27,55 +27,7 @@ export const strings = {
 		home: 'Home',
 		library: 'Movies',
 		settings: 'Settings',
-		profiles: 'Profiles',
 		back: 'Back'
-	},
-
-	profiles: {
-		eyebrow: 'In this household',
-		title: 'Who’s watching?',
-		body:
-			'Profiles keep playback progress separate. They are not accounts: there are no passwords, and anyone on the local network can choose or edit any profile.',
-		loading: 'Loading profiles…',
-		listLabel: 'Choose a profile',
-		defaultName: 'Default profile',
-		current: 'Active profile',
-		switchTo: (name) => `Switch profile — ${name}`,
-		manage: 'Manage profiles',
-		manageHint:
-			'The photo stays in Theia’s local database. It is cropped and compressed before it is saved.',
-		done: 'Done',
-		name: 'Name',
-		newName: 'New profile',
-		namePlaceholder: 'First name or nickname',
-		add: 'Add',
-		adding: 'Adding…',
-		rename: 'Save name',
-		addPhoto: 'Add a photo',
-		replacePhoto: 'Replace photo',
-		removePhoto: 'Remove photo',
-		delete: 'Delete',
-		confirmDelete: 'Confirm deletion',
-		notices: {
-			profile_saved: 'Name saved.',
-			avatar_saved: 'Photo saved.',
-			avatar_removed: 'Photo removed.',
-			profile_deleted: 'Profile deleted. Your movies were not affected.',
-			invalid_profile_name: 'The name must be between 1 and 40 characters.',
-			invalid_profile_payload: 'The submitted change is not valid.',
-			profile_not_found: 'This profile no longer exists. Reload the list.',
-			profile_limit_reached: 'The maximum number of profiles has been reached.',
-			default_profile: 'The default profile cannot be deleted.',
-			last_profile: 'The last profile cannot be deleted.',
-			avatar_too_large: 'This image is too large. Choose a file under 8 MB.',
-			invalid_avatar: 'Choose a valid JPEG, PNG, or WebP image.',
-			profile_create_failed: 'The profile could not be added.',
-			profile_update_failed: 'The profile could not be updated.',
-			profile_delete_failed: 'The profile could not be deleted.',
-			avatar_save_failed: 'The photo could not be saved.',
-			avatar_delete_failed: 'The photo could not be removed.',
-			unknown: 'The change could not be saved.'
-		}
 	},
 
 	library: {
@@ -295,9 +247,6 @@ export const strings = {
 		language: 'Language',
 		languageHint:
 			'This choice stays in this browser. It translates the interface without downloading or retranslating cached TMDB metadata.',
-		profilesHint:
-			'Each profile keeps its own resume position. Like the language, the selected profile belongs to this browser rather than to the server: switching profile on the television changes nothing on a laptop.',
-		profilesAction: 'Switch profile',
 		server: 'Server',
 		version: 'Version',
 		port: 'Port',

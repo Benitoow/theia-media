@@ -1,11 +1,9 @@
 <script>
 	import '../app.css';
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { i18n } from '$lib/i18n/index.svelte.js';
 	import { strings as t } from '$lib/strings.js';
-	import { profileSession } from '$lib/profiles.svelte.js';
 
 	let { children } = $props();
 
@@ -16,30 +14,17 @@
 	const atHome = $derived(path === '/');
 	const inLibrary = $derived(path === '/films' || path.startsWith('/films/'));
 	const inSettings = $derived(path === '/reglages' || path.startsWith('/reglages/'));
-	const inProfiles = $derived(path === '/profils' || path.startsWith('/profils/'));
 
 	// The pill keeps a light scrim over arbitrary hero artwork, then strengthens
 	// once the page moves so it never becomes a hard opaque band.
 	let scrolled = $state(false);
 
-	onMount(async () => {
+	onMount(() => {
 		i18n.bootstrap();
-		await profileSession.bootstrap();
 	});
 
 	$effect(() => {
 		document.documentElement.lang = i18n.htmlLang;
-	});
-
-	// The layout survives client-side navigation. Keep this guard reactive so
-	// leaving the chooser without selecting somebody cannot strand another page
-	// behind an eternal loading message.
-	$effect(() => {
-		if (!profileSession.needsSelection || inProfiles) return;
-		const destination = `/profils?return=${encodeURIComponent(
-			$page.url.pathname + $page.url.search
-		)}`;
-		goto(destination, { replaceState: true });
 	});
 
 	const remoteFocusable = [
@@ -149,90 +134,57 @@
 	onkeydown={navigateByRemote}
 />
 
-{#if !profileSession.ready}
-	<main class="profile-bootstrap" aria-live="polite">
-		<span class="label">{t.profiles.loading}</span>
-	</main>
-{:else}
-	<!--
-		No nav on the profile chooser. "Who is watching?" is a question with one
-		job, and a D-pad landing on a row of navigation links instead of on a face
-		is the whole reason the old pill did not work. Every other screen keeps it.
-	-->
-	{#if !inProfiles}
-		<div class="site-nav-wrap">
-			<nav class="site-nav" data-scrolled={scrolled} aria-label={t.a11y.mainNavigation}>
-				<a
-					href="/"
-					class="nav-target nav-brand"
-					aria-label="{t.appName} — {t.nav.home}"
-					aria-current={atHome ? 'page' : undefined}
-				>
-					<!-- The wordmark carries the name, so the image is decorative and
-					     the link states both the brand and where it goes. Intrinsic
-					     dimensions are declared so the nav does not reflow while it
-					     loads. -->
-					<img
-						src="/theia-wordmark.webp"
-						alt=""
-						width="410"
-						height="120"
-						class="brand-wordmark"
-						fetchpriority="high"
-					/>
-				</a>
-				<div class="flex items-center">
-					<a
-						href="/films"
-						class="nav-target nav-link label"
-						aria-current={inLibrary ? 'page' : undefined}
-					>
-						{t.nav.library}
-					</a>
-					<a
-						href="/reglages"
-						class="nav-target nav-link label"
-						aria-current={inSettings ? 'page' : undefined}
-					>
-						{t.nav.settings}
-					</a>
-				</div>
-			</nav>
+<div class="site-nav-wrap">
+	<nav class="site-nav" data-scrolled={scrolled} aria-label={t.a11y.mainNavigation}>
+		<a
+			href="/"
+			class="nav-target nav-brand"
+			aria-label="{t.appName} — {t.nav.home}"
+			aria-current={atHome ? 'page' : undefined}
+		>
+			<!-- The wordmark carries the name, so the image is decorative and
+			     the link states both the brand and where it goes. Intrinsic
+			     dimensions are declared so the nav does not reflow while it
+			     loads. -->
+			<img
+				src="/theia-wordmark.webp"
+				alt=""
+				width="410"
+				height="120"
+				class="brand-wordmark"
+				fetchpriority="high"
+			/>
+		</a>
+		<div class="flex items-center">
+			<a
+				href="/films"
+				class="nav-target nav-link label"
+				aria-current={inLibrary ? 'page' : undefined}
+			>
+				{t.nav.library}
+			</a>
+			<a
+				href="/reglages"
+				class="nav-target nav-link label"
+				aria-current={inSettings ? 'page' : undefined}
+			>
+				{t.nav.settings}
+			</a>
 		</div>
-	{/if}
+	</nav>
+</div>
 
-	{#if profileSession.active || profileSession.unreachable || inProfiles}
-		{@render children()}
-	{:else}
-		<main class="profile-bootstrap" aria-live="polite">
-			<span class="label">{t.profiles.loading}</span>
-		</main>
-	{/if}
+{@render children()}
 
-	<!--
-		TMDB's terms require this to be visible in the application. Keeping it in the
-		layout means it survives every page added from here on without anyone having
-		to remember it.
-	-->
-	<footer class="mt-16 border-t border-line py-10">
-		<div class="page-shell">
-			<p class="micro max-w-prose leading-relaxed text-muted">
-				{t.tmdbAttribution}
-			</p>
-		</div>
-	</footer>
-{/if}
-
-<style>
-	.profile-bootstrap {
-		display: grid;
-		min-height: 100vh;
-		place-items: center;
-		color: var(--color-muted);
-	}
-
-	/* The profile pill that used to live here is gone: it is a full screen now,
-	   reached from settings or shown on arrival. Its small-screen rule went with
-	   it, and so did the 320px overflow it caused -- three nav targets fit where
-	   four did not. */
-</style>
+<!--
+	TMDB's terms require this to be visible in the application. Keeping it in the
+	layout means it survives every page added from here on without anyone having
+	to remember it.
+-->
+<footer class="mt-16 border-t border-line py-10">
+	<div class="page-shell">
+		<p class="micro max-w-prose leading-relaxed text-muted">
+			{t.tmdbAttribution}
+		</p>
+	</div>
+</footer>
