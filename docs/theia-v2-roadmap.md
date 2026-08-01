@@ -101,7 +101,7 @@ partir d'une ancienne conversation.
 
 | Jalon | Backend | Frontend | Blocage actuel |
 |---|---|---|---|
-| V2-M1 — fichiers et qualités | Implémenté et vérifié, attend fusion | Prêt après fusion `M1-BE` | Aucun blocage backend ; reste `M1-FE` |
+| V2-M1 — fichiers et qualités | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Prêt sur le contrat M1-BE | Aucun blocage backend ; reste `M1-FE` |
 | V2-M2 — profils | Attend les références | Attend les références | Screenshots et croquis du mainteneur |
 | V2-M3 — séries | Backlog | Attend `M3-BE` | À cadrer après M2 |
 | V2-M4 — accès distant | Bloqué | Bloqué | Modèle de sécurité/authentification |

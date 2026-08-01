@@ -27,8 +27,10 @@ ce fichier, `theia-v2-frontend.md` et `DECISIONS.md` dans le même commit.
 
 ### M1-BE — Plusieurs fichiers par film
 
-**Statut : implémenté et vérifié le 01/08/2026 ; attend sa fusion sur `main`
-avant le démarrage de M1-FE.**
+**Statut : implémenté et vérifié dans
+[`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e),
+publié par la [PR #4](https://github.com/Benitoow/theia-media/pull/4). M1-FE
+part de ce commit lorsqu'il est présent sur `main`.**
 
 Le catalogue expose un film, pas une ligne par fichier. Le serveur ne choisit
 jamais une « meilleure qualité » : la fiche renvoie les fichiers, le frontend
@@ -333,7 +335,7 @@ cibles de compilation existantes.
 
 | Jalon | Statut | Commit fusionné | Contrat frontend |
 |---|---|---|---|
-| M1-BE | Implémenté et vérifié, attend fusion | À renseigner après fusion | Contrat ci-dessus ; M1-FE attend `main` |
+| M1-BE | Implémenté et vérifié | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Contrat ci-dessus ; M1-FE part de ce commit |
 | M2-BE | Bloqué par les références | — | — |
 | M3-BE | Backlog | — | — |
 | M4-BE | Bloqué par la sécurité | — | — |

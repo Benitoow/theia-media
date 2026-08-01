@@ -30,8 +30,10 @@ Contraintes communes à tous les écrans :
 
 ### M1-FE — Choix du fichier sur la fiche film
 
-**Statut : prêt à démarrer dès que le commit M1-BE indiqué dans le journal
-backend est fusionné sur `main`.**
+**Statut : prêt à démarrer à partir du commit backend
+[`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e),
+publié par la [PR #4](https://github.com/Benitoow/theia-media/pull/4), dès qu'il
+est présent sur `main`.**
 
 Une seule carte représente le film dans le catalogue. Après ouverture de la
 fiche, l'utilisateur voit les fichiers réellement renvoyés par l'API et choisit
