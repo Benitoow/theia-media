@@ -95,11 +95,46 @@ commence seulement après validation des références et handoff M2-BE.
 
 ### M3-FE — Séries
 
-**Statut : attend M3-BE.**
+**Statut : prêt à démarrer depuis
+[`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7),
+livré par la [PR #5](https://github.com/Benitoow/theia-media/pull/5). Aucun écran
+série n'a été codé par le chantier backend.**
 
-Écrans série, saison et épisode, reprise, épisode suivant et intégration aux
-rangées d'accueil. La composition exacte sera décidée lorsque le contrat backend
-et les cas réels de bibliothèque existeront.
+Le contrat complet, la fixture et les erreurs se trouvent dans la section
+M3-BE de `theia-v2-backend.md`. Le frontend ne repart pas du rapport de spike et
+ne devine pas une route à partir d'un ancien message.
+
+Flux à consommer :
+
+1. `GET /api/library/series` construit le catalogue séries ;
+2. `GET /api/library/series/{id}` construit la fiche et les saisons locales ;
+3. `GET /api/library/series/{id}/seasons/{number}` fournit les items compacts ;
+4. `GET /api/library/episodes/{id}` fournit membres, fichiers, progression,
+   `next_episode_id` et `next_has_gap` ;
+5. un fichier `pending` se mesure uniquement par le `POST .../inspect` explicite ;
+6. le lecteur demande `.../stream/info`, puis utilise `.../stream` ou
+   `.../stream/remux`, avec les mêmes IDs de piste et règles que M1-FE ;
+7. la progression utilise `PUT`/`DELETE /api/library/episodes/{id}/progress` ;
+8. `GET /api/library/series/home` fournit la reprise série et les séries
+   récentes à composer avec l'accueil films existant.
+
+Un item peut porter `[1, 2]` : il doit être présenté comme un épisode combiné,
+pas dupliqué en deux cartes qui lancent le même fichier. `next_has_gap` mérite un
+état visible mais ne bloque pas l'action. Les spéciaux sont la saison 0 et ne
+doivent jamais être injectés dans l'enchaînement automatique principal.
+
+Le choix de fichier reste manuel sur la fiche, exactement comme M1-FE. Une
+piste audio choisie force le remux. Aucun label de résolution, langue ou codec
+n'est inventé quand `media.status != "ok"`, et aucun chemin serveur n'existe à
+afficher.
+
+États obligatoires à maquetter au D-pad et à trois mètres : catalogue vide,
+série sans TMDB, saison 0, item simple, item combiné, trou, dernier épisode,
+plusieurs fichiers, inspection `pending/error/ok`, plusieurs pistes, reprise et
+erreurs stables du tableau M3-BE. Le corpus utilisateur actuel ne contient
+encore aucune série ; utiliser d'abord la fixture backend, puis refaire la
+validation sur les premiers vrais fichiers au lieu de transformer ce manque en
+fausse preuve visuelle.
 
 ### M4-FE — Accès distant
 

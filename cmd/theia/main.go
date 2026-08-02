@@ -136,7 +136,7 @@ func run() error {
 	if merged, err := libraryService.Consolidate(ctx); err != nil {
 		return err
 	} else if merged > 0 {
-		log.Info("consolidated duplicate film records", "merged", merged)
+		log.Info("consolidated duplicate media records", "merged", merged)
 	}
 
 	// An installation that already has a library has, by definition, already
@@ -308,11 +308,15 @@ func markOnboardedIfEstablished(ctx context.Context, state *db.State,
 	if err != nil {
 		return err
 	}
-	if count == 0 {
+	series, err := lib.SeriesCount(ctx)
+	if err != nil {
+		return err
+	}
+	if count == 0 && series == 0 {
 		return nil // a genuine first launch; the welcome screen is for this
 	}
 
-	log.Info("existing library found, skipping the welcome screen", "films", count)
+	log.Info("existing library found, skipping the welcome screen", "films", count, "series", series)
 	return state.Set(ctx, db.KeyOnboardingCompleted, "pre-existing")
 }
 

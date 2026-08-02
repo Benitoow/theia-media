@@ -18,6 +18,7 @@ import (
 type streamInfoResponse struct {
 	ID           int64  `json:"id"`
 	MovieID      int64  `json:"movie_id,omitempty"`
+	EpisodeID    int64  `json:"episode_id,omitempty"`
 	FileID       int64  `json:"file_id,omitempty"`
 	AudioTrackID int64  `json:"audio_track_id,omitempty"`
 	Mode         string `json:"mode"`

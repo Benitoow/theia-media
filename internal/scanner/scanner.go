@@ -22,6 +22,8 @@ import (
 // File is a video file found on disk.
 type File struct {
 	Path       string
+	Root       string
+	Relative   string
 	Name       string
 	SizeBytes  int64
 	ModifiedAt time.Time
@@ -52,7 +54,7 @@ var skippedDirectories = map[string]bool{
 	"extras": true, "extra": true, "featurettes": true, "featurette": true,
 	"behind the scenes": true, "deleted scenes": true, "interviews": true,
 	"trailers": true, "trailer": true, "sample": true, "samples": true,
-	"subs": true, "subtitles": true, "other": true, "shorts": true,
+	"subs": true, "subtitles": true, "other": true,
 
 	// Platform and appliance noise.
 	"@eadir": true, "$recycle.bin": true, "system volume information": true,
@@ -157,12 +159,22 @@ func scanRoot(ctx context.Context, root string, seen map[string]bool, result *Re
 
 		result.Files = append(result.Files, File{
 			Path:       path,
+			Root:       root,
+			Relative:   relativePath(root, path),
 			Name:       name,
 			SizeBytes:  info.Size(),
 			ModifiedAt: info.ModTime(),
 		})
 		return nil
 	})
+}
+
+func relativePath(root, path string) string {
+	relative, err := filepath.Rel(root, path)
+	if err != nil {
+		return filepath.Base(path)
+	}
+	return relative
 }
 
 // isHidden covers dot-files on every platform. Windows' hidden attribute is not

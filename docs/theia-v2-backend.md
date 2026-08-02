@@ -302,12 +302,231 @@ mais ne deviennent ni comptes ni permissions.
 
 ### M3-BE — Séries
 
-**Statut : backlog, à cadrer après M2.**
+**Statut : implémenté et vérifié dans
+[`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7),
+livré par la [PR #5](https://github.com/Benitoow/theia-media/pull/5). Le backend
+M3 est prêt pour M3-FE ; aucun frontend série n'est inclus dans ce commit.**
 
-Modèle série/saison/épisode, parsing `SxxExx`, métadonnées TMDB TV, scan et
-réconciliation, progression par épisode, épisode suivant et API consommable par
-les écrans de série. Le contrat frontend sera écrit à partir du code fusionné,
-pas anticipé ici.
+M3-A, M3-B et M3-C ont été livrés ensemble après décision du mainteneur. La
+progression est volontairement **single-viewer**, comme le produit actuel : M3
+ne ressuscite ni l'ancien modèle profils, ni `X-Theia-Profile`. M2 migrera cette
+progression lorsqu'un nouveau contrat profils existera.
+
+#### Migration et modèle local
+
+`0007_tv_series.sql` est entièrement additive. Elle crée :
+
+- `series`, identité locale et cache TMDB TV ;
+- `seasons`, unique sur `(series_id, season_number)` ;
+- `episodes`, membres TMDB uniques par saison et numéro ;
+- `episode_items`, unités réellement jouables et reprenables ;
+- `episode_item_members`, jointure ordonnée d'un item vers un ou plusieurs
+  épisodes ;
+- `episode_files`, chemins, générations de scan et mesures ffmpeg ;
+- `episode_file_audio_tracks`, pistes mesurées avec IDs SQLite stables.
+
+Un fichier `S01E01E02` produit un item avec `episode_numbers: [1, 2]`, deux
+membres et une seule timeline de progression. Deux encodages ne rejoignent le
+même item que si leur liste canonique de numéros est strictement identique. La
+migration ne lit, ne copie et ne modifie aucune ligne film ; elle est testée
+avec deux passes successives de `Migrate`.
+
+La progression se trouve sur `episode_items`. Elle reprend exactement les
+règles films : moins de 30 secondes n'est pas mémorisé ; la fin est calculée à
+la plus proche des deux bornes, 95 % ou deux minutes restantes ; un reset garde
+la durée mesurée.
+
+#### Classification et réconciliation
+
+Le scanner transmet maintenant la racine et le chemin relatif. Le classifieur
+reconnaît, avec de vraies frontières :
+
+- `S01E02`, `S1E2` et variantes de casse ;
+- `1x02` ;
+- `S01E01E02` et `S01E01-E02` ;
+- `S00E01`, rangé dans la saison spéciale 0 ;
+- un titre/une année avant le marqueur, ou le premier parent qui n'est pas un
+  dossier de saison.
+
+`101`, les dates, les numéros absolus d'anime et « Episode 2 » sans saison ne
+sont pas devinés. Un marqueur fiable sans titre de série renvoie le problème
+stable `episode_series_unknown` et n'est pas transformé en film. Ce problème
+n'empêche pas la purge ; toute erreur de marche ou d'écriture SQLite l'empêche.
+Le dossier `shorts` n'est plus sauté globalement, car il peut contenir une vraie
+série courte.
+
+La réconciliation suit cet ordre : chemin connu, déplacement prouvé par taille
+et date, puis association locale titre normalisé + année. Plusieurs candidats
+de déplacement sont départagés seulement par un meilleur contexte unique —
+même item, saison, puis série. Une égalité reste non fusionnée. Deux identités
+TMDB contradictoires bloquent l'association locale ; un même `tmdb_id` non nul
+est au contraire la preuve qui consolide des titres localisés. Une bascule
+film ↔ épisode retire l'ancien propriétaire dans la même transaction.
+
+Les suppressions retirent dans l'ordre fichiers, items orphelins, épisodes,
+saisons puis séries ; un nouveau fichier principal est promu si nécessaire.
+Un renommage logique crée le nouvel `episode_item`, mais conserve le
+`episode_file.id`, les mesures média et la progression la plus récente lorsque
+le déplacement est prouvé.
+
+#### TMDB TV
+
+Le client utilise :
+
+- `GET /3/search/tv`, avec `first_air_date_year` quand il existe ;
+- `GET /3/tv/{id}?append_to_response=credits` ;
+- `GET /3/tv/{id}/season/{number}` uniquement pour les saisons locales.
+
+Le nom ou `original_name` exact gagne, puis la popularité. Les métadonnées
+restent en `fr-FR`, avec 90 jours de cache après succès et 7 jours après absence
+ou erreur. Une saison fraîche est relue si un nouvel épisode local apparaît :
+le cache surveille série, saison **et épisode**, ce qui évite de laisser une
+nouvelle acquisition `pending` pendant trois mois. TMDB ne crée jamais de
+saison ou d'épisode absent du disque.
+
+#### Catalogue et reprise
+
+| Méthode et route | Réponse / rôle |
+|---|---|
+| `GET /api/library/series?limit=&offset=` | Catalogue paginé, `kind: "series"` |
+| `GET /api/library/series/{series_id}` | Fiche série et saisons possédées |
+| `GET /api/library/series/{series_id}/seasons/{number}` | Items locaux compacts de la saison |
+| `GET /api/library/episodes/{episode_id}` | Item complet, membres, fichiers, progression et voisinage |
+| `GET /api/library/series/home?limit=` | `continue_watching` + `recent_series` |
+| `PUT /api/library/episodes/{episode_id}/progress` | Sauve `position_seconds` et `duration_seconds` |
+| `DELETE /api/library/episodes/{episode_id}/progress` | Repart de zéro, réponse 204 |
+
+L'`episode_id` est toujours l'ID de `episode_items`, jamais un ID TMDB. Une
+réponse de saison reste compacte : elle expose membres et progression, mais
+pas `files`. Le frontend ouvre ensuite la fiche de l'item pour obtenir les
+fichiers. Aucun payload ne contient de chemin absolu.
+
+Fixture capturée contre le serveur de validation et TMDB réel ; les mesures
+restent `pending` tant que l'inspection explicite n'a pas eu lieu :
+
+```json
+{
+  "kind": "episode",
+  "id": 1,
+  "series_id": 1,
+  "series_title": "Severance",
+  "season_id": 1,
+  "season_number": 1,
+  "episode_numbers": [1],
+  "episode_metadata": [
+    {
+      "id": 1,
+      "episode_number": 1,
+      "metadata": {
+        "tmdb_id": 1982925,
+        "name": "Le bon côté de l'enfer",
+        "runtime_minutes": 57,
+        "status": "ok"
+      }
+    }
+  ],
+  "files": [
+    {
+      "id": 1,
+      "file_name": "S01E01.1080p.mkv",
+      "size_bytes": 2415845,
+      "extension": "mkv",
+      "is_primary": true,
+      "media": { "status": "pending", "audio_tracks": [] }
+    },
+    {
+      "id": 2,
+      "file_name": "S01E01.720p.mp4",
+      "size_bytes": 124512,
+      "extension": "mp4",
+      "is_primary": false,
+      "media": { "status": "pending", "audio_tracks": [] }
+    }
+  ],
+  "progress": { "position_seconds": 0, "finished": false },
+  "next_episode_id": 2
+}
+```
+
+Le prochain item est le prochain possédé localement. `next_has_gap: true`
+signale un saut de numéro sans bloquer la lecture. Passer de la fin d'une saison
+à l'épisode 1 de la suivante n'est pas un trou. `S00` ne reçoit jamais de
+`next_episode_id`, et un item combiné avance depuis son numéro maximal.
+
+`/api/library/stats` ajoute `series` et `episodes`. Le rapport de scan garde ses
+compteurs historiques de fichiers et ajoute `movie_files`, `episode_files`,
+`series` et `episodes`. `enriched`, `not_found` et `metadata_errors` agrègent
+désormais films et séries/saisons.
+
+#### Inspection, fichiers, audio et lecture
+
+| Méthode et route | Rôle |
+|---|---|
+| `POST /api/library/episodes/{episode_id}/files/{file_id}/inspect` | Mesure conteneur, durée, vidéo et pistes |
+| `GET /api/library/episodes/{episode_id}/files/{file_id}/stream/info` | Décide direct/remux/refus sans lancer ffmpeg |
+| `GET /api/library/episodes/{episode_id}/files/{file_id}/stream` | Direct play avec HTTP Range |
+| `GET /api/library/episodes/{episode_id}/files/{file_id}/stream/remux` | Remux, seek `t` et sélection `audio` |
+
+`audio={audio_track_id}` utilise l'ID stable exposé après inspection, jamais
+`stream_index`. Une sélection force le remux même sur MP4. `t={secondes}` garde
+le seek corrigé. La durée vient, dans l'ordre, de la mesure du fichier, de la
+progression connue, puis de la somme des durées TMDB des membres. Les routes
+sont placées sous la ressource épisode : la forme initialement proposée
+`/api/stream/episodes/...` chevauche réellement les wildcards films existants
+dans `http.ServeMux`.
+
+Le navigateur ne transmet ni chemin ni argument ffmpeg. Le serveur vérifie
+`episode_item → episode_file → audio_track`, résout les jonctions/liens, puis
+refuse tout fichier hors des racines configurées. Une inspection échouée est
+retentable ; seule une vraie erreur média est mise en cache comme `error`.
+
+#### Codes d'erreur stables pour M3-FE
+
+| HTTP | `error` |
+|---|---|
+| 400 | `invalid_series_id`, `invalid_season_number`, `invalid_episode_id`, `invalid_file_id` |
+| 400 | `invalid_audio_track_id`, `invalid_progress_payload`, `audio_selection_requires_remux` |
+| 403 | `file_outside_library` |
+| 404 | `series_not_found`, `season_not_found`, `episode_not_found`, `file_not_found` |
+| 404 | `audio_track_not_found`, `media_file_unavailable` |
+| 409 | `media_not_inspected` |
+| 415 | `media_unreadable`, `video_transcode_required` |
+| 500 | `series_unavailable`, `season_unavailable`, `episode_unavailable`, `file_unavailable` |
+| 500 | `audio_track_unavailable`, `progress_not_saved`, `progress_not_reset` |
+| 500 | `media_file_unreadable`, `media_inspection_not_saved`, `stream_start_failed` |
+| 501 | `ffmpeg_unsupported` |
+| 503 | `ffmpeg_unavailable` |
+
+#### Vérification effectuée
+
+- `go test ./... -count=1` et `go vet ./...` passent ;
+- six builds passent avec `CGO_ENABLED=0` : Windows, Linux et macOS en
+  `amd64`/`arm64` ;
+- la bibliothèque réelle a été scannée dans une base et un serveur isolés sur
+  8395 : **274 fichiers**, **254 films**, **0 fichier épisode**, **0 série** et
+  aucun faux positif ; la base utilisateur n'a pas été ouverte en écriture ;
+- un corpus positif décodable séparé contient saison 1, `S00`, un item
+  `S01E02E03` et deux encodages de `S01E01` ; il produit 4 fichiers, 3 items et
+  1 série ;
+- la vraie API TMDB a reconnu *Severance* (`tmdb_id: 95396`) et rempli uniquement
+  les saisons 0 et 1 locales ; le scan suivant a fait 0 enrichissement ;
+- les deux fichiers ont été inspectés en `1280×720` et `640×360`; le MP4 a
+  exposé deux pistes `eng`/`fra` et la sélection française a renvoyé
+  `audio_track_selected` ;
+- le direct play a renvoyé 206 et exactement 20 octets pour une Range de 20
+  octets ; le remux français a renvoyé 200, produit 96 095 octets et a été
+  redécodé sans erreur par ffmpeg ;
+- un renommage ambigu face à trois fichiers de taille/date identiques a gardé
+  `episode_file.id = 3`, déplacé `[2,3]` vers `[4,5]`, signalé le trou, puis
+  conservé 60 secondes de progression au retour ;
+- aucun corpus **utilisateur** positif n'existe encore. Le positif ci-dessus est
+  un corpus de validation généré et réellement lu, pas une série de la
+  bibliothèque du mainteneur. Ce manque reste à revalider pendant M3-FE avec
+  les premiers fichiers réels.
+
+Hors contrat : sous-titres, transcodage vidéo, ordre DVD/absolu, profils,
+accès distant et choix automatique de « meilleure » qualité. Ils ne se sont pas
+glissés dans M3 par la fenêtre pendant que la porte était ouverte.
 
 ### M4-BE — Accès distant
 
@@ -337,7 +556,7 @@ cibles de compilation existantes.
 |---|---|---|---|
 | M1-BE | Implémenté et vérifié | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Contrat ci-dessus ; M1-FE part de ce commit |
 | M2-BE | Bloqué par les références | — | — |
-| M3-BE | Backlog | — | — |
+| M3-BE | Implémenté et vérifié | [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7), [PR #5](https://github.com/Benitoow/theia-media/pull/5) | Contrat ci-dessus ; M3-FE part de ce commit |
 | M4-BE | Bloqué par la sécurité | — | — |
 | M5-BE | Sans backend | — | Aucun |
 | M6-BE | Différé | — | — |

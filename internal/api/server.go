@@ -91,6 +91,14 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/library/movies/{id}/files/{file_id}/inspect", s.handleInspectMovieFile)
 	mux.HandleFunc("PUT /api/library/movies/{id}/progress", s.handleSaveProgress)
 	mux.HandleFunc("DELETE /api/library/movies/{id}/progress", s.handleResetProgress)
+	mux.HandleFunc("GET /api/library/series", s.handleSeriesList)
+	mux.HandleFunc("GET /api/library/series/home", s.handleSeriesHome)
+	mux.HandleFunc("GET /api/library/series/{id}", s.handleSeries)
+	mux.HandleFunc("GET /api/library/series/{id}/seasons/{season}", s.handleSeason)
+	mux.HandleFunc("GET /api/library/episodes/{id}", s.handleEpisode)
+	mux.HandleFunc("POST /api/library/episodes/{id}/files/{file_id}/inspect", s.handleInspectEpisodeFile)
+	mux.HandleFunc("PUT /api/library/episodes/{id}/progress", s.handleSaveEpisodeProgress)
+	mux.HandleFunc("DELETE /api/library/episodes/{id}/progress", s.handleResetEpisodeProgress)
 	mux.HandleFunc("GET /api/library/stats", s.handleLibraryStats)
 	mux.HandleFunc("POST /api/library/scan", s.handleScan)
 	mux.HandleFunc("GET /api/images/{size}/{name}", s.handleImage)
@@ -100,6 +108,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/stream/{id}/files/{file_id}/info", s.handleMovieFileStreamInfo)
 	mux.HandleFunc("GET /api/stream/{id}/files/{file_id}/remux", s.handleMovieFileStreamRemux)
 	mux.HandleFunc("GET /api/stream/{id}/files/{file_id}", s.handleMovieFileStreamDirect)
+	// Episode streams live below their library resource. Putting them under
+	// /api/stream/episodes would overlap the legacy film wildcard routes in Go's
+	// ServeMux (some deliberately bizarre IDs can match both patterns).
+	mux.HandleFunc("GET /api/library/episodes/{id}/files/{file_id}/stream/info", s.handleEpisodeFileStreamInfo)
+	mux.HandleFunc("GET /api/library/episodes/{id}/files/{file_id}/stream/remux", s.handleEpisodeFileStreamRemux)
+	mux.HandleFunc("GET /api/library/episodes/{id}/files/{file_id}/stream", s.handleEpisodeFileStreamDirect)
 	mux.Handle("/", s.staticHandler())
 	return s.logRequests(mux)
 }
