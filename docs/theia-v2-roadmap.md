@@ -103,7 +103,7 @@ partir d'une ancienne conversation.
 |---|---|---|---|
 | V2-M1 — fichiers et qualités | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Prêt sur le contrat M1-BE | Aucun blocage backend ; reste `M1-FE` |
 | V2-M2 — profils | Attend les références | Attend les références | Screenshots et croquis du mainteneur |
-| V2-M3 — séries | Backlog | Attend `M3-BE` | À cadrer après M2 |
+| V2-M3 — séries | [Découverte M3.0 : `PARTIAL`](theia-v2-m3-discovery.md) | Attend un contrat M3-BE réel | Corpus série positif + décisions multi-épisodes/progression |
 | V2-M4 — accès distant | Bloqué | Bloqué | Modèle de sécurité/authentification |
 | V2-M5 — logo/navigation | Aucun chantier backend | Backlog | Direction artistique |
 | V2-M6 — optimisation matérielle | Différé | Attend `M6-BE` | À ouvrir après stabilisation du reste |
@@ -163,6 +163,18 @@ Le plus gros morceau du backlog, mérite son propre cycle multi-session
 complet façon M0-M8, pas une phase parmi d'autres. Modèle série/saison/
 épisode, parsing `SxxExx`, endpoints TMDB TV, enchaînement automatique
 d'épisode, "continuer à regarder" adapté aux séries.
+
+La [découverte backend M3.0](theia-v2-m3-discovery.md) est terminée avec un
+verdict `PARTIAL`. Le parseur jetable ne produit aucun faux positif sur les 283
+vidéos de la bibliothèque active et les routes TMDB TV nécessaires sont
+confirmées dans la documentation officielle. En revanche, la bibliothèque ne
+contient aucun épisode : import positif, réconciliation, lecture et progression
+restent non vérifiés. Aucune migration de production ni API n'a donc été créée.
+
+Le découpage recommandé est M3-A catalogue local, M3-B métadonnées/lecture,
+puis M3-C progression et accueil après le contrat profils de M2. Les décisions
+sur les fichiers multi-épisodes, les spéciaux, les trous de saison et la
+grammaire initiale doivent être tranchées avant M3-A.
 
 ### V2-M4 — Accès distant hors réseau local
 Identifié dès le tout premier message comme LE différentiateur manquant

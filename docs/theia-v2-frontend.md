@@ -95,11 +95,15 @@ commence seulement après validation des références et handoff M2-BE.
 
 ### M3-FE — Séries
 
-**Statut : attend M3-BE.**
+**Statut : attend un contrat M3-BE implémenté.**
 
 Écrans série, saison et épisode, reprise, épisode suivant et intégration aux
 rangées d'accueil. La composition exacte sera décidée lorsque le contrat backend
 et les cas réels de bibliothèque existeront.
+
+La [découverte backend M3.0](theia-v2-m3-discovery.md) est un rapport de spike,
+pas un contrat à coder. Elle ne fournit volontairement aucun payload figé : le
+frontend reste bloqué jusqu'à la fusion et à la vérification de M3-A/M3-B.
 
 ### M4-FE — Accès distant
 

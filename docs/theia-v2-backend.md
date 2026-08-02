@@ -302,12 +302,20 @@ mais ne deviennent ni comptes ni permissions.
 
 ### M3-BE — Séries
 
-**Statut : backlog, à cadrer après M2.**
+**Statut : découverte M3.0 terminée, verdict `PARTIAL`. Production non
+commencée.**
 
-Modèle série/saison/épisode, parsing `SxxExx`, métadonnées TMDB TV, scan et
-réconciliation, progression par épisode, épisode suivant et API consommable par
-les écrans de série. Le contrat frontend sera écrit à partir du code fusionné,
-pas anticipé ici.
+Le [rapport de découverte](theia-v2-m3-discovery.md) contient l'inventaire réel,
+le spike de parsing, la cartographie du backend, le schéma et les routes
+proposés, ainsi que les décisions encore ouvertes. Le corpus actif compte 283
+vidéos mais aucun motif d'épisode : zéro faux positif a été mesuré, aucun import
+positif réel ne l'a été. C'est pourquoi il n'existe encore ni migration, ni
+endpoint, ni contrat frontend M3.
+
+Le prochain lot recommandé est M3-A — catalogue local additif — puis M3-B —
+TMDB TV et lecture. M3-C — progression, épisode suivant et accueil — attend le
+contrat de profils M2 afin de ne pas inventer une seconde fois le propriétaire
+de la progression.
 
 ### M4-BE — Accès distant
 
@@ -337,7 +345,7 @@ cibles de compilation existantes.
 |---|---|---|---|
 | M1-BE | Implémenté et vérifié | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Contrat ci-dessus ; M1-FE part de ce commit |
 | M2-BE | Bloqué par les références | — | — |
-| M3-BE | Backlog | — | — |
+| M3-BE | Découverte `PARTIAL` ; production non commencée | [rapport M3.0](theia-v2-m3-discovery.md) | Aucun contrat ; attend M3-A/M3-B vérifiés |
 | M4-BE | Bloqué par la sécurité | — | — |
 | M5-BE | Sans backend | — | Aucun |
 | M6-BE | Différé | — | — |
