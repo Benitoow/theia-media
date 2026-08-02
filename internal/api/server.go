@@ -1,9 +1,9 @@
 // Package api exposes Theia's HTTP surface: the small JSON API the frontend
 // talks to, and the embedded single-page app itself.
 //
-// There is no authentication anywhere in this package, and that is a deliberate
-// scope decision for v1 rather than an oversight -- Theia assumes it is running
-// on a trusted LAN. See the warning in README.md.
+// LAN administration deliberately keeps the v1 zero-authentication model. The
+// separate remote listener authenticates WireGuard devices and exposes only a
+// viewer-safe subset of these routes. See internal/remoteaccess and README.md.
 package api
 
 import (
@@ -19,6 +19,7 @@ import (
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
+	"github.com/Benitoow/theia-media/internal/remoteaccess"
 	"github.com/Benitoow/theia-media/internal/updater"
 )
 
@@ -32,6 +33,7 @@ type Options struct {
 	State     *db.State
 	Updater   *updater.Updater
 	Activity  *activity.Tracker
+	Remote    *remoteaccess.Service
 	Web       fs.FS
 	Version   string
 	KeySource config.KeySource
@@ -48,6 +50,7 @@ type Server struct {
 	state     *db.State
 	updater   *updater.Updater
 	activity  *activity.Tracker
+	remote    *remoteaccess.Service
 	web       fs.FS
 	log       *slog.Logger
 	version   string
@@ -66,6 +69,7 @@ func New(opts Options) *Server {
 		state:     opts.State,
 		updater:   opts.Updater,
 		activity:  opts.Activity,
+		remote:    opts.Remote,
 		web:       opts.Web,
 		log:       opts.Logger,
 		version:   opts.Version,
@@ -85,6 +89,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/update", s.handleUpdateStatus)
 	mux.HandleFunc("POST /api/update/check", s.handleUpdateCheck)
 	mux.HandleFunc("POST /api/update/apply", s.handleUpdateApply)
+	mux.HandleFunc("GET /api/remote-access", s.handleRemoteAccessStatus)
+	mux.HandleFunc("PUT /api/remote-access", s.handleUpdateRemoteAccess)
+	mux.HandleFunc("POST /api/remote-access/peers", s.handleCreateRemotePeer)
+	mux.HandleFunc("DELETE /api/remote-access/peers/{id}", s.handleRevokeRemotePeer)
+	mux.HandleFunc("GET /api/remote-access/session", s.handleRemoteSession)
 	mux.HandleFunc("GET /api/library/home", s.handleHome)
 	mux.HandleFunc("GET /api/library/movies", s.handleMovies)
 	mux.HandleFunc("GET /api/library/movies/{id}", s.handleMovie)

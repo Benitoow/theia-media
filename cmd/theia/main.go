@@ -1,6 +1,6 @@
-// Command theia is the Theia media server: one binary, no configuration, no
-// account. It serves the embedded web interface over HTTP and announces itself
-// on the local network so other devices can find it without an IP address.
+// Command theia is the Theia media server: one binary, no account. It serves
+// the embedded web interface on the LAN, can expose a viewer-only interface
+// through embedded WireGuard, and announces itself locally through mDNS.
 package main
 
 import (
@@ -28,6 +28,7 @@ import (
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
+	"github.com/Benitoow/theia-media/internal/remoteaccess"
 	"github.com/Benitoow/theia-media/internal/tmdb"
 	"github.com/Benitoow/theia-media/internal/updater"
 )
@@ -157,6 +158,8 @@ func run() error {
 	// browser-friendly containers is never.
 	transcoder := ffmpeg.New(filepath.Join(dataDir, "bin"), log)
 	watching := activity.New()
+	remote := remoteaccess.New(database, dataDir, cfg.Port, log)
+	defer remote.Close()
 
 	// Where this binary lives, and the leftover from any previous update. The
 	// outgoing executable cannot be deleted while it is running, so it is
@@ -200,6 +203,7 @@ func run() error {
 				// close, so the replacement can bind straight away.
 				_ = httpSrv.Shutdown(shutdownCtx)
 			}
+			remote.Close()
 			_ = announcer.Close()
 
 			replacement := exec.Command(execPath, os.Args[1:]...)
@@ -222,26 +226,33 @@ func run() error {
 		return fmt.Errorf("cannot listen on port %d (is Theia already running?): %w", cfg.Port, err)
 	}
 
+	apiHandler := api.New(api.Options{
+		Config:    cfg,
+		Library:   libraryService,
+		Images:    images,
+		FFmpeg:    transcoder,
+		State:     state,
+		Updater:   selfUpdater,
+		Activity:  watching,
+		Remote:    remote,
+		Web:       webFS,
+		Version:   version,
+		KeySource: keySource,
+		Logger:    log,
+	}).Handler()
 	httpSrv = &http.Server{
-		Handler: api.New(api.Options{
-			Config:    cfg,
-			Library:   libraryService,
-			Images:    images,
-			FFmpeg:    transcoder,
-			State:     state,
-			Updater:   selfUpdater,
-			Activity:  watching,
-			Web:       webFS,
-			Version:   version,
-			KeySource: keySource,
-			Logger:    log,
-		}).Handler(),
+		Handler: remoteaccess.LANOnly(apiHandler),
 		// Guards against a client that opens a connection and never finishes
 		// sending its request headers. There is deliberately no WriteTimeout:
 		// video streaming holds a single response open for the length of a film.
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       120 * time.Second,
 		ErrorLog:          slog.NewLogLogger(log.Handler(), slog.LevelWarn),
+	}
+	if err := remote.Start(ctx, apiHandler); err != nil {
+		// Remote access always fails closed. Keep the LAN listener alive so the
+		// owner has a recovery path to change the UDP port or disable the feature.
+		log.Warn("remote access is unavailable; LAN access remains active", "error", err)
 	}
 
 	announcer, err = discovery.Announce(cfg.Hostname, cfg.Port, log)
@@ -282,6 +293,7 @@ func run() error {
 		log.Info("shutting down")
 	}
 
+	remote.Close()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := httpSrv.Shutdown(shutdownCtx); err != nil {

@@ -944,6 +944,90 @@ of the current household library found 274 video files, 254 film identities and
 zero episode false positives. It still contains no user-owned series, so that
 negative result is reported as such rather than promoted into positive proof.
 
+## 43. Remote access is embedded userspace WireGuard, not a public web login
+
+**Decided and verified in V2-M4-BE.** Decision 6 still governs the trusted LAN:
+Theia has no account, password or household permission system. It is refined at
+the internet boundary, not discarded. A remote device authenticates by proving
+possession of its own WireGuard private key before any HTTP byte reaches the
+application. That device identity is transport access, not a person, profile or
+Theia account.
+
+The server uses the official pure-Go WireGuard implementation with gVisor's
+userspace netstack. It creates neither an OS tunnel interface nor a route,
+requires no administrator/root privilege, starts no helper process and keeps
+all six CGO-free build targets. `tsnet` was tested as an architectural option
+and rejected despite its excellent traversal UX: joining a tailnet requires a
+control plane, account and cloud dependency that contradict the founding
+contract. Requiring a separately installed VPN was rejected for the same reason
+as Docker-as-installation: it turns “one binary” into marketing punctuation.
+
+Theia initiates no discovery, relay, STUN, UPnP or certificate request. It
+passively accepts WireGuard UDP on the configured port. The owner supplies the
+public `host:port` and router mapping; CGNAT remains an explicit unsupported
+case rather than a hidden third-party service.
+
+## 44. LAN administration and remote viewing are two different capabilities
+
+The historical TCP listener remains the full, zero-login administration
+surface, but now rejects public source addresses and ignores all forwarded-IP
+headers. Private, loopback, link-local and actually attached interface prefixes
+are accepted. This guard is defence in depth, not permission to forward TCP
+8383: a local reverse proxy or source-NAT router can still make an outside call
+look local.
+
+The HTTP listener inside WireGuard accepts only the `/32` address of an active
+peer and the exact host `10.77.0.1:<Theia port>`. Its allowlist contains the
+static UI, health/session, catalogue, artwork, streams, explicit media
+inspection and playback progress. Settings, scans, onboarding/LAN addresses,
+updates and all peer management remain LAN-only. Unknown paths fail closed.
+
+Remote browser writes require same-origin evidence. Cross-site subresources,
+foreign `Origin`, DNS rebinding hosts and framing are rejected even for read
+routes where a hostile page could otherwise embed a stream and spend server
+resources. Native WireGuard clients do not need to invent browser headers.
+This split is enforced before the shared API handler, so adding a new route does
+not accidentally make it remote: it must be admitted deliberately.
+
+## 45. A remote device receives one private key once
+
+The server has one stable WireGuard private key. On Windows its file is bound to
+the current OS user through DPAPI; on Linux and macOS it is owner-readable only
+with mode `0600`. The database stores active and revoked client public keys,
+names and tunnel addresses, never a server or client private key.
+
+Provisioning generates a fresh client keypair and returns the private material
+once as a standard WireGuard configuration and QR SVG with `Cache-Control:
+no-store`. Status responses cannot reproduce it. Losing the configuration means
+revoking that peer and creating a new one. A revoked public key is never
+reactivated; this avoids stale sessions and makes the operator's mental model
+match the cryptographic state.
+
+Each client routes only `10.77.0.1/32`, not `0.0.0.0/0`, and receives one address
+inside `10.77.0.0/24`. The fixed subnet exists only in the process netstack, so
+even a household LAN using the same `/24` keeps its routes. At most 32 peers may
+be active; a revoked address may be reused by a new key.
+
+## 46. Reachability is observed, configuration failures fail closed, LAN recovers
+
+`listen_port` is the local UDP port. `endpoint` is opaque configuration written
+into future client files; Theia never contacts it. Changing only the endpoint
+therefore does not interrupt active streams, but existing clients must edit it
+or be reprovisioned. Changing the listening port restarts WireGuard.
+
+The status says `reachability: unverified` until a live peer completes a real
+handshake, then `confirmed`. No external probe means no green fiction based on
+a successful local bind. If enable or reconfiguration fails, the new listener
+is not persisted and the old one is restored where possible. If runtime repair
+or revocation cannot be applied safely, the whole remote tunnel closes while
+the LAN server stays alive.
+
+A corrupt or machine-bound key never gets silently replaced, because doing so
+would strand every provisioned device while claiming continuity. The owner can
+always disable remote access from the LAN, remove the unusable key file and
+provision fresh devices. Windows data directories copied to another user or
+machine require exactly that recovery.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
