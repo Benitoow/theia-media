@@ -1,13 +1,22 @@
 # V2-M3 — Découverte backend séries
 
-**Verdict : PARTIAL.** Le chemin technique est viable, mais M3 n'est pas prêt
-pour une migration de production. La bibliothèque active ne contient aucune
-série : le spike a donc vérifié l'absence de faux positifs sur les films réels,
-pas l'import positif d'une vraie saison.
+> **Mise à jour après implémentation :** le verdict `PARTIAL` du spike est
+> dépassé par M3-BE, implémenté dans
+> [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7)
+> et livré par la [PR #5](https://github.com/Benitoow/theia-media/pull/5).
+> Le contrat de production est dans `theia-v2-backend.md`. Les sections 1 à 10
+> ci-dessous restent l'archive exacte de la découverte menée avant le code —
+> elles expliquent les risques et ne doivent plus être lues comme l'état actuel.
 
-Ce document décrit l'état observé le 2 août 2026 depuis `d0aac15`. Il ne crée
-aucun contrat frontend, aucune migration SQLite et aucun endpoint. Les éléments
-marqués **proposés** restent à trancher avant le code de production.
+**Verdict historique du spike : PARTIAL.** Le chemin technique était viable,
+mais la bibliothèque active ne contenait aucune série : le spike avait donc
+vérifié l'absence de faux positifs sur les films réels, pas l'import positif
+d'une vraie saison.
+
+Ce document décrivait l'état observé le 2 août 2026 depuis `d0aac15`. À cette
+date, il ne créait aucun contrat frontend, aucune migration SQLite et aucun
+endpoint. Les éléments marqués **proposés** ont depuis été tranchés et leur
+résultat est résumé en section 11.
 
 ---
 
@@ -338,3 +347,41 @@ Le prochain coup recommandé est donc M3-A, **après validation des décisions 1
 5 et mise à disposition d'un corpus positif**. Commencer la migration avant ces
 deux entrées ne serait pas de l'avance ; ce serait juste coder plus vite dans le
 brouillard.
+
+---
+
+## 11. Sortie du spike et état livré
+
+Le mainteneur a ensuite demandé M3 backend en entier. Les cinq choix proposés
+ont été retenus :
+
+1. M3-A/B/C livrés ensemble côté serveur ;
+2. un fichier multi-épisodes forme un item combiné ;
+3. `S00` reste visible et hors autoplay principal ;
+4. le prochain épisode est le prochain possédé, avec indicateur de trou ;
+5. la grammaire initiale reste `SxxExx` et `1x02`.
+
+Faute de contrat M2, la progression épisode est single-viewer sur
+`episode_items`, comme les films actuels. Cette décision est migratable et ne
+réintroduit aucune table, entête ou sélection de l'ancien système profils.
+
+M3-BE fournit maintenant la migration `0007_tv_series.sql`, la réconciliation,
+TMDB TV, la consolidation, les API catalogue/saison/item, les fichiers et pistes
+mesurés, direct/remux, progression, reprise et voisinage. Les décisions 39 à 42
+de `DECISIONS.md` en sont la trace d'architecture.
+
+Vérification finale :
+
+- la bibliothèque réelle actuelle compte 274 vidéos, classées en 254 films et
+  0 série dans une base isolée — zéro faux positif ;
+- le corpus positif séparé a réellement été décodé et contient `S00`, saison 1,
+  multi-épisode, deux fichiers et deux pistes audio ;
+- TMDB réel a identifié *Severance* et seules les saisons locales ont été lues ;
+- Range 206, remux de la piste française, progression, trou, renommage ambigu,
+  suppression, scans répétés et changement film ↔ épisode sont couverts ;
+- tests, vet et les six cibles sans CGO passent.
+
+La réserve ne change pas de nom pour faire joli : aucune série utilisateur
+n'existe encore. Le corpus positif est contrôlé et décodable, pas issu du foyer.
+M3-FE doit donc refaire le parcours visuel sur les premiers vrais fichiers
+avant que le jalon produit complet soit déclaré terminé.

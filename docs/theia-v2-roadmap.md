@@ -103,7 +103,7 @@ partir d'une ancienne conversation.
 |---|---|---|---|
 | V2-M1 — fichiers et qualités | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Prêt sur le contrat M1-BE | Aucun blocage backend ; reste `M1-FE` |
 | V2-M2 — profils | Attend les références | Attend les références | Screenshots et croquis du mainteneur |
-| V2-M3 — séries | [Découverte M3.0 : `PARTIAL`](theia-v2-m3-discovery.md) | Attend un contrat M3-BE réel | Corpus série positif + décisions multi-épisodes/progression |
+| V2-M3 — séries | [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7), [PR #5](https://github.com/Benitoow/theia-media/pull/5) | Prêt sur le contrat M3-BE | Reste M3-FE + validation sur les premiers fichiers série utilisateur |
 | V2-M4 — accès distant | Bloqué | Bloqué | Modèle de sécurité/authentification |
 | V2-M5 — logo/navigation | Aucun chantier backend | Backlog | Direction artistique |
 | V2-M6 — optimisation matérielle | Différé | Attend `M6-BE` | À ouvrir après stabilisation du reste |
@@ -164,17 +164,24 @@ complet façon M0-M8, pas une phase parmi d'autres. Modèle série/saison/
 épisode, parsing `SxxExx`, endpoints TMDB TV, enchaînement automatique
 d'épisode, "continuer à regarder" adapté aux séries.
 
-La [découverte backend M3.0](theia-v2-m3-discovery.md) est terminée avec un
-verdict `PARTIAL`. Le parseur jetable ne produit aucun faux positif sur les 283
-vidéos de la bibliothèque active et les routes TMDB TV nécessaires sont
-confirmées dans la documentation officielle. En revanche, la bibliothèque ne
-contient aucun épisode : import positif, réconciliation, lecture et progression
-restent non vérifiés. Aucune migration de production ni API n'a donc été créée.
+M3-BE est implémenté dans
+[`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7)
+et livré par la [PR #5](https://github.com/Benitoow/theia-media/pull/5). Le modèle
+additif série/saison/épisode, les items multi-épisodes, les fichiers et pistes
+audio, TMDB TV, le streaming, la progression single-viewer, le prochain épisode
+et l'accueil séries sont couverts par le contrat de `theia-v2-backend.md`.
 
-Le découpage recommandé est M3-A catalogue local, M3-B métadonnées/lecture,
-puis M3-C progression et accueil après le contrat profils de M2. Les décisions
-sur les fichiers multi-épisodes, les spéciaux, les trous de saison et la
-grammaire initiale doivent être tranchées avant M3-A.
+Les choix sont désormais figés : `SxxExx`/`1x02` seulement, un item combiné
+pour plusieurs numéros, `S00` séparé et hors autoplay, prochain item possédé
+avec indicateur de trou. M2 migrera la progression vers les futurs profils ; M3
+n'a pas restauré l'ancien modèle supprimé.
+
+La bibliothèque active actuelle contient 274 vidéos et toujours aucune série :
+le scan isolé confirme zéro faux positif, pas un import positif utilisateur. Le
+positif a donc été vérifié sur un corpus décodable séparé avec TMDB réel, saison
+spéciale, multi-épisode, deux qualités, deux pistes, Range et remux. M3-FE est
+débloqué, mais devra refaire la validation dès que les premiers fichiers série
+réels seront disponibles.
 
 ### V2-M4 — Accès distant hors réseau local
 Identifié dès le tout premier message comme LE différentiateur manquant

@@ -853,6 +853,97 @@ audio-copy remux, AC3-to-AAC remux and unsupported MPEG-2. A separate two-audio-
 track fixture proved that selecting the French track maps only its stored ffmpeg
 stream index. The original database hash and timestamp did not change.
 
+## 39. Series use parallel tables and a playable episode item
+
+**Decided and verified in V2-M3-BE.** Series do not force the stable film model
+through a polymorphic media tree. `series`, `seasons` and `episodes` own the
+catalogue hierarchy; `episode_items` owns what the player can actually resume;
+`episode_files` and `episode_file_audio_tracks` mirror the measured M1 file
+contract. The migration is additive and does not rewrite a movie row.
+
+The extra playable layer is not decorative normalization. `S01E01E02` is one
+physical timeline with two TMDB members, so it becomes one item with
+`episode_numbers: [1, 2]`, one progress position and any number of selectable
+encodes. Pretending it is two independent cards would launch both at second
+zero and call the lie a feature. Files are grouped only when their complete,
+ordered episode key is identical.
+
+Films and episodes keep separate file tables so each foreign key, cascade and
+ownership check remains enforceable by SQLite. Go shares the measured media
+types and rules; SQL stays explicit. A path that changes family is removed from
+the old family in the same transaction, so it is never playable as both a film
+and an episode.
+
+## 40. Episode classification is strict, and uncertain input remains visible
+
+The production grammar intentionally recognizes only boundary-safe `SxxExx`
+and `1x02`, including compact or separated multi-episode forms. It accepts
+`S00` as specials and uses the nearest non-season parent only when the filename
+has no series prefix. Numeric `101`, absolute anime numbering, dates and a bare
+“Episode 2” remain unclassified until real collections justify precise rules.
+
+A reliable episode marker without a series title produces
+`episode_series_unknown`; it is not quietly indexed as a film. This problem is
+non-blocking for deletion because the disk walk succeeded and the omission was
+deliberate. Every unreadable directory/file or rejected SQLite write still
+blocks both movie and episode pruning. The global `shorts` directory exclusion
+was removed: once Theia supports episodic shorts, that name is no longer proof
+that a whole subtree is disposable.
+
+Move detection remains conservative. Same size and modification time is
+accepted directly only when unique. If several unseen files share those bytes,
+the episode branch ranks exact item, season and series context; it acts only on
+a unique best candidate and otherwise inserts rather than steals. This rule was
+added after the real HTTP validation reproduced the ambiguity with three copied
+clips. A changed logical episode receives a new `episode_item.id`, while the
+physical `episode_file.id`, measured media and most recent progress survive.
+
+## 41. Series playback is single-viewer until profiles return
+
+M3 does not resurrect the deleted profile API from decisions 31 and 35.
+Progress lives on `episode_items` under the same 30-second memory floor and
+near-end rule as films. This gives the currently shipped single-viewer product
+an honest series history now. M2 may later migrate both film and episode
+progress into its new profile model after the maintainer's visual contract is
+known; M3 does not invent that model on M2's behalf.
+
+“Next episode” means the next playable item owned locally. A missing number is
+reported by `next_has_gap` instead of blocking playback, and the first episode
+of the next numbered season follows the last local item without being called a
+gap. Specials (`S00`) are a separate visible season and never enter automatic
+mainline playback. A combined item advances from its highest member number.
+
+Series continuation is exposed separately from the unchanged film home payload
+at `/api/library/series/home`. That additive boundary keeps the released
+frontend working while M3-FE decides how to compose mixed rows. It returns
+episode items in progress and recently added series; it does not smuggle an
+episode into the existing `Movie` JSON shape.
+
+## 42. TMDB TV and episode streams reuse M1's explicit boundaries
+
+Series metadata uses TMDB's TV endpoints, French metadata and the existing
+90-day success / 7-day miss-or-error cache. A lookup requests one series detail
+and only seasons present locally. It never materializes remote-only seasons.
+Exact localized/original name wins search selection, then popularity; a shared
+non-null TMDB id is the only proof strong enough to consolidate differently
+named local series. Contradictory existing TMDB ids block local association
+instead of letting the oldest row win by accident.
+
+Episode detail exposes stable item, file and audio-track ids without a path.
+Inspection remains an explicit `POST`; catalogue and stream-info reads cannot
+download ffmpeg. A selected audio track forces remux even for direct-play MP4,
+and direct play still supports HTTP ranges. The episode stream routes live
+below `/api/library/episodes/.../stream`: putting them below the legacy
+`/api/stream/{movie}` wildcard creates genuinely overlapping patterns in Go's
+`ServeMux`, not a merely aesthetic routing disagreement.
+
+The verified controlled corpus covered a special, a combined item, two encodes
+of one episode, an English/French MP4, real TMDB TV responses, HTTP 206 direct
+play and a selected-French remux decoded back through ffmpeg. An isolated scan
+of the current household library found 274 video files, 254 film identities and
+zero episode false positives. It still contains no user-owned series, so that
+negative result is reported as such rather than promoted into positive proof.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
