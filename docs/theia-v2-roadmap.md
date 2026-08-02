@@ -104,7 +104,7 @@ partir d'une ancienne conversation.
 | V2-M1 — fichiers et qualités | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Prêt sur le contrat M1-BE | Aucun blocage backend ; reste `M1-FE` |
 | V2-M2 — profils | Attend les références | Attend les références | Screenshots et croquis du mainteneur |
 | V2-M3 — séries | [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7), [PR #5](https://github.com/Benitoow/theia-media/pull/5) | Prêt sur le contrat M3-BE | Reste M3-FE + validation sur les premiers fichiers série utilisateur |
-| V2-M4 — accès distant | Bloqué | Bloqué | Modèle de sécurité/authentification |
+| V2-M4 — accès distant | [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a) | Prêt sur le contrat M4-BE après fusion | Reste M4-FE + validation via un vrai endpoint hors LAN |
 | V2-M5 — logo/navigation | Aucun chantier backend | Backlog | Direction artistique |
 | V2-M6 — optimisation matérielle | Différé | Attend `M6-BE` | À ouvrir après stabilisation du reste |
 
@@ -184,11 +184,27 @@ débloqué, mais devra refaire la validation dès que les premiers fichiers sér
 réels seront disponibles.
 
 ### V2-M4 — Accès distant hors réseau local
-Identifié dès le tout premier message comme LE différentiateur manquant
-face à Plex. Jamais commencé. Implique de vraies décisions de sécurité
-(la décision #6 "zéro authentification" ne peut plus tenir telle quelle
-si Theia devient joignable depuis internet) — probablement le chantier qui
-demande le plus de réflexion en amont avant tout prompt.
+
+Le backend est implémenté dans
+[`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a).
+La décision zéro-authentification reste vraie sur le LAN ; hors LAN, chaque
+appareil prouve une clé WireGuard créée localement. Ce n'est ni un compte, ni un
+profil, ni une permission par personne.
+
+Le tunnel est entièrement embarqué en Go avec une netstack userspace : pas de
+TUN système, de CGO, d'installation VPN sur le serveur, de compte cloud ou de
+control plane. Le propriétaire fournit l'endpoint et la redirection UDP. Theia
+ne traverse pas le CGNAT, ne contacte aucun relais et ne publie jamais le port
+HTTP 8383.
+
+Le distant reçoit une capacité de lecture : catalogue, images, streams,
+inspection et progression. Réglages, scans, onboarding, updater et gestion des
+appareils restent LAN-only. M4-FE doit maintenant construire le panneau local de
+configuration/provisioning et adapter la navigation distante à partir du
+contrat exact de `theia-v2-backend.md`. Le jalon produit ne sera complet qu'après
+un test navigateur via un vrai endpoint extérieur ; le backend a été vérifié
+avec un vrai tunnel et un client séparé sur UDP loopback, ce qui prouve le code,
+pas la box internet du mainteneur.
 
 ### V2-M5 — Logo et identité de nav
 Vrai travail de direction artistique, pas un câblage technique. À traiter

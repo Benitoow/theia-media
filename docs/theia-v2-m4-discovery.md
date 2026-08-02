@@ -1,5 +1,10 @@
 # V2-M4 — Découverte backend accès distant
 
+> **Mise à jour après implémentation :** M4-BE est livré dans
+> [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a).
+> Le contrat de production est dans `theia-v2-backend.md` ; ce document conserve
+> la menace, les alternatives et le spike qui ont conduit à ce choix.
+
 **Verdict du spike : `VALIDATED`.** Theia peut embarquer un serveur WireGuard
 et une pile IP entièrement en Go, sans interface réseau système, sans CGO, sans
 compte cloud et sans nouveau processus. Deux pairs jetables ont réellement

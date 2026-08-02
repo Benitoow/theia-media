@@ -11,16 +11,20 @@ phone and computer already in your home. There is no account, subscription,
 cloud library, Docker ceremony or separate frontend to install. Run the binary,
 choose the folders, watch.
 
-The v1 scope is complete and published as
-[v1.0.0](https://github.com/Benitoow/theia-media/releases/tag/v1.0.0).
+The v1 scope was completed in
+[v1.0.0](https://github.com/Benitoow/theia-media/releases/tag/v1.0.0); the
+current published release is
+[v1.5.0](https://github.com/Benitoow/theia-media/releases/tag/v1.5.0).
 The interface is available in French and English. French remains the default.
 
 > [!WARNING]
-> **Theia has no authentication. Never expose its port directly to the
-> internet.** It listens on the local network, and anyone who can reach it can
+> **Theia has no login on its LAN port. Never expose TCP `8383` directly to the
+> internet.** Anyone who can reach it locally can
 > browse and stream the library, change settings, start a scan and install an
-> available update. Use Theia on a trusted home network. For access away from
-> home, use a VPN; do not forward port `8383` on the router.
+> available update. Use Theia on a trusted home network. The V2 backend on
+> `main` adds a separate, device-keyed WireGuard listener; it does not make the
+> historical HTTP port public. The latest release has no setup screen for it
+> yet. Do not forward TCP `8383` on the router.
 
 ## See it
 
@@ -78,6 +82,22 @@ not to TMDB.
 The reasoning behind these boundaries lives in
 [the decision record](docs/DECISIONS.md). They are scope decisions, not
 half-finished menu items.
+
+## What is already on `main` for V2
+
+The latest release remains v1.5.0. Development is backend-first, so source on
+`main` can contain a finished server contract before the matching screen exists:
+
+- M1 groups multiple files under one film and exposes measured files/audio
+  tracks for a manual choice on the detail page.
+- M3 adds the complete series, season, playable-episode and stream backend.
+- M4 adds embedded userspace WireGuard, one-time device provisioning,
+  revocation and a viewer-only remote API.
+
+Those are not invisible buttons waiting to be discovered. Their frontend work
+is tracked explicitly in [the V2 frontend handoff](docs/theia-v2-frontend.md).
+The secure remote backend currently requires API-level setup from the LAN; wait
+for M4-FE if you want the television-friendly settings flow.
 
 ## Install
 
@@ -220,8 +240,11 @@ executable until it matches.
 
 ```mermaid
 flowchart LR
-    Movies["Movie folders"]
-    Browser["Browser<br/>TV · phone · computer"]
+    Movies["Media folders"]
+    LANBrowser["LAN browser<br/>TV · phone · computer"]
+    RemoteDevice["Provisioned remote device"]
+    LANGuard["LAN source guard<br/>full administration"]
+    RemoteGuard["WireGuard + route guard<br/>viewer capabilities"]
     Theia["Theia process<br/>Go server + embedded SvelteKit UI"]
     DB[("Local SQLite database")]
     Cache["Local image cache"]
@@ -237,15 +260,25 @@ flowchart LR
     Movies -->|"direct bytes"| Theia
     Movies -->|"compatible stream"| FFmpeg
     FFmpeg -->|"fragmented MP4"| Theia
-    Browser <-->|"embedded UI · JSON · video over HTTP"| Theia
+    LANBrowser <-->|"TCP · embedded UI · JSON · video"| LANGuard
+    LANGuard <--> Theia
+    RemoteDevice <-->|"encrypted UDP"| RemoteGuard
+    RemoteGuard <-->|"internal HTTP · viewer routes only"| Theia
     Theia <-->|"update checks and verified downloads"| GitHub
 ```
 
 The compiled frontend lives inside the Go executable. A normal request serves
 the SvelteKit application; `/api/*` handles the catalogue, settings,
 playback, onboarding and updater. SQLite stores metadata and playback progress.
-Movie files are read from their original folders and
+Media files are read from their original folders and
 are never imported into a second library.
+
+The M4 source has two network boundaries. LAN clients keep the complete API.
+Remote devices reach a fixed in-process address only after a WireGuard
+handshake, then receive catalogue, image, stream, inspection and progress
+capabilities—not settings, scans, onboarding, updates or device management.
+The tunnel creates no OS interface and never sends the rest of the client's
+internet traffic through Theia.
 
 The only outbound internet destinations in the application are:
 
@@ -253,11 +286,13 @@ The only outbound internet destinations in the application are:
 - GitHub Releases for Theia updates and the pinned FFmpeg download.
 
 There is no telemetry, analytics endpoint, cloud account or frontend CDN. Fonts
-and the frontend ship inside the binary.
+and the frontend ship inside the binary. The optional WireGuard listener
+passively accepts configured UDP peers; Theia does not contact a VPN control
+plane, relay, STUN service or the configured public endpoint.
 
 ## Technical specification
 
-| Layer | v1 implementation |
+| Layer | Current source implementation |
 | --- | --- |
 | Server | Go `1.26.5`, standard `net/http`, no CGO |
 | Database | SQLite through the pure-Go `modernc.org/sqlite` driver |
@@ -269,6 +304,7 @@ and the frontend ship inside the binary.
 | Distribution | Windows, macOS and Linux; `amd64` and `arm64` |
 | Updates | GitHub Releases, digest verification, atomic executable swap |
 | Interface language | French by default, English included; browser-local selection |
+| Remote access in V2 source | Embedded `wireguard-go` + userspace netstack; device keys, no CGO or control plane |
 
 ## Why Theia is small
 
@@ -449,6 +485,7 @@ internal/discovery/  LAN address ranking, mDNS and QR generation
 internal/ffmpeg/     pinned download, probing and remux process
 internal/imagecache/ lazy TMDB artwork cache
 internal/library/    catalogue, scans, metadata and playback progress
+internal/remoteaccess/ embedded WireGuard, peer store and LAN/remote guards
 internal/scanner/    filesystem walk and media-file filtering
 internal/stream/     direct-play/remux decisions
 internal/tmdb/       TMDB client and result matching

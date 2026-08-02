@@ -530,11 +530,209 @@ glissés dans M3 par la fenêtre pendant que la porte était ouverte.
 
 ### M4-BE — Accès distant
 
-**Statut : bloqué par une décision de sécurité.**
+**Statut : implémenté et vérifié dans
+[`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a).
+M4-FE peut partir de ce contrat une fois ce commit fusionné sur `main`. Aucun
+écran M4 n'est inclus.**
 
-Le réseau local sans authentification ne peut pas être simplement exposé sur
-internet. Aucun tunnel, compte, jeton ou HTTPS ne sera choisi avant une décision
-d'architecture explicite sur le modèle de menace et la récupération d'accès.
+Theia embarque WireGuard et une pile IP userspace. Il n'installe aucune
+interface système, ne demande ni administrateur/root, ni compte, ni control
+plane et ne lance aucun processus supplémentaire. Le propriétaire fournit le
+`host:port` public et configure lui-même la redirection UDP. Il n'existe pas de
+relais CGNAT, de découverte publique, d'UPnP ou de promesse marketing alimentée
+à l'électricité d'un cloud discret.
+
+#### Migration et fichiers
+
+`0008_remote_access.sql` est additive et ne touche aucune donnée média :
+
+- `remote_access_config` contient l'unique configuration, désactivée par défaut,
+  avec le port UDP `51820` et un endpoint vide ;
+- `remote_access_peers` contient nom, clé **publique**, adresse tunnel et dates
+  de création/révocation ;
+- une adresse ne peut appartenir qu'à un pair actif ; les lignes révoquées sont
+  conservées et leur adresse redevient disponible ;
+- 32 pairs actifs au maximum.
+
+La clé privée serveur n'est pas dans SQLite. Elle apparaît au premier enable
+dans `<data-dir>/remote-access.key`. Windows la protège avec DPAPI pour le compte
+courant ; Linux/macOS utilisent un fichier propriétaire `0600`. Une clé
+existante illisible n'est jamais remplacée en silence. La clé privée d'un client
+n'est jamais persistée par Theia.
+
+#### Deux surfaces HTTP
+
+Le listener TCP historique garde toutes les routes d'administration, sans login,
+pour le LAN de confiance. Il refuse une source publique avec :
+
+```json
+{"error":"lan_access_required"}
+```
+
+`X-Forwarded-For` et ses cousins ne sont jamais crus. Ce filtre ne rend pas le
+port publiable : un reverse proxy local ou un routeur qui source-NAT peut faire
+paraître une requête externe locale. **Le frontend doit continuer à dire de ne
+jamais rediriger le TCP 8383.**
+
+Le listener distant écoute à l'intérieur de WireGuard sur
+`http://10.77.0.1:<port HTTP Theia>`. Le client route uniquement
+`10.77.0.1/32`. Avant le handler partagé, le serveur exige :
+
+1. une adresse attribuée à un pair actif ;
+2. le `Host` exact `10.77.0.1:<port>` ;
+3. une route explicitement autorisée ;
+4. pour les navigateurs, une origine sûre, aucune sous-ressource cross-site et
+   aucun framing.
+
+Capacités distantes : frontend statique en `GET`/`HEAD`, santé et session,
+catalogue films/séries, images, streams, inspection explicite des fichiers et
+progression films/épisodes. Restent LAN-only : réglages, scan, onboarding et
+adresses locales, updater, configuration WireGuard et gestion des pairs. Une
+future route est distante **seulement** si elle est ajoutée à l'allowlist.
+
+#### API locale de gestion
+
+| Méthode et route | Requête | Réponse / effet |
+|---|---|---|
+| `GET /api/remote-access` | — | Configuration, état, clé publique serveur, portée et pairs actifs |
+| `PUT /api/remote-access` | Champs partiels `enabled`, `listen_port`, `endpoint` | Valide puis applique la configuration complète |
+| `POST /api/remote-access/peers` | `{"name":"Télévision du salon"}` | 201, configuration et QR privés affichables une fois |
+| `DELETE /api/remote-access/peers/{id}` | — | 204, révocation immédiate et persistée |
+| `GET /api/remote-access/session` | — | `{"mode":"lan"}` ou pair distant authentifié |
+
+`endpoint` est un `host:port`, sans schéma ni chemin. Il peut utiliser un DNS,
+IPv4 ou IPv6 entre crochets ; son port public peut différer de `listen_port`.
+Theia l'écrit dans les nouveaux clients mais ne le contacte jamais. Changer
+seulement l'endpoint ne coupe pas le tunnel et ne modifie pas les clients déjà
+provisionnés : ceux-ci doivent l'éditer ou être révoqués puis recréés.
+
+Fixture `GET /api/remote-access` capturée après un vrai handshake ; les clés
+publiques seules ont été remplacées par un marqueur :
+
+```json
+{
+  "enabled": true,
+  "listen_port": 62877,
+  "endpoint": "127.0.0.1:62877",
+  "updated_at": 1785667671,
+  "state": "running",
+  "tunnel_url": "http://10.77.0.1:8395",
+  "server_public_key": "<wireguard-public-key>",
+  "reachability": "confirmed",
+  "peers": [
+    {
+      "id": 3,
+      "name": "Télévision de validation",
+      "public_key": "<wireguard-public-key>",
+      "address": "10.77.0.2",
+      "created_at": 1785668775,
+      "last_handshake_at": 1785668775,
+      "received_bytes": 3508,
+      "transmitted_bytes": 4300
+    }
+  ]
+}
+```
+
+`state` vaut `disabled`, `running` ou `error`. `reachability` vaut
+`unverified` jusqu'au premier handshake réellement observé, puis `confirmed`.
+Ce n'est pas un test du routeur depuis internet. Les `reason` possibles en état
+`error` sont `remote_config_invalid`, `remote_key_unavailable`,
+`remote_listen_failed`, `remote_listener_stopped`,
+`remote_peer_reload_failed` et `remote_restore_failed`.
+
+La réponse 201 de création ajoute :
+
+```json
+{
+  "peer": { "id": 4, "name": "Téléphone", "address": "10.77.0.2" },
+  "client_config": "<configuration WireGuard privée, affichée une fois>",
+  "qr_svg": "<svg privé, affiché une fois>",
+  "tunnel_url": "http://10.77.0.1:8395"
+}
+```
+
+La vraie réponse `peer` contient aussi `public_key`, `created_at`, les compteurs
+à zéro et pas de clé privée. Elle porte `Cache-Control: no-store`. Ni
+`client_config` ni `qr_svg` ne réapparaissent dans le statut. Fermer l'écran
+sans les conserver impose une révocation puis une nouvelle création.
+
+`GET /api/remote-access/session` renvoie côté tunnel :
+
+```json
+{
+  "mode": "remote",
+  "peer": {
+    "id": 4,
+    "name": "Téléphone",
+    "public_key": "<wireguard-public-key>",
+    "address": "10.77.0.2",
+    "created_at": 1785668775,
+    "received_bytes": 0,
+    "transmitted_bytes": 0
+  }
+}
+```
+
+#### Erreurs stables pour M4-FE
+
+| HTTP | `error` |
+|---|---|
+| 400 | `invalid_remote_access_payload`, `invalid_remote_listen_port`, `invalid_remote_endpoint` |
+| 400 | `invalid_remote_peer_payload`, `invalid_remote_peer_name`, `invalid_remote_peer_id` |
+| 403 | `lan_access_required`, `remote_peer_unknown`, `remote_access_forbidden`, `remote_origin_forbidden` |
+| 404 | `remote_peer_not_found` |
+| 409 | `remote_access_disabled`, `remote_peer_limit_reached` |
+| 421 | `remote_host_invalid` |
+| 500 | `remote_access_unavailable` pour une erreur de stockage inattendue |
+| 503 | `remote_access_not_ready`, `remote_access_unavailable` pour le runtime |
+
+Les codes du garde distant ne doivent normalement pas être transformés en prose
+par une page locale : ils signalent une frontière de sécurité, pas un formulaire
+mal rempli.
+
+#### Récupération et comportement de panne
+
+- Un enable sur un port occupé échoue sans persister `enabled`.
+- Un changement de port défaillant restaure et reteste réellement l'ancien
+  listener ; si la restauration échoue, le distant reste fermé.
+- Une révocation qui ne peut pas être injectée dans WireGuard ferme tout le
+  tunnel plutôt que de laisser une ancienne session vivante.
+- Une clé corrompue empêche le tunnel, mais pas le serveur LAN ni un disable.
+- Copier un data-dir Windows vers un autre utilisateur/machine rend normalement
+  la clé DPAPI illisible : désactiver, retirer `remote-access.key`, réactiver et
+  reprovisionner.
+
+#### Vérification effectuée
+
+- `go test ./... -count=1` et `go vet ./...` passent ; les tests utilisent de
+  vrais pairs `wireguard-go`, pas un mock de handshake ;
+- `build.ps1`, les 224 valeurs/11 fonctions de locales et les ratios de contraste
+  passent ; le binaire Windows amd64 produit fait **17 314 816 octets** ;
+- six builds `CGO_ENABLED=0` passent : Windows amd64/arm64, Linux amd64/arm64 et
+  macOS amd64/arm64 ; tailles de 16 122 018 à 17 314 816 octets ;
+- `govulncheck` trouve **0 vulnérabilité appelée** et **0 dans les packages
+  importés**. Il signale `openpgp` dans le module transitif `x/crypto`, mais ce
+  package n'est pas importé par Theia ;
+- `go test -race` n'a pas pu compiler sur cette machine : le runtime race
+  Windows demande `gcc`, absent. Cet échec d'outillage n'est pas présenté comme
+  un test réussi ;
+- le vrai binaire a utilisé un data-dir isolé et scanné la vraie bibliothèque :
+  **274 fichiers**, **254 films**, **0 épisode**, aucun problème de scan ;
+- un second programme WireGuard externe a obtenu `/api/health`, tandis que
+  `/api/settings`, `/api/onboarding`, une vidéo cross-site et une progression
+  cross-origin ont été refusés ; le serveur a enregistré le handshake ;
+- après `DELETE`, le même client n'a plus pu se connecter ; un pair inconnu est
+  également refusé ;
+- les tests couvrent redémarrage, clé serveur stable, nouveau pair après
+  redémarrage, port occupé, restauration de l'ancien listener, clé corrompue,
+  limite de 32 pairs et réutilisation d'adresse ;
+- le serveur utilisateur sur le port 8383 et sa base n'ont pas été utilisés :
+  tous les processus de validation ont reçu explicitement le port 8395 et le
+  data-dir temporaire `codex-theia-m4-live`.
+
+Hors contrat : frontend M4, configuration automatique du routeur, CGNAT/relay,
+HTTPS public, comptes, profils, sous-titres et transcodage vidéo.
 
 ### M5-BE — Logo et navigation
 
@@ -557,6 +755,6 @@ cibles de compilation existantes.
 | M1-BE | Implémenté et vérifié | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Contrat ci-dessus ; M1-FE part de ce commit |
 | M2-BE | Bloqué par les références | — | — |
 | M3-BE | Implémenté et vérifié | [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7), [PR #5](https://github.com/Benitoow/theia-media/pull/5) | Contrat ci-dessus ; M3-FE part de ce commit |
-| M4-BE | Bloqué par la sécurité | — | — |
+| M4-BE | Implémenté et vérifié | [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a) | Contrat ci-dessus ; M4-FE part de ce commit après fusion |
 | M5-BE | Sans backend | — | Aucun |
 | M6-BE | Différé | — | — |
