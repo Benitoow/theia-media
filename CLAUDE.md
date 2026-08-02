@@ -40,8 +40,10 @@ From the founding spec, §3. These are not preferences:
 - **No runtime dependency beyond ffmpeg**, which Theia downloads itself, pinned
   and checksum-verified.
 - **Docker is never required.**
-- **No telemetry, no cloud account.** The only outbound calls Theia may make are
-  to TMDB and to GitHub Releases. Nothing else, ever.
+- **No telemetry, no cloud account.** The only internet calls initiated by
+  Theia are to TMDB and GitHub Releases. M4 may passively accept encrypted
+  WireGuard UDP from explicitly configured peers; it never contacts a control
+  plane, relay, STUN service or endpoint-discovery service.
 - **No unverified image.** This repository is public and GPL-3.0. Never fetch
   decorative imagery from the web; the maintainer supplies licence-checked
   assets. A screen that needs filling gets CSS texture and a note.
