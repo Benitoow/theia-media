@@ -27,6 +27,11 @@ type ScanReport struct {
 	Removed int `json:"removed"`
 	Merged  int `json:"merged"`
 
+	MovieFiles   int `json:"movie_files"`
+	EpisodeFiles int `json:"episode_files"`
+	Series       int `json:"series"`
+	Episodes     int `json:"episodes"`
+
 	// Metadata lookups performed during this pass.
 	Enriched       int `json:"enriched"`
 	NotFound       int `json:"not_found"`
@@ -104,6 +109,50 @@ func (s *Service) Get(ctx context.Context, id int64) (Movie, error) {
 	return s.store.Get(ctx, id)
 }
 
+func (s *Service) SeriesCount(ctx context.Context) (int, error) {
+	return s.store.SeriesCount(ctx)
+}
+
+func (s *Service) EpisodeCount(ctx context.Context) (int, error) {
+	return s.store.EpisodeItemCount(ctx)
+}
+
+func (s *Service) ListSeries(ctx context.Context, limit, offset int) ([]Series, error) {
+	return s.store.ListSeries(ctx, limit, offset)
+}
+
+func (s *Service) GetSeries(ctx context.Context, id int64) (Series, error) {
+	return s.store.GetSeries(ctx, id)
+}
+
+func (s *Service) GetSeason(ctx context.Context, seriesID int64, number int) (Season, error) {
+	return s.store.GetSeason(ctx, seriesID, number)
+}
+
+func (s *Service) GetEpisodeItem(ctx context.Context, id int64) (EpisodeItem, error) {
+	return s.store.GetEpisodeItem(ctx, id)
+}
+
+func (s *Service) SeriesHome(ctx context.Context, limit int) (*SeriesHome, error) {
+	return s.store.SeriesHome(ctx, limit)
+}
+
+func (s *Service) GetEpisodeFile(ctx context.Context, itemID, fileID int64) (EpisodeFile, error) {
+	return s.store.GetEpisodeFile(ctx, itemID, fileID)
+}
+
+func (s *Service) SaveEpisodeFileMedia(ctx context.Context, itemID, fileID int64, media FileMedia) (EpisodeFile, error) {
+	return s.store.SaveEpisodeFileMedia(ctx, itemID, fileID, media)
+}
+
+func (s *Service) MarkEpisodeFileMediaError(ctx context.Context, itemID, fileID int64) error {
+	return s.store.MarkEpisodeFileMediaError(ctx, itemID, fileID)
+}
+
+func (s *Service) EpisodeAudioTrack(ctx context.Context, itemID, fileID, trackID int64) (AudioTrack, error) {
+	return s.store.EpisodeAudioTrack(ctx, itemID, fileID, trackID)
+}
+
 // GetMovieFile resolves a playable file inside a film.
 func (s *Service) GetMovieFile(ctx context.Context, movieID, fileID int64) (MovieFile, error) {
 	return s.store.GetMovieFile(ctx, movieID, fileID)
@@ -127,7 +176,12 @@ func (s *Service) AudioTrack(ctx context.Context, movieID, fileID, trackID int64
 // Consolidate merges duplicates that have a proven identity. It is exposed so
 // startup can finish a data migration before the HTTP server becomes visible.
 func (s *Service) Consolidate(ctx context.Context) (int, error) {
-	return s.store.Consolidate(ctx)
+	movies, err := s.store.Consolidate(ctx)
+	if err != nil {
+		return 0, err
+	}
+	series, err := s.store.ConsolidateSeries(ctx)
+	return movies + series, err
 }
 
 // SaveProgress records where a viewer got to.
@@ -143,6 +197,18 @@ func (s *Service) ResetProgress(ctx context.Context, id int64) error {
 // SaveDuration records a duration learned from probing a file.
 func (s *Service) SaveDuration(ctx context.Context, id int64, seconds float64) error {
 	return s.store.SaveDuration(ctx, id, seconds)
+}
+
+func (s *Service) SaveEpisodeProgress(ctx context.Context, id int64, position, duration float64) (Progress, error) {
+	return s.store.SaveEpisodeProgress(ctx, id, position, duration, time.Now())
+}
+
+func (s *Service) ResetEpisodeProgress(ctx context.Context, id int64) error {
+	return s.store.ResetEpisodeProgress(ctx, id)
+}
+
+func (s *Service) SaveEpisodeDuration(ctx context.Context, id int64, seconds float64) error {
+	return s.store.SaveEpisodeDuration(ctx, id, seconds)
 }
 
 // Row kinds. The server names what a row *is*; the interface writes what it is
@@ -302,6 +368,32 @@ func (s *Service) Scan(ctx context.Context, roots []string) (*ScanReport, error)
 			return nil, err
 		}
 
+		parsedEpisode := ParseEpisodePath(file.Relative)
+		if parsedEpisode.Matched {
+			if parsedEpisode.Ambiguous {
+				report.Problems = append(report.Problems, scanner.Problem{
+					Kind: scanner.KindEpisodeSeriesUnknown,
+					Path: file.Path,
+				})
+				continue
+			}
+			report.EpisodeFiles++
+			res, err := s.store.UpsertEpisode(ctx, file, parsedEpisode, generation)
+			if err != nil {
+				s.log.Warn("an episode could not be saved", "path", file.Path, "error", err)
+				report.Problems = append(report.Problems,
+					scanner.Problem{Kind: scanner.KindSaveFailed, Path: file.Path})
+				continue
+			}
+			if res.inserted {
+				report.Added++
+			} else {
+				report.Updated++
+			}
+			continue
+		}
+
+		report.MovieFiles++
 		parsed := ParseFileName(file.Name)
 		res, err := s.store.Upsert(ctx, Movie{
 			Path:       file.Path,
@@ -328,12 +420,16 @@ func (s *Service) Scan(ctx context.Context, roots []string) (*ScanReport, error)
 	// Only prune when both the walk and every database write completed without
 	// trouble. A disconnected drive or a rejected row looks like a missing file
 	// from here; turning either into deletions would compound a recoverable error.
-	if len(report.Problems) == 0 {
+	if !hasBlockingScanProblem(report.Problems) {
 		removed, err := s.store.DeleteNotSeenIn(ctx, generation)
 		if err != nil {
 			return nil, err
 		}
-		report.Removed = removed
+		episodeRemoved, err := s.store.DeleteEpisodeFilesNotSeenIn(ctx, generation)
+		if err != nil {
+			return nil, err
+		}
+		report.Removed = removed + episodeRemoved
 	} else {
 		s.log.Warn("skipping removal of missing files, the scan reported problems",
 			"problems", len(report.Problems))
@@ -346,11 +442,17 @@ func (s *Service) Scan(ctx context.Context, roots []string) (*ScanReport, error)
 		return nil, err
 	}
 	report.Merged += merged
+	merged, err = s.store.ConsolidateSeries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	report.Merged += merged
 
 	// Metadata comes last, so that the library is complete and browsable before
 	// a single network request is made. A TMDB outage delays posters; it never
 	// delays knowing what you own.
 	s.enrich(ctx, report)
+	s.enrichSeries(ctx, report)
 
 	// TMDB identity resolves the hard but real cases: a yearless filename or a
 	// localized title that parsed differently. It is authoritative only after a
@@ -360,6 +462,19 @@ func (s *Service) Scan(ctx context.Context, roots []string) (*ScanReport, error)
 		return nil, err
 	}
 	report.Merged += merged
+	merged, err = s.store.ConsolidateSeries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	report.Merged += merged
+	report.Series, err = s.store.SeriesCount(ctx)
+	if err != nil {
+		return nil, err
+	}
+	report.Episodes, err = s.store.EpisodeItemCount(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	report.Duration = time.Since(startedAt)
 	report.Seconds = report.Duration.Seconds()
@@ -377,6 +492,18 @@ func (s *Service) Scan(ctx context.Context, roots []string) (*ScanReport, error)
 	)
 	s.remember(report)
 	return report, nil
+}
+
+func hasBlockingScanProblem(problems []scanner.Problem) bool {
+	for _, problem := range problems {
+		// An ambiguous episode was read successfully and intentionally omitted.
+		// It is safe to reconcile the rest of the disk; unreadable paths and failed
+		// writes are not.
+		if problem.Kind != scanner.KindEpisodeSeriesUnknown {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Service) remember(r *ScanReport) {

@@ -26,6 +26,12 @@ func (s *Store) upsertFile(ctx context.Context, m Movie, generation int64) (upse
 	}
 	defer tx.Rollback() //nolint:errcheck
 
+	// Classification can change after a rename or parser improvement. Keep one
+	// physical path in exactly one media family.
+	if err := removeEpisodePathTx(ctx, tx, m.Path); err != nil {
+		return upsertResult{}, fmt.Errorf("reclassifying %s as a film: %w", m.Path, err)
+	}
+
 	existing, err := fileByPathTx(ctx, tx, m.Path)
 	switch {
 	case err == nil:

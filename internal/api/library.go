@@ -43,6 +43,8 @@ func (s *Server) handleMovies(w http.ResponseWriter, r *http.Request) {
 
 type statsResponse struct {
 	Movies       int                 `json:"movies"`
+	Series       int                 `json:"series"`
+	Episodes     int                 `json:"episodes"`
 	Scanning     bool                `json:"scanning"`
 	LibraryPaths int                 `json:"library_paths"`
 	LastScan     *library.ScanReport `json:"last_scan"`
@@ -57,9 +59,23 @@ func (s *Server) handleLibraryStats(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "could not read the library")
 		return
 	}
+	series, err := s.lib.SeriesCount(r.Context())
+	if err != nil {
+		s.log.Error("counting series failed", "error", err)
+		writeJSONError(w, http.StatusInternalServerError, "could not read the library")
+		return
+	}
+	episodes, err := s.lib.EpisodeCount(r.Context())
+	if err != nil {
+		s.log.Error("counting episodes failed", "error", err)
+		writeJSONError(w, http.StatusInternalServerError, "could not read the library")
+		return
+	}
 
 	writeJSON(w, http.StatusOK, statsResponse{
 		Movies:       count,
+		Series:       series,
+		Episodes:     episodes,
 		Scanning:     s.lib.Scanning(),
 		LibraryPaths: len(s.cfg.LibraryPaths),
 		LastScan:     s.lib.LastScan(),

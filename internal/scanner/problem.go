@@ -46,4 +46,8 @@ const (
 	// KindMetadataKeyRejected is TMDB refusing the API key, which stops the
 	// whole metadata pass and needs a human.
 	KindMetadataKeyRejected ProblemKind = "metadata_key_rejected"
+
+	// KindEpisodeSeriesUnknown is a filename with a reliable episode marker but
+	// no series title in either the filename or its parent directories.
+	KindEpisodeSeriesUnknown ProblemKind = "episode_series_unknown"
 )
