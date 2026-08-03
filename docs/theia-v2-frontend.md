@@ -30,10 +30,22 @@ Contraintes communes à tous les écrans :
 
 ### M1-FE — Choix du fichier sur la fiche film
 
-**Statut : prêt à démarrer à partir du commit backend
-[`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e),
-publié par la [PR #4](https://github.com/Benitoow/theia-media/pull/4), dès qu'il
-est présent sur `main`.**
+**Statut : implémenté sur le contrat backend
+[`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e)
+(PR #4), vérifié contre le vrai serveur et la vraie bibliothèque. Reste à
+valider : un vrai film décodable multi-pistes du mainteneur — les 274 fichiers
+actuels sont remplis de zéros et ne prouvent que le chemin `error`.**
+
+Livré : `web/src/lib/components/FileChoice.svelte`, consommé par
+`web/src/routes/film/[id]/+page.svelte`, plus les routes `file_id` dans
+`Player.svelte` et la table de codes `player.codes` dans les deux catalogues.
+Le raisonnement, les mesures D-pad et les limites sont dans la décision 47.
+
+Trois points qu'un agent suivant ne doit pas défaire sans lire la décision 47 :
+
+- le sélecteur est **au-dessus** du synopsis, pas en bas de fiche ;
+- les options partagent une largeur plafonnée à `26rem` ;
+- la section gère elle-même Haut/Bas ; les bords ne sont pas consommés.
 
 Une seule carte représente le film dans le catalogue. Après ouverture de la
 fiche, l'utilisateur voit les fichiers réellement renvoyés par l'API et choisit
@@ -86,12 +98,59 @@ il n'affiche aucune prose technique du serveur.
 
 ### M2-FE — Profils, nouvelle mouture
 
-**Statut : bloqué par les screenshots et croquis du mainteneur.**
+**Statut : contrat visuel figé le 03/08/2026 (décision 48). Reste bloqué par le
+handoff M2-BE : il n'existe aujourd'hui aucune route profils.** Ne pas recycler
+l'ancien écran `/profils`, même comme raccourci temporaire.
 
-Ces références seront le contrat visuel : composition, hiérarchie, transitions,
-focus, navigation télécommande et comportement de gestion. Ne pas recycler
-l'ancien écran `/profils`, même comme raccourci temporaire. L'implémentation
-commence seulement après validation des références et handoff M2-BE.
+Les références du mainteneur donnent la **disposition, pas le style**. Le style
+reste celui du design system : fond `--ink`, registre display pour le titre,
+label tracké pour les métadonnées, un seul accent, cibles de 52 à 56 px.
+
+#### Trois surfaces
+
+**1. Le sélecteur — écran plein, nav supprimée pour cette route.**
+Marque en haut à gauche, titre en question au registre display, une rangée
+horizontale de cartes (image carrée, nom centré dessous en registre UI), puis,
+nettement détaché, un unique bouton contourné vers la gestion. Beaucoup de vide :
+c'est du chrome, pas la grille (§6 du design system ne s'applique pas ici, mais
+son esprit de densité non plus).
+
+Le premier focus D-pad est une carte de profil, jamais la nav ni le bouton de
+gestion : c'est la question que l'écran pose. La rangée suit la règle §9 des
+listes d'options — largeur partagée, axe géré, bords non consommés.
+
+**2. La fiche de profil — deux panneaux empilés.**
+Identité en haut : image circulaire cerclée, nom, action d'édition discrète mais
+jamais réservée au survol. Puis une liste libellé-gauche / valeur-droite séparée
+par des filets : créé le, films commencés, films terminés, dernière lecture.
+Aucune ligne email, rôle, statut ou abonnement — elles n'existent pas ici.
+En pied, isolée et pleine largeur, la suppression du profil, en `--error`, avec
+confirmation. Aucun bouton de déconnexion : il n'y a pas de session.
+
+**3. L'entrée dans la nav — un raccourci, pas un menu.**
+L'avatar actif dans la nav **ouvre le sélecteur**. Pas de liste déroulante :
+la décision 35 avait mesuré pourquoi (illisible à trois mètres, débordement au
+plancher de 320 px, premier focus D-pad détourné vers la navigation).
+
+#### Démarrage
+
+Tant qu'aucun profil n'est choisi dans ce navigateur, le sélecteur s'affiche à
+l'arrivée. Le choix vit en `localStorage`, comme la langue : une télévision et
+un portable n'imposent pas leur profil l'un à l'autre. Un retour n'est proposé
+que si un profil est déjà actif — arriver ici parce que l'application a besoin
+d'une réponse ne doit pas offrir de partir sans la donner.
+
+#### États obligatoires à maquetter et tester au D-pad
+
+Aucun profil, un seul, la limite haute retenue par M2-BE, nom très long, image
+absente, image en cours d'envoi, envoi refusé, création, renommage, suppression
+confirmée et annulée, profil actif supprimé depuis un autre appareil, et le
+comportement quand le serveur répond une erreur pendant la sélection.
+
+L'image d'avatar est fournie par l'utilisateur : aucune illustration ne peut
+entrer dans le dépôt, et les artworks des références sont exclus (dépôt public
+GPL-3.0). Un profil sans image retombe sur une marque CSS, jamais sur une icône
+d'image cassée.
 
 ### M3-FE — Séries
 

@@ -461,6 +461,23 @@ rather than here:
   use spatial navigation; left and right move deterministically inside a film
   row. Tab remains available and focus is never trapped at an edge. During
   playback, left and right seek only when focus is not on a discrete control.
+- **A vertical list of options owns its own axis, and its rows share one width.**
+  Spatial navigation ranks candidates by centre-to-centre distance with the
+  horizontal axis weighted `2.25`, which is hostile to stacked full-width rows:
+  a wide row's centre sits far right of every narrow control in the same column,
+  so a distant link wins the press and the list is skipped entirely. Three rules
+  follow, and they are not tuning — they were measured on the film page before
+  they were written down (decision 47):
+  - a list of options handles up and down itself, in reading order, and does
+    **not** consume the press at either edge, so leaving the list still falls
+    through to the page;
+  - every option in one list keeps the same width, or the shortest label sits
+    furthest left and gets skipped;
+  - option rows stay near `26rem` rather than full-bleed, and the list sits
+    close to the action it serves rather than at the far end of the page.
+
+  This applies to any screen with a list of choices — files, episodes, devices —
+  not only to the film page where it was found.
 - Fine-pointer desktop users may reveal scroll chevrons by hovering a home row.
   They are supplemental controls with `tabindex="-1"` and sit outside the row's
   directional-navigation handler, so they do not add stops to either Tab or the

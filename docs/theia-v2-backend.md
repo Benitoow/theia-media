@@ -291,14 +291,51 @@ lisent le fichier principal. M1-FE doit utiliser les routes avec `file_id`.
 
 ### M2-BE — Profils, nouvelle mouture
 
-**Statut : bloqué par les screenshots et croquis du mainteneur.**
+**Statut : débloqué le 03/08/2026. Références reçues et actions figées par la
+décision 48. Le modèle et l'API restent à concevoir : cette section décrit ce
+dont l'interface a besoin, pas le schéma à écrire.**
 
 Le chantier repart de zéro. Il ne restaure ni l'ancien package, ni l'ancienne
-migration, ni `X-Theia-Profile`. Les références visuelles permettront d'abord
-de figer les actions réelles — créer, choisir, modifier, supprimer — puis le
-modèle et l'API seront conçus pour ces actions. Tant que la décision
-zéro-authentification tient, les profils séparent l'expérience et la progression
-mais ne deviennent ni comptes ni permissions.
+migration, ni `X-Theia-Profile`, ni l'ancien endpoint d'avatar. Tant que la
+décision zéro-authentification tient, les profils séparent l'expérience et la
+progression mais ne deviennent ni comptes ni permissions.
+
+#### Actions réellement demandées par l'interface
+
+1. lister les profils, dans un ordre stable ;
+2. en créer un, avec un nom ;
+3. le renommer ;
+4. lui donner ou remplacer une image ;
+5. le supprimer, avec sa progression ;
+6. lire, pour un profil, les faits affichés sur sa fiche : date de création,
+   films commencés, films terminés, dernière lecture.
+
+Le choix du profil actif n'est **pas** une action serveur : il appartient au
+navigateur, comme la langue (décision 32). Le serveur doit donc recevoir
+l'identité du profil sur les routes de progression, sans que cela devienne une
+authentification.
+
+#### Contraintes à ne pas découvrir tard
+
+- **La progression vit à deux endroits** : `movies` depuis M1 et `episode_items`
+  depuis M3 (décision 41). La migration possède les deux ou elle en corrompt un.
+- **L'envoi d'image est une surface d'attaque** : borner la taille, décoder,
+  corriger l'orientation EXIF, recadrer au carré, ré-encoder à une dimension
+  fixe, retirer les métadonnées avant stockage, versionner l'URL immuable. Cet
+  endpoint ne doit pas devenir un hébergeur de fichiers arbitraires.
+- **Aucune prose utilisateur** : codes stables uniquement, l'interface traduit
+  (décision 25).
+- **M4 reste LAN-only pour la gestion** : créer, renommer, supprimer un profil
+  et envoyer une image ne figurent pas dans l'allowlist distante. La lecture du
+  catalogue et l'écriture de progression y figurent déjà : si la progression
+  devient porteuse d'un profil, le garde distant doit être revu en conséquence.
+- Les bornes de l'ancienne mouture (nombre de profils, longueur du nom, plafond
+  d'envoi) étaient des garde-fous de LAN non authentifié, pas une politique de
+  comptes : à re-décider, pas à recopier par réflexe.
+
+Le handoff devra publier, comme les précédents, les routes et payloads réels,
+les codes d'erreur, l'effet de migration sur les données existantes, une fixture
+réutilisable et ce qui a été vérifié sur la vraie bibliothèque.
 
 ### M3-BE — Séries
 

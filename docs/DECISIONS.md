@@ -1028,6 +1028,107 @@ always disable remote access from the LAN, remove the unusable key file and
 provision fresh devices. Windows data directories copied to another user or
 machine require exactly that recovery.
 
+## 47. The file chooser owns its own vertical axis, and its rows are width-capped
+
+**Decided and verified in V2-M1-FE.** The film page now lists the files the
+server returned and lets the viewer pick one, plus a measured audio track when
+the file has more than one. Nothing is inferred: a file whose `media.status` is
+not `ok` shows "characteristics not measured" rather than reading `2160p` out of
+its own filename, which is exactly what `Amelie.2001.2160p...mkv` invites.
+Inspection stays an explicit button per file, and only `media_unreadable` is
+mirrored into the local state, because that is the only failure the server
+caches against the file (decision 38).
+
+The interesting part was the remote. The layout's spatial navigation ranks
+candidates by centre-to-centre distance with the horizontal axis weighted
+`2.25`, and that weight is hostile to a list of wide rows:
+
+- With the inspect button stacked **under** its file, the narrow button won
+  every downward press: from "Lire" the first file option scored 1705 against
+  the button's 1095, and the file options were unreachable by D-pad entirely.
+- Moved beside its file, the rows still lost to `← Retour` at the foot of a
+  short page — 1454 against 1272 — because a full-bleed row's centre sits ~384px
+  right of every narrow control in the column.
+- Making every row full width made it worse, not better: all five options then
+  scored ~1170 against Retour's 915.
+- Within the list, the *narrowest* option was skipped for the same reason:
+  shrink-to-fit "Piste par défaut" scored 869 against the wider
+  "ENG · English stereo" at 771.
+
+Three things fix it together, and the third is the one that matters:
+
+1. the chooser sits directly under the play button rather than after the cast
+   list — editorially right anyway, since choosing the file is part of deciding
+   to watch;
+2. option rows are capped at `26rem` and share one width, so no sibling is
+   penalised for having a shorter label;
+3. **the section handles Up and Down itself**, in the spirit of decision 27's
+   film row, so movement inside the list is reading order rather than geometry.
+   An edge press is deliberately not consumed, so leaving the list still falls
+   through to the page's own navigation.
+
+Tuning the width alone was tried and rejected: it only ever won by twenty-odd
+points against whatever happened to sit below, which is a number that changes
+with the length of a synopsis. Any future screen with a list of options — M3's
+episodes and M4's device list both qualify — inherits this constraint.
+
+Verified against the maintainer's real library rather than a fixture: 279 files
+resolved to 253 films with 25 genuinely multi-file cards, including a three-file
+*Amélie* consolidated across a localised title. Playback of a chosen file with a
+chosen track reached `readyState 4` at 1280×720 through
+`/api/stream/3/files/4/remux?t=0&audio=2`, and the server log confirms it mapped
+stable track id 2 to ffmpeg stream index 2 — the browser never sends a stream
+index. Film-level progress survived a change of file: 62 seconds saved on one
+file resumed at `t=62` on the other.
+
+## 48. Profiles return as a local viewer, from a new contract rather than the old one
+
+**The maintainer's references arrived on 2026-08-03 and this is the scoped
+decision that decision 36 required.** Nothing is restored from the removed
+implementation: not the screen, not `X-Theia-Profile`, not `playback_progress`,
+not the avatar endpoint. What follows is what the interface needs; the model and
+the API are M2-BE's to design for these actions.
+
+The references are three Netflix-shaped screens, supplied for **layout, not
+style**. Read literally they carry an account system, and Theia has none. These
+are refused outright rather than translated: "Se déconnecter" (there is nothing
+to log out of, decisions 6 and 36), email, "Membre depuis", "Rôle", "Statut",
+the "Abonné" badge and crown (the founding pitch says zero paywall), "Transférer
+un profil", "Compte" and "Centre d'aide" (all require a cloud Theia never
+contacts), and the notification bell. The reference artwork cannot ship either:
+the repository is public and GPL-3.0, and the rule is no unverified image, ever.
+
+Four things were settled with the maintainer before any code:
+
+- **The chooser is a full screen, and the nav only points at it.** The reference
+  shows an inline dropdown; decision 35 had already measured why that fails —
+  a 2rem avatar and an 11px name are unreadable at three metres, four targets in
+  one pill overflowed the 320px floor, and the first D-pad arrow landed on
+  navigation rather than on the question the app opens with. The nav entry
+  therefore opens the screen instead of expanding a menu. A reference is a
+  layout, not a licence to repeat a measured failure.
+- **The detail panel keeps its shape and loses its subject.** Two stacked
+  panels, identity above and a label/value list below, with the destructive
+  action isolated at the foot. The rows become local facts — created, films
+  started, films finished, last watched — and the foot action is "delete this
+  profile".
+- **An avatar is an image the viewer supplies.** Generated marks were offered
+  and refused. This revives a mechanism, not the retired code, and it revives
+  its hazards with it: bounded upload, decode, EXIF-orientation correction,
+  centre-crop, re-encode to a fixed square, metadata stripped before the bytes
+  reach storage, and a version in the immutable URL. That endpoint must not
+  become an arbitrary-file host.
+- **The startup gate returns.** With no profile chosen in this browser the
+  chooser appears on arrival; the selection is local to the browser, as the
+  interface language already is (decision 32), so a television and a laptop do
+  not fight over who is watching.
+
+Two constraints M2-BE inherits and must not discover late: progress now lives in
+**two** places, `movies` from M1 and `episode_items` from M3 (decision 41), so
+the migration owns both or it corrupts one. And a profile remains neither an
+account nor a permission — anyone on the LAN may select and edit every profile,
+exactly as they may already change every setting.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

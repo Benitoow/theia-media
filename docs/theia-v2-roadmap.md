@@ -101,8 +101,8 @@ partir d'une ancienne conversation.
 
 | Jalon | Backend | Frontend | Blocage actuel |
 |---|---|---|---|
-| V2-M1 — fichiers et qualités | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Prêt sur le contrat M1-BE | Aucun blocage backend ; reste `M1-FE` |
-| V2-M2 — profils | Attend les références | Attend les références | Screenshots et croquis du mainteneur |
+| V2-M1 — fichiers et qualités | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Implémenté et vérifié (décision 47) | Reste la validation sur un vrai film décodable |
+| V2-M2 — profils | Débloqué, à concevoir (décision 48) | Contrat visuel figé (décision 48) | `M2-BE` : aucune route profils n'existe |
 | V2-M3 — séries | [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7), [PR #5](https://github.com/Benitoow/theia-media/pull/5) | Prêt sur le contrat M3-BE | Reste M3-FE + validation sur les premiers fichiers série utilisateur |
 | V2-M4 — accès distant | [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a) | Prêt sur le contrat M4-BE après fusion | Reste M4-FE + validation via un vrai endpoint hors LAN |
 | V2-M5 — logo/navigation | Aucun chantier backend | Backlog | Direction artistique |
@@ -150,13 +150,21 @@ membres du foyer, mais l'ancienne implémentation ne sert pas de point de dépar
 Le chantier repart d'une base vierge : pas de résurrection de l'écran, de l'API
 ou du modèle visuel retirés après v1.5.0.
 
-Le frontend est bloqué jusqu'à réception des screenshots et croquis fournis par
-le mainteneur. Ces références deviennent le contrat visuel du jalon : structure,
-hiérarchie, interactions D-pad et rendu à trois mètres doivent les respecter,
-pas être improvisés par l'agent. Les comportements précis et le nouveau modèle
-de données seront cadrés avec ces références avant la première ligne de code.
-Tant que la décision zéro-authentification reste en vigueur, un profil n'est ni
-un compte, ni une permission.
+Les références sont arrivées le 03/08/2026 et le contrat est figé par la
+**décision 48** : sélecteur en écran plein, entrée de nav qui ouvre cet écran
+plutôt qu'un menu déroulant, fiche de profil à deux panneaux ne portant que des
+faits locaux, avatar fourni par l'utilisateur, et écran d'accueil tant qu'aucun
+profil n'est actif dans ce navigateur.
+
+Les références montrent des écrans Netflix, donnés pour la **disposition, pas le
+style**. Tout ce qu'ils portent de compte — déconnexion, email, rôle, statut,
+badge d'abonnement, transfert de profil, centre d'aide, notifications — est
+refusé, pas traduit. Leurs illustrations ne peuvent pas entrer dans un dépôt
+public GPL-3.0.
+
+Il reste à concevoir `M2-BE` : aucune route profils n'existe aujourd'hui. Tant
+que la décision zéro-authentification reste en vigueur, un profil n'est ni un
+compte, ni une permission.
 
 ### V2-M3 — Séries
 Le plus gros morceau du backlog, mérite son propre cycle multi-session
