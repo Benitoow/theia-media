@@ -165,46 +165,30 @@ d'image cassée.
 
 ### M3-FE — Séries
 
-**Statut : prêt à démarrer depuis
-[`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7),
-livré par la [PR #5](https://github.com/Benitoow/theia-media/pull/5). Aucun écran
-série n'a été codé par le chantier backend.**
+**Statut : implémenté et vérifié à l'écran contre un vrai corpus et TMDB réel
+(décision 52). Reste à valider : les premiers fichiers série du mainteneur, la
+lecture à trois mètres et le parcours D-pad à la télécommande.**
 
-Le contrat complet, la fixture et les erreurs se trouvent dans la section
-M3-BE de `theia-v2-backend.md`. Le frontend ne repart pas du rapport de spike et
-ne devine pas une route à partir d'un ancien message.
+Livré : `/series`, `/serie/[id]`, `/episode/[id]`, `EpisodeRow.svelte`, et deux
+rangées séries ajoutées après les rangées films sur l'accueil.
 
-Flux à consommer :
+Le sélecteur de fichiers et le lecteur sont **ceux de M1**, pas des copies : ils
+prennent désormais la ressource sur laquelle ils agissent (`basePath`,
+`streamBase`, `progressPath`). Un épisode est une autre ressource, pas une autre
+interaction. `PosterCard` a gagné une image et un titre optionnels pour qu'un
+épisode l'utilise sans mentir dans ses données.
 
-1. `GET /api/library/series` construit le catalogue séries ;
-2. `GET /api/library/series/{id}` construit la fiche et les saisons locales ;
-3. `GET /api/library/series/{id}/seasons/{number}` fournit les items compacts ;
-4. `GET /api/library/episodes/{id}` fournit membres, fichiers, progression,
-   `next_episode_id` et `next_has_gap` ;
-5. un fichier `pending` se mesure uniquement par le `POST .../inspect` explicite ;
-6. le lecteur demande `.../stream/info`, puis utilise `.../stream` ou
-   `.../stream/remux`, avec les mêmes IDs de piste et règles que M1-FE ;
-7. la progression utilise `PUT`/`DELETE /api/library/episodes/{id}/progress` ;
-8. `GET /api/library/series/home` fournit la reprise série et les séries
-   récentes à composer avec l'accueil films existant.
+Trois points qu'un agent suivant ne doit pas défaire sans lire la décision 52 :
 
-Un item peut porter `[1, 2]` : il doit être présenté comme un épisode combiné,
-pas dupliqué en deux cartes qui lancent le même fichier. `next_has_gap` mérite un
-état visible mais ne bloque pas l'action. Les spéciaux sont la saison 0 et ne
-doivent jamais être injectés dans l'enchaînement automatique principal.
+- un item combiné s'affiche **une fois**, avec ses deux titres et une seule
+  reprise ; chaque membre garde son synopsis ;
+- `next_has_gap` s'affiche et ne bloque rien ; `S00` ne mène nulle part ;
+- les saisons sont des options sur la fiche, pas des pages.
 
-Le choix de fichier reste manuel sur la fiche, exactement comme M1-FE. Une
-piste audio choisie force le remux. Aucun label de résolution, langue ou codec
-n'est inventé quand `media.status != "ok"`, et aucun chemin serveur n'existe à
-afficher.
-
-États obligatoires à maquetter au D-pad et à trois mètres : catalogue vide,
-série sans TMDB, saison 0, item simple, item combiné, trou, dernier épisode,
-plusieurs fichiers, inspection `pending/error/ok`, plusieurs pistes, reprise et
-erreurs stables du tableau M3-BE. Le corpus utilisateur actuel ne contient
-encore aucune série ; utiliser d'abord la fixture backend, puis refaire la
-validation sur les premiers vrais fichiers au lieu de transformer ce manque en
-fausse preuve visuelle.
+Le corpus de validation a été généré : *Severance* avec `S01E01` en deux
+encodages, un `S01E02E03` combiné, un `S01E05` créant un trou, et un `S00E01`.
+Le corpus **utilisateur** ne contient toujours aucune série ; c'est la validation
+qui reste.
 
 ### M4-FE — Accès distant
 

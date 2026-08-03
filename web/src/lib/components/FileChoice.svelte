@@ -10,7 +10,10 @@
 	import { strings as t, formatSize } from '$lib/strings.js';
 	import Icon from './Icon.svelte';
 
-	let { movieId, files = [], fileId, audioTrackId, onselect, onmeasure } = $props();
+	// basePath is the resource these files hang off:
+	// /api/library/movies/{id} or /api/library/episodes/{id}. Inspection sits at
+	// the same place under both, so one component serves films and episodes.
+	let { basePath, files = [], fileId, audioTrackId, onselect, onmeasure } = $props();
 
 	/** file id -> 'idle' | 'running', so two files can be inspected independently. */
 	let inspecting = $state({});
@@ -42,10 +45,9 @@
 		inspectError = { ...inspectError, [file.id]: null };
 
 		try {
-			const response = await apiFetch(
-				`/api/library/movies/${movieId}/files/${file.id}/inspect`,
-				{ method: 'POST' }
-			);
+			const response = await apiFetch(`${basePath}/files/${file.id}/inspect`, {
+				method: 'POST'
+			});
 			if (!response.ok) {
 				// The body carries a code, never a sentence. Anything unparseable is
 				// still a failure, so fall back to a code this catalogue knows.

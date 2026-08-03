@@ -16,6 +16,9 @@
 	const path = $derived($page.url.pathname);
 	const atHome = $derived(path === '/');
 	const inLibrary = $derived(path === '/films' || path.startsWith('/films/'));
+	const inSeries = $derived(
+		path === '/series' || path.startsWith('/serie/') || path.startsWith('/episode/')
+	);
 	const inSettings = $derived(path === '/reglages' || path.startsWith('/reglages/'));
 	// The chooser owns the whole viewport: the navigation is suppressed for that
 	// route only, so the first arrow key lands on a profile rather than on a link.
@@ -158,18 +161,10 @@
 			aria-label="{t.appName} — {t.nav.home}"
 			aria-current={atHome ? 'page' : undefined}
 		>
-			<!-- The wordmark carries the name, so the image is decorative and
-			     the link states both the brand and where it goes. Intrinsic
-			     dimensions are declared so the nav does not reflow while it
-			     loads. -->
-			<img
-				src="/theia-wordmark.webp"
-				alt=""
-				width="410"
-				height="120"
-				class="brand-wordmark"
-				fetchpriority="high"
-			/>
+			<!-- Text, not an image: it carries the name to a screen reader
+			     without an alt attribute, needs no request, and cannot reflow
+			     the nav while it loads. See .brand-wordmark. -->
+			<span class="brand-wordmark">{t.appName}</span>
 		</a>
 		<div class="flex items-center">
 			<a
@@ -178,6 +173,13 @@
 				aria-current={inLibrary ? 'page' : undefined}
 			>
 				{t.nav.library}
+			</a>
+			<a
+				href="/series"
+				class="nav-target nav-link label"
+				aria-current={inSeries ? 'page' : undefined}
+			>
+				{t.series.title}
 			</a>
 			<a
 				href="/reglages"

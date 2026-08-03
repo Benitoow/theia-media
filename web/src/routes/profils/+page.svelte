@@ -290,7 +290,7 @@
 	     control underneath. Everything else is negative space. -->
 	<div class="profile-screen">
 		<a href="/" class="profile-brand" aria-label="{t.appName} — {t.nav.home}">
-			<img src="/theia-wordmark.webp" alt="" width="410" height="120" />
+			<span class="brand-wordmark">{t.appName}</span>
 		</a>
 
 		<h1 class="hero-title profile-question">

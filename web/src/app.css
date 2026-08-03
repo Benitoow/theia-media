@@ -434,36 +434,46 @@
 		box-shadow: 0 0 0.5rem rgba(200, 162, 74, 0.5);
 	}
 
-	/* The real wordmark, which replaced the CSS orbit-and-rule stand-in that held
-	   the brand's place until the licence-checked asset was wired up.
+	/* The wordmark is set, not placed.
 
-	   Sized by height so the nav's rhythm decides, not the image: 1.75rem inside
-	   a 4rem bar, rising with the bar at TV width. The file is cropped to the
-	   letterforms and shipped at three times the rendered height, so it stays
-	   crisp on a 4K panel and still costs 7.4 KB. */
+	   The photographic version -- letterforms filled with an earth horizon -- is
+	   the prestige piece the founding spec §11.10 describes, and the same
+	   paragraph warns that "le détail photographique ne survit pas à la réduction
+	   de taille" for the nav bar. It does not: at 28px the atmosphere band runs
+	   straight through the middle of the letters and reads as a strikethrough,
+	   the lens flare blows out E and I, the T and A come out gold while H, E and
+	   I come out white, and the image's box shows as a rectangle against the
+	   near-black bar. That is the "mal intégré, rectangulaire, mauvaise couleur
+	   perçue" already recorded in the roadmap's open points.
+
+	   So it is typography until M5 does the real art direction: uppercase display
+	   serif, tracked wide in the manner of the reference moodboards. It costs no
+	   asset, no licence question and no request, and it is legible at any size
+	   from a favicon to a television. */
 	.brand-wordmark {
-		width: auto;
-		height: 1.75rem;
-		opacity: 0.92;
-		transition: opacity var(--duration-fast) var(--ease-cine);
+		color: var(--color-parchment);
+		font-family: var(--font-display);
+		font-size: clamp(1.0625rem, 1.15vw, 1.375rem);
+		font-weight: 500;
+		letter-spacing: 0.32em;
+		line-height: 1;
+		text-transform: uppercase;
+		transition: color var(--duration-fast) var(--ease-cine);
+		/* Letter-spacing also applies after the last letter. Without this the
+		   mark sits a third of an em right of everything below it. */
+		margin-inline-end: -0.32em;
 	}
 
 	.nav-brand:hover .brand-wordmark,
 	.nav-brand:focus-visible .brand-wordmark {
-		opacity: 1;
+		color: var(--color-bone);
 	}
 
-	/* Being home brightens the mark rather than adding a second gold dot beside
-	   it: the wordmark is already an accent, and §3 keeps the budget at five. */
+	/* Being home brightens the mark instead of adding a second gold dot beside
+	   it: §3 keeps the accent budget at five per screen, and the nav already
+	   spends one on whichever link is current. */
 	.nav-brand[aria-current='page'] .brand-wordmark {
-		opacity: 1;
-		filter: drop-shadow(0 0 0.85rem rgba(200, 162, 74, 0.4));
-	}
-
-	@media (min-width: 80rem) {
-		.brand-wordmark {
-			height: 2rem;
-		}
+		color: var(--color-bone);
 	}
 
 	/* The largest register, and it stays reserved for what fills a viewport: the
@@ -1282,10 +1292,8 @@
 		inset-inline-start: var(--page-gutter);
 	}
 
-	.profile-brand img {
-		width: clamp(6rem, 9vw, 8rem);
-		height: auto;
-		opacity: 0.9;
+	.profile-brand {
+		text-decoration: none;
 	}
 
 	.profile-question {
@@ -1524,6 +1532,213 @@
 		width: min(100%, 34rem);
 		padding: clamp(1.25rem, 3vw, 1.75rem);
 		text-align: start;
+	}
+
+	/* Seasons and episodes. The season row follows §9's list rule -- one shared
+	   width so the D-pad cannot skip the shortest label -- and an episode row is
+	   a wide target with its artwork on the left. */
+	.season-picker {
+		border-top: 1px solid var(--color-line);
+		margin-top: 1rem;
+		padding-top: 1.75rem;
+	}
+
+	.season-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 0.6rem;
+		margin: 1rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.season-option {
+		display: inline-flex;
+		width: 11rem;
+		min-block-size: var(--target-min);
+		align-items: center;
+		justify-content: center;
+		border: 1px solid var(--color-line);
+		border-radius: 999px;
+		padding-inline: 1rem;
+		background: var(--color-surface);
+		color: var(--color-parchment);
+		font-size: clamp(0.875rem, 0.95vw, 1rem);
+		cursor: pointer;
+		transition:
+			border-color var(--duration-fast) var(--ease-cine),
+			background-color var(--duration-fast) var(--ease-cine),
+			color var(--duration-fast) var(--ease-cine);
+	}
+
+	.season-option:hover {
+		border-color: var(--color-muted);
+		background: var(--color-raised);
+		color: var(--color-bone);
+	}
+
+	.season-option--active {
+		border-color: var(--color-bone);
+		background: var(--color-raised);
+		color: var(--color-bone);
+	}
+
+	.episode-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin: 1.75rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.episode-row {
+		display: flex;
+		width: 100%;
+		max-width: 52rem;
+		align-items: center;
+		gap: clamp(0.9rem, 1.6vw, 1.4rem);
+		border: 1px solid var(--color-line);
+		border-radius: clamp(0.75rem, 1.2vw, 1rem);
+		padding: 0.75rem clamp(0.9rem, 1.4vw, 1.25rem);
+		background: var(--color-surface);
+		color: var(--color-bone);
+		text-decoration: none;
+		transition:
+			border-color var(--duration-fast) var(--ease-cine),
+			background-color var(--duration-fast) var(--ease-cine);
+	}
+
+	.episode-row:hover {
+		border-color: var(--color-muted);
+		background: var(--color-raised);
+	}
+
+	.episode-still {
+		position: relative;
+		display: block;
+		width: clamp(6rem, 11vw, 9rem);
+		flex: none;
+		aspect-ratio: 16 / 9;
+		overflow: hidden;
+		border-radius: 0.5rem;
+		background: var(--color-raised);
+	}
+
+	.episode-still img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.episode-progress {
+		position: absolute;
+		inset-inline: 0;
+		bottom: 0;
+		display: block;
+		height: 3px;
+		background: rgba(11, 10, 9, 0.55);
+	}
+
+	.episode-progress > span {
+		display: block;
+		height: 100%;
+		background: var(--color-accent);
+	}
+
+	.episode-body {
+		display: flex;
+		min-width: 0;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+
+	.episode-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem 0.7rem;
+	}
+
+	.episode-flag {
+		border-radius: 999px;
+		padding: 0.15rem 0.6rem;
+		background: var(--color-bone);
+		color: var(--color-ink);
+		font-size: var(--text-micro);
+		font-weight: 600;
+		letter-spacing: var(--text-micro--letter-spacing);
+		line-height: 1.5;
+		text-transform: uppercase;
+	}
+
+	.episode-flag--quiet {
+		background: transparent;
+		color: var(--color-muted);
+		box-shadow: inset 0 0 0 1px var(--color-line);
+	}
+
+	.episode-title {
+		overflow: hidden;
+		font-size: clamp(0.9375rem, 1vw, 1.0625rem);
+		font-weight: 500;
+		line-height: 1.35;
+		text-overflow: ellipsis;
+	}
+
+	.episode-facts {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem 0.9rem;
+		color: var(--color-muted);
+		font-size: var(--text-small);
+	}
+
+	.episode-resume {
+		color: var(--color-parchment);
+	}
+
+	.episode-header {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		gap: clamp(1.25rem, 3vw, 2.25rem);
+	}
+
+	.episode-header-still {
+		width: min(100%, 26rem);
+		aspect-ratio: 16 / 9;
+		object-fit: cover;
+		border: 1px solid var(--color-line);
+		border-radius: var(--radius-card);
+	}
+
+	.episode-note,
+	.episode-gap {
+		display: flex;
+		max-width: 38rem;
+		align-items: flex-start;
+		gap: 0.6rem;
+		margin-bottom: 1.25rem;
+		color: var(--color-muted);
+		font-size: var(--text-small);
+		line-height: 1.5;
+	}
+
+	.episode-gap {
+		margin: 0.9rem 0 0;
+		border-left: 1px solid var(--color-warning);
+		padding-left: 0.9rem;
+		color: var(--color-parchment);
+	}
+
+	.episode-next {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		margin-top: 2.5rem;
+		border-top: 1px solid var(--color-line);
+		padding-top: 1.75rem;
 	}
 
 	.row-scroll-frame {

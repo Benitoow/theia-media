@@ -84,6 +84,14 @@ export const strings = {
 			title: 'Top rated',
 			href: '/films?sort=rating'
 		},
+		series_continue: {
+			title: 'Continue a series',
+			href: '/series'
+		},
+		series_recent: {
+			title: 'Recently added series',
+			href: '/series'
+		},
 		tonight: {
 			title: 'Tonight’s random picks',
 			href: null,
@@ -275,8 +283,8 @@ export const strings = {
 			resolution: (width, height) => `${width} × ${height}`,
 			trackCount: (count) => (count > 1 ? `${count} audio tracks` : `${count} audio track`),
 			hint:
-				'Theia never picks a quality for you: this movie has several files and you decide ' +
-				'which one to play.'
+				'Theia never picks a quality for you: several files exist and you decide which ' +
+				'one to play.'
 		},
 		audio: {
 			title: 'Audio track',
@@ -293,6 +301,34 @@ export const strings = {
 		unmatched:
 			'This file could not be identified on TMDB. It remains listed under its filename; ' +
 			'renaming the file will trigger another search during the next scan.'
+	},
+
+	series: {
+		title: 'Series',
+		loading: 'Loading series…',
+		countAll: (n) => (n === 1 ? '1 series' : `${n} series`),
+		emptyTitle: 'No series',
+		emptyBody:
+			'Arrange episodes in series and season folders, named SxxExx, then run another scan from settings.',
+		notFound: 'This series could not be found.',
+		episodeNotFound: 'This episode could not be found.',
+		seasons: 'Seasons',
+		specials: 'Specials',
+		season: (number) => `Season ${number}`,
+		ownedEpisodes: (n) => (n === 1 ? '1 episode owned' : `${n} episodes owned`),
+		episodeLabel: (number) => `Episode ${number}`,
+		episodeRange: (first, last) => `Episodes ${first} to ${last}`,
+		combined: 'Combined episode',
+		combinedHint:
+			'These episodes are in one file: they play in a single run and share one resume position.',
+		gap: 'An episode is missing before the next one',
+		next: 'Next episode',
+		lastOwned: 'Last episode owned',
+		unmatched:
+			'This series was not identified on TMDB. It remains listed under its folder name.',
+		noOverview: 'No overview is available.',
+		play: 'Play episode',
+		resumeAtMinutes: (minutes) => `Resume at ${minutes} min`
 	},
 
 	profiles: {

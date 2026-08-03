@@ -39,14 +39,19 @@ export function imageURL(path, size = 'w342') {
 	return `/api/images/${size}/${path.replace(/^\//, '')}`;
 }
 
-/** The title to show: TMDB's when it recognised the film, the filename's otherwise. */
-export function displayTitle(movie) {
-	return movie?.metadata?.tmdb_title || movie?.title || '';
+/**
+ * The title to show: TMDB's when it recognised the item, the filename's
+ * otherwise. Films carry `tmdb_title`, series `tmdb_name` -- one helper rather
+ * than two so a card component does not need to know which it is holding.
+ */
+export function displayTitle(item) {
+	return item?.metadata?.tmdb_title || item?.metadata?.tmdb_name || item?.title || '';
 }
 
-/** The year to show, preferring TMDB's release date over the parsed filename. */
-export function displayYear(movie) {
-	return movie?.metadata?.release_date?.slice(0, 4) || movie?.year || null;
+/** The year to show, preferring TMDB's date over the parsed filename. */
+export function displayYear(item) {
+	const date = item?.metadata?.release_date || item?.metadata?.first_air_date;
+	return date?.slice(0, 4) || item?.year || null;
 }
 
 /**

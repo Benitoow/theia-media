@@ -192,7 +192,7 @@
 					     by remote: the layout's geometric D-pad scored the distant "Retour"
 					     link below the first file option and skipped the whole list. -->
 					<FileChoice
-						movieId={movie.id}
+						basePath={`/api/library/movies/${movie.id}`}
 						{files}
 						{fileId}
 						{audioTrackId}

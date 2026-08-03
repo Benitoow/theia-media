@@ -1203,6 +1203,70 @@ Two things were found by looking at the built screens rather than the code:
 A profile's page is addressable as `/profils?gerer=1&profil=<id>` so a reload
 does not throw the viewer back to the row they came from.
 
+## 51. The wordmark is set, not placed
+
+The photographic wordmark — serif letterforms filled with an earth horizon — is
+the prestige piece the founding spec §11.10 describes, and the same paragraph
+warns that photographic detail does not survive the reduction to nav-bar size.
+It does not, and the failure is specific rather than a matter of taste. At the
+28px the bar renders, the atmosphere band runs straight through the middle of
+the letters and reads as a strikethrough; the lens flare blows out the E and the
+I; the T and A come out gold while the H, E and I come out white, so it reads as
+two words; and the image's box shows as a rectangle against the near-black bar.
+That is exactly the "mal intégré, rectangulaire, mauvaise couleur perçue"
+already sitting in the roadmap's open points, and the fallback recorded beside
+it was plain "THEIA" text.
+
+So the mark is typography until M5 does the real art direction: uppercase
+display serif, tracked at `0.32em` in the manner of the reference moodboards,
+with a negative end margin because letter-spacing also applies after the last
+letter and would otherwise push the mark a third of an em right of everything
+below it. It costs no asset, no licence question and no request, it carries the
+name to a screen reader without an alt attribute, it cannot reflow the bar while
+it loads, and it is legible from a favicon to a television.
+
+`web/static/theia-wordmark.webp` is now referenced by nothing. It is left in
+place rather than deleted — it is the maintainer's licence-checked asset and
+M5's starting point — and joins `icon-512.png` in the roadmap's open points.
+Designing a new mark is still M5; this is integration, not identity.
+
+## 52. A series is a catalogue of items, not of episodes
+
+**Decided and verified in V2-M3-FE.** The catalogue, the series page and the
+episode page consume the M3-BE contract as published. Three things follow from
+the model rather than from taste:
+
+- **A combined file appears once.** `S01E02E03` is one item with one timeline,
+  so the row reads "épisodes 2 à 3", joins both TMDB titles, and carries one
+  resume position. Two cards would launch the same file twice from second zero.
+  Each member still gets its own synopsis on the episode page, because that is
+  information the item genuinely holds.
+- **A gap is stated, never enforced.** `next_has_gap` renders as a line beside
+  the next-episode action, in the warning register, and blocks nothing.
+  Specials are a named season and lead nowhere: `S00` never receives a
+  `next_episode_id`, so the page says so instead of inventing a successor.
+- **Seasons are options, not pages.** Switching season on a television should
+  not be a navigation, and the season payload is compact by design — files live
+  on the episode page. The row obeys §9: one shared width, its own axis.
+
+The file chooser and the player are the components M1 built, not copies. Both
+now take the resource they act on — `basePath` for inspection, `streamBase` and
+`progressPath` for playback — because an episode is a different resource, not a
+different interaction. The same is true of the card: `PosterCard` gained an
+artwork and title override so an episode can use it without pretending in its
+data to be a film.
+
+Series rows are appended after the film rows on the home screen and disappear
+when the endpoint returns nothing, which is what keeps a films-only library
+looking exactly as it did.
+
+Verified against a real corpus rather than a fixture: TMDB recognised
+*Severance*, the specials and season 1 filled, a two-track MKV inspected at
+1280×720 with `eng`/`fra`, the French track remuxed from twenty seconds in and
+decoded back through ffmpeg without error, and the chain reported
+`[1] → [2,3] → [5]` with the gap flagged on the middle item and nothing after
+the special.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

@@ -66,10 +66,12 @@ inexistant).
 
 ## 3. Points ouverts, décision utilisateur requise avant de prompter
 
-- **Logo dans la nav** : le wordmark photographique recadré est jugé mal
-  intégré (rectangulaire, mauvaise couleur perçue). Retour à un texte
-  simple "THEIA" en attendant un vrai travail de direction artistique dédié
-  au logo de nav — ne pas retenter un câblage rapide sans ça.
+- **Logo dans la nav** : tranché à l'usage par la décision 51. Le wordmark
+  photographique se lit comme un texte barré à 28 px ; la nav et l'écran de
+  profils utilisent désormais un wordmark **typographique**. Reste entier le
+  vrai travail de direction artistique, qui appartient à V2-M5.
+- **`web/static/theia-wordmark.webp`** (7,4 Ko) : n'est plus référencé depuis la
+  décision 51. Conservé comme point de départ de M5, à trancher avec le logo.
 - **`web/static/icon-512.png`** (208 Ko) : embarqué dans le binaire,
   référencé nulle part, aucun manifeste PWA dans le projet. À trancher :
   retirer, ou construire le manifeste qui le justifie.
@@ -103,7 +105,7 @@ partir d'une ancienne conversation.
 |---|---|---|---|
 | V2-M1 — fichiers et qualités | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Implémenté et vérifié à l'écran (décision 47) | Reste la validation sur un vrai film décodable multi-pistes |
 | V2-M2 — profils | Implémenté et vérifié (décision 48) | Implémenté et vérifié (décisions 48/50) | Reste la validation TV et D-pad |
-| V2-M3 — séries | [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7), [PR #5](https://github.com/Benitoow/theia-media/pull/5) | Prêt sur le contrat M3-BE | Reste M3-FE + validation sur les premiers fichiers série utilisateur |
+| V2-M3 — séries | [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7), [PR #5](https://github.com/Benitoow/theia-media/pull/5) | Implémenté et vérifié (décision 52) | Reste la validation sur les premiers fichiers série utilisateur |
 | V2-M4 — accès distant | [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a) | Prêt sur le contrat M4-BE après fusion | Reste M4-FE + validation via un vrai endpoint hors LAN |
 | V2-M5 — logo/navigation | Aucun chantier backend | Backlog | Direction artistique |
 | V2-M6 — optimisation matérielle | Différé | Attend `M6-BE` | À ouvrir après stabilisation du reste |

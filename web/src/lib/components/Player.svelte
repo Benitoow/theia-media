@@ -9,11 +9,25 @@
 	// are absent the player falls back to the v1 routes, which the server still
 	// binds to the primary file -- that is the compatibility net for the home
 	// hero's "reprendre", not a path M1 should build on.
-	let { movie, fileId = null, audioTrackId = null, onclose, onprogress } = $props();
+	// streamBase and progressPath let an episode reuse this player: its routes
+	// live under /api/library/episodes/{id}/... rather than /api/stream/{id}/...,
+	// but the shapes below them are identical -- info, the bare path, /remux.
+	let {
+		movie,
+		fileId = null,
+		audioTrackId = null,
+		streamBase = null,
+		progressPath = null,
+		title = null,
+		onclose,
+		onprogress
+	} = $props();
 
 	const base = $derived(
-		fileId ? `/api/stream/${movie.id}/files/${fileId}` : `/api/stream/${movie.id}`
+		streamBase ?? (fileId ? `/api/stream/${movie.id}/files/${fileId}` : `/api/stream/${movie.id}`)
 	);
+	const progressRoute = $derived(progressPath ?? `/api/library/movies/${movie.id}/progress`);
+	const heading = $derived(title ?? displayTitle(movie));
 	const audioQuery = $derived(audioTrackId ? `audio=${audioTrackId}` : '');
 
 	/** @type {'checking' | 'resume' | 'playing' | 'preparing' | 'failed'} */
@@ -251,7 +265,7 @@
 		lastSaved = seconds;
 
 		try {
-			const response = await apiFetch(profiles.url(`/api/library/movies/${movie.id}/progress`), {
+			const response = await apiFetch(profiles.url(progressRoute), {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ position_seconds: seconds, duration_seconds: duration }),
@@ -530,7 +544,7 @@
 	class:player--idle={hidden}
 	role="dialog"
 	aria-modal="true"
-	aria-label={displayTitle(movie)}
+	aria-label={heading}
 	tabindex="-1"
 	onkeydown={trapDialogFocus}
 	onpointermove={showControls}
@@ -547,7 +561,7 @@
 		<!-- Resuming has to be the obvious choice without hiding the other one. -->
 		<div class="player-message">
 			<span class="label">{t.player.continueWatching}</span>
-			<h2 class="page-title mx-auto mt-4 mb-3">{displayTitle(movie)}</h2>
+			<h2 class="page-title mx-auto mt-4 mb-3">{heading}</h2>
 			<p class="tv-copy mb-10">{t.player.resumeAt} {formatTime(offset)}</p>
 			<div class="flex flex-wrap items-center justify-center gap-5">
 				<button
@@ -562,7 +576,7 @@
 				<button
 					type="button"
 					onclick={async () => {
-						await apiFetch(profiles.url(`/api/library/movies/${movie.id}/progress`), { method: 'DELETE' });
+						await apiFetch(profiles.url(progressRoute), { method: 'DELETE' });
 						start(0);
 					}}
 					class="tv-action cursor-pointer"
@@ -614,7 +628,7 @@
 				<Icon name="back" label={t.player.close} />
 			</button>
 			<div class="min-w-0">
-				<p class="player-title truncate">{displayTitle(movie)}</p>
+				<p class="player-title truncate">{heading}</p>
 				{#if isRemux}
 					<p class="micro mt-1">{t.player.remuxBadge}</p>
 				{/if}

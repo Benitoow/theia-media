@@ -84,6 +84,14 @@ export const strings = {
 			title: 'Les mieux notés',
 			href: '/films?sort=rating'
 		},
+		series_continue: {
+			title: 'Reprendre une série',
+			href: '/series'
+		},
+		series_recent: {
+			title: 'Séries récemment ajoutées',
+			href: '/series'
+		},
 		tonight: {
 			title: 'Au hasard ce soir',
 			href: null,
@@ -277,8 +285,8 @@ export const strings = {
 			resolution: (width, height) => `${width} × ${height}`,
 			trackCount: (count) => (count > 1 ? `${count} pistes audio` : `${count} piste audio`),
 			hint:
-				'Theia ne choisit jamais une qualité à votre place : ce film possède plusieurs ' +
-				'fichiers et vous décidez lequel lire.'
+				'Theia ne choisit jamais une qualité à votre place : plusieurs fichiers existent ' +
+				'et vous décidez lequel lire.'
 		},
 		audio: {
 			title: 'Piste audio',
@@ -295,6 +303,34 @@ export const strings = {
 		unmatched:
 			"Ce fichier n'a pas été identifié sur TMDB. Il reste listé sous le nom que porte le fichier ; " +
 			'renommer celui-ci relance une recherche à la prochaine analyse.'
+	},
+
+	series: {
+		title: 'Séries',
+		loading: 'Chargement des séries…',
+		countAll: (n) => (n === 1 ? '1 série' : `${n} séries`),
+		emptyTitle: 'Aucune série',
+		emptyBody:
+			'Rangez vos épisodes en dossiers de série et de saison, nommés SxxExx, puis relancez une analyse depuis les réglages.',
+		notFound: 'Cette série est introuvable.',
+		episodeNotFound: 'Cet épisode est introuvable.',
+		seasons: 'Saisons',
+		specials: 'Épisodes spéciaux',
+		season: (number) => `Saison ${number}`,
+		ownedEpisodes: (n) => (n === 1 ? '1 épisode possédé' : `${n} épisodes possédés`),
+		episodeLabel: (number) => `Épisode ${number}`,
+		episodeRange: (first, last) => `Épisodes ${first} à ${last}`,
+		combined: 'Épisode combiné',
+		combinedHint:
+			'Ces épisodes sont dans un seul fichier : ils se lisent d’une traite et partagent une reprise.',
+		gap: 'Un épisode manque avant le suivant',
+		next: 'Épisode suivant',
+		lastOwned: 'Dernier épisode possédé',
+		unmatched:
+			'Cette série n’a pas été identifiée sur TMDB. Elle reste listée sous le nom de son dossier.',
+		noOverview: 'Aucun synopsis n’est disponible.',
+		play: 'Lire l’épisode',
+		resumeAtMinutes: (minutes) => `Reprendre à ${minutes} min`
 	},
 
 	profiles: {
