@@ -1314,6 +1314,51 @@ very tall box. And a device name typed with accents round-trips intact — the
 mojibake in the first screenshot came from the shell that created the peer, not
 from the server, which was checked rather than assumed.
 
+## 54. The identity is the word and the rule, and the icon is a crop of it
+
+**Decided in V2-M5, from four directions put in front of the maintainer before
+anything was written.** The brief was the one the roadmap set: real art
+direction, several options, validation before implementation — not a cosmetic
+retouch smuggled into another milestone.
+
+Four were drawn and rendered at 16px, 28px and 96px, then in a navigation
+lockup: a Greek theta, a drawn sun, the word underlined by a rule, and a
+geometric sunrise. Rendering them at their real sizes is what decided it. The
+sun lost its rays at 16px and became a gold dot, which is exactly the failure
+decision 51 had just removed. The maintainer chose **the word and the rule**:
+THEIA in the display serif, underlined by a gold rule that reads as a horizon.
+
+Its weakness was known when it was chosen — at 16px the word does not fit — so
+the reduction was designed and tested rather than assumed. Three candidates were
+rendered in a real browser tab: a disc crossed by the rule read as a ringed
+planet and said nothing about the lockup; the rule alone became a grey smudge;
+the **initial standing on the rule** stayed legible and is a crop of the lockup
+rather than a second mark invented beside it. That is the icon.
+
+Three consequences:
+
+- **The T is drawn as paths, never as a text element.** A favicon is fetched as
+  an image, so no webfont reaches it: a text node would fall back to whatever
+  serif the platform happens to have and the letter would differ per machine.
+  The trade is that the serifs are blockier than a true didone, because
+  thick/thin contrast is what disappears first at 16px, and legibility there
+  outranks fidelity at 180.
+- **The touch icon is generated from the same SVG**, so the two files cannot
+  drift. It exists only because iOS will not take an SVG for a home screen.
+- **Two dead assets left the binary.** `icon-512.png` was 208 KB serving a PWA
+  manifest that the founding spec §11.5 excludes from v1, and
+  `theia-wordmark.webp` was the nav crop that decision 51 stopped using; the
+  README's prestige logo lives in `assets/`, outside the binary, and is
+  untouched. Static assets fall from about 840 KB to 584 KB.
+
+The favicon was verified the way the four-release bug of decision 22 taught: not
+by the file existing, but by loading it into an `Image()` and reading back
+`32×32` after a strict XML parse.
+
+Both of the roadmap's open points are now closed. What remains genuinely open is
+whether the photographic wordmark ever earns a surface inside the application;
+it currently has none, and none is invented for it.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

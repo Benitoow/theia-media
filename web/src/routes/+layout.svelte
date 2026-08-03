@@ -167,7 +167,7 @@
 			<!-- Text, not an image: it carries the name to a screen reader
 			     without an alt attribute, needs no request, and cannot reflow
 			     the nav while it loads. See .brand-wordmark. -->
-			<span class="brand-wordmark">{t.appName}</span>
+			<span class="brand-wordmark"><span class="brand-word">{t.appName}</span></span>
 		</a>
 		<div class="flex items-center">
 			<a

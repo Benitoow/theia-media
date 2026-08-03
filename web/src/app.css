@@ -451,28 +451,44 @@
 	   asset, no licence question and no request, and it is legible at any size
 	   from a favicon to a television. */
 	.brand-wordmark {
+		display: inline-flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+
+	.brand-word {
 		color: var(--color-parchment);
 		font-family: var(--font-display);
 		font-size: clamp(1.0625rem, 1.15vw, 1.375rem);
 		font-weight: 500;
-		letter-spacing: 0.32em;
+		letter-spacing: var(--text-label--letter-spacing);
 		line-height: 1;
 		text-transform: uppercase;
 		transition: color var(--duration-fast) var(--ease-cine);
 		/* Letter-spacing also applies after the last letter. Without this the
-		   mark sits a third of an em right of everything below it. */
-		margin-inline-end: -0.32em;
+		   word sits a fifth of an em right of the rule beneath it. */
+		margin-inline-end: calc(var(--text-label--letter-spacing) * -1);
 	}
 
-	.nav-brand:hover .brand-wordmark,
-	.nav-brand:focus-visible .brand-wordmark {
+	/* The rule is the horizon, and it is the one gold thing the mark spends.
+	   It fades out rather than stopping, so it reads as a horizon running off
+	   rather than as an underline that ended. */
+	.brand-wordmark::after {
+		content: '';
+		display: block;
+		height: 1px;
+		background: linear-gradient(to right, var(--color-accent), rgba(200, 162, 74, 0));
+	}
+
+	.nav-brand:hover .brand-word,
+	.nav-brand:focus-visible .brand-word {
 		color: var(--color-bone);
 	}
 
-	/* Being home brightens the mark instead of adding a second gold dot beside
+	/* Being home brightens the word instead of adding a second gold dot beside
 	   it: §3 keeps the accent budget at five per screen, and the nav already
-	   spends one on whichever link is current. */
-	.nav-brand[aria-current='page'] .brand-wordmark {
+	   spends one on whichever link is current, plus the rule above. */
+	.nav-brand[aria-current='page'] .brand-word {
 		color: var(--color-bone);
 	}
 

@@ -1,8 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <!-- The wordmark reduced to its centre. A photographic crop of the logo turns
-       to mush below about 64px, because the letterforms either side of the
-       flare become an ambiguous cross, so the tab icon is the sun alone, drawn.
-       Larger sizes use the real crop; see apple-touch-icon.png.
+  <!-- The wordmark reduced to its first letter and its rule.
+
+       Decision 52 chose "the word and the rule" as the identity: THEIA set in
+       the display serif, underlined by a gold rule that reads as a horizon. At
+       16px the word cannot fit, so what survives is the initial standing on the
+       same rule. That is a crop of the lockup rather than a second mark
+       invented beside it, which is what the previous sun icon was.
+
+       The T is drawn as paths, never as a text element. A favicon is fetched as
+       an image, so no webfont is available to it: a text node would silently
+       fall back to whatever serif the platform happens to have, and the letter
+       would differ on every machine.
 
        Never write a double hyphen in this file. XML forbids it inside a
        comment, and this icon carried two of them from M2 until v1.5.0. Nothing
@@ -12,23 +20,19 @@
        parser, so every tab silently fell back to the default icon for four
        releases. Loading it into an Image() and waiting for onload is the check
        that finds this; the file existing is not. -->
-  <defs>
-    <radialGradient id="core" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#FFF6E2"/>
-      <stop offset="45%" stop-color="#FFD98A"/>
-      <stop offset="100%" stop-color="#E8971F"/>
-    </radialGradient>
-  </defs>
 
   <rect width="32" height="32" rx="7" fill="#0B0A09"/>
 
-  <!-- Rays: long on the horizontal, as in the lockup. -->
-  <g stroke="#E8971F" stroke-linecap="round" fill="none">
-    <path d="M2 16h7M23 16h7" stroke-width="1.6" opacity="0.95"/>
-    <path d="M16 5v5M16 22v5" stroke-width="1.4" opacity="0.75"/>
-    <path d="M8.2 8.2l3.2 3.2M20.6 20.6l3.2 3.2M23.8 8.2l-3.2 3.2M11.4 20.6l-3.2 3.2"
-          stroke-width="1.2" opacity="0.55"/>
+  <g fill="#EDE7DC">
+    <!-- Crossbar, thin as a didone's horizontal. -->
+    <path d="M6.4 7h19.2v2.5H6.4z"/>
+    <!-- Bracket serifs hanging off each end of the crossbar. -->
+    <path d="M6.4 7h1.9v3.6H6.4zM23.7 7h1.9v3.6h-1.9z"/>
+    <!-- Stem, thick, and its foot serif. -->
+    <path d="M14.4 7h3.2v14.1h-3.2z"/>
+    <path d="M11.3 20.3h9.4v2.4h-9.4z"/>
   </g>
 
-  <circle cx="16" cy="16" r="5.4" fill="url(#core)"/>
+  <!-- The rule. The one gold thing on the mark, as in the lockup. -->
+  <path d="M5.6 26.4h20.8" stroke="#C8A24A" stroke-width="2.4" stroke-linecap="round"/>
 </svg>

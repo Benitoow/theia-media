@@ -399,6 +399,30 @@ kept here. Paste one in when a screen needs it.
 The favicon remains authored as SVG in this repository. Any additional shipped
 image must satisfy the rules above and stay self-hosted.
 
+### 7.1 The mark
+
+The identity is **the word and the rule**: THEIA set in the display serif,
+tracked at `--text-label--letter-spacing`, underlined by a gold rule that fades
+to the right so it reads as a horizon running off rather than an underline that
+stopped. The rule is the mark's single use of the accent.
+
+Where the word does not fit, the mark is **its initial standing on the same
+rule** — a crop of the lockup, not a second mark beside it. That is the favicon
+and, rendered from the same file, the touch icon.
+
+Two rules that are not preferences:
+
+- **The letter is drawn as paths.** A favicon is fetched as an image and no
+  webfont reaches it; a text element would fall back to whatever serif the
+  platform has. This costs some didone contrast, because thick/thin is what
+  vanishes first at 16px, and legibility there wins.
+- **A photographic wordmark is a prestige piece, never chrome.** Founding spec
+  §11.10 said so and decision 51 measured it: at 28px the fill's horizon band
+  runs through the letters and reads as a strikethrough. It lives in `assets/`
+  for the README, outside the binary.
+
+See decisions 51 and 54.
+
 ## 8. Motion
 
 Slow and eased, never bouncy. The reference for timing is a camera move, not a

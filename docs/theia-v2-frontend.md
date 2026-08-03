@@ -32,9 +32,10 @@ Contraintes communes à tous les écrans :
 
 **Statut : implémenté sur le contrat backend
 [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e)
-(PR #4), vérifié contre le vrai serveur et la vraie bibliothèque. Reste à
-valider : un vrai film décodable multi-pistes du mainteneur — les 274 fichiers
-actuels sont remplis de zéros et ne prouvent que le chemin `error`.**
+(PR #4), vérifié contre le vrai serveur et la vraie bibliothèque. **Seul jalon
+que le mainteneur n'a pas encore validé** : il reste à ouvrir un vrai film
+décodable multi-pistes, les 274 fichiers actuels étant remplis de zéros et ne
+prouvant que le chemin `error`.**
 
 Livré : `web/src/lib/components/FileChoice.svelte`, consommé par
 `web/src/routes/film/[id]/+page.svelte`, plus les routes `file_id` dans
@@ -98,9 +99,8 @@ il n'affiche aucune prose technique du serveur.
 
 ### M2-FE — Profils, nouvelle mouture
 
-**Statut : implémenté et vérifié à l'écran dans un vrai navigateur. Contrat
-visuel de la décision 48, backend M2-BE. Reste à valider : la lecture à trois
-mètres sur une vraie télévision et le parcours D-pad complet à la télécommande.**
+**Statut : implémenté, vérifié à l'écran et confirmé par le mainteneur
+(décisions 48 et 50).**
 
 Livré : `web/src/routes/profils/+page.svelte`, `ProfileMark.svelte`,
 `profiles.svelte.js`, l'entrée de nav et le `?profile=` sur les requêtes.
@@ -165,9 +165,8 @@ d'image cassée.
 
 ### M3-FE — Séries
 
-**Statut : implémenté et vérifié à l'écran contre un vrai corpus et TMDB réel
-(décision 52). Reste à valider : les premiers fichiers série du mainteneur, la
-lecture à trois mètres et le parcours D-pad à la télécommande.**
+**Statut : implémenté, vérifié à l'écran et confirmé par le mainteneur
+(décision 52).**
 
 Livré : `/series`, `/serie/[id]`, `/episode/[id]`, `EpisodeRow.svelte`, et deux
 rangées séries ajoutées après les rangées films sur l'accueil.
@@ -192,10 +191,8 @@ qui reste.
 
 ### M4-FE — Accès distant
 
-**Statut : implémenté et vérifié sur le LAN dans un vrai navigateur
-(décision 53). Reste à valider, et c'est indispensable avant de déclarer
-V2-M4 produit terminé : un vrai endpoint hors LAN, puis une session réelle
-derrière un client WireGuard.**
+**Statut : implémenté, vérifié sur le LAN et confirmé par le mainteneur en
+mode distant réel (décision 53).**
 
 Livré : `RemoteAccess.svelte` en section de Réglages, `ProvisionDialog.svelte`,
 `remote.svelte.js` pour la détection de contexte, la navigation distante et le
@@ -218,10 +215,18 @@ peuvent être observés que depuis une vraie session derrière WireGuard.
 
 ### M5-FE — Logo et identité de navigation
 
-**Statut : backlog frontend, sans dépendance backend.**
+**Statut : implémenté (décision 54).** Quatre pistes ont été dessinées, rendues
+à 16, 28 et 96 px puis en verrou de navigation, et soumises au mainteneur avant
+la première ligne de code, comme le jalon l'exigeait.
 
-Travail de direction artistique à partir de références validées. Il ne doit pas
-être glissé dans un autre jalon comme une retouche cosmétique opportuniste.
+Retenu : **le mot et le filet**. La marque réduite est l'initiale posée sur le
+même filet — un recadrage du verrou, pas une seconde marque à côté. Elle sert de
+favicon et, rendue depuis le même SVG, d'icône d'application. `icon-512.png` et
+`theia-wordmark.webp` ont quitté le binaire.
+
+Le trait est dessiné en chemins et non en `<text>` : un favicon est chargé comme
+une image, donc sans police web. Le fichier est vérifié en le décodant dans un
+`Image()`, pas en constatant qu'il existe.
 
 ### M6-FE — Contrôles de qualité et capacités matérielles
 
