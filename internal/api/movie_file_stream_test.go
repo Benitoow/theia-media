@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,9 +17,17 @@ import (
 	"github.com/Benitoow/theia-media/internal/db"
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/library"
+	"github.com/Benitoow/theia-media/internal/profiles"
 )
 
 func newMovieFileTestServer(t *testing.T) (http.Handler, *library.Service, string) {
+	handler, service, root, _ := newMovieFileTestServerDB(t)
+	return handler, service, root
+}
+
+// newMovieFileTestServerDB also hands back the database, for the few tests that
+// assert on a column the API deliberately does not expose.
+func newMovieFileTestServerDB(t *testing.T) (http.Handler, *library.Service, string, *sql.DB) {
 	t.Helper()
 	database, err := db.Open(t.Context(), filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {
@@ -32,15 +41,16 @@ func newMovieFileTestServer(t *testing.T) (http.Handler, *library.Service, strin
 	cfg := config.Default()
 	cfg.LibraryPaths = []string{root}
 	handler := New(Options{
-		Config:  &cfg,
-		Library: service,
-		FFmpeg:  ffmpeg.New(t.TempDir(), log),
-		State:   db.NewState(database),
-		Web:     bundle(),
-		Version: "test",
-		Logger:  log,
+		Config:   &cfg,
+		Library:  service,
+		FFmpeg:   ffmpeg.New(t.TempDir(), log),
+		State:    db.NewState(database),
+		Profiles: profiles.New(database),
+		Web:      bundle(),
+		Version:  "test",
+		Logger:   log,
 	}).Handler()
-	return handler, service, root
+	return handler, service, root, database
 }
 
 func testMediaFile(t *testing.T, root, name, contents string) string {
@@ -59,7 +69,7 @@ func TestMovieDetailExposesFileIDsWithoutNestedPaths(t *testing.T) {
 	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
 		t.Fatal(err)
 	}
-	movies, _ := service.List(t.Context(), 10, 0)
+	movies, _ := service.List(t.Context(), defaultProfileID, 10, 0)
 
 	res := get(t, handler, "/api/library/movies/"+strconvID(movies[0].ID))
 	if res.StatusCode != http.StatusOK {
@@ -94,7 +104,7 @@ func TestSelectedAudioForcesRemuxAndReturnsStableIDs(t *testing.T) {
 		t.Fatal(err)
 	}
 	movie := onlyAPIMovie(t, service)
-	detail, _ := service.Get(t.Context(), movie.ID)
+	detail, _ := service.Get(t.Context(), defaultProfileID, movie.ID)
 	file := detail.Files[0]
 	file, err := service.SaveFileMedia(t.Context(), movie.ID, file.ID, library.FileMedia{
 		Status:          library.MediaOK,
@@ -138,9 +148,9 @@ func TestMovieFileRoutesEnforceOwnershipAndInspection(t *testing.T) {
 	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
 		t.Fatal(err)
 	}
-	movies, _ := service.List(t.Context(), 10, 0)
-	first, _ := service.Get(t.Context(), movies[0].ID)
-	second, _ := service.Get(t.Context(), movies[1].ID)
+	movies, _ := service.List(t.Context(), defaultProfileID, 10, 0)
+	first, _ := service.Get(t.Context(), defaultProfileID, movies[0].ID)
+	second, _ := service.Get(t.Context(), defaultProfileID, movies[1].ID)
 
 	wrongOwner := "/api/stream/" + strconvID(first.ID) + "/files/" +
 		strconvID(second.Files[0].ID) + "/info"
@@ -169,7 +179,7 @@ func TestMovieFileDirectRouteSupportsRangesAndRejectsAudioSelection(t *testing.T
 		t.Fatal(err)
 	}
 	movie := onlyAPIMovie(t, service)
-	detail, _ := service.Get(t.Context(), movie.ID)
+	detail, _ := service.Get(t.Context(), defaultProfileID, movie.ID)
 	path := "/api/stream/" + strconvID(movie.ID) + "/files/" + strconvID(detail.Files[0].ID)
 
 	recorder := httptest.NewRecorder()
@@ -197,7 +207,7 @@ func TestMovieFileDirectRouteReportsAFileThatDisappearedAfterScan(t *testing.T) 
 		t.Fatal(err)
 	}
 	movie := onlyAPIMovie(t, service)
-	detail, _ := service.Get(t.Context(), movie.ID)
+	detail, _ := service.Get(t.Context(), defaultProfileID, movie.ID)
 	if err := os.Remove(mediaPath); err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +223,7 @@ func TestMovieFileDirectRouteReportsAFileThatDisappearedAfterScan(t *testing.T) 
 
 func onlyAPIMovie(t *testing.T, service *library.Service) library.Movie {
 	t.Helper()
-	movies, err := service.List(t.Context(), 10, 0)
+	movies, err := service.List(t.Context(), defaultProfileID, 10, 0)
 	if err != nil || len(movies) != 1 {
 		t.Fatalf("movies = %d err=%v, want one", len(movies), err)
 	}

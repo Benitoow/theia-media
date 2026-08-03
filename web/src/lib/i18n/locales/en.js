@@ -84,6 +84,14 @@ export const strings = {
 			title: 'Top rated',
 			href: '/films?sort=rating'
 		},
+		series_continue: {
+			title: 'Continue a series',
+			href: '/series'
+		},
+		series_recent: {
+			title: 'Recently added series',
+			href: '/series'
+		},
 		tonight: {
 			title: 'Tonight’s random picks',
 			href: null,
@@ -204,6 +212,35 @@ export const strings = {
 		failed:
 			'This file could not be played. Its format is probably not supported by v1.',
 
+		// The server sends a code, never a sentence (decision 25). This table is
+		// the only place where an M1 code becomes English.
+		codes: {
+			invalid_movie_id: 'This movie cannot be identified.',
+			invalid_file_id: 'This file cannot be identified.',
+			invalid_audio_track_id: 'This audio track cannot be identified.',
+			audio_selection_requires_remux: 'This track can only be guaranteed by remuxing.',
+			file_outside_library:
+				'This file is no longer inside a watched folder. Check the library folders in settings.',
+			movie_not_found: 'This movie could not be found.',
+			file_not_found: 'This file no longer belongs to this movie.',
+			audio_track_not_found: 'This audio track no longer exists in this file.',
+			media_file_unavailable:
+				'This file has disappeared from disk. Run another scan from settings.',
+			media_not_inspected: 'Analyse this file before choosing an audio track.',
+			media_unreadable:
+				'This file could not be decoded. It may be incomplete or corrupted.',
+			video_transcode_required:
+				'This file uses a video format that needs full conversion, planned for a later milestone.',
+			movie_unavailable: 'The movie could not be read from the database.',
+			file_unavailable: 'The file could not be read from the database.',
+			audio_track_unavailable: 'The audio track could not be read from the database.',
+			media_file_unreadable: 'This file could not be opened on disk.',
+			media_inspection_not_saved: 'The result of the analysis could not be saved.',
+			stream_start_failed: 'Playback could not be started.',
+			ffmpeg_unsupported: 'No ffmpeg build is available for this platform.',
+			ffmpeg_unavailable: 'ffmpeg could not be prepared. Check the connection, then try again.'
+		},
+
 		shortcuts: {
 			open: 'Show keyboard shortcuts',
 			close: 'Close keyboard shortcuts',
@@ -231,14 +268,217 @@ export const strings = {
 		genres: 'Genres',
 		runtime: 'Runtime',
 		year: 'Year',
-		file: 'File',
-		size: 'Size',
 		progress: 'Movie progress',
+		files: {
+			one: 'File',
+			many: 'Available files',
+			choose: 'Choose which file to play',
+			chosen: 'Chosen file',
+			primary: 'Primary',
+			pending: 'Characteristics not measured',
+			inspect: 'Analyse',
+			inspecting: 'Analysing…',
+			retry: 'Run the analysis again',
+			errored: 'This file could not be analysed.',
+			resolution: (width, height) => `${width} × ${height}`,
+			trackCount: (count) => (count > 1 ? `${count} audio tracks` : `${count} audio track`),
+			hint:
+				'Theia never picks a quality for you: several files exist and you decide which ' +
+				'one to play.'
+		},
+		audio: {
+			title: 'Audio track',
+			choose: 'Choose the audio track',
+			auto: "The file's default track",
+			isDefault: 'default',
+			unnamed: (index) => `Track ${index}`,
+			remuxNote:
+				'Choosing a track explicitly goes through a remux, the only way to guarantee which ' +
+				'one the browser will play.'
+		},
 		moreByDirector: (director) => `See more movies by ${director}`,
 		noOverview: 'No overview is available for this movie.',
 		unmatched:
 			'This file could not be identified on TMDB. It remains listed under its filename; ' +
 			'renaming the file will trigger another search during the next scan.'
+	},
+
+	remote: {
+		heading: 'Remote access',
+		intro:
+			'Theia can be reached outside the local network through an embedded WireGuard tunnel. No account, no relay, no outside service: each device proves a key created here.',
+		router:
+			'Your router must forward the UDP port below to this machine. Never forward Theia’s TCP port: it has no authentication at all.',
+		cgnat:
+			'If your provider puts you behind CGNAT, no forwarding is possible and Theia cannot work around it.',
+		state: 'State',
+		stateDisabled: 'Disabled',
+		stateRunning: 'Running',
+		stateError: 'Error',
+		enable: 'Enable remote access',
+		disable: 'Disable',
+		port: 'Listening UDP port',
+		portHelp: 'The port your router forwards to this machine.',
+		portChange: 'Changing the port restarts the tunnel and briefly cuts connected devices.',
+		endpoint: 'Public address',
+		endpointPlaceholder: 'media.example.net:51820',
+		endpointHelp:
+			'As host:port, without http://. The public port may differ from the listening port.',
+		endpointExamples:
+			'Examples: media.example.net:51820, 203.0.113.10:51820, [2001:db8::10]:51820',
+		endpointChange:
+			'Changing this address does not update devices already created: edit their WireGuard configuration, or revoke and recreate them.',
+		reachability: 'Reachability',
+		unverified: 'Never confirmed',
+		unverifiedHelp:
+			'No device has proven the path yet. This is not an error: Theia does not test your router from outside.',
+		confirmed: 'Confirmed',
+		confirmedHelp:
+			'At least one device has completed a handshake since this start. It is not a permanent guarantee.',
+		save: 'Save',
+		saving: 'Saving…',
+		devices: 'Devices',
+		noDevices: 'No device has been created yet.',
+		addDevice: 'Add a device',
+		deviceName: 'Device name',
+		devicePlaceholder: 'Living room television',
+		create: 'Create',
+		creating: 'Creating…',
+		enableFirst: 'Enable remote access before creating a device.',
+		address: 'Address inside the tunnel',
+		lastHandshake: 'Last handshake',
+		neverConnected: 'Never connected',
+		traffic: 'Traffic',
+		trafficHelp: 'Tunnel network counters, not viewing statistics.',
+		revoke: 'Revoke',
+		revokeConfirm: (name) =>
+			'Revoke ' + name + '? This device loses access immediately and its key can never be reactivated.',
+		revokeYes: 'Revoke this device',
+		cancel: 'Cancel',
+
+		provisionTitle: (name) => name + ' is ready',
+		provisionWarning:
+			'This QR code and this file contain a private key. They will never be shown again.',
+		provisionScan: 'Scan this code with the device’s WireGuard app.',
+		copyConfig: 'Copy the configuration',
+		copied: 'Copied',
+		downloadConfig: 'Download the .conf',
+		done: 'I have kept the configuration',
+		closeWarning:
+			'Close without keeping the configuration? It cannot be shown again: you would have to revoke this device and create another.',
+		closeAnyway: 'Close anyway',
+		lost: 'Lost the configuration? Revoke this device and create a new one.',
+
+		remoteBadge: 'Remote access',
+		remoteContext: (name) => 'Connected from ' + name,
+		remoteRestricted:
+			'Settings, scanning and updates are only available from the local network.',
+
+		codes: {
+			invalid_remote_access_payload: 'The request could not be read.',
+			invalid_remote_listen_port: 'This port is not valid. Choose a port between 1 and 65535.',
+			invalid_remote_endpoint:
+				'This address is not valid. Expected host:port, without http:// or a path.',
+			invalid_remote_peer_payload: 'The request could not be read.',
+			invalid_remote_peer_name: 'A name is required, from 1 to 64 characters.',
+			invalid_remote_peer_id: 'This device cannot be identified.',
+			remote_peer_limit_reached: 'The limit of 32 active devices has been reached.',
+			remote_peer_not_found: 'This device no longer exists.',
+			remote_access_disabled: 'Enable remote access before this operation.',
+			remote_access_not_ready: 'The tunnel is not ready. Try again in a moment.',
+			remote_access_unavailable: 'Remote access is unavailable.'
+		},
+
+		reasons: {
+			remote_config_invalid: 'The saved configuration is not usable.',
+			remote_key_unavailable:
+				'The server key cannot be read. If this data directory came from another machine or another Windows account, disable remote access, remove remote-access.key, enable it again and recreate the devices.',
+			remote_listen_failed: 'The UDP port could not be opened. It may already be in use.',
+			remote_listener_stopped: 'The tunnel stopped on its own.',
+			remote_peer_reload_failed:
+				'Devices could not be reloaded; the tunnel was closed as a precaution.',
+			remote_restore_failed: 'The previous configuration could not be restored.'
+		}
+	},
+
+	series: {
+		title: 'Series',
+		loading: 'Loading series…',
+		countAll: (n) => (n === 1 ? '1 series' : `${n} series`),
+		emptyTitle: 'No series',
+		emptyBody:
+			'Arrange episodes in series and season folders, named SxxExx, then run another scan from settings.',
+		notFound: 'This series could not be found.',
+		episodeNotFound: 'This episode could not be found.',
+		seasons: 'Seasons',
+		specials: 'Specials',
+		season: (number) => `Season ${number}`,
+		ownedEpisodes: (n) => (n === 1 ? '1 episode owned' : `${n} episodes owned`),
+		episodeLabel: (number) => `Episode ${number}`,
+		episodeRange: (first, last) => `Episodes ${first} to ${last}`,
+		combined: 'Combined episode',
+		combinedHint:
+			'These episodes are in one file: they play in a single run and share one resume position.',
+		gap: 'An episode is missing before the next one',
+		next: 'Next episode',
+		lastOwned: 'Last episode owned',
+		unmatched:
+			'This series was not identified on TMDB. It remains listed under its folder name.',
+		noOverview: 'No overview is available.',
+		play: 'Play episode',
+		resumeAtMinutes: (minutes) => `Resume at ${minutes} min`
+	},
+
+	profiles: {
+		question: "Who's watching?",
+		defaultName: 'Main profile',
+		manage: 'Manage profiles',
+		done: 'Done',
+		switch: 'Switch profile',
+		current: (name) => `Active profile: ${name}`,
+		choose: (name) => `Watch as ${name}`,
+		add: 'Add a profile',
+		create: 'Create profile',
+		cancel: 'Cancel',
+		nameLabel: 'Profile name',
+		namePlaceholder: 'Mimi',
+		edit: (name) => `Edit ${name}`,
+		editShort: 'Edit',
+		save: 'Save',
+		picture: 'Picture',
+		pictureChange: 'Choose a picture',
+		pictureRemove: 'Remove the picture',
+		pictureHint:
+			'The picture stays on this machine. It is cropped square and re-encoded; ' +
+			'nothing from the original file is kept.',
+		pictureUploading: 'Uploading the picture…',
+		details: 'Details',
+		createdAt: 'Created',
+		moviesStarted: 'Movies started',
+		moviesFinished: 'Movies finished',
+		episodesStarted: 'Episodes started',
+		episodesFinished: 'Episodes finished',
+		lastWatched: 'Last watched',
+		never: 'Never',
+		delete: 'Delete this profile',
+		deleteConfirm: (name) =>
+			`Delete ${name}? Their progress will be lost. Other profiles are unaffected.`,
+		deleteYes: 'Delete',
+		empty: 'No profiles.',
+		loading: 'Loading profiles…',
+		codes: {
+			invalid_profile_id: 'This profile cannot be identified.',
+			invalid_profile_payload: 'The request could not be read.',
+			invalid_profile_name:
+				'A name is required, without control characters, and at most 40 characters.',
+			profile_not_found: 'This profile no longer exists. It may have been deleted elsewhere.',
+			profile_image_not_found: 'This profile has no picture.',
+			profile_limit_reached: 'The maximum number of profiles has been reached.',
+			profile_last_remaining: 'The last profile cannot be deleted.',
+			profile_image_too_large: 'This image is too large.',
+			profile_image_unreadable: 'This file is not a usable image.',
+			profile_unavailable: 'Profiles are unavailable at the moment.'
+		}
 	},
 
 	settings: {

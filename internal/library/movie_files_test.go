@@ -20,14 +20,14 @@ func TestScanGroupsParsedTitleAndYearIntoOneFilm(t *testing.T) {
 	if report.Found != 2 || report.Added != 2 {
 		t.Fatalf("report = %+v, want two files found and added", report)
 	}
-	movies, err := service.List(t.Context(), 10, 0)
+	movies, err := service.List(t.Context(), defaultProfileID, 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(movies) != 1 {
 		t.Fatalf("listed %d films, want one grouped film", len(movies))
 	}
-	detail, err := service.Get(t.Context(), movies[0].ID)
+	detail, err := service.Get(t.Context(), defaultProfileID, movies[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,7 @@ func TestScanKeepsRemakesWithDifferentYearsSeparate(t *testing.T) {
 	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
 		t.Fatal(err)
 	}
-	movies, err := service.List(t.Context(), 10, 0)
+	movies, err := service.List(t.Context(), defaultProfileID, 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestDeletingPrimaryVariantKeepsFilmAndPromotesAnotherFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := onlyMovie(t, service)
-	detail, err := service.Get(t.Context(), before.ID)
+	detail, err := service.Get(t.Context(), defaultProfileID, before.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestDeletingPrimaryVariantKeepsFilmAndPromotesAnotherFile(t *testing.T) {
 	if after.ID != before.ID {
 		t.Errorf("film id changed from %d to %d", before.ID, after.ID)
 	}
-	detail, err = service.Get(t.Context(), after.ID)
+	detail, err = service.Get(t.Context(), defaultProfileID, after.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +106,7 @@ func TestMovePreservesMovieAndFileIDs(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := onlyMovie(t, service)
-	detail, err := service.Get(t.Context(), before.ID)
+	detail, err := service.Get(t.Context(), defaultProfileID, before.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestMovePreservesMovieAndFileIDs(t *testing.T) {
 		t.Errorf("move report = %+v, want one update and no add/remove", report)
 	}
 	after := onlyMovie(t, service)
-	detail, err = service.Get(t.Context(), after.ID)
+	detail, err = service.Get(t.Context(), defaultProfileID, after.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +144,7 @@ func TestRenamingSingleFileResetsStaleMetadataWithoutChangingIDs(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := onlyMovie(t, service)
-	detail, err := service.Get(t.Context(), before.ID)
+	detail, err := service.Get(t.Context(), defaultProfileID, before.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +169,7 @@ func TestRenamingSingleFileResetsStaleMetadataWithoutChangingIDs(t *testing.T) {
 		t.Fatal(err)
 	}
 	after := onlyMovie(t, service)
-	detail, err = service.Get(t.Context(), after.ID)
+	detail, err = service.Get(t.Context(), defaultProfileID, after.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,7 +195,7 @@ func TestConsolidateUsesTMDBIdentityAndPreservesProgress(t *testing.T) {
 	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
 		t.Fatal(err)
 	}
-	movies, err := service.List(t.Context(), 10, 0)
+	movies, err := service.List(t.Context(), defaultProfileID, 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +216,7 @@ func TestConsolidateUsesTMDBIdentityAndPreservesProgress(t *testing.T) {
 		}
 	}
 	newerID := movies[1].ID
-	if _, err := service.store.SaveProgress(t.Context(), newerID, 1800, 9840, time.Now()); err != nil {
+	if _, err := service.store.SaveProgress(t.Context(), defaultProfileID, newerID, 1800, 9840, time.Now()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -241,7 +241,7 @@ func TestConsolidateUsesTMDBIdentityAndPreservesProgress(t *testing.T) {
 	if after.Metadata.Status != statusOK || after.Metadata.PosterPath != "/blade-runner.jpg" {
 		t.Errorf("metadata = %+v, want the recognised duplicate copied to the canonical id", after.Metadata)
 	}
-	detail, err := service.Get(t.Context(), after.ID)
+	detail, err := service.Get(t.Context(), defaultProfileID, after.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,7 +257,7 @@ func TestConsolidateRefusesConflictingTMDBIDs(t *testing.T) {
 	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
 		t.Fatal(err)
 	}
-	movies, err := service.List(t.Context(), 10, 0)
+	movies, err := service.List(t.Context(), defaultProfileID, 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,7 +290,7 @@ func TestMediaInspectionKeepsTrackIDsAndInvalidatesWhenFileChanges(t *testing.T)
 		t.Fatal(err)
 	}
 	movie := onlyMovie(t, service)
-	detail, _ := service.Get(t.Context(), movie.ID)
+	detail, _ := service.Get(t.Context(), defaultProfileID, movie.ID)
 	fileID := detail.Files[0].ID
 
 	media := FileMedia{
@@ -349,9 +349,9 @@ func TestAudioTrackCannotCrossFileOwnership(t *testing.T) {
 	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
 		t.Fatal(err)
 	}
-	movies, _ := service.List(t.Context(), 10, 0)
-	first, _ := service.Get(t.Context(), movies[0].ID)
-	second, _ := service.Get(t.Context(), movies[1].ID)
+	movies, _ := service.List(t.Context(), defaultProfileID, 10, 0)
+	first, _ := service.Get(t.Context(), defaultProfileID, movies[0].ID)
+	second, _ := service.Get(t.Context(), defaultProfileID, movies[1].ID)
 	inspected, err := service.SaveFileMedia(t.Context(), first.ID, first.Files[0].ID, FileMedia{
 		Status: MediaOK,
 		Video:  &VideoStream{StreamIndex: 0, Codec: "h264"},

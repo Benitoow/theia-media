@@ -30,10 +30,23 @@ Contraintes communes à tous les écrans :
 
 ### M1-FE — Choix du fichier sur la fiche film
 
-**Statut : prêt à démarrer à partir du commit backend
-[`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e),
-publié par la [PR #4](https://github.com/Benitoow/theia-media/pull/4), dès qu'il
-est présent sur `main`.**
+**Statut : implémenté sur le contrat backend
+[`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e)
+(PR #4), vérifié contre le vrai serveur et la vraie bibliothèque. **Seul jalon
+que le mainteneur n'a pas encore validé** : il reste à ouvrir un vrai film
+décodable multi-pistes, les 274 fichiers actuels étant remplis de zéros et ne
+prouvant que le chemin `error`.**
+
+Livré : `web/src/lib/components/FileChoice.svelte`, consommé par
+`web/src/routes/film/[id]/+page.svelte`, plus les routes `file_id` dans
+`Player.svelte` et la table de codes `player.codes` dans les deux catalogues.
+Le raisonnement, les mesures D-pad et les limites sont dans la décision 47.
+
+Trois points qu'un agent suivant ne doit pas défaire sans lire la décision 47 :
+
+- le sélecteur est **au-dessus** du synopsis, pas en bas de fiche ;
+- les options partagent une largeur plafonnée à `26rem` ;
+- la section gère elle-même Haut/Bas ; les bords ne sont pas consommés.
 
 Une seule carte représente le film dans le catalogue. Après ouverture de la
 fiche, l'utilisateur voit les fichiers réellement renvoyés par l'API et choisit
@@ -86,176 +99,134 @@ il n'affiche aucune prose technique du serveur.
 
 ### M2-FE — Profils, nouvelle mouture
 
-**Statut : bloqué par les screenshots et croquis du mainteneur.**
+**Statut : implémenté, vérifié à l'écran et confirmé par le mainteneur
+(décisions 48 et 50).**
 
-Ces références seront le contrat visuel : composition, hiérarchie, transitions,
-focus, navigation télécommande et comportement de gestion. Ne pas recycler
-l'ancien écran `/profils`, même comme raccourci temporaire. L'implémentation
-commence seulement après validation des références et handoff M2-BE.
+Livré : `web/src/routes/profils/+page.svelte`, `ProfileMark.svelte`,
+`profiles.svelte.js`, l'entrée de nav et le `?profile=` sur les requêtes.
+La décision 50 note le seul écart assumé par rapport à la décision 48 : un
+profil unique est adopté en silence, le sélecteur n'apparaissant que lorsqu'il y
+a un vrai choix. Ne pas recycler l'ancien écran `/profils`.
+
+Le profil actif vit en `localStorage`, comme la langue, et voyage en
+`?profile={id}` sur les routes de catalogue et de progression. Un id inconnu
+renvoie `profile_not_found` : c'est le cas à traiter quand une télévision garde
+un profil supprimé ailleurs.
+
+Les références du mainteneur donnent la **disposition, pas le style**. Le style
+reste celui du design system : fond `--ink`, registre display pour le titre,
+label tracké pour les métadonnées, un seul accent, cibles de 52 à 56 px.
+
+#### Trois surfaces
+
+**1. Le sélecteur — écran plein, nav supprimée pour cette route.**
+Marque en haut à gauche, titre en question au registre display, une rangée
+horizontale de cartes (image carrée, nom centré dessous en registre UI), puis,
+nettement détaché, un unique bouton contourné vers la gestion. Beaucoup de vide :
+c'est du chrome, pas la grille (§6 du design system ne s'applique pas ici, mais
+son esprit de densité non plus).
+
+Le premier focus D-pad est une carte de profil, jamais la nav ni le bouton de
+gestion : c'est la question que l'écran pose. La rangée suit la règle §9 des
+listes d'options — largeur partagée, axe géré, bords non consommés.
+
+**2. La fiche de profil — deux panneaux empilés.**
+Identité en haut : image circulaire cerclée, nom, action d'édition discrète mais
+jamais réservée au survol. Puis une liste libellé-gauche / valeur-droite séparée
+par des filets : créé le, films commencés, films terminés, dernière lecture.
+Aucune ligne email, rôle, statut ou abonnement — elles n'existent pas ici.
+En pied, isolée et pleine largeur, la suppression du profil, en `--error`, avec
+confirmation. Aucun bouton de déconnexion : il n'y a pas de session.
+
+**3. L'entrée dans la nav — un raccourci, pas un menu.**
+L'avatar actif dans la nav **ouvre le sélecteur**. Pas de liste déroulante :
+la décision 35 avait mesuré pourquoi (illisible à trois mètres, débordement au
+plancher de 320 px, premier focus D-pad détourné vers la navigation).
+
+#### Démarrage
+
+Tant qu'aucun profil n'est choisi dans ce navigateur, le sélecteur s'affiche à
+l'arrivée. Le choix vit en `localStorage`, comme la langue : une télévision et
+un portable n'imposent pas leur profil l'un à l'autre. Un retour n'est proposé
+que si un profil est déjà actif — arriver ici parce que l'application a besoin
+d'une réponse ne doit pas offrir de partir sans la donner.
+
+#### États obligatoires à maquetter et tester au D-pad
+
+Aucun profil, un seul, la limite haute retenue par M2-BE, nom très long, image
+absente, image en cours d'envoi, envoi refusé, création, renommage, suppression
+confirmée et annulée, profil actif supprimé depuis un autre appareil, et le
+comportement quand le serveur répond une erreur pendant la sélection.
+
+L'image d'avatar est fournie par l'utilisateur : aucune illustration ne peut
+entrer dans le dépôt, et les artworks des références sont exclus (dépôt public
+GPL-3.0). Un profil sans image retombe sur une marque CSS, jamais sur une icône
+d'image cassée.
 
 ### M3-FE — Séries
 
-**Statut : prêt à démarrer depuis
-[`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7),
-livré par la [PR #5](https://github.com/Benitoow/theia-media/pull/5). Aucun écran
-série n'a été codé par le chantier backend.**
+**Statut : implémenté, vérifié à l'écran et confirmé par le mainteneur
+(décision 52).**
 
-Le contrat complet, la fixture et les erreurs se trouvent dans la section
-M3-BE de `theia-v2-backend.md`. Le frontend ne repart pas du rapport de spike et
-ne devine pas une route à partir d'un ancien message.
+Livré : `/series`, `/serie/[id]`, `/episode/[id]`, `EpisodeRow.svelte`, et deux
+rangées séries ajoutées après les rangées films sur l'accueil.
 
-Flux à consommer :
+Le sélecteur de fichiers et le lecteur sont **ceux de M1**, pas des copies : ils
+prennent désormais la ressource sur laquelle ils agissent (`basePath`,
+`streamBase`, `progressPath`). Un épisode est une autre ressource, pas une autre
+interaction. `PosterCard` a gagné une image et un titre optionnels pour qu'un
+épisode l'utilise sans mentir dans ses données.
 
-1. `GET /api/library/series` construit le catalogue séries ;
-2. `GET /api/library/series/{id}` construit la fiche et les saisons locales ;
-3. `GET /api/library/series/{id}/seasons/{number}` fournit les items compacts ;
-4. `GET /api/library/episodes/{id}` fournit membres, fichiers, progression,
-   `next_episode_id` et `next_has_gap` ;
-5. un fichier `pending` se mesure uniquement par le `POST .../inspect` explicite ;
-6. le lecteur demande `.../stream/info`, puis utilise `.../stream` ou
-   `.../stream/remux`, avec les mêmes IDs de piste et règles que M1-FE ;
-7. la progression utilise `PUT`/`DELETE /api/library/episodes/{id}/progress` ;
-8. `GET /api/library/series/home` fournit la reprise série et les séries
-   récentes à composer avec l'accueil films existant.
+Trois points qu'un agent suivant ne doit pas défaire sans lire la décision 52 :
 
-Un item peut porter `[1, 2]` : il doit être présenté comme un épisode combiné,
-pas dupliqué en deux cartes qui lancent le même fichier. `next_has_gap` mérite un
-état visible mais ne bloque pas l'action. Les spéciaux sont la saison 0 et ne
-doivent jamais être injectés dans l'enchaînement automatique principal.
+- un item combiné s'affiche **une fois**, avec ses deux titres et une seule
+  reprise ; chaque membre garde son synopsis ;
+- `next_has_gap` s'affiche et ne bloque rien ; `S00` ne mène nulle part ;
+- les saisons sont des options sur la fiche, pas des pages.
 
-Le choix de fichier reste manuel sur la fiche, exactement comme M1-FE. Une
-piste audio choisie force le remux. Aucun label de résolution, langue ou codec
-n'est inventé quand `media.status != "ok"`, et aucun chemin serveur n'existe à
-afficher.
-
-États obligatoires à maquetter au D-pad et à trois mètres : catalogue vide,
-série sans TMDB, saison 0, item simple, item combiné, trou, dernier épisode,
-plusieurs fichiers, inspection `pending/error/ok`, plusieurs pistes, reprise et
-erreurs stables du tableau M3-BE. Le corpus utilisateur actuel ne contient
-encore aucune série ; utiliser d'abord la fixture backend, puis refaire la
-validation sur les premiers vrais fichiers au lieu de transformer ce manque en
-fausse preuve visuelle.
+Le corpus de validation a été généré : *Severance* avec `S01E01` en deux
+encodages, un `S01E02E03` combiné, un `S01E05` créant un trou, et un `S00E01`.
+Le corpus **utilisateur** ne contient toujours aucune série ; c'est la validation
+qui reste.
 
 ### M4-FE — Accès distant
 
-**Statut : prêt à démarrer depuis
-[`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a),
-après sa fusion sur `main`. Le backend est complet ; aucun écran M4 n'a été
-codé.**
+**Statut : implémenté, vérifié sur le LAN et confirmé par le mainteneur en
+mode distant réel (décision 53).**
 
-M4 n'ajoute ni compte, ni mot de passe, ni profil. Le LAN reste zéro-login ; un
-appareil distant possède une clé WireGuard. Ne dessine donc pas un écran de
-connexion façon SaaS : ce serait un mensonge très bien aligné.
+Livré : `RemoteAccess.svelte` en section de Réglages, `ProvisionDialog.svelte`,
+`remote.svelte.js` pour la détection de contexte, la navigation distante et le
+saut de la requête d'onboarding hors LAN.
 
-#### Détection de contexte
+Ce qui a été vérifié ici : activation sur un port UDP libre, `state: running`,
+`reachability: unverified` présenté comme un fait et non comme une panne,
+création d'appareil avec QR et configuration, adresse `10.77.0.2`,
+`AllowedIPs = 10.77.0.1/32` dans le client, révocation, désactivation, et les
+refus `invalid_remote_listen_port` / `invalid_remote_endpoint` traduits.
 
-Le layout appelle tôt `GET /api/remote-access/session` :
+**La garantie de la décision 45 a été mesurée dans le navigateur** : après
+création, `PrivateKey` n'apparaît ni dans `localStorage`, ni dans
+`sessionStorage`, ni dans IndexedDB, ni dans l'URL, ni dans le document. Fermer
+sans conserver demande confirmation, puis efface tout.
 
-- `mode: "lan"` conserve toute la navigation actuelle ;
-- `mode: "remote"` permet catalogue, fiches et lecteur, mais retire de la
-  navigation les réglages, le scan, l'onboarding et l'updater ; le nom du pair
-  peut être affiché discrètement comme contexte, jamais comme profil humain.
-
-Depuis le tunnel, `GET /api/remote-access` et `GET /api/settings` renvoient 403.
-Ne les lance pas puis ne transforme pas le refus en écran rouge : ne les lance
-pas. La home actuelle tolère déjà l'échec de `/api/onboarding` via
-`Promise.allSettled`, mais M4-FE doit sauter cette requête en mode distant pour
-ne pas demander volontairement une donnée interdite.
-
-#### Écran local Réglages > Accès distant
-
-Uniquement sur le LAN :
-
-1. charger `GET /api/remote-access` ;
-2. afficher `disabled`, `running` ou `error`, le port UDP, l'endpoint public et
-   `reachability` ;
-3. sauvegarder par `PUT` avec les champs réellement modifiés ;
-4. expliquer que le routeur redirige **UDP**, jamais TCP 8383, et que CGNAT
-   n'est pas résolu par Theia ;
-5. créer un appareil par nom seulement quand `state == "running"` ;
-6. lister les pairs actifs, leur dernière poignée de main et leurs compteurs,
-   puis confirmer la révocation avant `DELETE`.
-
-`unverified` ne signifie pas « erreur » : aucun appareil n'a encore prouvé le
-chemin. `confirmed` signifie au moins un handshake observé depuis ce démarrage,
-pas une garantie éternelle. Les octets sont des compteurs réseau techniques,
-pas une statistique de visionnage.
-
-L'endpoint est saisi comme `hôte:port` sans `http://`. Donner des exemples
-distincts : `media.example.net:51820`, `203.0.113.10:51820` et
-`[2001:db8::10]:51820`. Le port public peut différer du port d'écoute. Changer
-l'endpoint ne met pas à jour les appareils existants : afficher ce fait avant
-la sauvegarde et proposer de modifier WireGuard ou de reprovisionner. Changer
-le port peut couper momentanément les appareils.
-
-#### Provisioning affiché une fois
-
-Après le 201 de `POST /api/remote-access/peers` :
-
-- ouvrir un dialogue D-pad complet avec le QR, le bouton de copie et le
-  téléchargement d'un `.conf` standard ;
-- annoncer clairement que le QR et le fichier contiennent une clé privée ;
-- garder `client_config` et `qr_svg` uniquement dans l'état mémoire du dialogue,
-  jamais dans `localStorage`, IndexedDB, logs, analytics ou URL ;
-- vider cet état à la fermeture/navigation ;
-- demander confirmation avant de fermer sans copie, car le backend ne les
-  renverra pas ;
-- si l'utilisateur les perd, proposer « Révoquer et recréer », pas « Afficher
-  à nouveau ».
-
-Le QR SVG vient du serveur local et doit rester dans le dialogue. Ne pas le
-mettre en cache par un service worker et ne pas en faire une miniature de carte.
-Le secret d'une télévision n'est pas un badge décoratif.
-
-#### Erreurs et récupération à traduire
-
-Formulaire : `invalid_remote_access_payload`, `invalid_remote_listen_port`,
-`invalid_remote_endpoint`, `invalid_remote_peer_payload`,
-`invalid_remote_peer_name`, `invalid_remote_peer_id`,
-`remote_peer_limit_reached`, `remote_peer_not_found`,
-`remote_access_disabled`, `remote_access_not_ready` et
-`remote_access_unavailable`.
-
-État serveur : `remote_config_invalid`, `remote_key_unavailable`,
-`remote_listen_failed`, `remote_listener_stopped`,
-`remote_peer_reload_failed`, `remote_restore_failed`. Chaque état d'erreur doit
-garder l'action **Désactiver** disponible. La récupération documentée est locale
-: désactiver, corriger le port/endpoint ou, pour une clé devenue illisible après
-copie du data-dir Windows, retirer `remote-access.key`, réactiver puis
-reprovisionner.
-
-Les gardes `lan_access_required`, `remote_peer_unknown`,
-`remote_host_invalid`, `remote_access_forbidden` et
-`remote_origin_forbidden` ont leur contrat dans M4-BE. Une session distante qui
-les rencontre doit revenir vers une page de récupération concise, sans proposer
-un mot de passe qui n'existe pas.
-
-#### Acceptation visuelle et réelle
-
-- écran lisible à trois mètres, focus toujours visible, clavier et D-pad ;
-- aucun QR ou bouton essentiel réservé au survol ;
-- états : disabled, enable invalide, running/unverified, running/confirmed,
-  aucun pair, 32 pairs, erreur listener, provisioning, fermeture sans copie,
-  révocation et session distante ;
-- français/anglais ajoutés ensemble et contrôle des 224 clés existantes étendu ;
-- test dans un vrai navigateur LAN pour la gestion, puis dans un vrai navigateur
-  derrière un client WireGuard pour home, fiches, lecture, progression et nav
-  sans réglages ;
-- validation avec un vrai endpoint hors du LAN indispensable avant de déclarer
-  **V2-M4 produit** terminé. Le backend a prouvé le tunnel en UDP loopback ; il
-  n'a pas prétendu posséder un routeur extérieur de poche.
-
-Le payload exact, la fixture, les codes HTTP, les limites et la récupération
-sont dans M4-BE. Le rapport de découverte
-`theia-v2-m4-discovery.md` explique les alternatives ; il ne remplace pas ce
-contrat.
+Ce qui **n'a pas** été vérifié : le mode distant lui-même. La navigation sans
+réglages et le saut d'onboarding sont implémentés selon le contrat, mais ils ne
+peuvent être observés que depuis une vraie session derrière WireGuard.
 
 ### M5-FE — Logo et identité de navigation
 
-**Statut : backlog frontend, sans dépendance backend.**
+**Statut : implémenté (décision 54).** Quatre pistes ont été dessinées, rendues
+à 16, 28 et 96 px puis en verrou de navigation, et soumises au mainteneur avant
+la première ligne de code, comme le jalon l'exigeait.
 
-Travail de direction artistique à partir de références validées. Il ne doit pas
-être glissé dans un autre jalon comme une retouche cosmétique opportuniste.
+Retenu : **le mot et le filet**. La marque réduite est l'initiale posée sur le
+même filet — un recadrage du verrou, pas une seconde marque à côté. Elle sert de
+favicon et, rendue depuis le même SVG, d'icône d'application. `icon-512.png` et
+`theia-wordmark.webp` ont quitté le binaire.
+
+Le trait est dessiné en chemins et non en `<text>` : un favicon est chargé comme
+une image, donc sans police web. Le fichier est vérifié en le décodant dans un
+`Image()`, pas en constatant qu'il existe.
 
 ### M6-FE — Contrôles de qualité et capacités matérielles
 

@@ -62,7 +62,7 @@ func TestScanIndexesVideoFiles(t *testing.T) {
 		t.Errorf("problems = %v, want none", report.Problems)
 	}
 
-	movies, err := service.List(t.Context(), 100, 0)
+	movies, err := service.List(t.Context(), defaultProfileID, 100, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestScanIgnoresWhatIsNotAFilm(t *testing.T) {
 		t.Fatalf("Scan returned an unexpected error: %v", err)
 	}
 	if report.Found != 1 {
-		movies, _ := service.List(t.Context(), 100, 0)
+		movies, _ := service.List(t.Context(), defaultProfileID, 100, 0)
 		var got []string
 		for _, m := range movies {
 			got = append(got, m.FileName)
@@ -158,7 +158,7 @@ func TestDeletedFilesLeaveTheLibrary(t *testing.T) {
 		t.Errorf("removed = %d, want 1", report.Removed)
 	}
 
-	movies, err := service.List(t.Context(), 100, 0)
+	movies, err := service.List(t.Context(), defaultProfileID, 100, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,7 +234,7 @@ func TestSaveFailureDoesNotPruneFilesThatWereNotSeen(t *testing.T) {
 	if report.Removed != 0 {
 		t.Errorf("removed = %d, want zero after any scan problem", report.Removed)
 	}
-	movies, err := service.List(t.Context(), 10, 0)
+	movies, err := service.List(t.Context(), defaultProfileID, 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -275,7 +275,7 @@ func TestBadlyNamedFilesStillLand(t *testing.T) {
 			report.Found, report.Added, report.Problems)
 	}
 
-	movies, err := service.List(t.Context(), 100, 0)
+	movies, err := service.List(t.Context(), defaultProfileID, 100, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

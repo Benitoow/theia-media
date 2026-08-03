@@ -44,7 +44,12 @@ func (s *Server) handleSeries(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	series, err := s.lib.GetSeries(r.Context(), id)
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return
+	}
+
+	series, err := s.lib.GetSeries(r.Context(), profileID, id)
 	switch {
 	case errors.Is(err, library.ErrNoSuchSeries):
 		writeJSONError(w, http.StatusNotFound, "series_not_found")
@@ -66,7 +71,12 @@ func (s *Server) handleSeason(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid_season_number")
 		return
 	}
-	season, err := s.lib.GetSeason(r.Context(), seriesID, number)
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return
+	}
+
+	season, err := s.lib.GetSeason(r.Context(), profileID, seriesID, number)
 	switch {
 	case errors.Is(err, library.ErrNoSuchSeason):
 		writeJSONError(w, http.StatusNotFound, "season_not_found")
@@ -83,7 +93,12 @@ func (s *Server) handleEpisode(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	episode, err := s.lib.GetEpisodeItem(r.Context(), id)
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return
+	}
+
+	episode, err := s.lib.GetEpisodeItem(r.Context(), profileID, id)
 	switch {
 	case errors.Is(err, library.ErrNoSuchEpisodeItem):
 		writeJSONError(w, http.StatusNotFound, "episode_not_found")
@@ -97,7 +112,12 @@ func (s *Server) handleEpisode(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleSeriesHome(w http.ResponseWriter, r *http.Request) {
 	limit := clamp(intQuery(r, "limit", 12), 1, 60)
-	home, err := s.lib.SeriesHome(r.Context(), limit)
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return
+	}
+
+	home, err := s.lib.SeriesHome(r.Context(), profileID, limit)
 	if err != nil {
 		s.log.Error("building series home failed", "error", err)
 		writeJSONError(w, http.StatusInternalServerError, "series_home_unavailable")
@@ -116,7 +136,12 @@ func (s *Server) handleSaveEpisodeProgress(w http.ResponseWriter, r *http.Reques
 		writeJSONError(w, http.StatusBadRequest, "invalid_progress_payload")
 		return
 	}
-	progress, err := s.lib.SaveEpisodeProgress(r.Context(), id,
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return
+	}
+
+	progress, err := s.lib.SaveEpisodeProgress(r.Context(), profileID, id,
 		body.PositionSeconds, body.DurationSeconds)
 	switch {
 	case errors.Is(err, library.ErrNoSuchEpisodeItem):
@@ -134,7 +159,12 @@ func (s *Server) handleResetEpisodeProgress(w http.ResponseWriter, r *http.Reque
 	if !ok {
 		return
 	}
-	switch err := s.lib.ResetEpisodeProgress(r.Context(), id); {
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return
+	}
+
+	switch err := s.lib.ResetEpisodeProgress(r.Context(), profileID, id); {
 	case errors.Is(err, library.ErrNoSuchEpisodeItem):
 		writeJSONError(w, http.StatusNotFound, "episode_not_found")
 	case err != nil:

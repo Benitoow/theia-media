@@ -117,9 +117,18 @@
 			onkeydown={moveInRow}
 			onscroll={updateScrollEdges}
 		>
-			{#each row.movies as movie (movie.id)}
+			<!-- A row carries either films or prepared cards. Episodes need their
+			     own artwork and heading; everything else about the card is the
+			     same, so this stays one component rather than two. -->
+			{#each row.cards ?? row.movies.map((movie) => ({ movie })) as card (card.movie.id)}
 				<div class="snap-start">
-					<PosterCard {movie} />
+					<PosterCard
+						movie={card.movie}
+						href={card.href ?? null}
+						art={card.art ?? null}
+						title={card.title ?? null}
+						legend={card.legend ?? null}
+					/>
 				</div>
 			{/each}
 		</div>

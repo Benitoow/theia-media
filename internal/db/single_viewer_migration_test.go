@@ -106,7 +106,12 @@ func TestSingleViewerMigrationRemovesRetiredViewerDataAndKeepsMovieProgress(t *t
 		t.Errorf("movie progress = %v/%v, want 1234/6960", position, duration)
 	}
 
-	for _, object := range []string{"profiles", "playback_progress", "sync_legacy_progress_to_default"} {
+	// `profiles` is deliberately not in this list any more. 0009 creates a table
+	// of that name, but it is a new one: what 0005 had to destroy was the old
+	// model -- the separate progress table and the trigger that mirrored it --
+	// and those must stay gone. Decision 48 rebuilt profiles from scratch rather
+	// than reviving this schema, so the check is now about shape, not naming.
+	for _, object := range []string{"playback_progress", "sync_legacy_progress_to_default"} {
 		var count int
 		if err := database.QueryRowContext(t.Context(), `
 			SELECT COUNT(*) FROM sqlite_schema WHERE name = ?`, object,
@@ -116,6 +121,18 @@ func TestSingleViewerMigrationRemovesRetiredViewerDataAndKeepsMovieProgress(t *t
 		if count != 0 {
 			t.Errorf("retired database object %q still exists", object)
 		}
+	}
+
+	// The retired avatar column is the clearest proof the old table did not come
+	// back under its own name.
+	var retiredColumns int
+	if err := database.QueryRowContext(t.Context(), `
+		SELECT COUNT(*) FROM pragma_table_info('profiles') WHERE name = 'avatar'`,
+	).Scan(&retiredColumns); err != nil {
+		t.Fatal(err)
+	}
+	if retiredColumns != 0 {
+		t.Errorf("the retired profiles schema was resurrected rather than rebuilt")
 	}
 
 	var historicalMigrationCount int

@@ -228,7 +228,7 @@ func pageBounds(limit, offset int) (int, int) {
 	return limit, offset
 }
 
-func (s *Store) GetSeries(ctx context.Context, id int64) (Series, error) {
+func (s *Store) GetSeries(ctx context.Context, profileID, id int64) (Series, error) {
 	series, err := scanSeries(s.db.QueryRowContext(ctx,
 		`SELECT `+seriesColumns+` FROM series WHERE id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -237,7 +237,7 @@ func (s *Store) GetSeries(ctx context.Context, id int64) (Series, error) {
 	if err != nil {
 		return Series{}, fmt.Errorf("reading series %d: %w", id, err)
 	}
-	series.Seasons, err = s.Seasons(ctx, id)
+	series.Seasons, err = s.Seasons(ctx, profileID, id)
 	if err != nil {
 		return Series{}, err
 	}
@@ -278,7 +278,7 @@ func scanSeason(row interface{ Scan(...any) error }) (Season, error) {
 	return season, nil
 }
 
-func (s *Store) Seasons(ctx context.Context, seriesID int64) ([]Season, error) {
+func (s *Store) Seasons(ctx context.Context, profileID, seriesID int64) ([]Season, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT `+seasonColumns+` FROM seasons
 		WHERE series_id = ? ORDER BY season_number`, seriesID)
@@ -297,7 +297,7 @@ func (s *Store) Seasons(ctx context.Context, seriesID int64) ([]Season, error) {
 	return out, rows.Err()
 }
 
-func (s *Store) GetSeason(ctx context.Context, seriesID int64, number int) (Season, error) {
+func (s *Store) GetSeason(ctx context.Context, profileID, seriesID int64, number int) (Season, error) {
 	season, err := scanSeason(s.db.QueryRowContext(ctx, `
 		SELECT `+seasonColumns+` FROM seasons
 		WHERE series_id = ? AND season_number = ?`, seriesID, number))
@@ -307,17 +307,28 @@ func (s *Store) GetSeason(ctx context.Context, seriesID int64, number int) (Seas
 	if err != nil {
 		return Season{}, fmt.Errorf("reading season %d of series %d: %w", number, seriesID, err)
 	}
-	season.Items, err = s.EpisodeItemsForSeason(ctx, season.ID)
+	season.Items, err = s.EpisodeItemsForSeason(ctx, profileID, season.ID)
 	if err != nil {
 		return Season{}, err
 	}
 	return season, nil
 }
 
+// Progress joins in from the viewer's own table; the duration stays on the item
+// because it describes the file. Same split as movieColumns, same reason.
 const episodeItemColumns = `
 	i.id, i.season_id, se.id, se.title, s.season_number,
-	i.episode_key, i.duration_seconds, i.position_seconds, i.watched_at, i.finished,
+	i.episode_key, i.duration_seconds,
+	COALESCE(ep.position_seconds, 0), COALESCE(ep.watched_at, 0), COALESCE(ep.finished, 0),
 	i.added_at, i.updated_at`
+
+// episodeItemSource is the shared FROM. The profile id is always the first
+// argument of a query built on it.
+const episodeItemSource = `
+	FROM episode_items i
+	JOIN seasons s ON s.id = i.season_id
+	JOIN series se ON se.id = s.series_id
+	LEFT JOIN episode_progress ep ON ep.episode_item_id = i.id AND ep.profile_id = ?`
 
 func scanEpisodeItem(row interface{ Scan(...any) error }) (EpisodeItem, error) {
 	var (
@@ -358,14 +369,11 @@ func parseEpisodeKey(key string) []int {
 	return out
 }
 
-func (s *Store) EpisodeItemsForSeason(ctx context.Context, seasonID int64) ([]EpisodeItem, error) {
+func (s *Store) EpisodeItemsForSeason(ctx context.Context, profileID, seasonID int64) ([]EpisodeItem, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT `+episodeItemColumns+`
-		FROM episode_items i
-		JOIN seasons s ON s.id = i.season_id
-		JOIN series se ON se.id = s.series_id
+		SELECT `+episodeItemColumns+episodeItemSource+`
 		WHERE i.season_id = ?
-		ORDER BY i.first_episode, i.last_episode, i.id`, seasonID)
+		ORDER BY i.first_episode, i.last_episode, i.id`, profileID, seasonID)
 	if err != nil {
 		return nil, fmt.Errorf("listing episodes for season %d: %w", seasonID, err)
 	}
@@ -390,13 +398,10 @@ func (s *Store) EpisodeItemsForSeason(ctx context.Context, seasonID int64) ([]Ep
 	return out, nil
 }
 
-func (s *Store) GetEpisodeItem(ctx context.Context, id int64) (EpisodeItem, error) {
+func (s *Store) GetEpisodeItem(ctx context.Context, profileID, id int64) (EpisodeItem, error) {
 	item, err := scanEpisodeItem(s.db.QueryRowContext(ctx, `
-		SELECT `+episodeItemColumns+`
-		FROM episode_items i
-		JOIN seasons s ON s.id = i.season_id
-		JOIN series se ON se.id = s.series_id
-		WHERE i.id = ?`, id))
+		SELECT `+episodeItemColumns+episodeItemSource+`
+		WHERE i.id = ?`, profileID, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return EpisodeItem{}, ErrNoSuchEpisodeItem
 	}
@@ -494,12 +499,14 @@ func (s *Store) nextEpisode(ctx context.Context, current EpisodeItem) (*int64, b
 	return &id, hasGap, nil
 }
 
-func (s *Store) ContinueEpisodes(ctx context.Context, limit int) ([]EpisodeItem, error) {
+func (s *Store) ContinueEpisodes(ctx context.Context, profileID int64, limit int) ([]EpisodeItem, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT i.id
-		FROM episode_items i
-		WHERE i.finished = 0 AND i.watched_at > 0 AND i.position_seconds >= ?
-		ORDER BY i.watched_at DESC, i.id DESC LIMIT ?`, minimumRememberedSeconds, limit)
+		SELECT ep.episode_item_id
+		FROM episode_progress ep
+		WHERE ep.profile_id = ? AND ep.finished = 0 AND ep.watched_at > 0
+		  AND ep.position_seconds >= ?
+		ORDER BY ep.watched_at DESC, ep.episode_item_id DESC LIMIT ?`,
+		profileID, minimumRememberedSeconds, limit)
 	if err != nil {
 		return nil, fmt.Errorf("listing episodes in progress: %w", err)
 	}
@@ -514,7 +521,7 @@ func (s *Store) ContinueEpisodes(ctx context.Context, limit int) ([]EpisodeItem,
 	}
 	out := make([]EpisodeItem, 0, len(ids))
 	for _, id := range ids {
-		item, err := s.GetEpisodeItem(ctx, id)
+		item, err := s.GetEpisodeItem(ctx, profileID, id)
 		if err != nil {
 			return nil, err
 		}
@@ -537,8 +544,8 @@ func (s *Store) RecentSeries(ctx context.Context, limit int) ([]Series, error) {
 	return collectSeries(rows, limit)
 }
 
-func (s *Store) SeriesHome(ctx context.Context, limit int) (*SeriesHome, error) {
-	continued, err := s.ContinueEpisodes(ctx, limit)
+func (s *Store) SeriesHome(ctx context.Context, profileID int64, limit int) (*SeriesHome, error) {
+	continued, err := s.ContinueEpisodes(ctx, profileID, limit)
 	if err != nil {
 		return nil, err
 	}

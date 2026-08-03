@@ -84,6 +84,14 @@ export const strings = {
 			title: 'Les mieux notés',
 			href: '/films?sort=rating'
 		},
+		series_continue: {
+			title: 'Reprendre une série',
+			href: '/series'
+		},
+		series_recent: {
+			title: 'Séries récemment ajoutées',
+			href: '/series'
+		},
 		tonight: {
 			title: 'Au hasard ce soir',
 			href: null,
@@ -204,6 +212,37 @@ export const strings = {
 		failed:
 			"Ce fichier n'a pas pu être lu. Son format n'est probablement pas pris en charge par la v1.",
 
+		// Le serveur envoie un code, jamais une phrase (décision 25). Cette table
+		// est le seul endroit où un code de M1 devient du français.
+		codes: {
+			invalid_movie_id: "Ce film n'est pas identifiable.",
+			invalid_file_id: "Ce fichier n'est pas identifiable.",
+			invalid_audio_track_id: "Cette piste audio n'est pas identifiable.",
+			audio_selection_requires_remux:
+				'Cette piste ne peut être garantie que par un réencapsulage.',
+			file_outside_library:
+				"Ce fichier ne se trouve plus dans un dossier surveillé. Vérifiez les dossiers de la bibliothèque dans les réglages.",
+			movie_not_found: 'Ce film est introuvable.',
+			file_not_found: "Ce fichier n'appartient plus à ce film.",
+			audio_track_not_found: "Cette piste audio n'existe plus dans ce fichier.",
+			media_file_unavailable:
+				'Ce fichier a disparu du disque. Relancez une analyse depuis les réglages.',
+			media_not_inspected: 'Analysez ce fichier avant de choisir une piste audio.',
+			media_unreadable:
+				"Ce fichier n'a pas pu être décodé. Il est peut-être incomplet ou corrompu.",
+			video_transcode_required:
+				'Le format vidéo de ce fichier demande une conversion complète, prévue pour un jalon ultérieur.',
+			movie_unavailable: 'Le film ne peut pas être lu depuis la base de données.',
+			file_unavailable: 'Le fichier ne peut pas être lu depuis la base de données.',
+			audio_track_unavailable: 'La piste audio ne peut pas être lue depuis la base de données.',
+			media_file_unreadable: "Ce fichier n'a pas pu être ouvert sur le disque.",
+			media_inspection_not_saved: "Le résultat de l'analyse n'a pas pu être enregistré.",
+			stream_start_failed: "La lecture n'a pas pu démarrer.",
+			ffmpeg_unsupported: "Aucune version de ffmpeg n'est disponible pour cette plateforme.",
+			ffmpeg_unavailable:
+				"ffmpeg n'a pas pu être préparé. Vérifiez la connexion, puis réessayez."
+		},
+
 		shortcuts: {
 			open: 'Afficher les raccourcis clavier',
 			close: 'Fermer l’aide des raccourcis',
@@ -231,14 +270,217 @@ export const strings = {
 		genres: 'Genres',
 		runtime: 'Durée',
 		year: 'Année',
-		file: 'Fichier',
-		size: 'Taille',
 		progress: 'Progression dans le film',
+		files: {
+			one: 'Fichier',
+			many: 'Fichiers disponibles',
+			choose: 'Choisir le fichier à lire',
+			chosen: 'Fichier choisi',
+			primary: 'Principal',
+			pending: 'Caractéristiques non mesurées',
+			inspect: 'Analyser',
+			inspecting: 'Analyse en cours…',
+			retry: "Relancer l'analyse",
+			errored: "Ce fichier n'a pas pu être analysé.",
+			resolution: (width, height) => `${width} × ${height}`,
+			trackCount: (count) => (count > 1 ? `${count} pistes audio` : `${count} piste audio`),
+			hint:
+				'Theia ne choisit jamais une qualité à votre place : plusieurs fichiers existent ' +
+				'et vous décidez lequel lire.'
+		},
+		audio: {
+			title: 'Piste audio',
+			choose: 'Choisir la piste audio',
+			auto: 'Piste par défaut du fichier',
+			isDefault: 'par défaut',
+			unnamed: (index) => `Piste ${index}`,
+			remuxNote:
+				'Choisir une piste explicitement passe par un réencapsulage, seul moyen de garantir ' +
+				"celle que le navigateur jouera."
+		},
 		moreByDirector: (director) => `Voir les autres films de ${director}`,
 		noOverview: "Aucun synopsis n'est disponible pour ce film.",
 		unmatched:
 			"Ce fichier n'a pas été identifié sur TMDB. Il reste listé sous le nom que porte le fichier ; " +
 			'renommer celui-ci relance une recherche à la prochaine analyse.'
+	},
+
+	remote: {
+		heading: 'Accès distant',
+		intro:
+			'Theia peut être joint hors du réseau local par un tunnel WireGuard embarqué. Aucun compte, aucun relais, aucun service extérieur : chaque appareil prouve une clé créée ici.',
+		router:
+			'Votre box doit rediriger le port UDP ci-dessous vers cette machine. Ne redirigez jamais le port TCP de Theia : il n’a aucune authentification.',
+		cgnat:
+			'Si votre opérateur vous place derrière un CGNAT, aucune redirection n’est possible et Theia ne peut rien y faire.',
+		state: 'État',
+		stateDisabled: 'Désactivé',
+		stateRunning: 'Actif',
+		stateError: 'En erreur',
+		enable: 'Activer l’accès distant',
+		disable: 'Désactiver',
+		port: 'Port UDP d’écoute',
+		portHelp: 'Le port que votre box redirige vers cette machine.',
+		portChange: 'Changer le port redémarre le tunnel et coupe brièvement les appareils connectés.',
+		endpoint: 'Adresse publique',
+		endpointPlaceholder: 'media.exemple.net:51820',
+		endpointHelp:
+			'Sous la forme hôte:port, sans http://. Le port public peut différer du port d’écoute.',
+		endpointExamples:
+			'Exemples : media.exemple.net:51820, 203.0.113.10:51820, [2001:db8::10]:51820',
+		endpointChange:
+			'Changer cette adresse ne met pas à jour les appareils déjà créés : il faut modifier leur configuration WireGuard, ou les révoquer et les recréer.',
+		reachability: 'Joignabilité',
+		unverified: 'Jamais confirmée',
+		unverifiedHelp:
+			'Aucun appareil n’a encore prouvé le chemin. Ce n’est pas une erreur : Theia ne teste pas votre box depuis l’extérieur.',
+		confirmed: 'Confirmée',
+		confirmedHelp:
+			'Au moins un appareil a établi une liaison depuis ce démarrage. Ce n’est pas une garantie permanente.',
+		save: 'Enregistrer',
+		saving: 'Enregistrement…',
+		devices: 'Appareils',
+		noDevices: 'Aucun appareil n’a encore été créé.',
+		addDevice: 'Ajouter un appareil',
+		deviceName: 'Nom de l’appareil',
+		devicePlaceholder: 'Télévision du salon',
+		create: 'Créer',
+		creating: 'Création…',
+		enableFirst: 'Activez l’accès distant avant de créer un appareil.',
+		address: 'Adresse dans le tunnel',
+		lastHandshake: 'Dernière liaison',
+		neverConnected: 'Jamais connecté',
+		traffic: 'Trafic',
+		trafficHelp: 'Compteurs réseau du tunnel, pas des statistiques de visionnage.',
+		revoke: 'Révoquer',
+		revokeConfirm: (name) =>
+			'Révoquer ' + name + ' ? Cet appareil perdra l’accès immédiatement et sa clé ne pourra pas être réactivée.',
+		revokeYes: 'Révoquer cet appareil',
+		cancel: 'Annuler',
+
+		provisionTitle: (name) => name + ' est prêt',
+		provisionWarning:
+			'Ce QR code et ce fichier contiennent une clé privée. Ils ne seront plus jamais affichés.',
+		provisionScan: 'Scannez ce code avec l’application WireGuard de l’appareil.',
+		copyConfig: 'Copier la configuration',
+		copied: 'Copié',
+		downloadConfig: 'Télécharger le .conf',
+		done: 'J’ai conservé la configuration',
+		closeWarning:
+			'Fermer sans conserver la configuration ? Elle ne peut pas être réaffichée : il faudra révoquer cet appareil et en créer un autre.',
+		closeAnyway: 'Fermer quand même',
+		lost: 'Configuration perdue ? Révoquez cet appareil et créez-en un nouveau.',
+
+		remoteBadge: 'Accès distant',
+		remoteContext: (name) => 'Connecté depuis ' + name,
+		remoteRestricted:
+			'Les réglages, l’analyse et les mises à jour ne sont accessibles que depuis le réseau local.',
+
+		codes: {
+			invalid_remote_access_payload: 'La demande n’a pas pu être lue.',
+			invalid_remote_listen_port: 'Ce port n’est pas valide. Choisissez un port entre 1 et 65535.',
+			invalid_remote_endpoint:
+				'Cette adresse n’est pas valide. Attendu : hôte:port, sans http:// ni chemin.',
+			invalid_remote_peer_payload: 'La demande n’a pas pu être lue.',
+			invalid_remote_peer_name: 'Un nom est requis, de 1 à 64 caractères.',
+			invalid_remote_peer_id: 'Cet appareil n’est pas identifiable.',
+			remote_peer_limit_reached: 'La limite de 32 appareils actifs est atteinte.',
+			remote_peer_not_found: 'Cet appareil n’existe plus.',
+			remote_access_disabled: 'Activez l’accès distant avant cette opération.',
+			remote_access_not_ready: 'Le tunnel n’est pas prêt. Réessayez dans un instant.',
+			remote_access_unavailable: 'L’accès distant est indisponible.'
+		},
+
+		reasons: {
+			remote_config_invalid: 'La configuration enregistrée n’est pas utilisable.',
+			remote_key_unavailable:
+				'La clé du serveur est illisible. Si ce dossier de données vient d’une autre machine ou d’un autre compte Windows, désactivez l’accès distant, supprimez remote-access.key, réactivez et recréez les appareils.',
+			remote_listen_failed: 'Le port UDP n’a pas pu être ouvert. Il est peut-être déjà utilisé.',
+			remote_listener_stopped: 'Le tunnel s’est arrêté de lui-même.',
+			remote_peer_reload_failed:
+				'Les appareils n’ont pas pu être rechargés ; le tunnel a été fermé par sécurité.',
+			remote_restore_failed: 'L’ancienne configuration n’a pas pu être rétablie.'
+		}
+	},
+
+	series: {
+		title: 'Séries',
+		loading: 'Chargement des séries…',
+		countAll: (n) => (n === 1 ? '1 série' : `${n} séries`),
+		emptyTitle: 'Aucune série',
+		emptyBody:
+			'Rangez vos épisodes en dossiers de série et de saison, nommés SxxExx, puis relancez une analyse depuis les réglages.',
+		notFound: 'Cette série est introuvable.',
+		episodeNotFound: 'Cet épisode est introuvable.',
+		seasons: 'Saisons',
+		specials: 'Épisodes spéciaux',
+		season: (number) => `Saison ${number}`,
+		ownedEpisodes: (n) => (n === 1 ? '1 épisode possédé' : `${n} épisodes possédés`),
+		episodeLabel: (number) => `Épisode ${number}`,
+		episodeRange: (first, last) => `Épisodes ${first} à ${last}`,
+		combined: 'Épisode combiné',
+		combinedHint:
+			'Ces épisodes sont dans un seul fichier : ils se lisent d’une traite et partagent une reprise.',
+		gap: 'Un épisode manque avant le suivant',
+		next: 'Épisode suivant',
+		lastOwned: 'Dernier épisode possédé',
+		unmatched:
+			'Cette série n’a pas été identifiée sur TMDB. Elle reste listée sous le nom de son dossier.',
+		noOverview: 'Aucun synopsis n’est disponible.',
+		play: 'Lire l’épisode',
+		resumeAtMinutes: (minutes) => `Reprendre à ${minutes} min`
+	},
+
+	profiles: {
+		question: 'Qui regarde ?',
+		defaultName: 'Profil principal',
+		manage: 'Gérer les profils',
+		done: 'Terminé',
+		switch: 'Changer de profil',
+		current: (name) => `Profil actif : ${name}`,
+		choose: (name) => `Regarder en tant que ${name}`,
+		add: 'Ajouter un profil',
+		create: 'Créer le profil',
+		cancel: 'Annuler',
+		nameLabel: 'Nom du profil',
+		namePlaceholder: 'Mimi',
+		edit: (name) => `Modifier ${name}`,
+		editShort: 'Modifier',
+		save: 'Enregistrer',
+		picture: 'Photo',
+		pictureChange: 'Choisir une photo',
+		pictureRemove: 'Retirer la photo',
+		pictureHint:
+			'La photo reste sur cette machine. Elle est recadrée en carré et ré-enregistrée ; ' +
+			'aucune donnée du fichier d’origine n’est conservée.',
+		pictureUploading: 'Envoi de la photo…',
+		details: 'Détails',
+		createdAt: 'Créé le',
+		moviesStarted: 'Films commencés',
+		moviesFinished: 'Films terminés',
+		episodesStarted: 'Épisodes commencés',
+		episodesFinished: 'Épisodes terminés',
+		lastWatched: 'Dernière lecture',
+		never: 'Jamais',
+		delete: 'Supprimer ce profil',
+		deleteConfirm: (name) =>
+			`Supprimer ${name} ? Sa progression sera perdue. Les autres profils ne changent pas.`,
+		deleteYes: 'Supprimer',
+		empty: 'Aucun profil.',
+		loading: 'Chargement des profils…',
+		codes: {
+			invalid_profile_id: "Ce profil n'est pas identifiable.",
+			invalid_profile_payload: "La demande n'a pas pu être lue.",
+			invalid_profile_name:
+				'Un nom est requis, sans caractère de contrôle, et ne peut pas dépasser 40 caractères.',
+			profile_not_found: "Ce profil n'existe plus. Il a peut-être été supprimé ailleurs.",
+			profile_image_not_found: "Ce profil n'a pas de photo.",
+			profile_limit_reached: 'Le nombre maximal de profils est atteint.',
+			profile_last_remaining: 'Le dernier profil ne peut pas être supprimé.',
+			profile_image_too_large: 'Cette image est trop lourde.',
+			profile_image_unreadable: "Ce fichier n'est pas une image utilisable.",
+			profile_unavailable: 'Les profils ne sont pas disponibles pour le moment.'
+		}
 	},
 
 	settings: {

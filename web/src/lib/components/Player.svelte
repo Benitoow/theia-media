@@ -2,9 +2,33 @@
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { apiFetch, getJSON, formatTime, displayTitle } from '$lib/api.js';
 	import { strings as t } from '$lib/strings.js';
+	import { profiles } from '$lib/profiles.svelte.js';
 	import Icon from './Icon.svelte';
 
-	let { movie, onclose, onprogress } = $props();
+	// fileId and audioTrackId come from the chooser on the film page. When they
+	// are absent the player falls back to the v1 routes, which the server still
+	// binds to the primary file -- that is the compatibility net for the home
+	// hero's "reprendre", not a path M1 should build on.
+	// streamBase and progressPath let an episode reuse this player: its routes
+	// live under /api/library/episodes/{id}/... rather than /api/stream/{id}/...,
+	// but the shapes below them are identical -- info, the bare path, /remux.
+	let {
+		movie,
+		fileId = null,
+		audioTrackId = null,
+		streamBase = null,
+		progressPath = null,
+		title = null,
+		onclose,
+		onprogress
+	} = $props();
+
+	const base = $derived(
+		streamBase ?? (fileId ? `/api/stream/${movie.id}/files/${fileId}` : `/api/stream/${movie.id}`)
+	);
+	const progressRoute = $derived(progressPath ?? `/api/library/movies/${movie.id}/progress`);
+	const heading = $derived(title ?? displayTitle(movie));
+	const audioQuery = $derived(audioTrackId ? `audio=${audioTrackId}` : '');
 
 	/** @type {'checking' | 'resume' | 'playing' | 'preparing' | 'failed'} */
 	let phase = $state('checking');
@@ -51,7 +75,14 @@
 	const position = $derived(scrubbing ? scrubValue : offset + elapsed);
 	const hidden = $derived(!controlsVisible && phase === 'playing');
 	const isRemux = $derived(info?.mode === 'remux');
-	const failure = $derived(failureCode ? (t.player[failureCode] ?? t.player.failed) : null);
+	// Three sources, one message: the player's own states (`unavailable`,
+	// `noFfmpeg`, `failed`) and the server's stable codes, which live in their
+	// own table so a code is never mistaken for a UI string.
+	const failure = $derived(
+		failureCode
+			? (t.player.codes[failureCode] ?? t.player[failureCode] ?? t.player.failed)
+			: null
+	);
 	const progressPercent = $derived(duration > 0 ? Math.min(100, (position / duration) * 100) : 0);
 	const bufferedPercent = $derived(duration > 0 ? Math.min(100, (buffered / duration) * 100) : 0);
 	const remaining = $derived(duration > 0 ? Math.max(0, duration - position) : 0);
@@ -68,10 +99,20 @@
 		document.body.style.overflow = 'hidden';
 
 		try {
-			info = await getJSON(`/api/stream/${movie.id}/info`);
-		} catch {
+			const query = audioQuery ? `?${audioQuery}` : '';
+			info = await getJSON(profiles.url(`${base}/info${query}`));
+		} catch (error) {
 			phase = 'failed';
-			failureCode = 'unavailable';
+			failureCode = error?.code ?? 'unavailable';
+			return;
+		}
+
+		// The server decides; it does not merely advise. A refusal is reported
+		// with its own reason rather than letting the element fail on its own and
+		// blaming "an unsupported format" for a codec the server already named.
+		if (info.mode === 'unsupported') {
+			phase = 'failed';
+			failureCode = info.reason_code ?? 'failed';
 			return;
 		}
 
@@ -106,7 +147,7 @@
 		triedRemux = false;
 
 		if (info.mode === 'direct') {
-			source = `/api/stream/${movie.id}`;
+			source = base;
 			phase = 'playing';
 			return;
 		}
@@ -128,7 +169,10 @@
 		elapsed = 0;
 
 		phase = info?.ffmpeg_ready ? 'playing' : 'preparing';
-		source = `/api/stream/${movie.id}/remux?t=${Math.floor(from)}`;
+		// `audio` has to survive every seek: dropping it would silently restart
+		// the film on the file's default track halfway through.
+		const query = [`t=${Math.floor(from)}`, audioQuery].filter(Boolean).join('&');
+		source = `${base}/remux?${query}`;
 	}
 
 	function onLoadedMetadata() {
@@ -221,7 +265,7 @@
 		lastSaved = seconds;
 
 		try {
-			const response = await apiFetch(`/api/library/movies/${movie.id}/progress`, {
+			const response = await apiFetch(profiles.url(progressRoute), {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ position_seconds: seconds, duration_seconds: duration }),
@@ -500,7 +544,7 @@
 	class:player--idle={hidden}
 	role="dialog"
 	aria-modal="true"
-	aria-label={displayTitle(movie)}
+	aria-label={heading}
 	tabindex="-1"
 	onkeydown={trapDialogFocus}
 	onpointermove={showControls}
@@ -517,7 +561,7 @@
 		<!-- Resuming has to be the obvious choice without hiding the other one. -->
 		<div class="player-message">
 			<span class="label">{t.player.continueWatching}</span>
-			<h2 class="page-title mx-auto mt-4 mb-3">{displayTitle(movie)}</h2>
+			<h2 class="page-title mx-auto mt-4 mb-3">{heading}</h2>
 			<p class="tv-copy mb-10">{t.player.resumeAt} {formatTime(offset)}</p>
 			<div class="flex flex-wrap items-center justify-center gap-5">
 				<button
@@ -532,7 +576,7 @@
 				<button
 					type="button"
 					onclick={async () => {
-						await apiFetch(`/api/library/movies/${movie.id}/progress`, { method: 'DELETE' });
+						await apiFetch(profiles.url(progressRoute), { method: 'DELETE' });
 						start(0);
 					}}
 					class="tv-action cursor-pointer"
@@ -584,7 +628,7 @@
 				<Icon name="back" label={t.player.close} />
 			</button>
 			<div class="min-w-0">
-				<p class="player-title truncate">{displayTitle(movie)}</p>
+				<p class="player-title truncate">{heading}</p>
 				{#if isRemux}
 					<p class="micro mt-1">{t.player.remuxBadge}</p>
 				{/if}

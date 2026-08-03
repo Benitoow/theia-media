@@ -39,7 +39,7 @@ func TestHomeHeroPrefersWhatIsAlreadyUnderway(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	movies, err := service.store.List(t.Context(), 10, 0)
+	movies, err := service.store.List(t.Context(), defaultProfileID, 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestHomeHeroPrefersWhatIsAlreadyUnderway(t *testing.T) {
 	}
 
 	// Nothing watched yet: the hero is the featured pick.
-	home, err := service.HomeScreen(t.Context(), 12)
+	home, err := service.HomeScreen(t.Context(), defaultProfileID, 12)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,11 +58,11 @@ func TestHomeHeroPrefersWhatIsAlreadyUnderway(t *testing.T) {
 
 	// Start one of them, and it takes the slot regardless of rating or recency.
 	started := movies[1].ID
-	if _, err := service.SaveProgress(t.Context(), started, 1800, 10140); err != nil {
+	if _, err := service.SaveProgress(t.Context(), defaultProfileID, started, 1800, 10140); err != nil {
 		t.Fatal(err)
 	}
 
-	home, err = service.HomeScreen(t.Context(), 12)
+	home, err = service.HomeScreen(t.Context(), defaultProfileID, 12)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,11 +82,11 @@ func TestHomeRowsAreCodesNotSentences(t *testing.T) {
 	}
 	id := onlyMovie(t, service).ID
 	dressForScreen(t, service, id, 8.0)
-	if _, err := service.SaveProgress(t.Context(), id, 1800, 10140); err != nil {
+	if _, err := service.SaveProgress(t.Context(), defaultProfileID, id, 1800, 10140); err != nil {
 		t.Fatal(err)
 	}
 
-	home, err := service.HomeScreen(t.Context(), 12)
+	home, err := service.HomeScreen(t.Context(), defaultProfileID, 12)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func TestTonightHoldsForTheEveningAndTurnsOver(t *testing.T) {
 	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
 		t.Fatal(err)
 	}
-	movies, err := service.store.List(t.Context(), 50, 0)
+	movies, err := service.store.List(t.Context(), defaultProfileID, 50, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func TestTonightHoldsForTheEveningAndTurnsOver(t *testing.T) {
 	}
 
 	order := func(seed int64) string {
-		picks, err := service.store.Tonight(t.Context(), 12, seed)
+		picks, err := service.store.Tonight(t.Context(), defaultProfileID, 12, seed)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -167,7 +167,7 @@ func TestTonightIsNotAnArithmeticProgression(t *testing.T) {
 	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
 		t.Fatal(err)
 	}
-	movies, err := service.store.List(t.Context(), 100, 0)
+	movies, err := service.store.List(t.Context(), defaultProfileID, 100, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +175,7 @@ func TestTonightIsNotAnArithmeticProgression(t *testing.T) {
 		dressForScreen(t, service, m.ID, 7.0)
 	}
 
-	picks, err := service.store.Tonight(t.Context(), 12, 20260729)
+	picks, err := service.store.Tonight(t.Context(), defaultProfileID, 12, 20260729)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,7 +201,7 @@ func TestTonightLeavesOutWhatIsAlreadyFinished(t *testing.T) {
 	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
 		t.Fatal(err)
 	}
-	movies, err := service.store.List(t.Context(), 10, 0)
+	movies, err := service.store.List(t.Context(), defaultProfileID, 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,11 +213,11 @@ func TestTonightLeavesOutWhatIsAlreadyFinished(t *testing.T) {
 	// 10140-second one that is anything past 10020. 10000 would still count as
 	// in progress, which is what this test asserted on its first run.
 	finished := movies[0].ID
-	if _, err := service.SaveProgress(t.Context(), finished, 10100, 10140); err != nil {
+	if _, err := service.SaveProgress(t.Context(), defaultProfileID, finished, 10100, 10140); err != nil {
 		t.Fatal(err)
 	}
 
-	picks, err := service.store.Tonight(t.Context(), 12, 1)
+	picks, err := service.store.Tonight(t.Context(), defaultProfileID, 12, 1)
 	if err != nil {
 		t.Fatal(err)
 	}

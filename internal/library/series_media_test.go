@@ -14,8 +14,8 @@ func TestEpisodeMediaKeepsTrackIDsAndInvalidatesWhenFileChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	series := onlySeries(t, service)
-	season, _ := service.GetSeason(t.Context(), series.ID, 1)
-	item, _ := service.GetEpisodeItem(t.Context(), season.Items[0].ID)
+	season, _ := service.GetSeason(t.Context(), defaultProfileID, series.ID, 1)
+	item, _ := service.GetEpisodeItem(t.Context(), defaultProfileID, season.Items[0].ID)
 	file := item.Files[0]
 
 	measured := FileMedia{
@@ -57,7 +57,7 @@ func TestEpisodeMediaKeepsTrackIDsAndInvalidatesWhenFileChanges(t *testing.T) {
 	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
 		t.Fatal(err)
 	}
-	item, err = service.GetEpisodeItem(t.Context(), item.ID)
+	item, err = service.GetEpisodeItem(t.Context(), defaultProfileID, item.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,27 +74,27 @@ func TestEpisodeProgressUsesTheSameResumeAndFinishedRulesAsFilms(t *testing.T) {
 		t.Fatal(err)
 	}
 	series := onlySeries(t, service)
-	season, _ := service.GetSeason(t.Context(), series.ID, 1)
+	season, _ := service.GetSeason(t.Context(), defaultProfileID, series.ID, 1)
 	id := season.Items[0].ID
 
-	short, err := service.SaveEpisodeProgress(t.Context(), id, 10, 1200)
+	short, err := service.SaveEpisodeProgress(t.Context(), defaultProfileID, id, 10, 1200)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if short.PositionSeconds != 0 || short.WatchedAt != nil {
 		t.Fatalf("short opening was remembered: %+v", short)
 	}
-	finished, err := service.SaveEpisodeProgress(t.Context(), id, 1190, 1200)
+	finished, err := service.SaveEpisodeProgress(t.Context(), defaultProfileID, id, 1190, 1200)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !finished.Finished {
 		t.Fatalf("near-end episode was not finished: %+v", finished)
 	}
-	if err := service.ResetEpisodeProgress(t.Context(), id); err != nil {
+	if err := service.ResetEpisodeProgress(t.Context(), defaultProfileID, id); err != nil {
 		t.Fatal(err)
 	}
-	item, err := service.GetEpisodeItem(t.Context(), id)
+	item, err := service.GetEpisodeItem(t.Context(), defaultProfileID, id)
 	if err != nil {
 		t.Fatal(err)
 	}

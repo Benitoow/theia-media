@@ -1028,6 +1028,337 @@ always disable remote access from the LAN, remove the unusable key file and
 provision fresh devices. Windows data directories copied to another user or
 machine require exactly that recovery.
 
+## 47. The file chooser owns its own vertical axis, and its rows are width-capped
+
+**Decided and verified in V2-M1-FE.** The film page now lists the files the
+server returned and lets the viewer pick one, plus a measured audio track when
+the file has more than one. Nothing is inferred: a file whose `media.status` is
+not `ok` shows "characteristics not measured" rather than reading `2160p` out of
+its own filename, which is exactly what `Amelie.2001.2160p...mkv` invites.
+Inspection stays an explicit button per file, and only `media_unreadable` is
+mirrored into the local state, because that is the only failure the server
+caches against the file (decision 38).
+
+The interesting part was the remote. The layout's spatial navigation ranks
+candidates by centre-to-centre distance with the horizontal axis weighted
+`2.25`, and that weight is hostile to a list of wide rows:
+
+- With the inspect button stacked **under** its file, the narrow button won
+  every downward press: from "Lire" the first file option scored 1705 against
+  the button's 1095, and the file options were unreachable by D-pad entirely.
+- Moved beside its file, the rows still lost to `← Retour` at the foot of a
+  short page — 1454 against 1272 — because a full-bleed row's centre sits ~384px
+  right of every narrow control in the column.
+- Making every row full width made it worse, not better: all five options then
+  scored ~1170 against Retour's 915.
+- Within the list, the *narrowest* option was skipped for the same reason:
+  shrink-to-fit "Piste par défaut" scored 869 against the wider
+  "ENG · English stereo" at 771.
+
+Three things fix it together, and the third is the one that matters:
+
+1. the chooser sits directly under the play button rather than after the cast
+   list — editorially right anyway, since choosing the file is part of deciding
+   to watch;
+2. option rows are capped at `26rem` and share one width, so no sibling is
+   penalised for having a shorter label;
+3. **the section handles Up and Down itself**, in the spirit of decision 27's
+   film row, so movement inside the list is reading order rather than geometry.
+   An edge press is deliberately not consumed, so leaving the list still falls
+   through to the page's own navigation.
+
+Tuning the width alone was tried and rejected: it only ever won by twenty-odd
+points against whatever happened to sit below, which is a number that changes
+with the length of a synopsis. Any future screen with a list of options — M3's
+episodes and M4's device list both qualify — inherits this constraint.
+
+Verified against the maintainer's real library rather than a fixture: 279 files
+resolved to 253 films with 25 genuinely multi-file cards, including a three-file
+*Amélie* consolidated across a localised title. Playback of a chosen file with a
+chosen track reached `readyState 4` at 1280×720 through
+`/api/stream/3/files/4/remux?t=0&audio=2`, and the server log confirms it mapped
+stable track id 2 to ffmpeg stream index 2 — the browser never sends a stream
+index. Film-level progress survived a change of file: 62 seconds saved on one
+file resumed at `t=62` on the other.
+
+## 48. Profiles return as a local viewer, from a new contract rather than the old one
+
+**The maintainer's references arrived on 2026-08-03 and this is the scoped
+decision that decision 36 required.** Nothing is restored from the removed
+implementation: not the screen, not `X-Theia-Profile`, not `playback_progress`,
+not the avatar endpoint. What follows is what the interface needs; the model and
+the API are M2-BE's to design for these actions.
+
+The references are three Netflix-shaped screens, supplied for **layout, not
+style**. Read literally they carry an account system, and Theia has none. These
+are refused outright rather than translated: "Se déconnecter" (there is nothing
+to log out of, decisions 6 and 36), email, "Membre depuis", "Rôle", "Statut",
+the "Abonné" badge and crown (the founding pitch says zero paywall), "Transférer
+un profil", "Compte" and "Centre d'aide" (all require a cloud Theia never
+contacts), and the notification bell. The reference artwork cannot ship either:
+the repository is public and GPL-3.0, and the rule is no unverified image, ever.
+
+Four things were settled with the maintainer before any code:
+
+- **The chooser is a full screen, and the nav only points at it.** The reference
+  shows an inline dropdown; decision 35 had already measured why that fails —
+  a 2rem avatar and an 11px name are unreadable at three metres, four targets in
+  one pill overflowed the 320px floor, and the first D-pad arrow landed on
+  navigation rather than on the question the app opens with. The nav entry
+  therefore opens the screen instead of expanding a menu. A reference is a
+  layout, not a licence to repeat a measured failure.
+- **The detail panel keeps its shape and loses its subject.** Two stacked
+  panels, identity above and a label/value list below, with the destructive
+  action isolated at the foot. The rows become local facts — created, films
+  started, films finished, last watched — and the foot action is "delete this
+  profile".
+- **An avatar is an image the viewer supplies.** Generated marks were offered
+  and refused. This revives a mechanism, not the retired code, and it revives
+  its hazards with it: bounded upload, decode, EXIF-orientation correction,
+  centre-crop, re-encode to a fixed square, metadata stripped before the bytes
+  reach storage, and a version in the immutable URL. That endpoint must not
+  become an arbitrary-file host.
+- **The startup gate returns.** With no profile chosen in this browser the
+  chooser appears on arrival; the selection is local to the browser, as the
+  interface language already is (decision 32), so a television and a laptop do
+  not fight over who is watching.
+
+Two constraints M2-BE inherits and must not discover late: progress now lives in
+**two** places, `movies` from M1 and `episode_items` from M3 (decision 41), so
+the migration owns both or it corrupts one. And a profile remains neither an
+account nor a permission — anyone on the LAN may select and edit every profile,
+exactly as they may already change every setting.
+
+## 49. A profile travels in the open, and the rollback mirror follows whoever is default
+
+**Implementation decisions from V2-M2-BE, which decision 48 left to the backend.**
+
+The active profile is `?profile={id}` on the routes that read or write a
+position — not a header. The removed implementation used `X-Theia-Profile`, and
+the shape was the problem as much as the name: a header reads like a credential,
+and this is not one. Anyone on the LAN may pass any id, exactly as anyone on the
+LAN may already change every setting. Putting it in the URL keeps that honest,
+and keeps it debuggable.
+
+An absent id falls back to the oldest profile, so the released frontend and any
+client that has never heard of profiles keep working. An id that names nothing
+is **refused** rather than quietly redirected to the default: writing one
+viewer's position into another's history because a television held a stale id is
+the kind of corruption nobody notices and nobody reports.
+
+Eight profiles, and the number comes from the screen rather than from taste. The
+chooser is one horizontal row read from three metres, where a card may not fall
+below the design system's 160px legibility floor; past eight the row wraps or
+shrinks under it. The previous implementation allowed twelve, chosen before that
+screen existed.
+
+Two hazards were found by running the thing rather than reading it:
+
+- **Consolidation and rename lost every viewer but one.** Both paths moved
+  progress through the single legacy columns, so merging two copies of a film —
+  or renaming an episode — discarded the other profiles' rows when the duplicate
+  cascaded away. Both now move `movie_progress` / `episode_progress` per profile,
+  most recently watched winning within each profile rather than across all of
+  them.
+- **Deleting the default profile stranded the rollback mirror.** The legacy
+  columns on `movies` exist so a rolled-back v1.5.0 still finds a history, and
+  they follow whichever profile is oldest. Deleting that profile promotes the
+  next one, and the columns kept serving the deleted viewer's positions —
+  a history belonging to nobody. Deletion now re-points them.
+
+The avatar endpoint re-encodes everything to JPEG regardless of what arrived, so
+a hostile PNG cannot be stored and served back intact, and bounds both the bytes
+read and the pixels claimed — a decompression bomb is a few bytes of header
+asking for gigabytes. One EXIF tag is parsed by hand, because a full parser is a
+dependency and a much larger surface for a single integer, and every other field
+in that block is precisely what Theia throws away.
+
+## 50. One profile is not a question
+
+**A deliberate narrowing of the maintainer's answer in decision 48, recorded
+because it is a narrowing.** The startup gate was specified as "show the chooser
+whenever no profile is active in this browser". Built exactly that way, a
+household that never creates a second profile meets "Qui regarde ?" on every new
+device, with one card to press. That is a click whose answer is already known,
+standing between a television and a film — and the founding criterion is a film
+in under three clicks.
+
+So a lone profile is adopted silently, and the chooser appears the moment there
+is an actual choice: two or more profiles, or a stored selection that named a
+profile since deleted elsewhere. Everything else in decision 48 stands. If the
+maintainer wants the screen unconditionally, the change is one condition in
+`profiles.svelte.js`.
+
+Two things were found by looking at the built screens rather than the code:
+
+- **A middot ended a wrapped line.** The file facts render as separate children
+  with separators between them, so `2:30 ·` could sit alone at the right edge
+  with `2 pistes audio` below. The separator is now inside the same inline box
+  as the fact it introduces.
+- **Deleting an unknown profile reported the wrong reason.** The last-profile
+  rule was checked before existence, so removing an id that did not exist
+  answered "the last profile cannot be deleted" whenever one remained — a true
+  sentence about the wrong subject. Existence is checked first.
+
+A profile's page is addressable as `/profils?gerer=1&profil=<id>` so a reload
+does not throw the viewer back to the row they came from.
+
+## 51. The wordmark is set, not placed
+
+The photographic wordmark — serif letterforms filled with an earth horizon — is
+the prestige piece the founding spec §11.10 describes, and the same paragraph
+warns that photographic detail does not survive the reduction to nav-bar size.
+It does not, and the failure is specific rather than a matter of taste. At the
+28px the bar renders, the atmosphere band runs straight through the middle of
+the letters and reads as a strikethrough; the lens flare blows out the E and the
+I; the T and A come out gold while the H, E and I come out white, so it reads as
+two words; and the image's box shows as a rectangle against the near-black bar.
+That is exactly the "mal intégré, rectangulaire, mauvaise couleur perçue"
+already sitting in the roadmap's open points, and the fallback recorded beside
+it was plain "THEIA" text.
+
+So the mark is typography until M5 does the real art direction: uppercase
+display serif, tracked at `0.32em` in the manner of the reference moodboards,
+with a negative end margin because letter-spacing also applies after the last
+letter and would otherwise push the mark a third of an em right of everything
+below it. It costs no asset, no licence question and no request, it carries the
+name to a screen reader without an alt attribute, it cannot reflow the bar while
+it loads, and it is legible from a favicon to a television.
+
+`web/static/theia-wordmark.webp` is now referenced by nothing. It is left in
+place rather than deleted — it is the maintainer's licence-checked asset and
+M5's starting point — and joins `icon-512.png` in the roadmap's open points.
+Designing a new mark is still M5; this is integration, not identity.
+
+## 52. A series is a catalogue of items, not of episodes
+
+**Decided and verified in V2-M3-FE.** The catalogue, the series page and the
+episode page consume the M3-BE contract as published. Three things follow from
+the model rather than from taste:
+
+- **A combined file appears once.** `S01E02E03` is one item with one timeline,
+  so the row reads "épisodes 2 à 3", joins both TMDB titles, and carries one
+  resume position. Two cards would launch the same file twice from second zero.
+  Each member still gets its own synopsis on the episode page, because that is
+  information the item genuinely holds.
+- **A gap is stated, never enforced.** `next_has_gap` renders as a line beside
+  the next-episode action, in the warning register, and blocks nothing.
+  Specials are a named season and lead nowhere: `S00` never receives a
+  `next_episode_id`, so the page says so instead of inventing a successor.
+- **Seasons are options, not pages.** Switching season on a television should
+  not be a navigation, and the season payload is compact by design — files live
+  on the episode page. The row obeys §9: one shared width, its own axis.
+
+The file chooser and the player are the components M1 built, not copies. Both
+now take the resource they act on — `basePath` for inspection, `streamBase` and
+`progressPath` for playback — because an episode is a different resource, not a
+different interaction. The same is true of the card: `PosterCard` gained an
+artwork and title override so an episode can use it without pretending in its
+data to be a film.
+
+Series rows are appended after the film rows on the home screen and disappear
+when the endpoint returns nothing, which is what keeps a films-only library
+looking exactly as it did.
+
+Verified against a real corpus rather than a fixture: TMDB recognised
+*Severance*, the specials and season 1 filled, a two-track MKV inspected at
+1280×720 with `eng`/`fra`, the French track remuxed from twenty seconds in and
+decoded back through ffmpeg without error, and the chain reported
+`[1] → [2,3] → [5]` with the gap flagged on the middle item and nothing after
+the special.
+
+## 53. A remote session does not ask for what it may not have
+
+**Decided and verified in V2-M4-FE.** The layout reads
+`GET /api/remote-access/session` before anything else, because what follows
+depends on which side of the tunnel the browser is. On the LAN nothing changes.
+Inside the tunnel the settings link is not rendered and the home screen does not
+request onboarding.
+
+Not requesting is the point. `Promise.allSettled` would swallow the 403 quite
+happily, and the released home already did. But a deliberate refusal is a
+security boundary working, not a failure to tolerate: asking anyway trains the
+interface to treat a correct answer as noise, and the first person to add
+logging would see a wall of forbidden requests from every remote device. A
+session whose mode is unknown is treated as LAN, because hiding the settings
+from somebody sitting at home is the worse of the two mistakes.
+
+The panel says the uncomfortable parts out loud, before anything can be switched
+on: the router forwards **UDP** and never Theia's TCP port, which has no
+authentication at all; and CGNAT is stated as unsupported rather than quietly
+attempted. `unverified` is presented as a fact, not a fault — no device has
+proven the path, and Theia owns no probe that could say otherwise. `confirmed`
+says "since this start", not "guaranteed". The byte counters are labelled as
+tunnel traffic so nobody reads them as viewing statistics.
+
+Both consequences of a change are stated before the save, not discovered after
+it: a new endpoint does not reach devices already provisioned, and a new port
+restarts the listener. Only fields that actually changed are sent, so saving an
+endpoint never restarts a tunnel nobody asked to restart. Every error state
+keeps **Disable** reachable, because that is the documented way back and the LAN
+never went away.
+
+The provisioning dialog holds the one copy of a private key that will ever
+exist. It lives in component memory: verified in a real browser that after
+creating a device, `PrivateKey` appears in no localStorage value, no
+sessionStorage value, no IndexedDB database, not in the URL and not in the
+document — the QR renders as SVG and the configuration text is never written
+into the DOM. Closing without copying asks first, and closing clears it. Losing
+it offers "revoke and recreate", never "show it again", because a server that
+could show it twice would not have thrown it away.
+
+Two things found by running it: `.profile-input` carries a row-direction flex
+basis for the profile page, and reused in this column it stretched the port
+field to the height of the whole group, stranding the value at the bottom of a
+very tall box. And a device name typed with accents round-trips intact — the
+mojibake in the first screenshot came from the shell that created the peer, not
+from the server, which was checked rather than assumed.
+
+## 54. The identity is the word and the rule, and the icon is a crop of it
+
+**Decided in V2-M5, from four directions put in front of the maintainer before
+anything was written.** The brief was the one the roadmap set: real art
+direction, several options, validation before implementation — not a cosmetic
+retouch smuggled into another milestone.
+
+Four were drawn and rendered at 16px, 28px and 96px, then in a navigation
+lockup: a Greek theta, a drawn sun, the word underlined by a rule, and a
+geometric sunrise. Rendering them at their real sizes is what decided it. The
+sun lost its rays at 16px and became a gold dot, which is exactly the failure
+decision 51 had just removed. The maintainer chose **the word and the rule**:
+THEIA in the display serif, underlined by a gold rule that reads as a horizon.
+
+Its weakness was known when it was chosen — at 16px the word does not fit — so
+the reduction was designed and tested rather than assumed. Three candidates were
+rendered in a real browser tab: a disc crossed by the rule read as a ringed
+planet and said nothing about the lockup; the rule alone became a grey smudge;
+the **initial standing on the rule** stayed legible and is a crop of the lockup
+rather than a second mark invented beside it. That is the icon.
+
+Three consequences:
+
+- **The T is drawn as paths, never as a text element.** A favicon is fetched as
+  an image, so no webfont reaches it: a text node would fall back to whatever
+  serif the platform happens to have and the letter would differ per machine.
+  The trade is that the serifs are blockier than a true didone, because
+  thick/thin contrast is what disappears first at 16px, and legibility there
+  outranks fidelity at 180.
+- **The touch icon is generated from the same SVG**, so the two files cannot
+  drift. It exists only because iOS will not take an SVG for a home screen.
+- **Two dead assets left the binary.** `icon-512.png` was 208 KB serving a PWA
+  manifest that the founding spec §11.5 excludes from v1, and
+  `theia-wordmark.webp` was the nav crop that decision 51 stopped using; the
+  README's prestige logo lives in `assets/`, outside the binary, and is
+  untouched. Static assets fall from about 840 KB to 584 KB.
+
+The favicon was verified the way the four-release bug of decision 22 taught: not
+by the file existing, but by loading it into an `Image()` and reading back
+`32×32` after a strict XML parse.
+
+Both of the roadmap's open points are now closed. What remains genuinely open is
+whether the photographic wordmark ever earns a surface inside the application;
+it currently has none, and none is invented for it.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

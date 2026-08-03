@@ -1,4 +1,5 @@
 <script>
+	import RemoteAccess from '$lib/components/RemoteAccess.svelte';
 	import { onMount } from 'svelte';
 	import { getJSON } from '$lib/api.js';
 	import { i18n } from '$lib/i18n/index.svelte.js';
@@ -186,6 +187,8 @@
 				<ConnectPanel info={connect} />
 			</section>
 		{/if}
+
+		<RemoteAccess />
 
 		<section class="mb-14">
 			<h2 class="label mb-5">{t.settings.server}</h2>

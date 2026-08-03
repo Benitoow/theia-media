@@ -1,7 +1,9 @@
 <script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { getJSON } from '$lib/api.js';
+	import { getJSON, imageURL } from '$lib/api.js';
+	import { profiles } from '$lib/profiles.svelte.js';
+	import { remote } from '$lib/remote.svelte.js';
 	import { strings as t } from '$lib/strings.js';
 	import Hero from '$lib/components/Hero.svelte';
 	import Row from '$lib/components/Row.svelte';
@@ -11,13 +13,60 @@
 	/** @type {'loading' | 'ready' | 'offline'} */
 	let state = $state('loading');
 	let home = $state(null);
+	let seriesHome = $state(null);
+
+	// Series rows are additive and sit after the film rows: M3 kept its home
+	// payload separate precisely so the released screen went on working
+	// (decision 41). An episode brings its own still and heading; the card is
+	// otherwise the same one the film rows use.
+	const seriesRows = $derived.by(() => {
+		const rows = [];
+		const resuming = seriesHome?.continue_watching ?? [];
+		if (resuming.length) {
+			rows.push({
+				kind: 'series_continue',
+				cards: resuming.map((item) => ({
+					movie: item,
+					href: `/episode/${item.id}`,
+					art: imageURL(item.episode_metadata?.[0]?.metadata?.still_path, 'w780'),
+					title: item.series_title,
+					legend: episodeLegend(item)
+				}))
+			});
+		}
+		const recent = seriesHome?.recent_series ?? [];
+		if (recent.length) {
+			rows.push({
+				kind: 'series_recent',
+				cards: recent.map((item) => ({
+					movie: item,
+					href: `/serie/${item.id}`,
+					legend: item.metadata?.first_air_date?.slice(0, 4) ?? '—'
+				}))
+			});
+		}
+		return rows;
+	});
+
+	function episodeLegend(item) {
+		const numbers = item.episode_numbers ?? [];
+		if (numbers.length > 1) {
+			return t.series.episodeRange(numbers[0], numbers[numbers.length - 1]);
+		}
+		return t.series.episodeLabel(numbers[0] ?? '?');
+	}
 
 	onMount(async () => {
 		// Asked alongside the library rather than before it, so a normal launch
 		// pays one extra request in parallel and never a round trip in series.
-		const [library, onboarding] = await Promise.allSettled([
-			getJSON('/api/library/home'),
-			getJSON('/api/onboarding')
+		// Onboarding is LAN-only. allSettled would swallow the 403, but asking for
+		// something deliberately forbidden is still the wrong request to make:
+		// the guard is a boundary, not a fallback (decision 44).
+		await remote.load();
+		const [library, onboarding, series] = await Promise.allSettled([
+			getJSON(profiles.url('/api/library/home')),
+			remote.isRemote ? Promise.resolve({ needed: false }) : getJSON('/api/onboarding'),
+			getJSON(profiles.url('/api/library/series/home'))
 		]);
 
 		if (onboarding.status === 'fulfilled' && onboarding.value.needed) {
@@ -30,6 +79,8 @@
 			return;
 		}
 		home = library.value;
+		// A server without series is not a failure: the rows simply do not appear.
+		if (series.status === 'fulfilled') seriesHome = series.value;
 		state = 'ready';
 	});
 </script>
@@ -73,6 +124,10 @@
 	     gradient rather than after a visible seam. -->
 	<div class:home-rows={home.hero} class:page-body={!home.hero}>
 		{#each home.rows as row (row.kind)}
+			<Row {row} />
+		{/each}
+
+		{#each seriesRows as row (row.kind)}
 			<Row {row} />
 		{/each}
 	</div>

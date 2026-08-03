@@ -14,13 +14,25 @@ var ErrNoSuchMovie = errors.New("no such film")
 
 // movieColumns is the projection every read shares, so that adding a field is
 // one edit rather than four.
+//
+// Duration comes from the film; position, watched_at and finished come from the
+// viewer's own row and are absent for a film this profile has never opened --
+// hence the COALESCE rather than a NULL-scanning dance in Go.
 const movieColumns = `
-	id, path, file_name, size_bytes, modified_at, title, year,
-	added_at, updated_at,
-	tmdb_id, tmdb_title, overview, release_date, poster_path,
-	backdrop_path, director, genres_json, cast_json,
-	runtime_minutes, vote_average, metadata_status, metadata_fetched_at,
-	duration_seconds, position_seconds, watched_at, finished`
+	m.id, m.path, m.file_name, m.size_bytes, m.modified_at, m.title, m.year,
+	m.added_at, m.updated_at,
+	m.tmdb_id, m.tmdb_title, m.overview, m.release_date, m.poster_path,
+	m.backdrop_path, m.director, m.genres_json, m.cast_json,
+	m.runtime_minutes, m.vote_average, m.metadata_status, m.metadata_fetched_at,
+	m.duration_seconds,
+	COALESCE(p.position_seconds, 0), COALESCE(p.watched_at, 0), COALESCE(p.finished, 0)`
+
+// movieSource carries the join to one profile's history. Every query built on
+// it takes the profile id as its first argument -- get that order wrong and the
+// film ids shift by one, which is the kind of mistake that reads as correct.
+const movieSource = `
+	FROM movies m
+	LEFT JOIN movie_progress p ON p.movie_id = m.id AND p.profile_id = ?`
 
 // scanMovie reads one row projected with movieColumns.
 func scanMovie(row interface{ Scan(...any) error }) (Movie, error) {
@@ -81,10 +93,10 @@ func collectMovies(rows *sql.Rows, capacity int) ([]Movie, error) {
 	return out, rows.Err()
 }
 
-// Get returns one film by id.
-func (s *Store) Get(ctx context.Context, id int64) (Movie, error) {
+// Get returns one film by id, with the progress belonging to profileID.
+func (s *Store) Get(ctx context.Context, profileID, id int64) (Movie, error) {
 	row := s.db.QueryRowContext(ctx,
-		`SELECT `+movieColumns+` FROM movies WHERE id = ?`, id)
+		`SELECT `+movieColumns+movieSource+` WHERE m.id = ?`, profileID, id)
 
 	m, err := scanMovie(row)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -119,21 +131,20 @@ const heroMinimumRating = 6.0
 //
 // A backdrop and a synopsis are required outright: a hero without artwork is a
 // hole, and one without text is a title floating in the dark.
-func (s *Store) Hero(ctx context.Context) (Movie, error) {
+func (s *Store) Hero(ctx context.Context, profileID int64) (Movie, error) {
 	const query = `
-		SELECT ` + movieColumns + `
-		FROM movies
-		WHERE backdrop_path IS NOT NULL AND backdrop_path != ''
-		  AND overview IS NOT NULL AND overview != ''
-		  AND COALESCE(vote_average, 0) >= ?
-		ORDER BY added_at DESC, vote_average DESC, id DESC
+		SELECT ` + movieColumns + movieSource + `
+		WHERE m.backdrop_path IS NOT NULL AND m.backdrop_path != ''
+		  AND m.overview IS NOT NULL AND m.overview != ''
+		  AND COALESCE(m.vote_average, 0) >= ?
+		ORDER BY m.added_at DESC, m.vote_average DESC, m.id DESC
 		LIMIT 1`
 
-	m, err := scanMovie(s.db.QueryRowContext(ctx, query, heroMinimumRating))
+	m, err := scanMovie(s.db.QueryRowContext(ctx, query, profileID, heroMinimumRating))
 	if errors.Is(err, sql.ErrNoRows) {
 		// A small or poorly rated library still deserves a hero; drop the floor
 		// rather than show nothing.
-		m, err = scanMovie(s.db.QueryRowContext(ctx, query, 0.0))
+		m, err = scanMovie(s.db.QueryRowContext(ctx, query, profileID, 0.0))
 	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return Movie{}, ErrNoSuchMovie
@@ -145,12 +156,11 @@ func (s *Store) Hero(ctx context.Context) (Movie, error) {
 }
 
 // RecentlyAdded returns the newest films first.
-func (s *Store) RecentlyAdded(ctx context.Context, limit int) ([]Movie, error) {
+func (s *Store) RecentlyAdded(ctx context.Context, profileID int64, limit int) ([]Movie, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT `+movieColumns+`
-		FROM movies
-		ORDER BY added_at DESC, id DESC
-		LIMIT ?`, limit)
+		SELECT `+movieColumns+movieSource+`
+		ORDER BY m.added_at DESC, m.id DESC
+		LIMIT ?`, profileID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("listing recent films: %w", err)
 	}
@@ -167,14 +177,13 @@ func (s *Store) RecentlyAdded(ctx context.Context, limit int) ([]Movie, error) {
 // not be on a public catalogue: this is somebody's own shelf of a few hundred
 // films they chose to keep, not the whole of TMDB. If it ever needs fixing, the
 // fix is to store vote_count, not to invent a weighting from what we have.
-func (s *Store) TopRated(ctx context.Context, limit int) ([]Movie, error) {
+func (s *Store) TopRated(ctx context.Context, profileID int64, limit int) ([]Movie, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT `+movieColumns+`
-		FROM movies
-		WHERE poster_path IS NOT NULL AND poster_path != ''
-		  AND COALESCE(vote_average, 0) > 0
-		ORDER BY vote_average DESC, added_at DESC, id DESC
-		LIMIT ?`, limit)
+		SELECT `+movieColumns+movieSource+`
+		WHERE m.poster_path IS NOT NULL AND m.poster_path != ''
+		  AND COALESCE(m.vote_average, 0) > 0
+		ORDER BY m.vote_average DESC, m.added_at DESC, m.id DESC
+		LIMIT ?`, profileID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("listing the best rated films: %w", err)
 	}
@@ -201,8 +210,8 @@ func (s *Store) TopRated(ctx context.Context, limit int) ([]Movie, error) {
 // never changes the order, and multiplying by a raw date seed never reaches the
 // modulus for a few hundred ids, leaving plain id order. A real shuffle has no
 // such edges.
-func (s *Store) Tonight(ctx context.Context, limit int, seed int64) ([]Movie, error) {
-	ids, err := s.eligibleForTonight(ctx)
+func (s *Store) Tonight(ctx context.Context, profileID int64, limit int, seed int64) ([]Movie, error) {
+	ids, err := s.eligibleForTonight(ctx, profileID)
 	if err != nil {
 		return nil, err
 	}
@@ -215,18 +224,18 @@ func (s *Store) Tonight(ctx context.Context, limit int, seed int64) ([]Movie, er
 	if len(ids) > limit {
 		ids = ids[:limit]
 	}
-	return s.byIDs(ctx, ids)
+	return s.byIDs(ctx, profileID, ids)
 }
 
 // eligibleForTonight lists what may be suggested: nothing already watched to the
 // end, and nothing without a poster, since this row exists to be looked at.
-func (s *Store) eligibleForTonight(ctx context.Context) ([]int64, error) {
+func (s *Store) eligibleForTonight(ctx context.Context, profileID int64) ([]int64, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id
-		FROM movies
-		WHERE finished = 0
-		  AND poster_path IS NOT NULL AND poster_path != ''
-		ORDER BY id`)
+		SELECT m.id
+		`+movieSource+`
+		WHERE COALESCE(p.finished, 0) = 0
+		  AND m.poster_path IS NOT NULL AND m.poster_path != ''
+		ORDER BY m.id`, profileID)
 	if err != nil {
 		return nil, fmt.Errorf("listing films eligible for tonight: %w", err)
 	}
@@ -245,19 +254,21 @@ func (s *Store) eligibleForTonight(ctx context.Context) ([]int64, error) {
 
 // byIDs fetches films by id and returns them in the order asked for, which SQL
 // will not do on its own.
-func (s *Store) byIDs(ctx context.Context, ids []int64) ([]Movie, error) {
+func (s *Store) byIDs(ctx context.Context, profileID int64, ids []int64) ([]Movie, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
 
-	args := make([]any, len(ids))
-	for i, id := range ids {
-		args[i] = id
+	// The profile id leads, because the join is written before the WHERE.
+	args := make([]any, 0, len(ids)+1)
+	args = append(args, profileID)
+	for _, id := range ids {
+		args = append(args, id)
 	}
 	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
 
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT `+movieColumns+` FROM movies WHERE id IN (`+placeholders+`)`, args...)
+		`SELECT `+movieColumns+movieSource+` WHERE m.id IN (`+placeholders+`)`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("reading films by id: %w", err)
 	}
@@ -285,19 +296,18 @@ func (s *Store) byIDs(ctx context.Context, ids []int64) ([]Movie, error) {
 // Separate from ContinueWatching because the requirements differ. The row can
 // show a film with no backdrop — it is a poster among posters. The hero cannot:
 // a hero without artwork is a hole in the top of the screen.
-func (s *Store) ResumeHero(ctx context.Context) (Movie, error) {
+func (s *Store) ResumeHero(ctx context.Context, profileID int64) (Movie, error) {
 	const query = `
-		SELECT ` + movieColumns + `
-		FROM movies
-		WHERE finished = 0
-		  AND watched_at > 0
-		  AND position_seconds >= ?
-		  AND backdrop_path IS NOT NULL AND backdrop_path != ''
-		  AND overview IS NOT NULL AND overview != ''
-		ORDER BY watched_at DESC, id DESC
+		SELECT ` + movieColumns + movieSource + `
+		WHERE p.finished = 0
+		  AND p.watched_at > 0
+		  AND p.position_seconds >= ?
+		  AND m.backdrop_path IS NOT NULL AND m.backdrop_path != ''
+		  AND m.overview IS NOT NULL AND m.overview != ''
+		ORDER BY p.watched_at DESC, m.id DESC
 		LIMIT 1`
 
-	m, err := scanMovie(s.db.QueryRowContext(ctx, query, minimumRememberedSeconds))
+	m, err := scanMovie(s.db.QueryRowContext(ctx, query, profileID, minimumRememberedSeconds))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Movie{}, ErrNoSuchMovie
 	}

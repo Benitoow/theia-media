@@ -4,11 +4,14 @@
 	// fluid lets the card fill a grid cell instead of carrying its own width.
 	// Rows want a fixed size so a strip reads evenly; the library grid wants the
 	// column to decide.
-	let { movie, fluid = false, legend = null } = $props();
+	// href lets the same card stand for a series: everything else about it --
+	// artwork, title, legend, the progress rule -- is identical.
+	let { movie, fluid = false, legend = null, href = null, art = null, title: given = null } =
+		$props();
 
 	// Landscape artwork, which is what a 16/9 card is for. TMDB's backdrop is
 	// already that shape, so nothing is cropped to fit.
-	const backdrop = $derived(imageURL(movie.metadata?.backdrop_path, 'w780'));
+	const backdrop = $derived(art ?? imageURL(movie.metadata?.backdrop_path, 'w780'));
 
 	// Only reached by a film that has a poster and no backdrop. On the 274-film
 	// library that is nobody -- artwork arrives in pairs or not at all -- but a
@@ -16,7 +19,7 @@
 	// the crop, so it is contained rather than covered when it does happen.
 	const poster = $derived(backdrop ? null : imageURL(movie.metadata?.poster_path, 'w342'));
 
-	const title = $derived(displayTitle(movie));
+	const title = $derived(given ?? displayTitle(movie));
 	const year = $derived(displayYear(movie));
 	const secondary = $derived(legend ?? year ?? '—');
 
@@ -41,7 +44,7 @@
 	backdrop at 16/9, with corners from the same family as every other panel.
 -->
 <a
-	href="/film/{movie.id}"
+	href={href ?? `/film/${movie.id}`}
 	class="poster-card group"
 	class:poster-card--fluid={fluid}
 	title={title}

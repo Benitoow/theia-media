@@ -496,18 +496,16 @@ func mergeEpisodeProgressTx(ctx context.Context, tx *sql.Tx, sourceID, targetID 
 	if sourceID == targetID {
 		return nil
 	}
-	var sourceWatched, targetWatched int64
+	var exists int
 	if err := tx.QueryRowContext(ctx,
-		`SELECT watched_at FROM episode_items WHERE id = ?`, sourceID).Scan(&sourceWatched); err != nil {
+		`SELECT 1 FROM episode_items WHERE id = ?`, sourceID).Scan(&exists); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil
 		}
 		return err
 	}
-	if err := tx.QueryRowContext(ctx,
-		`SELECT watched_at FROM episode_items WHERE id = ?`, targetID).Scan(&targetWatched); err != nil {
-		return err
-	}
+
+	// The duration describes the file and still lives on the item.
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE episode_items SET duration_seconds = COALESCE(
 			duration_seconds,
@@ -515,16 +513,19 @@ func mergeEpisodeProgressTx(ctx context.Context, tx *sql.Tx, sourceID, targetID 
 		) WHERE id = ?`, sourceID, targetID); err != nil {
 		return err
 	}
-	if sourceWatched <= targetWatched {
-		return nil
-	}
+
+	// The position does not. Each viewer's row moves on its own merit: the
+	// comparison is per profile, so a renamed episode cannot hand one person's
+	// position to another just because theirs happened to be more recent.
 	_, err := tx.ExecContext(ctx, `
-		UPDATE episode_items SET
-			duration_seconds = (SELECT duration_seconds FROM episode_items WHERE id = ?),
-			position_seconds = (SELECT position_seconds FROM episode_items WHERE id = ?),
-			watched_at = (SELECT watched_at FROM episode_items WHERE id = ?),
-			finished = (SELECT finished FROM episode_items WHERE id = ?)
-		WHERE id = ?`, sourceID, sourceID, sourceID, sourceID, targetID)
+		INSERT INTO episode_progress (profile_id, episode_item_id, position_seconds, watched_at, finished)
+		SELECT profile_id, ?, position_seconds, watched_at, finished
+		FROM episode_progress WHERE episode_item_id = ?
+		ON CONFLICT(profile_id, episode_item_id) DO UPDATE SET
+			position_seconds = excluded.position_seconds,
+			watched_at       = excluded.watched_at,
+			finished         = excluded.finished
+		WHERE excluded.watched_at > episode_progress.watched_at`, targetID, sourceID)
 	return err
 }
 

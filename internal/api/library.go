@@ -20,7 +20,12 @@ func (s *Server) handleMovies(w http.ResponseWriter, r *http.Request) {
 	limit := intQuery(r, "limit", 100)
 	offset := intQuery(r, "offset", 0)
 
-	movies, err := s.lib.List(r.Context(), limit, offset)
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return
+	}
+
+	movies, err := s.lib.List(r.Context(), profileID, limit, offset)
 	if err != nil {
 		s.log.Error("listing the library failed", "error", err)
 		writeJSONError(w, http.StatusInternalServerError, "could not read the library")
@@ -108,7 +113,12 @@ func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	perRow := clamp(intQuery(r, "per_row", 12), 1, 60)
 
-	home, err := s.lib.HomeScreen(r.Context(), perRow)
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return
+	}
+
+	home, err := s.lib.HomeScreen(r.Context(), profileID, perRow)
 	if err != nil {
 		s.log.Error("building the home screen failed", "error", err)
 		writeJSONError(w, http.StatusInternalServerError, "could not read the library")
@@ -125,7 +135,12 @@ func (s *Server) handleMovie(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	movie, err := s.lib.Get(r.Context(), id)
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return
+	}
+
+	movie, err := s.lib.Get(r.Context(), profileID, id)
 	switch {
 	case errors.Is(err, library.ErrNoSuchMovie):
 		writeJSONError(w, http.StatusNotFound, "no such film")

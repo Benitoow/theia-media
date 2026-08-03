@@ -4,6 +4,7 @@
 // on disk, and nothing in the interface ever makes an external request.
 
 import { formatRuntime as formatLocalizedRuntime } from '$lib/i18n/index.svelte.js';
+import { profiles } from '$lib/profiles.svelte.js';
 
 export async function apiFetch(path, options) {
 	return fetch(path, options);
@@ -14,6 +15,15 @@ export async function getJSON(path, options) {
 	if (!res.ok) {
 		const error = new Error(`HTTP ${res.status}`);
 		error.status = res.status;
+		// The server answers a failure with {"error": "<code>"} and never with a
+		// sentence (decision 25). Carrying the code up lets the caller translate
+		// it; without this the interface can only say "something went wrong".
+		try {
+			const body = await res.json();
+			if (typeof body?.error === 'string') error.code = body.error;
+		} catch {
+			// Not every failure has a JSON body. The status alone still stands.
+		}
 		throw error;
 	}
 	return res.json();
@@ -29,14 +39,19 @@ export function imageURL(path, size = 'w342') {
 	return `/api/images/${size}/${path.replace(/^\//, '')}`;
 }
 
-/** The title to show: TMDB's when it recognised the film, the filename's otherwise. */
-export function displayTitle(movie) {
-	return movie?.metadata?.tmdb_title || movie?.title || '';
+/**
+ * The title to show: TMDB's when it recognised the item, the filename's
+ * otherwise. Films carry `tmdb_title`, series `tmdb_name` -- one helper rather
+ * than two so a card component does not need to know which it is holding.
+ */
+export function displayTitle(item) {
+	return item?.metadata?.tmdb_title || item?.metadata?.tmdb_name || item?.title || '';
 }
 
-/** The year to show, preferring TMDB's release date over the parsed filename. */
-export function displayYear(movie) {
-	return movie?.metadata?.release_date?.slice(0, 4) || movie?.year || null;
+/** The year to show, preferring TMDB's date over the parsed filename. */
+export function displayYear(item) {
+	const date = item?.metadata?.release_date || item?.metadata?.first_air_date;
+	return date?.slice(0, 4) || item?.year || null;
 }
 
 /**
@@ -55,7 +70,9 @@ export async function getAllMovies(onProgress) {
 	const movies = [];
 
 	while (offset < total) {
-		const page = await getJSON(`/api/library/movies?limit=${pageSize}&offset=${offset}`);
+		const page = await getJSON(
+			profiles.url(`/api/library/movies?limit=${pageSize}&offset=${offset}`)
+		);
 		total = page.total ?? page.movies.length;
 		movies.push(...page.movies);
 		offset += pageSize;

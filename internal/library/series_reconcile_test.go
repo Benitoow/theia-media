@@ -25,7 +25,7 @@ func TestScanBuildsSeriesSeasonsCombinedEpisodesAndQualities(t *testing.T) {
 	if report.Added != 6 || report.Series != 1 || report.Episodes != 4 {
 		t.Fatalf("scan counts = %+v", report)
 	}
-	if movies, err := service.List(t.Context(), 10, 0); err != nil || len(movies) != 1 {
+	if movies, err := service.List(t.Context(), defaultProfileID, 10, 0); err != nil || len(movies) != 1 {
 		t.Fatalf("films = %d, err = %v, want one", len(movies), err)
 	}
 
@@ -36,7 +36,7 @@ func TestScanBuildsSeriesSeasonsCombinedEpisodesAndQualities(t *testing.T) {
 	if len(seriesList) != 1 || seriesList[0].Title != "The Office" || seriesList[0].Year != 2005 {
 		t.Fatalf("series = %+v", seriesList)
 	}
-	detail, err := service.GetSeries(t.Context(), seriesList[0].ID)
+	detail, err := service.GetSeries(t.Context(), defaultProfileID, seriesList[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,14 +44,14 @@ func TestScanBuildsSeriesSeasonsCombinedEpisodesAndQualities(t *testing.T) {
 		t.Fatalf("seasons = %+v, want specials then season one", detail.Seasons)
 	}
 
-	season, err := service.GetSeason(t.Context(), detail.ID, 1)
+	season, err := service.GetSeason(t.Context(), defaultProfileID, detail.ID, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(season.Items) != 3 {
 		t.Fatalf("season items = %d, want E1, E2-E3 and E5", len(season.Items))
 	}
-	first, err := service.GetEpisodeItem(t.Context(), season.Items[0].ID)
+	first, err := service.GetEpisodeItem(t.Context(), defaultProfileID, season.Items[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestScanBuildsSeriesSeasonsCombinedEpisodesAndQualities(t *testing.T) {
 		t.Fatalf("next after E1 = id %v gap %v, want combined E2-E3 without gap",
 			first.NextEpisodeID, first.NextHasGap)
 	}
-	combined, err := service.GetEpisodeItem(t.Context(), season.Items[1].ID)
+	combined, err := service.GetEpisodeItem(t.Context(), defaultProfileID, season.Items[1].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,11 +73,11 @@ func TestScanBuildsSeriesSeasonsCombinedEpisodesAndQualities(t *testing.T) {
 		t.Fatalf("next after E2-E3 = id %v gap %v, want E5 with gap",
 			combined.NextEpisodeID, combined.NextHasGap)
 	}
-	specials, err := service.GetSeason(t.Context(), detail.ID, 0)
+	specials, err := service.GetSeason(t.Context(), defaultProfileID, detail.ID, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	special, err := service.GetEpisodeItem(t.Context(), specials.Items[0].ID)
+	special, err := service.GetEpisodeItem(t.Context(), defaultProfileID, specials.Items[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,15 +101,15 @@ func TestEpisodeRenamePreservesFileIdentityAndProgress(t *testing.T) {
 		t.Fatal(err)
 	}
 	series := onlySeries(t, service)
-	season, err := service.GetSeason(t.Context(), series.ID, 1)
+	season, err := service.GetSeason(t.Context(), defaultProfileID, series.ID, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	before, err := service.GetEpisodeItem(t.Context(), season.Items[0].ID)
+	before, err := service.GetEpisodeItem(t.Context(), defaultProfileID, season.Items[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.SaveEpisodeProgress(t.Context(), before.ID, 300, 1200); err != nil {
+	if _, err := service.SaveEpisodeProgress(t.Context(), defaultProfileID, before.ID, 300, 1200); err != nil {
 		t.Fatal(err)
 	}
 
@@ -121,14 +121,14 @@ func TestEpisodeRenamePreservesFileIdentityAndProgress(t *testing.T) {
 		t.Fatal(err)
 	}
 	series = onlySeries(t, service)
-	season, err = service.GetSeason(t.Context(), series.ID, 1)
+	season, err = service.GetSeason(t.Context(), defaultProfileID, series.ID, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(season.Items) != 1 || season.Items[0].EpisodeNumbers[0] != 2 {
 		t.Fatalf("renamed season = %+v", season.Items)
 	}
-	after, err := service.GetEpisodeItem(t.Context(), season.Items[0].ID)
+	after, err := service.GetEpisodeItem(t.Context(), defaultProfileID, season.Items[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,11 +149,11 @@ func TestEpisodeRenameUsesSeasonContextWhenByteIdentityIsAmbiguous(t *testing.T)
 		t.Fatal(err)
 	}
 	series := onlySeries(t, service)
-	season, err := service.GetSeason(t.Context(), series.ID, 1)
+	season, err := service.GetSeason(t.Context(), defaultProfileID, series.ID, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	before, err := service.GetEpisodeItem(t.Context(), season.Items[1].ID)
+	before, err := service.GetEpisodeItem(t.Context(), defaultProfileID, season.Items[1].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,11 +164,11 @@ func TestEpisodeRenameUsesSeasonContextWhenByteIdentityIsAmbiguous(t *testing.T)
 	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
 		t.Fatal(err)
 	}
-	season, err = service.GetSeason(t.Context(), series.ID, 1)
+	season, err = service.GetSeason(t.Context(), defaultProfileID, series.ID, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	after, err := service.GetEpisodeItem(t.Context(), season.Items[1].ID)
+	after, err := service.GetEpisodeItem(t.Context(), defaultProfileID, season.Items[1].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -292,12 +292,12 @@ func TestConsolidateSeriesUsesTMDBIdentityAndMergesFilesAndProgress(t *testing.T
 		t.Fatalf("series before consolidation = %+v, err = %v", series, err)
 	}
 	for index := range series {
-		season, err := service.GetSeason(t.Context(), series[index].ID, 1)
+		season, err := service.GetSeason(t.Context(), defaultProfileID, series[index].ID, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if index == 1 {
-			if _, err := service.store.SaveEpisodeProgress(t.Context(), season.Items[0].ID,
+			if _, err := service.store.SaveEpisodeProgress(t.Context(), defaultProfileID, season.Items[0].ID,
 				420, 1200, series[index].UpdatedAt.AddDate(0, 0, 1)); err != nil {
 				t.Fatal(err)
 			}
@@ -316,14 +316,14 @@ func TestConsolidateSeriesUsesTMDBIdentityAndMergesFilesAndProgress(t *testing.T
 		t.Fatalf("merged = %d, want 1", merged)
 	}
 	canonical := onlySeries(t, service)
-	season, err := service.GetSeason(t.Context(), canonical.ID, 1)
+	season, err := service.GetSeason(t.Context(), defaultProfileID, canonical.ID, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(season.Items) != 1 {
 		t.Fatalf("items after consolidation = %+v", season.Items)
 	}
-	item, err := service.GetEpisodeItem(t.Context(), season.Items[0].ID)
+	item, err := service.GetEpisodeItem(t.Context(), defaultProfileID, season.Items[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}

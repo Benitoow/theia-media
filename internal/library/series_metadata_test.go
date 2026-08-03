@@ -66,7 +66,7 @@ func TestSeriesScanFetchesOnlyLocalSeasonsAndCachesMetadata(t *testing.T) {
 		t.Fatalf("report=%+v calls=%d, want one series and three TMDB calls", report, calls.Load())
 	}
 	series := onlySeries(t, service)
-	detail, err := service.GetSeries(t.Context(), series.ID)
+	detail, err := service.GetSeries(t.Context(), defaultProfileID, series.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func TestSeriesScanFetchesOnlyLocalSeasonsAndCachesMetadata(t *testing.T) {
 		len(detail.Metadata.Cast) != 1 || detail.Metadata.Creators[0] != "Dan Erickson" {
 		t.Fatalf("series metadata = %+v", detail.Metadata)
 	}
-	season, err := service.GetSeason(t.Context(), series.ID, 1)
+	season, err := service.GetSeason(t.Context(), defaultProfileID, series.ID, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestSeriesScanFetchesOnlyLocalSeasonsAndCachesMetadata(t *testing.T) {
 		t.Fatalf("new local episode made %d calls, want series detail plus local season detail",
 			calls.Load()-before)
 	}
-	season, err = service.GetSeason(t.Context(), series.ID, 1)
+	season, err = service.GetSeason(t.Context(), defaultProfileID, series.ID, 1)
 	if err != nil {
 		t.Fatal(err)
 	}

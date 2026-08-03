@@ -399,6 +399,30 @@ kept here. Paste one in when a screen needs it.
 The favicon remains authored as SVG in this repository. Any additional shipped
 image must satisfy the rules above and stay self-hosted.
 
+### 7.1 The mark
+
+The identity is **the word and the rule**: THEIA set in the display serif,
+tracked at `--text-label--letter-spacing`, underlined by a gold rule that fades
+to the right so it reads as a horizon running off rather than an underline that
+stopped. The rule is the mark's single use of the accent.
+
+Where the word does not fit, the mark is **its initial standing on the same
+rule** — a crop of the lockup, not a second mark beside it. That is the favicon
+and, rendered from the same file, the touch icon.
+
+Two rules that are not preferences:
+
+- **The letter is drawn as paths.** A favicon is fetched as an image and no
+  webfont reaches it; a text element would fall back to whatever serif the
+  platform has. This costs some didone contrast, because thick/thin is what
+  vanishes first at 16px, and legibility there wins.
+- **A photographic wordmark is a prestige piece, never chrome.** Founding spec
+  §11.10 said so and decision 51 measured it: at 28px the fill's horizon band
+  runs through the letters and reads as a strikethrough. It lives in `assets/`
+  for the README, outside the binary.
+
+See decisions 51 and 54.
+
 ## 8. Motion
 
 Slow and eased, never bouncy. The reference for timing is a camera move, not a
@@ -461,6 +485,23 @@ rather than here:
   use spatial navigation; left and right move deterministically inside a film
   row. Tab remains available and focus is never trapped at an edge. During
   playback, left and right seek only when focus is not on a discrete control.
+- **A vertical list of options owns its own axis, and its rows share one width.**
+  Spatial navigation ranks candidates by centre-to-centre distance with the
+  horizontal axis weighted `2.25`, which is hostile to stacked full-width rows:
+  a wide row's centre sits far right of every narrow control in the same column,
+  so a distant link wins the press and the list is skipped entirely. Three rules
+  follow, and they are not tuning — they were measured on the film page before
+  they were written down (decision 47):
+  - a list of options handles up and down itself, in reading order, and does
+    **not** consume the press at either edge, so leaving the list still falls
+    through to the page;
+  - every option in one list keeps the same width, or the shortest label sits
+    furthest left and gets skipped;
+  - option rows stay near `26rem` rather than full-bleed, and the list sits
+    close to the action it serves rather than at the far end of the page.
+
+  This applies to any screen with a list of choices — files, episodes, devices —
+  not only to the film page where it was found.
 - Fine-pointer desktop users may reveal scroll chevrons by hovering a home row.
   They are supplemental controls with `tabindex="-1"` and sit outside the row's
   directional-navigation handler, so they do not add stops to either Tab or the

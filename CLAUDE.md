@@ -22,11 +22,18 @@ V2 work has three additional coordination documents:
 | [`docs/theia-v2-backend.md`](docs/theia-v2-backend.md) | Backend work, API/data handoffs and evidence that must be published before frontend work starts. |
 | [`docs/theia-v2-frontend.md`](docs/theia-v2-frontend.md) | Frontend work waiting behind each backend handoff, including visual and D-pad acceptance criteria. |
 
-The current V2 delivery split is deliberate: Codex advances the backend first,
-milestone by milestone; Claude consumes the merged, documented contract for the
-frontend afterwards. A frontend agent must read the backend handoff for its
-milestone instead of inferring the API from old code or conversation history.
-Any backend contract change updates both track documents in the same commit.
+The V2 delivery split is per milestone, not permanent. Backend still lands
+first, and the frontend still consumes a merged, documented contract rather than
+a conversation: M1, M3 and M4 were built that way with Codex on the backend.
+**M2 is the exception — the maintainer assigned both its tracks to Claude on
+2026-08-03**, so the same agent writes the handoff and then consumes it. That
+makes the handoff more important, not less: it is the only thing standing
+between the two halves, and it must be published as if a different agent were
+going to read it.
+
+Whoever holds a track, an agent must read the backend handoff for its milestone
+instead of inferring the API from old code or conversation history. Any backend
+contract change updates both track documents in the same commit.
 
 If a change contradicts one of them, the document is changed first, in the same
 commit, with the reasoning written down. `DECISIONS.md` is append-only in

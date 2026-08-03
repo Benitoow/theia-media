@@ -66,13 +66,18 @@ inexistant).
 
 ## 3. Points ouverts, décision utilisateur requise avant de prompter
 
-- **Logo dans la nav** : le wordmark photographique recadré est jugé mal
-  intégré (rectangulaire, mauvaise couleur perçue). Retour à un texte
-  simple "THEIA" en attendant un vrai travail de direction artistique dédié
-  au logo de nav — ne pas retenter un câblage rapide sans ça.
-- **`web/static/icon-512.png`** (208 Ko) : embarqué dans le binaire,
-  référencé nulle part, aucun manifeste PWA dans le projet. À trancher :
-  retirer, ou construire le manifeste qui le justifie.
+*Les deux points ouverts de cette section sont clos par la décision 54.*
+
+- **Logo dans la nav** : clos. Quatre pistes ont été soumises au mainteneur, qui
+  a retenu « le mot et le filet ». La marque réduite est l'initiale posée sur le
+  même filet, et sert de favicon comme d'icône d'application.
+- **`theia-wordmark.webp`** et **`icon-512.png`** : clos, tous deux retirés du
+  binaire. Le premier n'était plus référencé ; le second servait un manifeste PWA
+  que la spec fondatrice §11.5 exclut de la v1. Le logo de prestige du README
+  reste dans `assets/`, hors binaire.
+
+Reste ouvert : le wordmark photographique n'a aujourd'hui aucune surface dans
+l'application, et aucune ne lui a été inventée.
 
 ---
 
@@ -101,11 +106,11 @@ partir d'une ancienne conversation.
 
 | Jalon | Backend | Frontend | Blocage actuel |
 |---|---|---|---|
-| V2-M1 — fichiers et qualités | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Prêt sur le contrat M1-BE | Aucun blocage backend ; reste `M1-FE` |
-| V2-M2 — profils | Attend les références | Attend les références | Screenshots et croquis du mainteneur |
-| V2-M3 — séries | [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7), [PR #5](https://github.com/Benitoow/theia-media/pull/5) | Prêt sur le contrat M3-BE | Reste M3-FE + validation sur les premiers fichiers série utilisateur |
-| V2-M4 — accès distant | [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a) | Prêt sur le contrat M4-BE après fusion | Reste M4-FE + validation via un vrai endpoint hors LAN |
-| V2-M5 — logo/navigation | Aucun chantier backend | Backlog | Direction artistique |
+| V2-M1 — fichiers et qualités | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Implémenté et vérifié à l'écran (décision 47) | **Seul jalon non validé par le mainteneur** : un vrai film décodable multi-pistes |
+| V2-M2 — profils | Implémenté et vérifié (décision 48) | Implémenté et vérifié (décisions 48/50) | Reste la validation TV et D-pad |
+| V2-M3 — séries | [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7), [PR #5](https://github.com/Benitoow/theia-media/pull/5) | Implémenté et vérifié, confirmé par le mainteneur | Aucun |
+| V2-M4 — accès distant | [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a) | Implémenté et vérifié, mode distant confirmé par le mainteneur | Aucun |
+| V2-M5 — logo/navigation | Aucun chantier backend | Implémenté (décision 54) | Aucun |
 | V2-M6 — optimisation matérielle | Différé | Attend `M6-BE` | À ouvrir après stabilisation du reste |
 
 ### V2-M1 — Dédoublonnage de fichiers + sélection de qualité
@@ -150,13 +155,21 @@ membres du foyer, mais l'ancienne implémentation ne sert pas de point de dépar
 Le chantier repart d'une base vierge : pas de résurrection de l'écran, de l'API
 ou du modèle visuel retirés après v1.5.0.
 
-Le frontend est bloqué jusqu'à réception des screenshots et croquis fournis par
-le mainteneur. Ces références deviennent le contrat visuel du jalon : structure,
-hiérarchie, interactions D-pad et rendu à trois mètres doivent les respecter,
-pas être improvisés par l'agent. Les comportements précis et le nouveau modèle
-de données seront cadrés avec ces références avant la première ligne de code.
-Tant que la décision zéro-authentification reste en vigueur, un profil n'est ni
-un compte, ni une permission.
+Les références sont arrivées le 03/08/2026 et le contrat est figé par la
+**décision 48** : sélecteur en écran plein, entrée de nav qui ouvre cet écran
+plutôt qu'un menu déroulant, fiche de profil à deux panneaux ne portant que des
+faits locaux, avatar fourni par l'utilisateur, et écran d'accueil tant qu'aucun
+profil n'est actif dans ce navigateur.
+
+Les références montrent des écrans Netflix, donnés pour la **disposition, pas le
+style**. Tout ce qu'ils portent de compte — déconnexion, email, rôle, statut,
+badge d'abonnement, transfert de profil, centre d'aide, notifications — est
+refusé, pas traduit. Leurs illustrations ne peuvent pas entrer dans un dépôt
+public GPL-3.0.
+
+Il reste à concevoir `M2-BE` : aucune route profils n'existe aujourd'hui. Tant
+que la décision zéro-authentification reste en vigueur, un profil n'est ni un
+compte, ni une permission.
 
 ### V2-M3 — Séries
 Le plus gros morceau du backlog, mérite son propre cycle multi-session

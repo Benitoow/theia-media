@@ -28,6 +28,7 @@ import (
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
+	"github.com/Benitoow/theia-media/internal/profiles"
 	"github.com/Benitoow/theia-media/internal/remoteaccess"
 	"github.com/Benitoow/theia-media/internal/tmdb"
 	"github.com/Benitoow/theia-media/internal/updater"
@@ -158,6 +159,7 @@ func run() error {
 	// browser-friendly containers is never.
 	transcoder := ffmpeg.New(filepath.Join(dataDir, "bin"), log)
 	watching := activity.New()
+	viewers := profiles.New(database)
 	remote := remoteaccess.New(database, dataDir, cfg.Port, log)
 	defer remote.Close()
 
@@ -234,6 +236,7 @@ func run() error {
 		State:     state,
 		Updater:   selfUpdater,
 		Activity:  watching,
+		Profiles:  viewers,
 		Remote:    remote,
 		Web:       webFS,
 		Version:   version,

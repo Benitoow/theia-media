@@ -2,8 +2,12 @@
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { i18n } from '$lib/i18n/index.svelte.js';
 	import { strings as t } from '$lib/strings.js';
+	import { profiles } from '$lib/profiles.svelte.js';
+	import { remote } from '$lib/remote.svelte.js';
+	import ProfileMark from '$lib/components/ProfileMark.svelte';
 
 	let { children } = $props();
 
@@ -13,14 +17,31 @@
 	const path = $derived($page.url.pathname);
 	const atHome = $derived(path === '/');
 	const inLibrary = $derived(path === '/films' || path.startsWith('/films/'));
+	const inSeries = $derived(
+		path === '/series' || path.startsWith('/serie/') || path.startsWith('/episode/')
+	);
 	const inSettings = $derived(path === '/reglages' || path.startsWith('/reglages/'));
+	// The chooser owns the whole viewport: the navigation is suppressed for that
+	// route only, so the first arrow key lands on a profile rather than on a link.
+	const inProfiles = $derived(path === '/profils' || path.startsWith('/profils/'));
 
 	// The pill keeps a light scrim over arbitrary hero artwork, then strengthens
 	// once the page moves so it never becomes a hard opaque band.
 	let scrolled = $state(false);
 
-	onMount(() => {
+	onMount(async () => {
 		i18n.bootstrap();
+		// Asked first: what follows depends on which side of the tunnel this is.
+		await remote.load();
+		try {
+			await profiles.load();
+			// The application opens by asking who is watching, whenever this
+			// browser has no answer -- or has one that was deleted elsewhere.
+			if (profiles.needsSelection && !inProfiles) goto('/profils');
+		} catch {
+			// A server without profiles still serves the library. The chooser is
+			// not worth blocking a film over.
+		}
 	});
 
 	$effect(() => {
@@ -134,6 +155,7 @@
 	onkeydown={navigateByRemote}
 />
 
+{#if !inProfiles}
 <div class="site-nav-wrap">
 	<nav class="site-nav" data-scrolled={scrolled} aria-label={t.a11y.mainNavigation}>
 		<a
@@ -142,18 +164,10 @@
 			aria-label="{t.appName} — {t.nav.home}"
 			aria-current={atHome ? 'page' : undefined}
 		>
-			<!-- The wordmark carries the name, so the image is decorative and
-			     the link states both the brand and where it goes. Intrinsic
-			     dimensions are declared so the nav does not reflow while it
-			     loads. -->
-			<img
-				src="/theia-wordmark.webp"
-				alt=""
-				width="410"
-				height="120"
-				class="brand-wordmark"
-				fetchpriority="high"
-			/>
+			<!-- Text, not an image: it carries the name to a screen reader
+			     without an alt attribute, needs no request, and cannot reflow
+			     the nav while it loads. See .brand-wordmark. -->
+			<span class="brand-wordmark"><span class="brand-word">{t.appName}</span></span>
 		</a>
 		<div class="flex items-center">
 			<a
@@ -164,15 +178,52 @@
 				{t.nav.library}
 			</a>
 			<a
-				href="/reglages"
+				href="/series"
 				class="nav-target nav-link label"
-				aria-current={inSettings ? 'page' : undefined}
+				aria-current={inSeries ? 'page' : undefined}
 			>
-				{t.nav.settings}
+				{t.series.title}
 			</a>
+			<!-- Settings, scanning, onboarding and the updater are LAN-only, and
+			     the remote guard refuses them outright. A link that always 403s is
+			     worse than no link (decision 44). -->
+			{#if !remote.isRemote}
+				<a
+					href="/reglages"
+					class="nav-target nav-link label"
+					aria-current={inSettings ? 'page' : undefined}
+				>
+					{t.nav.settings}
+				</a>
+			{/if}
+
+			<!-- A shortcut to the chooser, not a menu that expands here. The
+			     reference showed a dropdown; decision 35 had already measured that
+			     a profile control inside this pill is unreadable at three metres
+			     and steals the first D-pad press. -->
+			{#if profiles.active}
+				<a
+					href="/profils"
+					class="nav-target nav-profile"
+					aria-label={t.profiles.switch}
+					title={t.profiles.current(profiles.active.name || t.profiles.defaultName)}
+				>
+					<ProfileMark profile={profiles.active} round size="2.25rem" />
+				</a>
+			{/if}
 		</div>
 	</nav>
 </div>
+
+{#if remote.isRemote}
+	<p class="remote-banner">
+		<span class="label">{t.remote.remoteBadge}</span>
+		{#if remote.peer?.name}
+			<span>{t.remote.remoteContext(remote.peer.name)}</span>
+		{/if}
+	</p>
+{/if}
+{/if}
 
 {@render children()}
 
