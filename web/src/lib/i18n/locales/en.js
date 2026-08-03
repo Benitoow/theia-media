@@ -215,6 +215,8 @@ export const strings = {
 		// The server sends a code, never a sentence (decision 25). This table is
 		// the only place where an M1 code becomes English.
 		codes: {
+			browser_cannot_decode_video:
+				'Your browser cannot decode this file\u2019s video: the sound would run on a frozen picture. Open it in another browser, or choose another file on the movie page.',
 			invalid_movie_id: 'This movie cannot be identified.',
 			invalid_file_id: 'This file cannot be identified.',
 			invalid_audio_track_id: 'This audio track cannot be identified.',

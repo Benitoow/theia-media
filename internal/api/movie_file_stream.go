@@ -55,8 +55,8 @@ func (s *Server) handleMovieFileStreamInfo(w http.ResponseWriter, r *http.Reques
 		audioCodec := ""
 		if selected != nil {
 			audioCodec = selected.Codec
-		} else if len(file.Media.AudioTracks) > 0 {
-			audioCodec = file.Media.AudioTracks[0].Codec
+		} else if track, ok := stream.PreferredAudio(file.Media.AudioTracks, func(t library.AudioTrack) string { return t.Codec }); ok {
+			audioCodec = track.Codec
 		}
 		decision = stream.Decide(file.Path, file.Media.Video.Codec, audioCodec)
 		reasonCode = decisionReasonCode(decision)
@@ -196,8 +196,13 @@ func (s *Server) handleMovieFileStreamRemux(w http.ResponseWriter, r *http.Reque
 	audioCodec := ""
 	if selected != nil {
 		audioCodec = selected.Codec
-	} else if len(file.Media.AudioTracks) > 0 {
-		audioCodec = file.Media.AudioTracks[0].Codec
+	} else if track, ok := stream.PreferredAudio(file.Media.AudioTracks, func(t library.AudioTrack) string { return t.Codec }); ok {
+		// Not a silent quality decision: the track the browser can decode is
+		// mapped explicitly so a DTS-first BluRay does not burn a core
+		// transcoding past an AAC track sitting one index away.
+		audioCodec = track.Codec
+		defaulted := track
+		selected = &defaulted
 	}
 	decision := stream.Decide(file.Path, file.Media.Video.Codec, audioCodec)
 	if decision.Mode == stream.ModeUnsupported {

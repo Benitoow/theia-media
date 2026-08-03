@@ -193,3 +193,30 @@ func remuxArgs(path string, d Decision, startSeconds float64, audioStreamIndex *
 func formatSeconds(s float64) string {
 	return strconv.FormatFloat(s, 'f', 3, 64)
 }
+
+// PreferredAudio picks which measured track to play when the viewer has not
+// chosen one.
+//
+// This is a compatibility choice, not a quality one, and the distinction is the
+// whole reason it is allowed to exist beside decision 38. Taking track zero
+// meant a BluRay rip whose first track is DTS and whose second is already AAC
+// got the DTS transcoded on the fly: a core burnt, a 5.1 mix folded to stereo,
+// and quality lost, while a browser-ready track sat one index away. Ranking by
+// bitrate or channel count would be the forbidden thing; preferring a track the
+// browser can actually decode is the same kind of judgement as choosing direct
+// play over a remux.
+//
+// An explicit selection always wins over this, and nothing here reorders what
+// the interface shows.
+func PreferredAudio[T any](tracks []T, codecOf func(T) string) (T, bool) {
+	var zero T
+	if len(tracks) == 0 {
+		return zero, false
+	}
+	for _, track := range tracks {
+		if browserAudio[strings.ToLower(codecOf(track))] {
+			return track, true
+		}
+	}
+	return tracks[0], true
+}

@@ -215,6 +215,8 @@ export const strings = {
 		// Le serveur envoie un code, jamais une phrase (décision 25). Cette table
 		// est le seul endroit où un code de M1 devient du français.
 		codes: {
+			browser_cannot_decode_video:
+				'Votre navigateur ne sait pas décoder la vidéo de ce fichier : le son avancerait sur une image figée. Ouvrez-le dans un autre navigateur, ou choisissez un autre fichier sur la fiche du film.',
 			invalid_movie_id: "Ce film n'est pas identifiable.",
 			invalid_file_id: "Ce fichier n'est pas identifiable.",
 			invalid_audio_track_id: "Cette piste audio n'est pas identifiable.",

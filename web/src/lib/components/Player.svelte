@@ -183,6 +183,18 @@
 			if (offset > 0) video.currentTime = offset;
 		}
 		seeking = false;
+
+		// A browser that cannot decode the video codec still loads the file, still
+		// reports readyState 4 and still plays the sound -- it simply never
+		// produces a picture. Measured on an HEVC Main 10 remux: canPlayType
+		// answers with an empty string, videoWidth stays 0 and not one frame is
+		// decoded, while currentTime advances. Left alone that reads as "the sound
+		// is badly out of sync", which is the wrong bug to go looking for. The
+		// server flags the codec as risky; this is the browser answering.
+		if (video.videoWidth === 0 && video.videoHeight === 0) {
+			phase = 'failed';
+			failureCode = 'browser_cannot_decode_video';
+		}
 	}
 
 	function onTimeUpdate() {
