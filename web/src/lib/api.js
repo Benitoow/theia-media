@@ -14,6 +14,15 @@ export async function getJSON(path, options) {
 	if (!res.ok) {
 		const error = new Error(`HTTP ${res.status}`);
 		error.status = res.status;
+		// The server answers a failure with {"error": "<code>"} and never with a
+		// sentence (decision 25). Carrying the code up lets the caller translate
+		// it; without this the interface can only say "something went wrong".
+		try {
+			const body = await res.json();
+			if (typeof body?.error === 'string') error.code = body.error;
+		} catch {
+			// Not every failure has a JSON body. The status alone still stands.
+		}
 		throw error;
 	}
 	return res.json();

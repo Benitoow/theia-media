@@ -204,6 +204,37 @@ export const strings = {
 		failed:
 			"Ce fichier n'a pas pu être lu. Son format n'est probablement pas pris en charge par la v1.",
 
+		// Le serveur envoie un code, jamais une phrase (décision 25). Cette table
+		// est le seul endroit où un code de M1 devient du français.
+		codes: {
+			invalid_movie_id: "Ce film n'est pas identifiable.",
+			invalid_file_id: "Ce fichier n'est pas identifiable.",
+			invalid_audio_track_id: "Cette piste audio n'est pas identifiable.",
+			audio_selection_requires_remux:
+				'Cette piste ne peut être garantie que par un réencapsulage.',
+			file_outside_library:
+				"Ce fichier ne se trouve plus dans un dossier surveillé. Vérifiez les dossiers de la bibliothèque dans les réglages.",
+			movie_not_found: 'Ce film est introuvable.',
+			file_not_found: "Ce fichier n'appartient plus à ce film.",
+			audio_track_not_found: "Cette piste audio n'existe plus dans ce fichier.",
+			media_file_unavailable:
+				'Ce fichier a disparu du disque. Relancez une analyse depuis les réglages.',
+			media_not_inspected: 'Analysez ce fichier avant de choisir une piste audio.',
+			media_unreadable:
+				"Ce fichier n'a pas pu être décodé. Il est peut-être incomplet ou corrompu.",
+			video_transcode_required:
+				'Le format vidéo de ce fichier demande une conversion complète, prévue pour un jalon ultérieur.',
+			movie_unavailable: 'Le film ne peut pas être lu depuis la base de données.',
+			file_unavailable: 'Le fichier ne peut pas être lu depuis la base de données.',
+			audio_track_unavailable: 'La piste audio ne peut pas être lue depuis la base de données.',
+			media_file_unreadable: "Ce fichier n'a pas pu être ouvert sur le disque.",
+			media_inspection_not_saved: "Le résultat de l'analyse n'a pas pu être enregistré.",
+			stream_start_failed: "La lecture n'a pas pu démarrer.",
+			ffmpeg_unsupported: "Aucune version de ffmpeg n'est disponible pour cette plateforme.",
+			ffmpeg_unavailable:
+				"ffmpeg n'a pas pu être préparé. Vérifiez la connexion, puis réessayez."
+		},
+
 		shortcuts: {
 			open: 'Afficher les raccourcis clavier',
 			close: 'Fermer l’aide des raccourcis',
@@ -231,9 +262,34 @@ export const strings = {
 		genres: 'Genres',
 		runtime: 'Durée',
 		year: 'Année',
-		file: 'Fichier',
-		size: 'Taille',
 		progress: 'Progression dans le film',
+		files: {
+			one: 'Fichier',
+			many: 'Fichiers disponibles',
+			choose: 'Choisir le fichier à lire',
+			chosen: 'Fichier choisi',
+			primary: 'Principal',
+			pending: 'Caractéristiques non mesurées',
+			inspect: 'Analyser',
+			inspecting: 'Analyse en cours…',
+			retry: "Relancer l'analyse",
+			errored: "Ce fichier n'a pas pu être analysé.",
+			resolution: (width, height) => `${width} × ${height}`,
+			trackCount: (count) => (count > 1 ? `${count} pistes audio` : `${count} piste audio`),
+			hint:
+				'Theia ne choisit jamais une qualité à votre place : ce film possède plusieurs ' +
+				'fichiers et vous décidez lequel lire.'
+		},
+		audio: {
+			title: 'Piste audio',
+			choose: 'Choisir la piste audio',
+			auto: 'Piste par défaut du fichier',
+			isDefault: 'par défaut',
+			unnamed: (index) => `Piste ${index}`,
+			remuxNote:
+				'Choisir une piste explicitement passe par un réencapsulage, seul moyen de garantir ' +
+				"celle que le navigateur jouera."
+		},
 		moreByDirector: (director) => `Voir les autres films de ${director}`,
 		noOverview: "Aucun synopsis n'est disponible pour ce film.",
 		unmatched:

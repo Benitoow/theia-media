@@ -2,15 +2,22 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { getJSON, imageURL, displayTitle, displayYear, formatRuntime } from '$lib/api.js';
-	import { strings as t, formatDecimal, formatSize } from '$lib/strings.js';
+	import { strings as t, formatDecimal } from '$lib/strings.js';
 	import Player from '$lib/components/Player.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
+	import FileChoice from '$lib/components/FileChoice.svelte';
 
 	/** @type {'loading' | 'ready' | 'missing'} */
 	let state = $state('loading');
 	let movie = $state(null);
 	let playing = $state(false);
+
+	// Which file the player will open, and optionally which measured audio track.
+	// Both are chosen by hand: M1-BE deliberately refuses to rank quality, so the
+	// only default here is the primary file the server already flagged.
+	let fileId = $state(null);
+	let audioTrackId = $state(null);
 
 	const meta = $derived(movie?.metadata ?? {});
 	const backdrop = $derived(imageURL(meta.backdrop_path, 'w1280'));
@@ -27,9 +34,16 @@
 			: 0
 	);
 
+	const files = $derived(movie?.files ?? []);
+	const selectedFile = $derived(files.find((file) => file.id === fileId) ?? null);
+
 	onMount(async () => {
 		try {
 			movie = await getJSON(`/api/library/movies/${$page.params.id}`);
+			// `files` only exists on the detail payload. The primary file is the
+			// server's existing bookkeeping, not a quality judgement, so it is a
+			// legitimate starting point for a choice the user still owns.
+			fileId = (movie.files?.find((file) => file.is_primary) ?? movie.files?.[0])?.id ?? null;
 			state = 'ready';
 			// The home hero's "Reprendre" links here with this flag rather than
 			// opening a player it does not own. The player still asks whether to
@@ -44,6 +58,26 @@
 	function syncProgress(progress) {
 		if (!movie || !progress) return;
 		movie = { ...movie, progress };
+	}
+
+	function onFileChoice({ fileId: nextFile, audioTrackId: nextTrack }) {
+		fileId = nextFile ?? fileId;
+		audioTrackId = nextTrack ?? null;
+	}
+
+	// A measurement replaces the page's copy of that one file. Keeping the single
+	// copy here rather than a second one inside the chooser means the player and
+	// the list can never disagree about what was actually measured.
+	function onFileMeasured(measured) {
+		if (!movie || !measured?.id) return;
+		movie = {
+			...movie,
+			files: movie.files.map((file) => (file.id === measured.id ? measured : file))
+		};
+		// Track ids belong to a measurement. Re-measuring the selected file can
+		// retire the chosen one, so the selection goes back to the file default
+		// rather than pointing at a track that may no longer exist.
+		if (measured.id === fileId) audioTrackId = null;
 	}
 </script>
 
@@ -148,13 +182,30 @@
 						<span>{resumable ? t.player.resumeAtMinutes(resumeMinutes) : t.player.play}</span>
 					</button>
 
+					<!-- The files behind the film. One card in the catalogue, the choice
+					     of what actually plays made here, by hand.
+
+					     It sits directly under the play button on purpose. Below the cast
+					     list it was both editorially wrong -- choosing the file is part of
+					     deciding to watch, not trivia after the credits -- and unreachable
+					     by remote: the layout's geometric D-pad scored the distant "Retour"
+					     link below the first file option and skipped the whole list. -->
+					<FileChoice
+						movieId={movie.id}
+						{files}
+						{fileId}
+						{audioTrackId}
+						onselect={onFileChoice}
+						onmeasure={onFileMeasured}
+					/>
+
 					{#if meta.status === 'not_found'}
-						<p class="mb-8 border-l border-warning py-1 pl-5 text-small text-parchment">
+						<p class="mt-10 mb-8 border-l border-warning py-1 pl-5 text-small text-parchment">
 							{t.film.unmatched}
 						</p>
 					{/if}
 
-					<p class="tv-copy mb-12 max-w-[46rem]">
+					<p class="tv-copy mt-10 mb-12 max-w-[46rem]">
 						{meta.overview || t.film.noOverview}
 					</p>
 
@@ -174,17 +225,6 @@
 						</section>
 					{/if}
 
-					<!-- The file behind the film. Useful when two copies of the same
-					     title are in the library and you need to know which is which. -->
-					<section class="border-t border-line pt-6">
-						<dl class="grid gap-x-8 gap-y-3 sm:grid-cols-[8rem_1fr]">
-							<dt class="label">{t.film.file}</dt>
-							<dd class="text-small break-all text-parchment">{movie.file_name}</dd>
-							<dt class="label">{t.film.size}</dt>
-							<dd class="text-small text-parchment">{formatSize(movie.size_bytes)}</dd>
-						</dl>
-					</section>
-
 					<a href="/" class="tv-link label mt-10">
 						← {t.nav.back}
 					</a>
@@ -194,6 +234,12 @@
 	</article>
 
 	{#if playing}
-		<Player {movie} onprogress={syncProgress} onclose={() => (playing = false)} />
+		<Player
+			{movie}
+			fileId={selectedFile?.id ?? null}
+			{audioTrackId}
+			onprogress={syncProgress}
+			onclose={() => (playing = false)}
+		/>
 	{/if}
 {/if}

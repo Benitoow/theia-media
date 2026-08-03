@@ -204,6 +204,35 @@ export const strings = {
 		failed:
 			'This file could not be played. Its format is probably not supported by v1.',
 
+		// The server sends a code, never a sentence (decision 25). This table is
+		// the only place where an M1 code becomes English.
+		codes: {
+			invalid_movie_id: 'This movie cannot be identified.',
+			invalid_file_id: 'This file cannot be identified.',
+			invalid_audio_track_id: 'This audio track cannot be identified.',
+			audio_selection_requires_remux: 'This track can only be guaranteed by remuxing.',
+			file_outside_library:
+				'This file is no longer inside a watched folder. Check the library folders in settings.',
+			movie_not_found: 'This movie could not be found.',
+			file_not_found: 'This file no longer belongs to this movie.',
+			audio_track_not_found: 'This audio track no longer exists in this file.',
+			media_file_unavailable:
+				'This file has disappeared from disk. Run another scan from settings.',
+			media_not_inspected: 'Analyse this file before choosing an audio track.',
+			media_unreadable:
+				'This file could not be decoded. It may be incomplete or corrupted.',
+			video_transcode_required:
+				'This file uses a video format that needs full conversion, planned for a later milestone.',
+			movie_unavailable: 'The movie could not be read from the database.',
+			file_unavailable: 'The file could not be read from the database.',
+			audio_track_unavailable: 'The audio track could not be read from the database.',
+			media_file_unreadable: 'This file could not be opened on disk.',
+			media_inspection_not_saved: 'The result of the analysis could not be saved.',
+			stream_start_failed: 'Playback could not be started.',
+			ffmpeg_unsupported: 'No ffmpeg build is available for this platform.',
+			ffmpeg_unavailable: 'ffmpeg could not be prepared. Check the connection, then try again.'
+		},
+
 		shortcuts: {
 			open: 'Show keyboard shortcuts',
 			close: 'Close keyboard shortcuts',
@@ -231,9 +260,34 @@ export const strings = {
 		genres: 'Genres',
 		runtime: 'Runtime',
 		year: 'Year',
-		file: 'File',
-		size: 'Size',
 		progress: 'Movie progress',
+		files: {
+			one: 'File',
+			many: 'Available files',
+			choose: 'Choose which file to play',
+			chosen: 'Chosen file',
+			primary: 'Primary',
+			pending: 'Characteristics not measured',
+			inspect: 'Analyse',
+			inspecting: 'Analysing…',
+			retry: 'Run the analysis again',
+			errored: 'This file could not be analysed.',
+			resolution: (width, height) => `${width} × ${height}`,
+			trackCount: (count) => (count > 1 ? `${count} audio tracks` : `${count} audio track`),
+			hint:
+				'Theia never picks a quality for you: this movie has several files and you decide ' +
+				'which one to play.'
+		},
+		audio: {
+			title: 'Audio track',
+			choose: 'Choose the audio track',
+			auto: "The file's default track",
+			isDefault: 'default',
+			unnamed: (index) => `Track ${index}`,
+			remuxNote:
+				'Choosing a track explicitly goes through a remux, the only way to guarantee which ' +
+				'one the browser will play.'
+		},
 		moreByDirector: (director) => `See more movies by ${director}`,
 		noOverview: 'No overview is available for this movie.',
 		unmatched:
