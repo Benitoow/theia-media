@@ -19,6 +19,7 @@ import (
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
+	"github.com/Benitoow/theia-media/internal/profiles"
 	"github.com/Benitoow/theia-media/internal/remoteaccess"
 	"github.com/Benitoow/theia-media/internal/updater"
 )
@@ -33,6 +34,7 @@ type Options struct {
 	State     *db.State
 	Updater   *updater.Updater
 	Activity  *activity.Tracker
+	Profiles  *profiles.Store
 	Remote    *remoteaccess.Service
 	Web       fs.FS
 	Version   string
@@ -50,6 +52,7 @@ type Server struct {
 	state     *db.State
 	updater   *updater.Updater
 	activity  *activity.Tracker
+	profiles  *profiles.Store
 	remote    *remoteaccess.Service
 	web       fs.FS
 	log       *slog.Logger
@@ -69,6 +72,7 @@ func New(opts Options) *Server {
 		state:     opts.State,
 		updater:   opts.Updater,
 		activity:  opts.Activity,
+		profiles:  opts.Profiles,
 		remote:    opts.Remote,
 		web:       opts.Web,
 		log:       opts.Logger,
@@ -94,6 +98,14 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/remote-access/peers", s.handleCreateRemotePeer)
 	mux.HandleFunc("DELETE /api/remote-access/peers/{id}", s.handleRevokeRemotePeer)
 	mux.HandleFunc("GET /api/remote-access/session", s.handleRemoteSession)
+	mux.HandleFunc("GET /api/profiles", s.handleProfiles)
+	mux.HandleFunc("POST /api/profiles", s.handleCreateProfile)
+	mux.HandleFunc("GET /api/profiles/{id}", s.handleProfile)
+	mux.HandleFunc("PATCH /api/profiles/{id}", s.handleRenameProfile)
+	mux.HandleFunc("DELETE /api/profiles/{id}", s.handleDeleteProfile)
+	mux.HandleFunc("GET /api/profiles/{id}/avatar", s.handleProfileAvatar)
+	mux.HandleFunc("PUT /api/profiles/{id}/avatar", s.handleSetProfileAvatar)
+	mux.HandleFunc("DELETE /api/profiles/{id}/avatar", s.handleDeleteProfileAvatar)
 	mux.HandleFunc("GET /api/library/home", s.handleHome)
 	mux.HandleFunc("GET /api/library/movies", s.handleMovies)
 	mux.HandleFunc("GET /api/library/movies/{id}", s.handleMovie)

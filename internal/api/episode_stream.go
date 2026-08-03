@@ -275,7 +275,12 @@ func (s *Server) episodeFileForStream(w http.ResponseWriter, r *http.Request) (l
 	if !ok {
 		return library.EpisodeItem{}, library.EpisodeFile{}, false
 	}
-	item, err := s.lib.GetEpisodeItem(r.Context(), itemID)
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return library.EpisodeItem{}, library.EpisodeFile{}, false
+	}
+
+	item, err := s.lib.GetEpisodeItem(r.Context(), profileID, itemID)
 	switch {
 	case errors.Is(err, library.ErrNoSuchEpisodeItem):
 		writeJSONError(w, http.StatusNotFound, "episode_not_found")

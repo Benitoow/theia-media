@@ -36,7 +36,12 @@ func (s *Server) handleSaveProgress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	progress, err := s.lib.SaveProgress(r.Context(), id, body.PositionSeconds, body.DurationSeconds)
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return
+	}
+
+	progress, err := s.lib.SaveProgress(r.Context(), profileID, id, body.PositionSeconds, body.DurationSeconds)
 	switch {
 	case errors.Is(err, library.ErrNoSuchMovie):
 		writeJSONError(w, http.StatusNotFound, "no such film")
@@ -58,7 +63,12 @@ func (s *Server) handleResetProgress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch err := s.lib.ResetProgress(r.Context(), id); {
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return
+	}
+
+	switch err := s.lib.ResetProgress(r.Context(), profileID, id); {
 	case errors.Is(err, library.ErrNoSuchMovie):
 		writeJSONError(w, http.StatusNotFound, "no such film")
 		return

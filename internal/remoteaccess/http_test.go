@@ -138,3 +138,36 @@ func assertRemoteError(t *testing.T, rec *httptest.ResponseRecorder, status int,
 		t.Fatalf("error = %q, want %q", body["error"], code)
 	}
 }
+
+// M2 put a profile on every progress write, so a remote device has to be able
+// to read the list and the pictures. Everything that *manages* the household
+// stays on the LAN, and this is the test that keeps it there.
+func TestRemoteAllowlistCoversProfileReadsAndRefusesProfileManagement(t *testing.T) {
+	allowed := []struct{ method, path string }{
+		{http.MethodGet, "/api/profiles"},
+		{http.MethodGet, "/api/profiles/3/avatar"},
+		{http.MethodPut, "/api/library/movies/7/progress"},
+		{http.MethodDelete, "/api/library/episodes/7/progress"},
+	}
+	for _, tc := range allowed {
+		if !remoteRouteAllowed(tc.method, tc.path) {
+			t.Errorf("%s %s was refused remotely, want allowed", tc.method, tc.path)
+		}
+	}
+
+	refused := []struct{ method, path string }{
+		{http.MethodPost, "/api/profiles"},
+		{http.MethodPatch, "/api/profiles/3"},
+		{http.MethodDelete, "/api/profiles/3"},
+		{http.MethodPut, "/api/profiles/3/avatar"},
+		{http.MethodDelete, "/api/profiles/3/avatar"},
+		{http.MethodGet, "/api/settings"},
+		{http.MethodPost, "/api/library/scan"},
+		{http.MethodGet, "/api/remote-access"},
+	}
+	for _, tc := range refused {
+		if remoteRouteAllowed(tc.method, tc.path) {
+			t.Errorf("%s %s was allowed remotely, want refused", tc.method, tc.path)
+		}
+	}
+}

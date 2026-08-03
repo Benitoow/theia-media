@@ -98,9 +98,15 @@ il n'affiche aucune prose technique du serveur.
 
 ### M2-FE — Profils, nouvelle mouture
 
-**Statut : contrat visuel figé le 03/08/2026 (décision 48). Reste bloqué par le
-handoff M2-BE : il n'existe aujourd'hui aucune route profils.** Ne pas recycler
-l'ancien écran `/profils`, même comme raccourci temporaire.
+**Statut : prêt à démarrer. Contrat visuel figé le 03/08/2026 (décision 48) et
+backend livré — voir la section M2-BE de `theia-v2-backend.md` pour les routes,
+les fixtures et les codes d'erreur.** Ne pas recycler l'ancien écran `/profils`,
+même comme raccourci temporaire.
+
+Le profil actif vit en `localStorage`, comme la langue, et voyage en
+`?profile={id}` sur les routes de catalogue et de progression. Un id inconnu
+renvoie `profile_not_found` : c'est le cas à traiter quand une télévision garde
+un profil supprimé ailleurs.
 
 Les références du mainteneur donnent la **disposition, pas le style**. Le style
 reste celui du design system : fond `--ink`, registre display pour le titre,

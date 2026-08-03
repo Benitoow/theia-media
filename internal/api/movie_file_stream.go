@@ -289,7 +289,12 @@ func (s *Server) movieFileForStream(w http.ResponseWriter, r *http.Request) (lib
 		return library.Movie{}, library.MovieFile{}, false
 	}
 
-	movie, err := s.lib.Get(r.Context(), movieID)
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return library.Movie{}, library.MovieFile{}, false
+	}
+
+	movie, err := s.lib.Get(r.Context(), profileID, movieID)
 	switch {
 	case errors.Is(err, library.ErrNoSuchMovie):
 		writeJSONError(w, http.StatusNotFound, "movie_not_found")

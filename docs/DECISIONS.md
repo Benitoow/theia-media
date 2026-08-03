@@ -1129,6 +1129,50 @@ the migration owns both or it corrupts one. And a profile remains neither an
 account nor a permission — anyone on the LAN may select and edit every profile,
 exactly as they may already change every setting.
 
+## 49. A profile travels in the open, and the rollback mirror follows whoever is default
+
+**Implementation decisions from V2-M2-BE, which decision 48 left to the backend.**
+
+The active profile is `?profile={id}` on the routes that read or write a
+position — not a header. The removed implementation used `X-Theia-Profile`, and
+the shape was the problem as much as the name: a header reads like a credential,
+and this is not one. Anyone on the LAN may pass any id, exactly as anyone on the
+LAN may already change every setting. Putting it in the URL keeps that honest,
+and keeps it debuggable.
+
+An absent id falls back to the oldest profile, so the released frontend and any
+client that has never heard of profiles keep working. An id that names nothing
+is **refused** rather than quietly redirected to the default: writing one
+viewer's position into another's history because a television held a stale id is
+the kind of corruption nobody notices and nobody reports.
+
+Eight profiles, and the number comes from the screen rather than from taste. The
+chooser is one horizontal row read from three metres, where a card may not fall
+below the design system's 160px legibility floor; past eight the row wraps or
+shrinks under it. The previous implementation allowed twelve, chosen before that
+screen existed.
+
+Two hazards were found by running the thing rather than reading it:
+
+- **Consolidation and rename lost every viewer but one.** Both paths moved
+  progress through the single legacy columns, so merging two copies of a film —
+  or renaming an episode — discarded the other profiles' rows when the duplicate
+  cascaded away. Both now move `movie_progress` / `episode_progress` per profile,
+  most recently watched winning within each profile rather than across all of
+  them.
+- **Deleting the default profile stranded the rollback mirror.** The legacy
+  columns on `movies` exist so a rolled-back v1.5.0 still finds a history, and
+  they follow whichever profile is oldest. Deleting that profile promotes the
+  next one, and the columns kept serving the deleted viewer's positions —
+  a history belonging to nobody. Deletion now re-points them.
+
+The avatar endpoint re-encodes everything to JPEG regardless of what arrived, so
+a hostile PNG cannot be stored and served back intact, and bounds both the bytes
+read and the pixels claimed — a decompression bomb is a few bytes of header
+asking for gigabytes. One EXIF tag is parsed by hand, because a full parser is a
+dependency and a much larger surface for a single integer, and every other field
+in that block is precisely what Theia throws away.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

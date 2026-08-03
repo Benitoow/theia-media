@@ -156,6 +156,15 @@ func remoteRouteAllowed(method, path string) bool {
 			return true
 		case path == "/api/remote-access/session":
 			return true
+		// Reading the profile list and its pictures is admitted because a remote
+		// device has to know whose history it is writing to: progress carries a
+		// profile since M2. Creating, renaming, deleting a profile and replacing
+		// a picture are not here, and must not be added -- managing the household
+		// stays on the LAN with every other administrative surface.
+		case path == "/api/profiles":
+			return true
+		case strings.HasPrefix(path, "/api/profiles/") && strings.HasSuffix(path, "/avatar"):
+			return true
 		case strings.HasPrefix(path, "/api/library/"):
 			return true
 		case strings.HasPrefix(path, "/api/images/"):

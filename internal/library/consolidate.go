@@ -298,6 +298,14 @@ func mergeMovieGroupTx(ctx context.Context, tx *sql.Tx, ids []int64,
 		return fmt.Errorf("merging progress into film %d: %w", canonicalID, err)
 	}
 
+	// Every viewer's history moves with the film, not just the default one's.
+	// The legacy columns above describe a single position, so on their own they
+	// would silently drop the other profiles' rows when the duplicate is deleted
+	// and its history cascades away with it.
+	if err := mergeMovieProgressTx(ctx, tx, canonicalID, ids[1:]); err != nil {
+		return err
+	}
+
 	for _, duplicateID := range ids[1:] {
 		// A partial unique index allows one primary per film, so demote before
 		// moving files under the canonical id.
@@ -313,6 +321,45 @@ func mergeMovieGroupTx(ctx context.Context, tx *sql.Tx, ids []int64,
 			`DELETE FROM movies WHERE id = ?`, duplicateID); err != nil {
 			return fmt.Errorf("removing duplicate film %d: %w", duplicateID, err)
 		}
+	}
+	return nil
+}
+
+// mergeMovieProgressTx moves every profile's position from the duplicates onto
+// the canonical film, most recently watched winning per profile.
+//
+// The conflict guard is what makes it per profile rather than global: two
+// viewers who each watched a different copy of the same film both keep their
+// own position, and neither overwrites the other.
+func mergeMovieProgressTx(ctx context.Context, tx *sql.Tx, canonicalID int64, duplicates []int64) error {
+	for _, duplicateID := range duplicates {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO movie_progress (profile_id, movie_id, position_seconds, watched_at, finished)
+			SELECT profile_id, ?, position_seconds, watched_at, finished
+			FROM movie_progress WHERE movie_id = ?
+			ON CONFLICT(profile_id, movie_id) DO UPDATE SET
+				position_seconds = excluded.position_seconds,
+				watched_at       = excluded.watched_at,
+				finished         = excluded.finished
+			WHERE excluded.watched_at > movie_progress.watched_at`,
+			canonicalID, duplicateID); err != nil {
+			return fmt.Errorf("merging viewer history into film %d: %w", canonicalID, err)
+		}
+	}
+
+	// The legacy columns follow the default profile, as everywhere else. They
+	// were written above from the pre-merge legacy values; rewriting them here
+	// keeps the mirror honest after the per-profile merge.
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE movies SET
+			position_seconds = COALESCE((SELECT position_seconds FROM movie_progress
+				WHERE movie_id = ? AND profile_id = (SELECT id FROM profiles ORDER BY id LIMIT 1)), 0),
+			watched_at = COALESCE((SELECT watched_at FROM movie_progress
+				WHERE movie_id = ? AND profile_id = (SELECT id FROM profiles ORDER BY id LIMIT 1)), 0),
+			finished = COALESCE((SELECT finished FROM movie_progress
+				WHERE movie_id = ? AND profile_id = (SELECT id FROM profiles ORDER BY id LIMIT 1)), 0)
+		WHERE id = ?`, canonicalID, canonicalID, canonicalID, canonicalID); err != nil {
+		return fmt.Errorf("mirroring merged history for film %d: %w", canonicalID, err)
 	}
 	return nil
 }

@@ -6,9 +6,13 @@
 
 ## 1. Règle de livraison
 
-Le backend avance avec Codex, un jalon à la fois. Un jalon backend n'est prêt
-pour le frontend qu'après fusion sur `main`, tests automatisés et vérification
-sur une copie de la vraie bibliothèque.
+Le backend avance un jalon à la fois. M1, M3 et M4 ont été pris en charge avec
+Codex ; **M2 a été confié à Claude le 03/08/2026**, qui écrit donc son propre
+handoff avant de le consommer. Cela rend le handoff plus important, pas moins :
+il reste la seule chose entre les deux moitiés et doit être publié comme si un
+autre agent allait le lire. Un jalon backend n'est prêt pour le frontend
+qu'après fusion sur `main`, tests automatisés et vérification sur une copie de
+la vraie bibliothèque.
 
 Chaque handoff doit remplacer les mentions « à définir » de son jalon par :
 
@@ -291,51 +295,162 @@ lisent le fichier principal. M1-FE doit utiliser les routes avec `file_id`.
 
 ### M2-BE — Profils, nouvelle mouture
 
-**Statut : débloqué le 03/08/2026. Références reçues et actions figées par la
-décision 48. Le modèle et l'API restent à concevoir : cette section décrit ce
-dont l'interface a besoin, pas le schéma à écrire.**
+**Statut : implémenté et vérifié. Contrat figé par la décision 48 ; le backend
+suit cette section. Aucun écran M2 n'est inclus.**
 
 Le chantier repart de zéro. Il ne restaure ni l'ancien package, ni l'ancienne
 migration, ni `X-Theia-Profile`, ni l'ancien endpoint d'avatar. Tant que la
 décision zéro-authentification tient, les profils séparent l'expérience et la
 progression mais ne deviennent ni comptes ni permissions.
 
-#### Actions réellement demandées par l'interface
+#### Migration et modèle
 
-1. lister les profils, dans un ordre stable ;
-2. en créer un, avec un nom ;
-3. le renommer ;
-4. lui donner ou remplacer une image ;
-5. le supprimer, avec sa progression ;
-6. lire, pour un profil, les faits affichés sur sa fiche : date de création,
-   films commencés, films terminés, dernière lecture.
+`0009_profiles.sql` est additive :
 
-Le choix du profil actif n'est **pas** une action serveur : il appartient au
-navigateur, comme la langue (décision 32). Le serveur doit donc recevoir
-l'identité du profil sur les routes de progression, sans que cela devienne une
-authentification.
+- `profiles` : `name` **nullable**, l'absence signifiant « le profil par
+  défaut ». L'interface le nomme dans la langue active ; SQLite ne stocke aucune
+  phrase (décision 25). Plus l'image, son type, sa version et la date de
+  création ;
+- `movie_progress(profile_id, movie_id, …)` et
+  `episode_progress(profile_id, episode_item_id, …)`, clé primaire composite,
+  suppression en cascade depuis le profil comme depuis le média ;
+- deux index sur `(profile_id, finished, watched_at DESC)` pour la reprise.
 
-#### Contraintes à ne pas découvrir tard
+La durée **reste** sur `movies` et `episode_items` : elle décrit le fichier, pas
+le spectateur. Seules la position, la date et l'état terminé deviennent
+personnels.
 
-- **La progression vit à deux endroits** : `movies` depuis M1 et `episode_items`
-  depuis M3 (décision 41). La migration possède les deux ou elle en corrompt un.
-- **L'envoi d'image est une surface d'attaque** : borner la taille, décoder,
-  corriger l'orientation EXIF, recadrer au carré, ré-encoder à une dimension
-  fixe, retirer les métadonnées avant stockage, versionner l'URL immuable. Cet
-  endpoint ne doit pas devenir un hébergeur de fichiers arbitraires.
-- **Aucune prose utilisateur** : codes stables uniquement, l'interface traduit
-  (décision 25).
-- **M4 reste LAN-only pour la gestion** : créer, renommer, supprimer un profil
-  et envoyer une image ne figurent pas dans l'allowlist distante. La lecture du
-  catalogue et l'écriture de progression y figurent déjà : si la progression
-  devient porteuse d'un profil, le garde distant doit être revu en conséquence.
-- Les bornes de l'ancienne mouture (nombre de profils, longueur du nom, plafond
-  d'envoi) étaient des garde-fous de LAN non authentifié, pas une politique de
-  comptes : à re-décider, pas à recopier par réflexe.
+La migration crée un profil par défaut et y copie les deux familles de
+progression existantes — films depuis 0001, épisodes depuis 0007.
 
-Le handoff devra publier, comme les précédents, les routes et payloads réels,
-les codes d'erreur, l'effet de migration sur les données existantes, une fixture
-réutilisable et ce qui a été vérifié sur la vraie bibliothèque.
+**Les colonnes historiques de `movies` restent et sont tenues à jour** avec le
+profil par défaut. Elles sont mortes pour ce binaire, qui lit `movie_progress` ;
+elles ne le sont pas pour le précédent, que l'updater garde comme cible de
+retour arrière et qui lit ces colonnes au démarrage. Un profil non-défaut n'y
+touche jamais. Supprimer le profil par défaut promeut le suivant **et
+réaligne ces colonnes sur lui** ; sans cela elles continueraient à servir
+l'historique d'un spectateur supprimé. Les épisodes n'ont pas de miroir :
+v1.5.0 n'en a jamais entendu parler.
+
+#### Identité du profil sur les routes existantes
+
+`?profile={id}` sur les routes qui lisent ou écrivent une position :
+`/api/library/home`, `/api/library/movies`, `/api/library/movies/{id}`,
+`/api/library/series/home`, `/api/library/series/{id}`,
+`/api/library/series/{id}/seasons/{n}`, `/api/library/episodes/{id}`, les
+`stream/info` et les quatre routes de progression.
+
+Ce n'est **pas** l'ancien en-tête : un en-tête se lit comme une preuve, et il
+n'y en a pas ici. Le paramètre absent retombe sur le profil le plus ancien, ce
+qui garde le frontend publié et tout client ignorant les profils fonctionnels.
+Un id inconnu est **refusé** plutôt que redirigé en silence vers le défaut :
+écrire la position d'un spectateur dans l'historique d'un autre parce qu'une
+télévision a gardé un id périmé est une corruption que personne ne signale.
+
+#### API locale de gestion
+
+| Méthode et route | Effet |
+|---|---|
+| `GET /api/profiles` | Liste ordonnée par id ; sans image ni statistiques |
+| `POST /api/profiles` | `{"name":"Mimi"}` → 201 et le profil créé |
+| `GET /api/profiles/{id}` | Profil **avec** `stats` |
+| `PATCH /api/profiles/{id}` | `{"name":"…"}` renomme |
+| `DELETE /api/profiles/{id}` | 204 ; emporte toute sa progression |
+| `GET /api/profiles/{id}/avatar?v={version}` | L'image ; `immutable` quand `v` correspond |
+| `PUT /api/profiles/{id}/avatar` | Corps = octets bruts de l'image |
+| `DELETE /api/profiles/{id}/avatar` | Retire l'image, incrémente la version |
+
+Fixtures capturées sur le serveur de validation :
+
+```json
+{
+  "profiles": [
+    { "id": 1, "is_default": true, "has_avatar": false,
+      "created_at": "2026-08-03T11:39:36Z" },
+    { "id": 2, "name": "Mimi", "is_default": false, "has_avatar": false,
+      "created_at": "2026-08-03T11:39:37Z" }
+  ]
+}
+```
+
+```json
+{
+  "id": 2, "name": "Mimi", "is_default": false, "has_avatar": false,
+  "created_at": "2026-08-03T11:39:37Z",
+  "stats": { "movies_started": 0, "movies_finished": 0,
+             "episodes_started": 0, "episodes_finished": 0 }
+}
+```
+
+`name` est **absent** pour le profil par défaut, et `last_watched_at` absent tant
+que rien n'a été regardé. `stats` ne contient ni email, ni rôle, ni statut, ni
+abonnement : ces lignes des références n'existent pas dans Theia.
+
+#### Bornes
+
+Huit profils actifs, quarante caractères Unicode par nom, 8 Mio par envoi,
+image stockée en JPEG 512×512. Le nombre vient de l'écran, pas du goût : le
+sélecteur est une rangée horizontale lue à trois mètres, où une carte ne peut
+descendre sous le plancher de 160 px du design system. Le dernier profil ne peut
+pas être supprimé.
+
+#### Codes d'erreur stables pour M2-FE
+
+| HTTP | `error` |
+|---|---|
+| 400 | `invalid_profile_id`, `invalid_profile_payload`, `invalid_profile_name` |
+| 404 | `profile_not_found`, `profile_image_not_found` |
+| 409 | `profile_limit_reached`, `profile_last_remaining` |
+| 413 | `profile_image_too_large` |
+| 415 | `profile_image_unreadable` |
+| 500/503 | `profile_unavailable` |
+
+#### Traitement de l'image
+
+Décodage JPEG/PNG/GIF, **encodage toujours JPEG** : un PNG piégé ne peut pas
+être restitué tel quel. Bornes en amont du décodage — 8 Mio d'octets et 64 Mpx
+revendiqués, ce qui arrête la bombe de décompression classique dont l'en-tête
+tient en quelques octets et réclame des gigaoctets. Orientation EXIF lue avant
+le recadrage, sinon une photo portrait couchée est rognée sur le mauvais axe et
+perd le visage pour lequel elle a été choisie. Puis recadrage centré, réduction
+par filtre boîte, ré-encodage. **Rien de la source ne survit sauf les pixels** :
+ni EXIF, ni GPS, ni profil, ni octet arbitraire.
+
+Un seul tag EXIF est analysé, à la main. Une bibliothèque complète serait une
+dépendance et une surface d'attaque bien plus large pour un entier, et tout le
+reste du bloc est précisément ce que Theia jette.
+
+#### Accès distant
+
+L'allowlist admet en lecture `GET /api/profiles` et
+`GET /api/profiles/{id}/avatar` : depuis M2 une progression porte un profil, et
+un appareil distant doit savoir dans quel historique il écrit. **Créer,
+renommer, supprimer et envoyer une image restent LAN-only** et sont refusés par
+le garde. C'est le point de contrat que la décision 48 signalait.
+
+#### Vérification effectuée
+
+- `go test ./... -count=1` et `go vet ./...` passent, dont les nouveaux tests
+  d'isolation, de bornes, d'avatar, d'EXIF et de frontière distante ;
+- six cross-builds `CGO_ENABLED=0` : Windows, Linux et macOS en `amd64`/`arm64` ;
+- `build.ps1` produit un binaire de 16,8 Mo ; parité des locales inchangée ;
+- migration exécutée sur une **copie** de la base réelle : la progression
+  existante (76 s sur `Long Vigil`) a été portée sur le profil par défaut, zéro
+  ligne perdue, aucune progression épisode à migrer ;
+- sur la vraie bibliothèque de 253 films : deux spectateurs ont enregistré
+  76 s et 121 s sur le même film et chacun a relu la sienne ; après remise à zéro
+  du seul profil par défaut, son accueil est repassé en héros `featured` sans
+  rangée `continue`, tandis que celui de Mimi gardait sa reprise ;
+- les colonnes historiques sont restées à 76 s pendant que Mimi écrivait 121 s,
+  puis ont suivi le profil par défaut — le contrat de retour arrière v1.5.0 tient ;
+- un JPEG 1600×900 de 61 990 octets est ressorti en 512×512 de 22 607 octets ;
+- un rescan complet de la bibliothèque réelle avec les profils actifs a retrouvé
+  281 fichiers et 253 films, zéro ajout, zéro suppression ;
+- le serveur utilisateur du port 8383 et sa base n'ont pas été ouverts : toute la
+  validation a utilisé le port 8395 et un data-dir temporaire.
+
+Hors contrat : frontend M2, comptes, mots de passe, permissions, avatars fournis
+par Theia, et toute notion d'abonnement.
 
 ### M3-BE — Séries
 
@@ -790,7 +905,7 @@ cibles de compilation existantes.
 | Jalon | Statut | Commit fusionné | Contrat frontend |
 |---|---|---|---|
 | M1-BE | Implémenté et vérifié | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Contrat ci-dessus ; M1-FE part de ce commit |
-| M2-BE | Bloqué par les références | — | — |
+| M2-BE | Implémenté et vérifié | branche `feat/m1-frontend-and-m2-profiles` | Contrat ci-dessus ; M2-FE part de ce commit |
 | M3-BE | Implémenté et vérifié | [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7), [PR #5](https://github.com/Benitoow/theia-media/pull/5) | Contrat ci-dessus ; M3-FE part de ce commit |
 | M4-BE | Implémenté et vérifié | [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a) | Contrat ci-dessus ; M4-FE part de ce commit après fusion |
 | M5-BE | Sans backend | — | Aucun |

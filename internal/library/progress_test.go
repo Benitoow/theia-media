@@ -51,7 +51,7 @@ func TestSaveProgressIgnoresAGlance(t *testing.T) {
 	}
 	id := onlyMovie(t, service).ID
 
-	got, err := service.SaveProgress(t.Context(), id, 12, 7200)
+	got, err := service.SaveProgress(t.Context(), defaultProfileID, id, 12, 7200)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestSaveProgressIgnoresAGlance(t *testing.T) {
 		t.Errorf("position = %v, want 0 for a glance", got.PositionSeconds)
 	}
 
-	rows, err := service.store.ContinueWatching(t.Context(), 10)
+	rows, err := service.store.ContinueWatching(t.Context(), defaultProfileID, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,11 +76,11 @@ func TestProgressRoundTripsAndAppearsInTheRow(t *testing.T) {
 	}
 	id := onlyMovie(t, service).ID
 
-	if _, err := service.SaveProgress(t.Context(), id, 1800, 10140); err != nil {
+	if _, err := service.SaveProgress(t.Context(), defaultProfileID, id, 1800, 10140); err != nil {
 		t.Fatal(err)
 	}
 
-	movie, err := service.Get(t.Context(), id)
+	movie, err := service.Get(t.Context(), defaultProfileID, id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestProgressRoundTripsAndAppearsInTheRow(t *testing.T) {
 		t.Error("watched_at was not recorded")
 	}
 
-	rows, err := service.store.ContinueWatching(t.Context(), 10)
+	rows, err := service.store.ContinueWatching(t.Context(), defaultProfileID, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,17 +114,17 @@ func TestFinishingRemovesAFilmFromTheRow(t *testing.T) {
 	}
 	id := onlyMovie(t, service).ID
 
-	if _, err := service.SaveProgress(t.Context(), id, 3000, 9660); err != nil {
+	if _, err := service.SaveProgress(t.Context(), defaultProfileID, id, 3000, 9660); err != nil {
 		t.Fatal(err)
 	}
-	if rows, _ := service.store.ContinueWatching(t.Context(), 10); len(rows) != 1 {
+	if rows, _ := service.store.ContinueWatching(t.Context(), defaultProfileID, 10); len(rows) != 1 {
 		t.Fatalf("expected the film to be in the row before finishing")
 	}
 
-	if _, err := service.SaveProgress(t.Context(), id, 9660, 9660); err != nil {
+	if _, err := service.SaveProgress(t.Context(), defaultProfileID, id, 9660, 9660); err != nil {
 		t.Fatal(err)
 	}
-	rows, err := service.store.ContinueWatching(t.Context(), 10)
+	rows, err := service.store.ContinueWatching(t.Context(), defaultProfileID, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,14 +143,14 @@ func TestRewatchingBringsAFilmBack(t *testing.T) {
 	}
 	id := onlyMovie(t, service).ID
 
-	if _, err := service.SaveProgress(t.Context(), id, 9000, 9000); err != nil {
+	if _, err := service.SaveProgress(t.Context(), defaultProfileID, id, 9000, 9000); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.SaveProgress(t.Context(), id, 300, 9000); err != nil {
+	if _, err := service.SaveProgress(t.Context(), defaultProfileID, id, 300, 9000); err != nil {
 		t.Fatal(err)
 	}
 
-	rows, err := service.store.ContinueWatching(t.Context(), 10)
+	rows, err := service.store.ContinueWatching(t.Context(), defaultProfileID, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,14 +167,14 @@ func TestResetProgressStartsFromTheBeginning(t *testing.T) {
 	}
 	id := onlyMovie(t, service).ID
 
-	if _, err := service.SaveProgress(t.Context(), id, 2000, 8400); err != nil {
+	if _, err := service.SaveProgress(t.Context(), defaultProfileID, id, 2000, 8400); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.ResetProgress(t.Context(), id); err != nil {
+	if err := service.ResetProgress(t.Context(), defaultProfileID, id); err != nil {
 		t.Fatal(err)
 	}
 
-	movie, err := service.Get(t.Context(), id)
+	movie, err := service.Get(t.Context(), defaultProfileID, id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,7 +195,7 @@ func TestContinueWatchingIsOrderedByMostRecent(t *testing.T) {
 	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
 		t.Fatal(err)
 	}
-	movies, err := service.List(t.Context(), 10, 0)
+	movies, err := service.List(t.Context(), defaultProfileID, 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,13 +205,13 @@ func TestContinueWatchingIsOrderedByMostRecent(t *testing.T) {
 	// indistinguishable -- the same trap as decisions 7c and 13.
 	base := time.Now().Add(-time.Hour)
 	for i, m := range movies {
-		if _, err := service.store.SaveProgress(t.Context(), m.ID, 600, 7200,
+		if _, err := service.store.SaveProgress(t.Context(), defaultProfileID, m.ID, 600, 7200,
 			base.Add(time.Duration(i)*time.Minute)); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	rows, err := service.store.ContinueWatching(t.Context(), 10)
+	rows, err := service.store.ContinueWatching(t.Context(), defaultProfileID, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +226,7 @@ func TestContinueWatchingIsOrderedByMostRecent(t *testing.T) {
 
 func onlyMovie(t *testing.T, s *Service) Movie {
 	t.Helper()
-	movies, err := s.List(t.Context(), 10, 0)
+	movies, err := s.List(t.Context(), defaultProfileID, 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,3 +235,7 @@ func onlyMovie(t *testing.T, s *Service) Movie {
 	}
 	return movies[0]
 }
+
+// defaultProfileID is the profile migration 0009 creates. Tests that do not
+// care which viewer they are speak for that one.
+const defaultProfileID int64 = 1

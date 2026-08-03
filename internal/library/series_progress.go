@@ -3,13 +3,14 @@ package library
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 )
 
 // SaveEpisodeProgress records progress on the playable item, not on each TMDB
 // member. A combined S01E01E02 file therefore has one honest resume position.
-func (s *Store) SaveEpisodeProgress(ctx context.Context, id int64, position, duration float64, now time.Time) (Progress, error) {
+func (s *Store) SaveEpisodeProgress(ctx context.Context, profileID, id int64, position, duration float64, now time.Time) (Progress, error) {
 	if position < 0 {
 		position = 0
 	}
@@ -38,15 +39,33 @@ func (s *Store) SaveEpisodeProgress(ctx context.Context, id int64, position, dur
 	if duration > 0 {
 		durationValue = duration
 	}
-	if _, err := s.db.ExecContext(ctx, `
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Progress{}, fmt.Errorf("saving progress for episode %d: %w", id, err)
+	}
+	defer tx.Rollback()
+
+	// The duration belongs to the file and stays on the item; only the position
+	// moves to the viewer. No legacy mirror here: v1.5.0 has never heard of an
+	// episode, so there is nothing for a rollback to read.
+	if _, err := tx.ExecContext(ctx, `
 		UPDATE episode_items SET
-			position_seconds = ?,
 			duration_seconds = COALESCE(?, duration_seconds),
-			watched_at = ?,
-			finished = ?,
 			updated_at = ?
-		WHERE id = ?`,
-		remembered, durationValue, watchedAt, boolToInt(finished), now.Unix(), id); err != nil {
+		WHERE id = ?`, durationValue, now.Unix(), id); err != nil {
+		return Progress{}, fmt.Errorf("saving progress for episode %d: %w", id, err)
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO episode_progress (profile_id, episode_item_id, position_seconds, watched_at, finished)
+		VALUES (?, ?, ?, ?, ?)
+		ON CONFLICT(profile_id, episode_item_id) DO UPDATE SET
+			position_seconds = excluded.position_seconds,
+			watched_at       = excluded.watched_at,
+			finished         = excluded.finished`,
+		profileID, id, remembered, watchedAt, boolToInt(finished)); err != nil {
+		return Progress{}, fmt.Errorf("saving progress for episode %d: %w", id, err)
+	}
+	if err := tx.Commit(); err != nil {
 		return Progress{}, fmt.Errorf("saving progress for episode %d: %w", id, err)
 	}
 
@@ -62,16 +81,19 @@ func (s *Store) SaveEpisodeProgress(ctx context.Context, id int64, position, dur
 	return progress, nil
 }
 
-func (s *Store) ResetEpisodeProgress(ctx context.Context, id int64) error {
-	res, err := s.db.ExecContext(ctx, `
-		UPDATE episode_items SET
-			position_seconds = 0, watched_at = 0, finished = 0, updated_at = ?
-		WHERE id = ?`, time.Now().Unix(), id)
+func (s *Store) ResetEpisodeProgress(ctx context.Context, profileID, id int64) error {
+	var one int
+	err := s.db.QueryRowContext(ctx, `SELECT 1 FROM episode_items WHERE id = ?`, id).Scan(&one)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNoSuchEpisodeItem
+	}
 	if err != nil {
 		return fmt.Errorf("resetting progress for episode %d: %w", id, err)
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return ErrNoSuchEpisodeItem
+	if _, err := s.db.ExecContext(ctx,
+		`DELETE FROM episode_progress WHERE profile_id = ? AND episode_item_id = ?`,
+		profileID, id); err != nil {
+		return fmt.Errorf("resetting progress for episode %d: %w", id, err)
 	}
 	return nil
 }

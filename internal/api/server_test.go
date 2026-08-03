@@ -13,6 +13,7 @@ import (
 	"github.com/Benitoow/theia-media/internal/config"
 	"github.com/Benitoow/theia-media/internal/db"
 	"github.com/Benitoow/theia-media/internal/library"
+	"github.com/Benitoow/theia-media/internal/profiles"
 )
 
 // bundle stands in for a real SvelteKit build: an entry point, a hashed asset
@@ -53,6 +54,7 @@ func newTestServerWithLibrary(t *testing.T, web fstest.MapFS) (http.Handler, *li
 		Config:    &cfg,
 		Library:   service,
 		State:     db.NewState(database),
+		Profiles:  profiles.New(database),
 		Web:       web,
 		Version:   "test-version",
 		KeySource: config.KeyMissing,

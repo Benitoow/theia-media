@@ -40,7 +40,7 @@ func episodeFixture(t *testing.T) (http.Handler, *library.Service, library.Serie
 	if err != nil || len(seriesList) != 1 {
 		t.Fatalf("series = %+v, err = %v", seriesList, err)
 	}
-	season, err := service.GetSeason(t.Context(), seriesList[0].ID, 1)
+	season, err := service.GetSeason(t.Context(), defaultProfileID, seriesList[0].ID, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +121,7 @@ func TestEpisodeProgressAndSeriesHome(t *testing.T) {
 
 func TestEpisodeSelectedAudioForcesRemuxAndOwnershipIsEnforced(t *testing.T) {
 	handler, service, _, items := episodeFixture(t)
-	first, err := service.GetEpisodeItem(t.Context(), items[0].ID)
+	first, err := service.GetEpisodeItem(t.Context(), defaultProfileID, items[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func TestEpisodeSelectedAudioForcesRemuxAndOwnershipIsEnforced(t *testing.T) {
 		t.Fatalf("stream decision = %+v", info)
 	}
 
-	second, err := service.GetEpisodeItem(t.Context(), items[1].ID)
+	second, err := service.GetEpisodeItem(t.Context(), defaultProfileID, items[1].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestEpisodeSelectedAudioForcesRemuxAndOwnershipIsEnforced(t *testing.T) {
 
 func TestEpisodeDirectStreamSupportsRanges(t *testing.T) {
 	handler, service, _, items := episodeFixture(t)
-	item, err := service.GetEpisodeItem(t.Context(), items[0].ID)
+	item, err := service.GetEpisodeItem(t.Context(), defaultProfileID, items[0].ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,3 +187,6 @@ func TestEpisodeDirectStreamSupportsRanges(t *testing.T) {
 		t.Fatalf("direct audio selection = %d", res.StatusCode)
 	}
 }
+
+// defaultProfileID is the profile migration 0009 creates.
+const defaultProfileID int64 = 1
