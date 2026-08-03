@@ -160,6 +160,19 @@ func (s *Store) Delete(ctx context.Context, id int64) error {
 	}
 	defer tx.Rollback()
 
+	// Existence is checked before the last-profile rule, and the order matters:
+	// the other way round, deleting an id that does not exist reported "the last
+	// profile cannot be deleted" whenever one profile remained -- a true
+	// sentence about the wrong subject, which is worse than a plain 404.
+	var exists int
+	err = tx.QueryRowContext(ctx, `SELECT 1 FROM profiles WHERE id = ?`, id).Scan(&exists)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNoSuchProfile
+	}
+	if err != nil {
+		return fmt.Errorf("deleting profile %d: %w", id, err)
+	}
+
 	var count int
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM profiles`).Scan(&count); err != nil {
 		return fmt.Errorf("deleting profile %d: %w", id, err)

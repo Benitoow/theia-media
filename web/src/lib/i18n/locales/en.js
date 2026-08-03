@@ -295,6 +295,58 @@ export const strings = {
 			'renaming the file will trigger another search during the next scan.'
 	},
 
+	profiles: {
+		question: "Who's watching?",
+		defaultName: 'Main profile',
+		manage: 'Manage profiles',
+		done: 'Done',
+		switch: 'Switch profile',
+		current: (name) => `Active profile: ${name}`,
+		choose: (name) => `Watch as ${name}`,
+		add: 'Add a profile',
+		create: 'Create profile',
+		cancel: 'Cancel',
+		nameLabel: 'Profile name',
+		namePlaceholder: 'Mimi',
+		edit: (name) => `Edit ${name}`,
+		editShort: 'Edit',
+		save: 'Save',
+		picture: 'Picture',
+		pictureChange: 'Choose a picture',
+		pictureRemove: 'Remove the picture',
+		pictureHint:
+			'The picture stays on this machine. It is cropped square and re-encoded; ' +
+			'nothing from the original file is kept.',
+		pictureUploading: 'Uploading the picture…',
+		details: 'Details',
+		createdAt: 'Created',
+		moviesStarted: 'Movies started',
+		moviesFinished: 'Movies finished',
+		episodesStarted: 'Episodes started',
+		episodesFinished: 'Episodes finished',
+		lastWatched: 'Last watched',
+		never: 'Never',
+		delete: 'Delete this profile',
+		deleteConfirm: (name) =>
+			`Delete ${name}? Their progress will be lost. Other profiles are unaffected.`,
+		deleteYes: 'Delete',
+		empty: 'No profiles.',
+		loading: 'Loading profiles…',
+		codes: {
+			invalid_profile_id: 'This profile cannot be identified.',
+			invalid_profile_payload: 'The request could not be read.',
+			invalid_profile_name:
+				'A name is required, without control characters, and at most 40 characters.',
+			profile_not_found: 'This profile no longer exists. It may have been deleted elsewhere.',
+			profile_image_not_found: 'This profile has no picture.',
+			profile_limit_reached: 'The maximum number of profiles has been reached.',
+			profile_last_remaining: 'The last profile cannot be deleted.',
+			profile_image_too_large: 'This image is too large.',
+			profile_image_unreadable: 'This file is not a usable image.',
+			profile_unavailable: 'Profiles are unavailable at the moment.'
+		}
+	},
+
 	settings: {
 		heading: 'Settings',
 		interface: 'Interface',

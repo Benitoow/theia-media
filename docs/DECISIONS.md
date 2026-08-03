@@ -1173,6 +1173,36 @@ asking for gigabytes. One EXIF tag is parsed by hand, because a full parser is a
 dependency and a much larger surface for a single integer, and every other field
 in that block is precisely what Theia throws away.
 
+## 50. One profile is not a question
+
+**A deliberate narrowing of the maintainer's answer in decision 48, recorded
+because it is a narrowing.** The startup gate was specified as "show the chooser
+whenever no profile is active in this browser". Built exactly that way, a
+household that never creates a second profile meets "Qui regarde ?" on every new
+device, with one card to press. That is a click whose answer is already known,
+standing between a television and a film — and the founding criterion is a film
+in under three clicks.
+
+So a lone profile is adopted silently, and the chooser appears the moment there
+is an actual choice: two or more profiles, or a stored selection that named a
+profile since deleted elsewhere. Everything else in decision 48 stands. If the
+maintainer wants the screen unconditionally, the change is one condition in
+`profiles.svelte.js`.
+
+Two things were found by looking at the built screens rather than the code:
+
+- **A middot ended a wrapped line.** The file facts render as separate children
+  with separators between them, so `2:30 ·` could sit alone at the right edge
+  with `2 pistes audio` below. The separator is now inside the same inline box
+  as the fact it introduces.
+- **Deleting an unknown profile reported the wrong reason.** The last-profile
+  rule was checked before existence, so removing an id that did not exist
+  answered "the last profile cannot be deleted" whenever one remained — a true
+  sentence about the wrong subject. Existence is checked first.
+
+A profile's page is addressable as `/profils?gerer=1&profil=<id>` so a reload
+does not throw the viewer back to the row they came from.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

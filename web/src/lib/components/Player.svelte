@@ -2,6 +2,7 @@
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { apiFetch, getJSON, formatTime, displayTitle } from '$lib/api.js';
 	import { strings as t } from '$lib/strings.js';
+	import { profiles } from '$lib/profiles.svelte.js';
 	import Icon from './Icon.svelte';
 
 	// fileId and audioTrackId come from the chooser on the film page. When they
@@ -85,7 +86,7 @@
 
 		try {
 			const query = audioQuery ? `?${audioQuery}` : '';
-			info = await getJSON(`${base}/info${query}`);
+			info = await getJSON(profiles.url(`${base}/info${query}`));
 		} catch (error) {
 			phase = 'failed';
 			failureCode = error?.code ?? 'unavailable';
@@ -250,7 +251,7 @@
 		lastSaved = seconds;
 
 		try {
-			const response = await apiFetch(`/api/library/movies/${movie.id}/progress`, {
+			const response = await apiFetch(profiles.url(`/api/library/movies/${movie.id}/progress`), {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ position_seconds: seconds, duration_seconds: duration }),
@@ -561,7 +562,7 @@
 				<button
 					type="button"
 					onclick={async () => {
-						await apiFetch(`/api/library/movies/${movie.id}/progress`, { method: 'DELETE' });
+						await apiFetch(profiles.url(`/api/library/movies/${movie.id}/progress`), { method: 'DELETE' });
 						start(0);
 					}}
 					class="tv-action cursor-pointer"

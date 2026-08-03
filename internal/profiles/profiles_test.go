@@ -357,3 +357,13 @@ func TestDeletingTheDefaultProfileRepointsTheLegacyMirror(t *testing.T) {
 		t.Errorf("legacy mirror = %v/%v, want the promoted profile's 240/800", position, watchedAt)
 	}
 }
+
+// Deleting an id that does not exist is a 404, even when a single profile
+// remains. Checking the count first reported "the last profile cannot be
+// deleted" -- a true sentence about the wrong subject.
+func TestDeletingAnUnknownProfileIsNotTheLastProfileError(t *testing.T) {
+	store, _ := newTestStore(t)
+	if err := store.Delete(t.Context(), 9999); err != ErrNoSuchProfile {
+		t.Errorf("deleting an unknown id = %v, want ErrNoSuchProfile", err)
+	}
+}

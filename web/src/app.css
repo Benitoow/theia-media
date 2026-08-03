@@ -1217,6 +1217,10 @@
 		line-height: 1.45;
 	}
 
+	.file-option-fact {
+		white-space: nowrap;
+	}
+
 	.file-option-sep {
 		color: var(--color-faint);
 	}
@@ -1246,6 +1250,280 @@
 		color: var(--color-parchment);
 		font-size: var(--text-small);
 		line-height: 1.5;
+	}
+
+	/* The chooser owns the viewport: brand, question, one row, one control.
+	   Chrome, so §6's density rules do not apply -- but nor does the card grid's
+	   compactness. Negative space is the composition here. */
+	.profile-screen {
+		position: relative;
+		display: flex;
+		min-block-size: 100svh;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: clamp(1.5rem, 3vw, 2.5rem);
+		padding: clamp(3rem, 8vw, 6rem) var(--page-gutter);
+		text-align: center;
+	}
+
+	/* The detail page has work under its heading, so it starts at the top rather
+	   than centring a tall column that would push the delete action off screen. */
+	.profile-screen--page {
+		justify-content: flex-start;
+		padding-block-start: clamp(2.5rem, 6vw, 4rem);
+	}
+
+	/* Top-left, as the reference has it, rather than stacked above the question:
+	   the brand is chrome, not part of the composition the eye should land on. */
+	.profile-brand {
+		position: absolute;
+		inset-block-start: clamp(1.25rem, 3vw, 2.25rem);
+		inset-inline-start: var(--page-gutter);
+	}
+
+	.profile-brand img {
+		width: clamp(6rem, 9vw, 8rem);
+		height: auto;
+		opacity: 0.9;
+	}
+
+	.profile-question {
+		margin: 0;
+		font-size: clamp(2.5rem, 6vw, 4.5rem);
+	}
+
+	/* One row of options. It follows §9: every card shares a width, so the D-pad
+	   cannot skip the one with the shortest name. */
+	.profile-row {
+		display: flex;
+		max-width: 100%;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		justify-content: center;
+		gap: clamp(1rem, 2.5vw, 2rem);
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.profile-card {
+		display: flex;
+		width: var(--profile-card-width, clamp(8rem, 12vw, 11rem));
+		flex-direction: column;
+		align-items: center;
+		gap: 0.85rem;
+		border: 0;
+		background: transparent;
+		color: var(--color-muted);
+		cursor: pointer;
+		transition: color var(--duration-fast) var(--ease-cine);
+	}
+
+	.profile-card:hover,
+	.profile-card:focus-visible {
+		color: var(--color-bone);
+	}
+
+	.profile-card-name {
+		overflow: hidden;
+		font-size: clamp(0.9375rem, 1.1vw, 1.125rem);
+		line-height: 1.3;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		max-width: 100%;
+	}
+
+	.profile-card-edit {
+		color: var(--color-faint);
+	}
+
+	/* The mark: a picture, or an initial on a colour derived from the name. Never
+	   a broken-image icon and never an empty square. */
+	.profile-mark {
+		display: grid;
+		width: var(--profile-mark-size, clamp(8rem, 12vw, 11rem));
+		aspect-ratio: 1;
+		place-items: center;
+		overflow: hidden;
+		border: 1px solid var(--color-line);
+		border-radius: clamp(0.75rem, 1.4vw, 1.125rem);
+		background:
+			linear-gradient(150deg,
+				hsl(var(--profile-hue, 40) 14% 20%),
+				hsl(var(--profile-hue, 40) 12% 11%));
+		color: var(--color-bone);
+		font-family: var(--font-display);
+		font-size: calc(var(--profile-mark-size, 9rem) * 0.42);
+		line-height: 1;
+		transition: border-color var(--duration-fast) var(--ease-cine);
+	}
+
+	.profile-mark img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.profile-mark--round {
+		border-radius: 999px;
+	}
+
+	.profile-mark--empty {
+		background: var(--color-surface);
+		color: var(--color-muted);
+	}
+
+	.profile-card:hover .profile-mark,
+	.profile-card:focus-visible .profile-mark,
+	.profile-card--active .profile-mark {
+		border-color: var(--color-bone);
+	}
+
+	.profile-screen-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		gap: 1.25rem 1.75rem;
+		margin-top: clamp(1rem, 3vw, 2.5rem);
+	}
+
+	.nav-profile {
+		display: inline-flex;
+		align-items: center;
+		margin-inline-start: 0.35rem;
+		padding-inline: 0.35rem;
+	}
+
+	/* Two stacked panels: identity, then the local facts. */
+	.profile-detail {
+		display: flex;
+		width: min(100%, 46rem);
+		flex-direction: column;
+		gap: 1.25rem;
+		text-align: start;
+	}
+
+	.profile-identity {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		gap: clamp(1.25rem, 3vw, 2rem);
+		padding: clamp(1.25rem, 3vw, 2rem);
+	}
+
+	.profile-name-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.6rem;
+		margin-top: 0.5rem;
+	}
+
+	.profile-input {
+		min-block-size: var(--target-min);
+		min-width: 0;
+		flex: 1 1 12rem;
+		border: 1px solid var(--color-line);
+		border-radius: 999px;
+		padding-inline: 1.1rem;
+		background: var(--color-surface);
+		color: var(--color-bone);
+		font-size: clamp(0.9375rem, 1vw, 1.0625rem);
+	}
+
+	.profile-input::placeholder {
+		color: var(--color-faint);
+	}
+
+	.profile-picture-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		margin-top: 1rem;
+	}
+
+	.profile-hint,
+	.profile-error {
+		max-width: 38rem;
+		margin-top: 0.75rem;
+		color: var(--color-muted);
+		font-size: var(--text-small);
+		line-height: 1.5;
+	}
+
+	.profile-error {
+		border-left: 1px solid var(--color-error);
+		padding-left: 0.9rem;
+		color: var(--color-parchment);
+	}
+
+	.profile-facts {
+		padding: clamp(1.25rem, 3vw, 2rem);
+	}
+
+	.profile-facts dl {
+		margin-top: 1rem;
+	}
+
+	.profile-facts dl > div {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1rem;
+		border-block-start: 1px solid var(--color-line);
+		padding-block: 0.9rem;
+	}
+
+	.profile-facts dl > div:first-child {
+		border-block-start: 0;
+	}
+
+	.profile-facts dt {
+		color: var(--color-muted);
+		font-size: var(--text-small);
+	}
+
+	.profile-facts dd {
+		margin: 0;
+		color: var(--color-bone);
+		font-size: clamp(0.9375rem, 1vw, 1.0625rem);
+		font-weight: 500;
+	}
+
+	/* Destructive, isolated, and never the first thing focus lands on. */
+	.profile-destructive {
+		border-color: color-mix(in srgb, var(--color-error) 55%, transparent);
+		color: var(--color-error);
+	}
+
+	.profile-destructive:hover {
+		border-color: var(--color-error);
+		background: color-mix(in srgb, var(--color-error) 12%, transparent);
+		color: var(--color-error);
+	}
+
+	.profile-delete {
+		align-self: flex-start;
+	}
+
+	.profile-danger {
+		padding: clamp(1.25rem, 3vw, 1.75rem);
+	}
+
+	.profile-danger-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		margin-top: 1.25rem;
+	}
+
+	.profile-create {
+		width: min(100%, 34rem);
+		padding: clamp(1.25rem, 3vw, 1.75rem);
+		text-align: start;
 	}
 
 	.row-scroll-frame {

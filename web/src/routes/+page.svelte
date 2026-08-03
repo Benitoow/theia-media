@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { getJSON } from '$lib/api.js';
+	import { profiles } from '$lib/profiles.svelte.js';
 	import { strings as t } from '$lib/strings.js';
 	import Hero from '$lib/components/Hero.svelte';
 	import Row from '$lib/components/Row.svelte';
@@ -16,7 +17,7 @@
 		// Asked alongside the library rather than before it, so a normal launch
 		// pays one extra request in parallel and never a round trip in series.
 		const [library, onboarding] = await Promise.allSettled([
-			getJSON('/api/library/home'),
+			getJSON(profiles.url('/api/library/home')),
 			getJSON('/api/onboarding')
 		]);
 

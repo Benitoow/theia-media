@@ -98,10 +98,15 @@ il n'affiche aucune prose technique du serveur.
 
 ### M2-FE — Profils, nouvelle mouture
 
-**Statut : prêt à démarrer. Contrat visuel figé le 03/08/2026 (décision 48) et
-backend livré — voir la section M2-BE de `theia-v2-backend.md` pour les routes,
-les fixtures et les codes d'erreur.** Ne pas recycler l'ancien écran `/profils`,
-même comme raccourci temporaire.
+**Statut : implémenté et vérifié à l'écran dans un vrai navigateur. Contrat
+visuel de la décision 48, backend M2-BE. Reste à valider : la lecture à trois
+mètres sur une vraie télévision et le parcours D-pad complet à la télécommande.**
+
+Livré : `web/src/routes/profils/+page.svelte`, `ProfileMark.svelte`,
+`profiles.svelte.js`, l'entrée de nav et le `?profile=` sur les requêtes.
+La décision 50 note le seul écart assumé par rapport à la décision 48 : un
+profil unique est adopté en silence, le sélecteur n'apparaissant que lorsqu'il y
+a un vrai choix. Ne pas recycler l'ancien écran `/profils`.
 
 Le profil actif vit en `localStorage`, comme la langue, et voyage en
 `?profile={id}` sur les routes de catalogue et de progression. Un id inconnu

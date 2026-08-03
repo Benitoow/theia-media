@@ -2,8 +2,11 @@
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { i18n } from '$lib/i18n/index.svelte.js';
 	import { strings as t } from '$lib/strings.js';
+	import { profiles } from '$lib/profiles.svelte.js';
+	import ProfileMark from '$lib/components/ProfileMark.svelte';
 
 	let { children } = $props();
 
@@ -14,13 +17,25 @@
 	const atHome = $derived(path === '/');
 	const inLibrary = $derived(path === '/films' || path.startsWith('/films/'));
 	const inSettings = $derived(path === '/reglages' || path.startsWith('/reglages/'));
+	// The chooser owns the whole viewport: the navigation is suppressed for that
+	// route only, so the first arrow key lands on a profile rather than on a link.
+	const inProfiles = $derived(path === '/profils' || path.startsWith('/profils/'));
 
 	// The pill keeps a light scrim over arbitrary hero artwork, then strengthens
 	// once the page moves so it never becomes a hard opaque band.
 	let scrolled = $state(false);
 
-	onMount(() => {
+	onMount(async () => {
 		i18n.bootstrap();
+		try {
+			await profiles.load();
+			// The application opens by asking who is watching, whenever this
+			// browser has no answer -- or has one that was deleted elsewhere.
+			if (profiles.needsSelection && !inProfiles) goto('/profils');
+		} catch {
+			// A server without profiles still serves the library. The chooser is
+			// not worth blocking a film over.
+		}
 	});
 
 	$effect(() => {
@@ -134,6 +149,7 @@
 	onkeydown={navigateByRemote}
 />
 
+{#if !inProfiles}
 <div class="site-nav-wrap">
 	<nav class="site-nav" data-scrolled={scrolled} aria-label={t.a11y.mainNavigation}>
 		<a
@@ -170,9 +186,25 @@
 			>
 				{t.nav.settings}
 			</a>
+
+			<!-- A shortcut to the chooser, not a menu that expands here. The
+			     reference showed a dropdown; decision 35 had already measured that
+			     a profile control inside this pill is unreadable at three metres
+			     and steals the first D-pad press. -->
+			{#if profiles.active}
+				<a
+					href="/profils"
+					class="nav-target nav-profile"
+					aria-label={t.profiles.switch}
+					title={t.profiles.current(profiles.active.name || t.profiles.defaultName)}
+				>
+					<ProfileMark profile={profiles.active} round size="2.25rem" />
+				</a>
+			{/if}
 		</div>
 	</nav>
 </div>
+{/if}
 
 {@render children()}
 

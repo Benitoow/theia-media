@@ -7,6 +7,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
 	import FileChoice from '$lib/components/FileChoice.svelte';
+	import { profiles } from '$lib/profiles.svelte.js';
 
 	/** @type {'loading' | 'ready' | 'missing'} */
 	let state = $state('loading');
@@ -39,7 +40,7 @@
 
 	onMount(async () => {
 		try {
-			movie = await getJSON(`/api/library/movies/${$page.params.id}`);
+			movie = await getJSON(profiles.url(`/api/library/movies/${$page.params.id}`));
 			// `files` only exists on the detail payload. The primary file is the
 			// server's existing bookkeeping, not a quality judgement, so it is a
 			// legitimate starting point for a choice the user still owns.

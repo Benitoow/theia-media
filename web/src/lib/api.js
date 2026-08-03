@@ -4,6 +4,7 @@
 // on disk, and nothing in the interface ever makes an external request.
 
 import { formatRuntime as formatLocalizedRuntime } from '$lib/i18n/index.svelte.js';
+import { profiles } from '$lib/profiles.svelte.js';
 
 export async function apiFetch(path, options) {
 	return fetch(path, options);
@@ -64,7 +65,9 @@ export async function getAllMovies(onProgress) {
 	const movies = [];
 
 	while (offset < total) {
-		const page = await getJSON(`/api/library/movies?limit=${pageSize}&offset=${offset}`);
+		const page = await getJSON(
+			profiles.url(`/api/library/movies?limit=${pageSize}&offset=${offset}`)
+		);
 		total = page.total ?? page.movies.length;
 		movies.push(...page.movies);
 		offset += pageSize;

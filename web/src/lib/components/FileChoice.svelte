@@ -136,7 +136,13 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<!--
+	The handler sits on the section because it coordinates its focusable
+	children; the section itself is never focused and adds no stop. Silencing the
+	rule rather than giving it a role: an interactive role here would announce a
+	control that does not exist.
+-->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <section class="file-choice" bind:this={root} onkeydown={onKeydown}>
 	<h2 class="label">{many ? t.film.files.many : t.film.files.one}</h2>
 
@@ -174,11 +180,14 @@
 						{/if}
 					</span>
 
+					<!-- The separator is glued to the fact that follows it, inside one
+					     inline box. As separate children the middot could end a wrapped
+					     line, leaving "2:30 ·" hanging at the right edge. -->
 					<span class="file-option-facts">
 						{#each facts(file) as fact, index (fact + index)}
-							{#if index > 0}<span class="file-option-sep" aria-hidden="true">·</span>{/if}<span
-								>{fact}</span
-							>
+							<span class="file-option-fact">
+								{#if index > 0}<span class="file-option-sep" aria-hidden="true">·&nbsp;</span>{/if}{fact}
+							</span>
 						{/each}
 					</span>
 

@@ -297,6 +297,58 @@ export const strings = {
 			'renommer celui-ci relance une recherche à la prochaine analyse.'
 	},
 
+	profiles: {
+		question: 'Qui regarde ?',
+		defaultName: 'Profil principal',
+		manage: 'Gérer les profils',
+		done: 'Terminé',
+		switch: 'Changer de profil',
+		current: (name) => `Profil actif : ${name}`,
+		choose: (name) => `Regarder en tant que ${name}`,
+		add: 'Ajouter un profil',
+		create: 'Créer le profil',
+		cancel: 'Annuler',
+		nameLabel: 'Nom du profil',
+		namePlaceholder: 'Mimi',
+		edit: (name) => `Modifier ${name}`,
+		editShort: 'Modifier',
+		save: 'Enregistrer',
+		picture: 'Photo',
+		pictureChange: 'Choisir une photo',
+		pictureRemove: 'Retirer la photo',
+		pictureHint:
+			'La photo reste sur cette machine. Elle est recadrée en carré et ré-enregistrée ; ' +
+			'aucune donnée du fichier d’origine n’est conservée.',
+		pictureUploading: 'Envoi de la photo…',
+		details: 'Détails',
+		createdAt: 'Créé le',
+		moviesStarted: 'Films commencés',
+		moviesFinished: 'Films terminés',
+		episodesStarted: 'Épisodes commencés',
+		episodesFinished: 'Épisodes terminés',
+		lastWatched: 'Dernière lecture',
+		never: 'Jamais',
+		delete: 'Supprimer ce profil',
+		deleteConfirm: (name) =>
+			`Supprimer ${name} ? Sa progression sera perdue. Les autres profils ne changent pas.`,
+		deleteYes: 'Supprimer',
+		empty: 'Aucun profil.',
+		loading: 'Chargement des profils…',
+		codes: {
+			invalid_profile_id: "Ce profil n'est pas identifiable.",
+			invalid_profile_payload: "La demande n'a pas pu être lue.",
+			invalid_profile_name:
+				'Un nom est requis, sans caractère de contrôle, et ne peut pas dépasser 40 caractères.',
+			profile_not_found: "Ce profil n'existe plus. Il a peut-être été supprimé ailleurs.",
+			profile_image_not_found: "Ce profil n'a pas de photo.",
+			profile_limit_reached: 'Le nombre maximal de profils est atteint.',
+			profile_last_remaining: 'Le dernier profil ne peut pas être supprimé.',
+			profile_image_too_large: 'Cette image est trop lourde.',
+			profile_image_unreadable: "Ce fichier n'est pas une image utilisable.",
+			profile_unavailable: 'Les profils ne sont pas disponibles pour le moment.'
+		}
+	},
+
 	settings: {
 		heading: 'Réglages',
 		interface: 'Interface',
