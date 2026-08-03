@@ -1741,6 +1741,250 @@
 		padding-top: 1.75rem;
 	}
 
+	/* Remote access. A settings section rather than a screen of its own: it is
+	   configuration, and it only ever exists on the LAN. */
+	.remote-caution,
+	.remote-error,
+	.remote-note {
+		display: flex;
+		max-width: 46rem;
+		align-items: flex-start;
+		gap: 0.6rem;
+		margin-top: 0.9rem;
+		color: var(--color-muted);
+		font-size: var(--text-small);
+		line-height: 1.55;
+	}
+
+	.remote-caution {
+		border-left: 1px solid var(--color-warning);
+		padding-left: 0.9rem;
+		color: var(--color-parchment);
+	}
+
+	.remote-error {
+		border-left: 1px solid var(--color-error);
+		padding-left: 0.9rem;
+		color: var(--color-parchment);
+	}
+
+	.remote-note--warn {
+		border-left: 1px solid var(--color-warning);
+		padding-left: 0.9rem;
+		color: var(--color-parchment);
+	}
+
+	.remote-status {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1rem 3rem;
+		margin-top: 1.75rem;
+	}
+
+	.remote-status dt {
+		color: var(--color-muted);
+		font-size: var(--text-small);
+	}
+
+	.remote-status dd {
+		margin: 0.2rem 0 0;
+		color: var(--color-bone);
+		font-size: clamp(1rem, 1.1vw, 1.125rem);
+		font-weight: 500;
+	}
+
+	.remote-value--error {
+		color: var(--color-error);
+	}
+
+	.remote-fields {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1.25rem 2rem;
+		margin-top: 1.75rem;
+	}
+
+	.remote-field {
+		display: flex;
+		min-width: 0;
+		flex: 1 1 18rem;
+		max-width: 26rem;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	/* .profile-input carries a row-direction basis for the profile page. In this
+	   column it made the field grow to the height of the whole group, leaving the
+	   value stranded at the bottom of a very tall box. */
+	.remote-field .profile-input {
+		flex: none;
+		align-self: stretch;
+	}
+
+	.remote-help {
+		color: var(--color-muted);
+		font-size: var(--text-small);
+		line-height: 1.5;
+	}
+
+	.remote-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		margin-top: 1.5rem;
+	}
+
+	.remote-destructive {
+		border-color: color-mix(in srgb, var(--color-error) 55%, transparent);
+		color: var(--color-error);
+	}
+
+	.remote-destructive:hover {
+		border-color: var(--color-error);
+		background: color-mix(in srgb, var(--color-error) 12%, transparent);
+		color: var(--color-error);
+	}
+
+	.remote-devices {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		margin: 0 0 1rem;
+		padding: 0;
+		list-style: none;
+	}
+
+	.remote-device {
+		display: flex;
+		max-width: 52rem;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 1rem;
+		border: 1px solid var(--color-line);
+		border-radius: clamp(0.75rem, 1.2vw, 1rem);
+		padding: 0.9rem clamp(0.9rem, 1.4vw, 1.25rem);
+		background: var(--color-surface);
+	}
+
+	.remote-device-name {
+		color: var(--color-bone);
+		font-size: clamp(0.9375rem, 1vw, 1.0625rem);
+		font-weight: 500;
+	}
+
+	.remote-device-facts {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 1.1rem;
+		margin-top: 0.3rem;
+		color: var(--color-muted);
+		font-size: var(--text-small);
+	}
+
+	.remote-device-confirm {
+		flex-basis: 100%;
+	}
+
+	.remote-add {
+		margin-top: 1.5rem;
+	}
+
+	.remote-banner {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		gap: 0.35rem 0.9rem;
+		padding: calc(var(--nav-offset) + 0.5rem) var(--page-gutter) 0;
+		color: var(--color-muted);
+		font-size: var(--text-small);
+	}
+
+	/* The provisioning dialog. The key it shows exists nowhere else. */
+	.provision-backdrop {
+		position: fixed;
+		z-index: 60;
+		display: grid;
+		overflow-y: auto;
+		padding: clamp(1rem, 4vw, 3rem);
+		place-items: center;
+		background: rgba(11, 10, 9, 0.88);
+		inset: 0;
+		-webkit-backdrop-filter: blur(10px);
+		backdrop-filter: blur(10px);
+	}
+
+	.provision-panel {
+		width: min(100%, 34rem);
+		padding: clamp(1.5rem, 4vw, 2.5rem);
+		text-align: center;
+	}
+
+	.provision-warning {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.6rem;
+		margin-top: 1.25rem;
+		border-left: 1px solid var(--color-warning);
+		padding-left: 0.9rem;
+		color: var(--color-parchment);
+		font-size: var(--text-small);
+		line-height: 1.55;
+		text-align: start;
+	}
+
+	.provision-warning--strong {
+		border-left-color: var(--color-error);
+	}
+
+	.provision-qr {
+		display: grid;
+		width: min(100%, 17rem);
+		margin: 1.75rem auto 0;
+		padding: 0.9rem;
+		place-items: center;
+		border-radius: 1rem;
+		background: var(--color-bone);
+	}
+
+	.provision-qr :global(svg) {
+		width: 100%;
+		height: auto;
+	}
+
+	.provision-scan,
+	.provision-lost {
+		margin-top: 1rem;
+		color: var(--color-muted);
+		font-size: var(--text-small);
+		line-height: 1.5;
+	}
+
+	.provision-facts {
+		margin-top: 1.25rem;
+		color: var(--color-muted);
+		font-size: var(--text-small);
+	}
+
+	.provision-facts dd {
+		margin: 0.2rem 0 0;
+		color: var(--color-bone);
+		font-weight: 500;
+	}
+
+	.provision-actions {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 0.75rem;
+		margin-top: 1.75rem;
+	}
+
+	.provision-destructive {
+		border-color: color-mix(in srgb, var(--color-error) 55%, transparent);
+		color: var(--color-error);
+	}
+
 	.row-scroll-frame {
 		position: relative;
 	}

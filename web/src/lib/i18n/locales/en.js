@@ -303,6 +303,104 @@ export const strings = {
 			'renaming the file will trigger another search during the next scan.'
 	},
 
+	remote: {
+		heading: 'Remote access',
+		intro:
+			'Theia can be reached outside the local network through an embedded WireGuard tunnel. No account, no relay, no outside service: each device proves a key created here.',
+		router:
+			'Your router must forward the UDP port below to this machine. Never forward Theia’s TCP port: it has no authentication at all.',
+		cgnat:
+			'If your provider puts you behind CGNAT, no forwarding is possible and Theia cannot work around it.',
+		state: 'State',
+		stateDisabled: 'Disabled',
+		stateRunning: 'Running',
+		stateError: 'Error',
+		enable: 'Enable remote access',
+		disable: 'Disable',
+		port: 'Listening UDP port',
+		portHelp: 'The port your router forwards to this machine.',
+		portChange: 'Changing the port restarts the tunnel and briefly cuts connected devices.',
+		endpoint: 'Public address',
+		endpointPlaceholder: 'media.example.net:51820',
+		endpointHelp:
+			'As host:port, without http://. The public port may differ from the listening port.',
+		endpointExamples:
+			'Examples: media.example.net:51820, 203.0.113.10:51820, [2001:db8::10]:51820',
+		endpointChange:
+			'Changing this address does not update devices already created: edit their WireGuard configuration, or revoke and recreate them.',
+		reachability: 'Reachability',
+		unverified: 'Never confirmed',
+		unverifiedHelp:
+			'No device has proven the path yet. This is not an error: Theia does not test your router from outside.',
+		confirmed: 'Confirmed',
+		confirmedHelp:
+			'At least one device has completed a handshake since this start. It is not a permanent guarantee.',
+		save: 'Save',
+		saving: 'Saving…',
+		devices: 'Devices',
+		noDevices: 'No device has been created yet.',
+		addDevice: 'Add a device',
+		deviceName: 'Device name',
+		devicePlaceholder: 'Living room television',
+		create: 'Create',
+		creating: 'Creating…',
+		enableFirst: 'Enable remote access before creating a device.',
+		address: 'Address inside the tunnel',
+		lastHandshake: 'Last handshake',
+		neverConnected: 'Never connected',
+		traffic: 'Traffic',
+		trafficHelp: 'Tunnel network counters, not viewing statistics.',
+		revoke: 'Revoke',
+		revokeConfirm: (name) =>
+			'Revoke ' + name + '? This device loses access immediately and its key can never be reactivated.',
+		revokeYes: 'Revoke this device',
+		cancel: 'Cancel',
+
+		provisionTitle: (name) => name + ' is ready',
+		provisionWarning:
+			'This QR code and this file contain a private key. They will never be shown again.',
+		provisionScan: 'Scan this code with the device’s WireGuard app.',
+		copyConfig: 'Copy the configuration',
+		copied: 'Copied',
+		downloadConfig: 'Download the .conf',
+		done: 'I have kept the configuration',
+		closeWarning:
+			'Close without keeping the configuration? It cannot be shown again: you would have to revoke this device and create another.',
+		closeAnyway: 'Close anyway',
+		lost: 'Lost the configuration? Revoke this device and create a new one.',
+
+		remoteBadge: 'Remote access',
+		remoteContext: (name) => 'Connected from ' + name,
+		remoteRestricted:
+			'Settings, scanning and updates are only available from the local network.',
+
+		codes: {
+			invalid_remote_access_payload: 'The request could not be read.',
+			invalid_remote_listen_port: 'This port is not valid. Choose a port between 1 and 65535.',
+			invalid_remote_endpoint:
+				'This address is not valid. Expected host:port, without http:// or a path.',
+			invalid_remote_peer_payload: 'The request could not be read.',
+			invalid_remote_peer_name: 'A name is required, from 1 to 64 characters.',
+			invalid_remote_peer_id: 'This device cannot be identified.',
+			remote_peer_limit_reached: 'The limit of 32 active devices has been reached.',
+			remote_peer_not_found: 'This device no longer exists.',
+			remote_access_disabled: 'Enable remote access before this operation.',
+			remote_access_not_ready: 'The tunnel is not ready. Try again in a moment.',
+			remote_access_unavailable: 'Remote access is unavailable.'
+		},
+
+		reasons: {
+			remote_config_invalid: 'The saved configuration is not usable.',
+			remote_key_unavailable:
+				'The server key cannot be read. If this data directory came from another machine or another Windows account, disable remote access, remove remote-access.key, enable it again and recreate the devices.',
+			remote_listen_failed: 'The UDP port could not be opened. It may already be in use.',
+			remote_listener_stopped: 'The tunnel stopped on its own.',
+			remote_peer_reload_failed:
+				'Devices could not be reloaded; the tunnel was closed as a precaution.',
+			remote_restore_failed: 'The previous configuration could not be restored.'
+		}
+	},
+
 	series: {
 		title: 'Series',
 		loading: 'Loading series…',

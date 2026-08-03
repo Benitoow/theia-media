@@ -192,117 +192,29 @@ qui reste.
 
 ### M4-FE — Accès distant
 
-**Statut : prêt à démarrer depuis
-[`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a),
-après sa fusion sur `main`. Le backend est complet ; aucun écran M4 n'a été
-codé.**
+**Statut : implémenté et vérifié sur le LAN dans un vrai navigateur
+(décision 53). Reste à valider, et c'est indispensable avant de déclarer
+V2-M4 produit terminé : un vrai endpoint hors LAN, puis une session réelle
+derrière un client WireGuard.**
 
-M4 n'ajoute ni compte, ni mot de passe, ni profil. Le LAN reste zéro-login ; un
-appareil distant possède une clé WireGuard. Ne dessine donc pas un écran de
-connexion façon SaaS : ce serait un mensonge très bien aligné.
+Livré : `RemoteAccess.svelte` en section de Réglages, `ProvisionDialog.svelte`,
+`remote.svelte.js` pour la détection de contexte, la navigation distante et le
+saut de la requête d'onboarding hors LAN.
 
-#### Détection de contexte
+Ce qui a été vérifié ici : activation sur un port UDP libre, `state: running`,
+`reachability: unverified` présenté comme un fait et non comme une panne,
+création d'appareil avec QR et configuration, adresse `10.77.0.2`,
+`AllowedIPs = 10.77.0.1/32` dans le client, révocation, désactivation, et les
+refus `invalid_remote_listen_port` / `invalid_remote_endpoint` traduits.
 
-Le layout appelle tôt `GET /api/remote-access/session` :
+**La garantie de la décision 45 a été mesurée dans le navigateur** : après
+création, `PrivateKey` n'apparaît ni dans `localStorage`, ni dans
+`sessionStorage`, ni dans IndexedDB, ni dans l'URL, ni dans le document. Fermer
+sans conserver demande confirmation, puis efface tout.
 
-- `mode: "lan"` conserve toute la navigation actuelle ;
-- `mode: "remote"` permet catalogue, fiches et lecteur, mais retire de la
-  navigation les réglages, le scan, l'onboarding et l'updater ; le nom du pair
-  peut être affiché discrètement comme contexte, jamais comme profil humain.
-
-Depuis le tunnel, `GET /api/remote-access` et `GET /api/settings` renvoient 403.
-Ne les lance pas puis ne transforme pas le refus en écran rouge : ne les lance
-pas. La home actuelle tolère déjà l'échec de `/api/onboarding` via
-`Promise.allSettled`, mais M4-FE doit sauter cette requête en mode distant pour
-ne pas demander volontairement une donnée interdite.
-
-#### Écran local Réglages > Accès distant
-
-Uniquement sur le LAN :
-
-1. charger `GET /api/remote-access` ;
-2. afficher `disabled`, `running` ou `error`, le port UDP, l'endpoint public et
-   `reachability` ;
-3. sauvegarder par `PUT` avec les champs réellement modifiés ;
-4. expliquer que le routeur redirige **UDP**, jamais TCP 8383, et que CGNAT
-   n'est pas résolu par Theia ;
-5. créer un appareil par nom seulement quand `state == "running"` ;
-6. lister les pairs actifs, leur dernière poignée de main et leurs compteurs,
-   puis confirmer la révocation avant `DELETE`.
-
-`unverified` ne signifie pas « erreur » : aucun appareil n'a encore prouvé le
-chemin. `confirmed` signifie au moins un handshake observé depuis ce démarrage,
-pas une garantie éternelle. Les octets sont des compteurs réseau techniques,
-pas une statistique de visionnage.
-
-L'endpoint est saisi comme `hôte:port` sans `http://`. Donner des exemples
-distincts : `media.example.net:51820`, `203.0.113.10:51820` et
-`[2001:db8::10]:51820`. Le port public peut différer du port d'écoute. Changer
-l'endpoint ne met pas à jour les appareils existants : afficher ce fait avant
-la sauvegarde et proposer de modifier WireGuard ou de reprovisionner. Changer
-le port peut couper momentanément les appareils.
-
-#### Provisioning affiché une fois
-
-Après le 201 de `POST /api/remote-access/peers` :
-
-- ouvrir un dialogue D-pad complet avec le QR, le bouton de copie et le
-  téléchargement d'un `.conf` standard ;
-- annoncer clairement que le QR et le fichier contiennent une clé privée ;
-- garder `client_config` et `qr_svg` uniquement dans l'état mémoire du dialogue,
-  jamais dans `localStorage`, IndexedDB, logs, analytics ou URL ;
-- vider cet état à la fermeture/navigation ;
-- demander confirmation avant de fermer sans copie, car le backend ne les
-  renverra pas ;
-- si l'utilisateur les perd, proposer « Révoquer et recréer », pas « Afficher
-  à nouveau ».
-
-Le QR SVG vient du serveur local et doit rester dans le dialogue. Ne pas le
-mettre en cache par un service worker et ne pas en faire une miniature de carte.
-Le secret d'une télévision n'est pas un badge décoratif.
-
-#### Erreurs et récupération à traduire
-
-Formulaire : `invalid_remote_access_payload`, `invalid_remote_listen_port`,
-`invalid_remote_endpoint`, `invalid_remote_peer_payload`,
-`invalid_remote_peer_name`, `invalid_remote_peer_id`,
-`remote_peer_limit_reached`, `remote_peer_not_found`,
-`remote_access_disabled`, `remote_access_not_ready` et
-`remote_access_unavailable`.
-
-État serveur : `remote_config_invalid`, `remote_key_unavailable`,
-`remote_listen_failed`, `remote_listener_stopped`,
-`remote_peer_reload_failed`, `remote_restore_failed`. Chaque état d'erreur doit
-garder l'action **Désactiver** disponible. La récupération documentée est locale
-: désactiver, corriger le port/endpoint ou, pour une clé devenue illisible après
-copie du data-dir Windows, retirer `remote-access.key`, réactiver puis
-reprovisionner.
-
-Les gardes `lan_access_required`, `remote_peer_unknown`,
-`remote_host_invalid`, `remote_access_forbidden` et
-`remote_origin_forbidden` ont leur contrat dans M4-BE. Une session distante qui
-les rencontre doit revenir vers une page de récupération concise, sans proposer
-un mot de passe qui n'existe pas.
-
-#### Acceptation visuelle et réelle
-
-- écran lisible à trois mètres, focus toujours visible, clavier et D-pad ;
-- aucun QR ou bouton essentiel réservé au survol ;
-- états : disabled, enable invalide, running/unverified, running/confirmed,
-  aucun pair, 32 pairs, erreur listener, provisioning, fermeture sans copie,
-  révocation et session distante ;
-- français/anglais ajoutés ensemble et contrôle des 224 clés existantes étendu ;
-- test dans un vrai navigateur LAN pour la gestion, puis dans un vrai navigateur
-  derrière un client WireGuard pour home, fiches, lecture, progression et nav
-  sans réglages ;
-- validation avec un vrai endpoint hors du LAN indispensable avant de déclarer
-  **V2-M4 produit** terminé. Le backend a prouvé le tunnel en UDP loopback ; il
-  n'a pas prétendu posséder un routeur extérieur de poche.
-
-Le payload exact, la fixture, les codes HTTP, les limites et la récupération
-sont dans M4-BE. Le rapport de découverte
-`theia-v2-m4-discovery.md` explique les alternatives ; il ne remplace pas ce
-contrat.
+Ce qui **n'a pas** été vérifié : le mode distant lui-même. La navigation sans
+réglages et le saut d'onboarding sont implémentés selon le contrat, mais ils ne
+peuvent être observés que depuis une vraie session derrière WireGuard.
 
 ### M5-FE — Logo et identité de navigation
 

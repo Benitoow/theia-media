@@ -305,6 +305,104 @@ export const strings = {
 			'renommer celui-ci relance une recherche à la prochaine analyse.'
 	},
 
+	remote: {
+		heading: 'Accès distant',
+		intro:
+			'Theia peut être joint hors du réseau local par un tunnel WireGuard embarqué. Aucun compte, aucun relais, aucun service extérieur : chaque appareil prouve une clé créée ici.',
+		router:
+			'Votre box doit rediriger le port UDP ci-dessous vers cette machine. Ne redirigez jamais le port TCP de Theia : il n’a aucune authentification.',
+		cgnat:
+			'Si votre opérateur vous place derrière un CGNAT, aucune redirection n’est possible et Theia ne peut rien y faire.',
+		state: 'État',
+		stateDisabled: 'Désactivé',
+		stateRunning: 'Actif',
+		stateError: 'En erreur',
+		enable: 'Activer l’accès distant',
+		disable: 'Désactiver',
+		port: 'Port UDP d’écoute',
+		portHelp: 'Le port que votre box redirige vers cette machine.',
+		portChange: 'Changer le port redémarre le tunnel et coupe brièvement les appareils connectés.',
+		endpoint: 'Adresse publique',
+		endpointPlaceholder: 'media.exemple.net:51820',
+		endpointHelp:
+			'Sous la forme hôte:port, sans http://. Le port public peut différer du port d’écoute.',
+		endpointExamples:
+			'Exemples : media.exemple.net:51820, 203.0.113.10:51820, [2001:db8::10]:51820',
+		endpointChange:
+			'Changer cette adresse ne met pas à jour les appareils déjà créés : il faut modifier leur configuration WireGuard, ou les révoquer et les recréer.',
+		reachability: 'Joignabilité',
+		unverified: 'Jamais confirmée',
+		unverifiedHelp:
+			'Aucun appareil n’a encore prouvé le chemin. Ce n’est pas une erreur : Theia ne teste pas votre box depuis l’extérieur.',
+		confirmed: 'Confirmée',
+		confirmedHelp:
+			'Au moins un appareil a établi une liaison depuis ce démarrage. Ce n’est pas une garantie permanente.',
+		save: 'Enregistrer',
+		saving: 'Enregistrement…',
+		devices: 'Appareils',
+		noDevices: 'Aucun appareil n’a encore été créé.',
+		addDevice: 'Ajouter un appareil',
+		deviceName: 'Nom de l’appareil',
+		devicePlaceholder: 'Télévision du salon',
+		create: 'Créer',
+		creating: 'Création…',
+		enableFirst: 'Activez l’accès distant avant de créer un appareil.',
+		address: 'Adresse dans le tunnel',
+		lastHandshake: 'Dernière liaison',
+		neverConnected: 'Jamais connecté',
+		traffic: 'Trafic',
+		trafficHelp: 'Compteurs réseau du tunnel, pas des statistiques de visionnage.',
+		revoke: 'Révoquer',
+		revokeConfirm: (name) =>
+			'Révoquer ' + name + ' ? Cet appareil perdra l’accès immédiatement et sa clé ne pourra pas être réactivée.',
+		revokeYes: 'Révoquer cet appareil',
+		cancel: 'Annuler',
+
+		provisionTitle: (name) => name + ' est prêt',
+		provisionWarning:
+			'Ce QR code et ce fichier contiennent une clé privée. Ils ne seront plus jamais affichés.',
+		provisionScan: 'Scannez ce code avec l’application WireGuard de l’appareil.',
+		copyConfig: 'Copier la configuration',
+		copied: 'Copié',
+		downloadConfig: 'Télécharger le .conf',
+		done: 'J’ai conservé la configuration',
+		closeWarning:
+			'Fermer sans conserver la configuration ? Elle ne peut pas être réaffichée : il faudra révoquer cet appareil et en créer un autre.',
+		closeAnyway: 'Fermer quand même',
+		lost: 'Configuration perdue ? Révoquez cet appareil et créez-en un nouveau.',
+
+		remoteBadge: 'Accès distant',
+		remoteContext: (name) => 'Connecté depuis ' + name,
+		remoteRestricted:
+			'Les réglages, l’analyse et les mises à jour ne sont accessibles que depuis le réseau local.',
+
+		codes: {
+			invalid_remote_access_payload: 'La demande n’a pas pu être lue.',
+			invalid_remote_listen_port: 'Ce port n’est pas valide. Choisissez un port entre 1 et 65535.',
+			invalid_remote_endpoint:
+				'Cette adresse n’est pas valide. Attendu : hôte:port, sans http:// ni chemin.',
+			invalid_remote_peer_payload: 'La demande n’a pas pu être lue.',
+			invalid_remote_peer_name: 'Un nom est requis, de 1 à 64 caractères.',
+			invalid_remote_peer_id: 'Cet appareil n’est pas identifiable.',
+			remote_peer_limit_reached: 'La limite de 32 appareils actifs est atteinte.',
+			remote_peer_not_found: 'Cet appareil n’existe plus.',
+			remote_access_disabled: 'Activez l’accès distant avant cette opération.',
+			remote_access_not_ready: 'Le tunnel n’est pas prêt. Réessayez dans un instant.',
+			remote_access_unavailable: 'L’accès distant est indisponible.'
+		},
+
+		reasons: {
+			remote_config_invalid: 'La configuration enregistrée n’est pas utilisable.',
+			remote_key_unavailable:
+				'La clé du serveur est illisible. Si ce dossier de données vient d’une autre machine ou d’un autre compte Windows, désactivez l’accès distant, supprimez remote-access.key, réactivez et recréez les appareils.',
+			remote_listen_failed: 'Le port UDP n’a pas pu être ouvert. Il est peut-être déjà utilisé.',
+			remote_listener_stopped: 'Le tunnel s’est arrêté de lui-même.',
+			remote_peer_reload_failed:
+				'Les appareils n’ont pas pu être rechargés ; le tunnel a été fermé par sécurité.',
+			remote_restore_failed: 'L’ancienne configuration n’a pas pu être rétablie.'
+		}
+	},
+
 	series: {
 		title: 'Séries',
 		loading: 'Chargement des séries…',

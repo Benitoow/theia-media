@@ -1267,6 +1267,53 @@ decoded back through ffmpeg without error, and the chain reported
 `[1] → [2,3] → [5]` with the gap flagged on the middle item and nothing after
 the special.
 
+## 53. A remote session does not ask for what it may not have
+
+**Decided and verified in V2-M4-FE.** The layout reads
+`GET /api/remote-access/session` before anything else, because what follows
+depends on which side of the tunnel the browser is. On the LAN nothing changes.
+Inside the tunnel the settings link is not rendered and the home screen does not
+request onboarding.
+
+Not requesting is the point. `Promise.allSettled` would swallow the 403 quite
+happily, and the released home already did. But a deliberate refusal is a
+security boundary working, not a failure to tolerate: asking anyway trains the
+interface to treat a correct answer as noise, and the first person to add
+logging would see a wall of forbidden requests from every remote device. A
+session whose mode is unknown is treated as LAN, because hiding the settings
+from somebody sitting at home is the worse of the two mistakes.
+
+The panel says the uncomfortable parts out loud, before anything can be switched
+on: the router forwards **UDP** and never Theia's TCP port, which has no
+authentication at all; and CGNAT is stated as unsupported rather than quietly
+attempted. `unverified` is presented as a fact, not a fault — no device has
+proven the path, and Theia owns no probe that could say otherwise. `confirmed`
+says "since this start", not "guaranteed". The byte counters are labelled as
+tunnel traffic so nobody reads them as viewing statistics.
+
+Both consequences of a change are stated before the save, not discovered after
+it: a new endpoint does not reach devices already provisioned, and a new port
+restarts the listener. Only fields that actually changed are sent, so saving an
+endpoint never restarts a tunnel nobody asked to restart. Every error state
+keeps **Disable** reachable, because that is the documented way back and the LAN
+never went away.
+
+The provisioning dialog holds the one copy of a private key that will ever
+exist. It lives in component memory: verified in a real browser that after
+creating a device, `PrivateKey` appears in no localStorage value, no
+sessionStorage value, no IndexedDB database, not in the URL and not in the
+document — the QR renders as SVG and the configuration text is never written
+into the DOM. Closing without copying asks first, and closing clears it. Losing
+it offers "revoke and recreate", never "show it again", because a server that
+could show it twice would not have thrown it away.
+
+Two things found by running it: `.profile-input` carries a row-direction flex
+basis for the profile page, and reused in this column it stretched the port
+field to the height of the whole group, stranding the value at the bottom of a
+very tall box. And a device name typed with accents round-trips intact — the
+mojibake in the first screenshot came from the shell that created the peer, not
+from the server, which was checked rather than assumed.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

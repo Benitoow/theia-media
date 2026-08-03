@@ -6,6 +6,7 @@
 	import { i18n } from '$lib/i18n/index.svelte.js';
 	import { strings as t } from '$lib/strings.js';
 	import { profiles } from '$lib/profiles.svelte.js';
+	import { remote } from '$lib/remote.svelte.js';
 	import ProfileMark from '$lib/components/ProfileMark.svelte';
 
 	let { children } = $props();
@@ -30,6 +31,8 @@
 
 	onMount(async () => {
 		i18n.bootstrap();
+		// Asked first: what follows depends on which side of the tunnel this is.
+		await remote.load();
 		try {
 			await profiles.load();
 			// The application opens by asking who is watching, whenever this
@@ -181,13 +184,18 @@
 			>
 				{t.series.title}
 			</a>
-			<a
-				href="/reglages"
-				class="nav-target nav-link label"
-				aria-current={inSettings ? 'page' : undefined}
-			>
-				{t.nav.settings}
-			</a>
+			<!-- Settings, scanning, onboarding and the updater are LAN-only, and
+			     the remote guard refuses them outright. A link that always 403s is
+			     worse than no link (decision 44). -->
+			{#if !remote.isRemote}
+				<a
+					href="/reglages"
+					class="nav-target nav-link label"
+					aria-current={inSettings ? 'page' : undefined}
+				>
+					{t.nav.settings}
+				</a>
+			{/if}
 
 			<!-- A shortcut to the chooser, not a menu that expands here. The
 			     reference showed a dropdown; decision 35 had already measured that
@@ -206,6 +214,15 @@
 		</div>
 	</nav>
 </div>
+
+{#if remote.isRemote}
+	<p class="remote-banner">
+		<span class="label">{t.remote.remoteBadge}</span>
+		{#if remote.peer?.name}
+			<span>{t.remote.remoteContext(remote.peer.name)}</span>
+		{/if}
+	</p>
+{/if}
 {/if}
 
 {@render children()}

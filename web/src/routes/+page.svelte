@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { getJSON, imageURL } from '$lib/api.js';
 	import { profiles } from '$lib/profiles.svelte.js';
+	import { remote } from '$lib/remote.svelte.js';
 	import { strings as t } from '$lib/strings.js';
 	import Hero from '$lib/components/Hero.svelte';
 	import Row from '$lib/components/Row.svelte';
@@ -58,9 +59,13 @@
 	onMount(async () => {
 		// Asked alongside the library rather than before it, so a normal launch
 		// pays one extra request in parallel and never a round trip in series.
+		// Onboarding is LAN-only. allSettled would swallow the 403, but asking for
+		// something deliberately forbidden is still the wrong request to make:
+		// the guard is a boundary, not a fallback (decision 44).
+		await remote.load();
 		const [library, onboarding, series] = await Promise.allSettled([
 			getJSON(profiles.url('/api/library/home')),
-			getJSON('/api/onboarding'),
+			remote.isRemote ? Promise.resolve({ needed: false }) : getJSON('/api/onboarding'),
 			getJSON(profiles.url('/api/library/series/home'))
 		]);
 

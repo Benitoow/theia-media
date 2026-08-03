@@ -106,7 +106,7 @@ partir d'une ancienne conversation.
 | V2-M1 — fichiers et qualités | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Implémenté et vérifié à l'écran (décision 47) | Reste la validation sur un vrai film décodable multi-pistes |
 | V2-M2 — profils | Implémenté et vérifié (décision 48) | Implémenté et vérifié (décisions 48/50) | Reste la validation TV et D-pad |
 | V2-M3 — séries | [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7), [PR #5](https://github.com/Benitoow/theia-media/pull/5) | Implémenté et vérifié (décision 52) | Reste la validation sur les premiers fichiers série utilisateur |
-| V2-M4 — accès distant | [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a) | Prêt sur le contrat M4-BE après fusion | Reste M4-FE + validation via un vrai endpoint hors LAN |
+| V2-M4 — accès distant | [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a) | Implémenté et vérifié sur le LAN (décision 53) | Reste la validation via un vrai endpoint hors LAN |
 | V2-M5 — logo/navigation | Aucun chantier backend | Backlog | Direction artistique |
 | V2-M6 — optimisation matérielle | Différé | Attend `M6-BE` | À ouvrir après stabilisation du reste |
 
