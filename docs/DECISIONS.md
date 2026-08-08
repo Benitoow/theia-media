@@ -1672,6 +1672,72 @@ could produce replacements — the preview pane does not composite frames, and t
 Chrome extension was not connected — so the release ships with a note above the
 images saying so, rather than with images that quietly misrepresent the product.
 
+## 62. The screenshots are taken by a scripted headless Chrome, against a library built for the purpose
+
+The note decision 61 left in the README is gone: **the screenshots now show the
+v2 interface.** Both obstacles turned out to be worth writing down, because the
+next person to need a screenshot will meet them again.
+
+**The one-shot route does not work here.** `chrome --headless --screenshot`
+cannot seed `localStorage`, and the profile chooser intercepts every route until
+a profile is chosen, so every capture came back as *Qui regarde ?*. What works is
+a scripted session: launch headless Chrome with `--remote-debugging-port`, drive
+it over CDP, set `theia.profile`, then navigate and capture. Two details are
+easily lost — a device scale factor of 2 downscaled to 1600px is what makes the
+type crisp, and the scroll offset must be set explicitly on *every* shot,
+including to zero, because navigating back to a URL restores the offset the tab
+had last time and silently reframes the picture.
+
+**A screenshot needs a library, and there was not one.** After the placeholder
+files were deleted, the catalogue held one real film and seven codec fixtures
+with no artwork. The library here is forty films and twelve series as two-second
+H.264 clips cloned from one 3.5 kB master, named the way releases are named, in a
+folder outside the maintainer's own. TMDB matched all fifty-two with no failures,
+which is what puts real posters, backdrops and episode stills on screen. It is a
+few hundred kilobytes, and it is *valid media* — unlike the 3 TB of unopenable
+placeholders it replaces, which is the trap decision 59 was written about.
+
+The frames avoid the panels that expose the rig — the watched folder, the data
+directory, `VERSION dev` — not to flatter the product but because a reader
+should not have to work out which parts of a screenshot are real.
+
+**This is also how the profile bug in decision 63 was found.** A screenshot of a
+feature is a test of it: the home screen refused to show the resume hero, and
+that refusal was correct.
+
+## 63. A page's onMount runs before its layout's, and the profile went out with the request
+
+Every screen that reads progress fetched it **without `?profile=`** on a cold
+load. Svelte runs a page's `onMount` before its layout's, and the layout is where
+`profiles.load()` lived, so `profiles.url()` was called while `activeID` was
+still `null`.
+
+What that looked like: the home screen offered to resume a film nobody in the
+house had started, and showed the default profile's *Continuer à regarder*.
+Worse, and silently: the player wrote its position against the wrong viewer, so
+one person's evening landed in another person's history. Navigating within the
+application fixed it, which is exactly why it survived M2 and shipped in
+`v2.0.0` — it is invisible unless the first page you land on is the one that
+matters.
+
+The fix is a shared promise. `profiles.ready()` starts the load on first ask and
+hands every later caller the same promise, so the page and the layout race to
+start the *same* request instead of two, and everything that builds a
+`?profile=` URL awaits it first. A failed load resolves rather than rejects: a
+server without profiles still serves the library, and no screen should be held
+back over the question of who is watching.
+
+Measured before and after on a cold load of `/`:
+
+| | Request | Hero |
+|---|---|---|
+| Before | `/api/library/home` | featured |
+| After | `/api/library/home?profile=2` | resume |
+
+The general lesson, which is not about Svelte: **a component that reads shared
+async state must await it, not assume somebody above it already did.** Ordering
+that happens to hold is not ordering.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

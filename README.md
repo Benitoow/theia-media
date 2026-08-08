@@ -38,16 +38,22 @@ are to TMDB for metadata and to GitHub Releases for its own updates.
 
 ## See it
 
-> [!NOTE]
-> These screenshots predate the v2 interface — the 16/9 cards, the wordmark in
-> the navigation, profiles and series are all newer than the images below.
-> Replacing them is tracked as an open task.
+![Theia's home screen offering to resume an unfinished film, above a row of what else is part-watched](docs/screenshots/home.webp)
 
-![Theia movie library designed for a television](docs/screenshots/library.webp)
-
-| First connection | Settings |
+| Every film | Every series |
 | --- | --- |
-| ![Theia onboarding screen with a LAN QR code](docs/screenshots/onboarding.webp) | ![Theia settings screen](docs/screenshots/settings.webp) |
+| ![The film library with search, five sorts and genre filters, in a 16/9 card grid](docs/screenshots/library.webp) | ![The series library in the same grid](docs/screenshots/series.webp) |
+
+| A series, season by season | Remote access |
+| --- | --- |
+| ![A series page listing seasons and episodes, one of them offering to resume](docs/screenshots/serie.webp) | ![The remote access panel, off until it is turned on](docs/screenshots/settings.webp) |
+
+| First launch | Who is watching |
+| --- | --- |
+| ![The first launch screen showing a LAN address and a QR code](docs/screenshots/onboarding.webp) | ![The full-screen profile chooser](docs/screenshots/profiles.webp) |
+
+Shown in French, the default. English is a complete second catalogue and switches
+without a reload. Titles, synopses and artwork come from TMDB.
 
 ## What Theia does
 
