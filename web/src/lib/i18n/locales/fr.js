@@ -23,6 +23,37 @@ export const strings = {
 		mainNavigation: 'Navigation principale'
 	},
 
+	// Les conteneurs écrivent la langue en ISO 639, et pas toujours la même
+	// variante : « fre » et « fra » désignent le français, « fr » aussi. Le
+	// serveur transmet le code tel qu'il l'a lu (décision 25) ; c'est ici qu'il
+	// devient un mot. Un code absent s'affiche en majuscules, ce qui reste
+	// lisible et n'invente rien.
+	languages: {
+		fra: 'Français', fre: 'Français', fr: 'Français',
+		eng: 'Anglais', en: 'Anglais',
+		spa: 'Espagnol', es: 'Espagnol',
+		deu: 'Allemand', ger: 'Allemand', de: 'Allemand',
+		ita: 'Italien', it: 'Italien',
+		por: 'Portugais', pt: 'Portugais',
+		nld: 'Néerlandais', dut: 'Néerlandais', nl: 'Néerlandais',
+		jpn: 'Japonais', ja: 'Japonais',
+		zho: 'Chinois', chi: 'Chinois', zh: 'Chinois',
+		kor: 'Coréen', ko: 'Coréen',
+		rus: 'Russe', ru: 'Russe',
+		ara: 'Arabe', ar: 'Arabe',
+		pol: 'Polonais', pl: 'Polonais',
+		swe: 'Suédois', sv: 'Suédois',
+		dan: 'Danois', da: 'Danois',
+		nor: 'Norvégien', no: 'Norvégien',
+		fin: 'Finnois', fi: 'Finnois',
+		tur: 'Turc', tr: 'Turc',
+		ces: 'Tchèque', cze: 'Tchèque', cs: 'Tchèque',
+		ell: 'Grec', gre: 'Grec', el: 'Grec',
+		heb: 'Hébreu', he: 'Hébreu',
+		hin: 'Hindi', hi: 'Hindi',
+		und: 'Langue non précisée', mul: 'Multilingue'
+	},
+
 	nav: {
 		home: 'Accueil',
 		library: 'Films',
@@ -245,6 +276,21 @@ export const strings = {
 				"ffmpeg n'a pas pu être préparé. Vérifiez la connexion, puis réessayez."
 		},
 
+		tracks: {
+			open: 'Audio et sous-titres',
+			title: 'Audio et sous-titres',
+			close: 'Fermer',
+			subtitles: 'Sous-titres',
+			noSubtitles: 'Aucun',
+			external: 'fichier joint',
+			forced: 'forcés',
+			unnamedSubtitle: (index) => `Sous-titres ${index}`,
+			// Décision 3 : une piste image ne peut être affichée qu'en la
+			// gravant dans l'image, ce qui est le transcodage complet que la v1
+			// refuse. Elle est listée quand même, sinon on la cherche.
+			imageBased: 'image — non affichable'
+		},
+
 		shortcuts: {
 			open: 'Afficher les raccourcis clavier',
 			close: 'Fermer l’aide des raccourcis',
@@ -288,7 +334,8 @@ export const strings = {
 			trackCount: (count) => (count > 1 ? `${count} pistes audio` : `${count} piste audio`),
 			hint:
 				'Theia ne choisit jamais une qualité à votre place : plusieurs fichiers existent ' +
-				'et vous décidez lequel lire.'
+				'et vous décidez lequel lire.',
+			tracksInPlayer: 'Les pistes audio et les sous-titres se choisissent pendant la lecture.'
 		},
 		audio: {
 			title: 'Piste audio',
@@ -311,6 +358,33 @@ export const strings = {
 		heading: 'Accès distant',
 		intro:
 			'Theia peut être joint hors du réseau local par un tunnel WireGuard embarqué. Aucun compte, aucun relais, aucun service extérieur : chaque appareil prouve une clé créée ici.',
+		opening: 'Ouverture du port…',
+		publicAddress: 'Adresse publique',
+		opened: 'Port ouvert par',
+		methods: {
+			upnp: 'UPnP',
+			natpmp: 'NAT-PMP'
+		},
+		addressChanged:
+			'Votre adresse publique a changé depuis l’activation. Les appareils créés avant ce ' +
+			'changement pointent vers une adresse qui n’est plus la vôtre : recréez-les.',
+		manual: 'Réglage manuel du port et de l’adresse',
+		retryAutomatic: 'Redemander au routeur',
+		// Le serveur envoie un code ; ces phrases-là appartiennent à l'interface.
+		discovery: {
+			remote_router_silent:
+				'Votre routeur n’a pas répondu. L’ouverture automatique de ports (UPnP ou NAT-PMP) ' +
+				'est sans doute désactivée dans son interface — c’est le cas par défaut sur ' +
+				'certaines box. Activez-la, ou ouvrez le port à la main ci-dessous.',
+			remote_router_refused:
+				'Votre routeur a refusé d’ouvrir ce port. Il est peut-être déjà redirigé vers une ' +
+				'autre machine, ou la redirection est verrouillée. Essayez un autre port, ou ' +
+				'ouvrez-le à la main ci-dessous.',
+			remote_carrier_nat:
+				'Votre opérateur vous place derrière un CGNAT : votre connexion n’a pas d’adresse ' +
+				'publique à elle, et aucune redirection de port ne peut la traverser. Demandez-lui ' +
+				'une adresse IP publique — c’est en général gratuit et immédiat.'
+		},
 		router:
 			'Votre box doit rediriger le port UDP ci-dessous vers cette machine. Ne redirigez jamais le port TCP de Theia : il n’a aucune authentification.',
 		cgnat:
@@ -416,6 +490,11 @@ export const strings = {
 		episodeNotFound: 'Cet épisode est introuvable.',
 		seasons: 'Saisons',
 		specials: 'Épisodes spéciaux',
+		specialsHelp:
+			"La saison 0 rassemble ce qui est hors numérotation : making-of, épisodes de " +
+			"Noël, récapitulatifs. Elle n'apparaît que si un dossier « Specials » ou " +
+			'« Saison 00 » existe dans votre bibliothèque, et elle ne fait jamais partie ' +
+			"de l'enchaînement automatique.",
 		season: (number) => `Saison ${number}`,
 		ownedEpisodes: (n) => (n === 1 ? '1 épisode possédé' : `${n} épisodes possédés`),
 		episodeLabel: (number) => `Épisode ${number}`,

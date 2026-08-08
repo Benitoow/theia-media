@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/Benitoow/theia-media/internal/discovery"
+	"github.com/Benitoow/theia-media/internal/portmap"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
@@ -26,6 +27,17 @@ type Service struct {
 	handler    http.Handler
 	runtime    *tunnelRuntime
 	lastReason string
+
+	// The router side. mapping is what the gateway last granted; mapped says
+	// whether there is one to withdraw. discoveryReason is separate from
+	// lastReason because a router that declined is not a listener that failed:
+	// the tunnel can be running perfectly and still be unreachable from
+	// outside, and those are two different sentences.
+	mapping         portmap.Mapping
+	mapped          bool
+	discoveryReason string
+	endpointChanged bool
+	renewCancel     context.CancelFunc
 }
 
 func New(database *sql.DB, dataDir string, httpPort int, log *slog.Logger) *Service {
@@ -53,6 +65,21 @@ func (s *Service) Start(ctx context.Context, handler http.Handler) error {
 		s.lastReason = ""
 		return nil
 	}
+	// A domestic address is renumbered by a router reboot, and a leased mapping
+	// is forgotten by one. Both happen while nobody is watching, so an enabled
+	// automatic configuration asks again on every start rather than trusting
+	// what it wrote down last time.
+	if cfg.Automatic {
+		mapped, reason := s.mapPortLocked(ctx, cfg)
+		s.discoveryReason = reason
+		cfg = mapped
+		if reason == "" {
+			if err := s.store.saveConfig(ctx, cfg); err != nil {
+				s.log.Warn("recording the discovered endpoint failed", "error", err)
+			}
+		}
+	}
+
 	cfg, err = validateConfig(cfg)
 	if err != nil {
 		s.lastReason = "remote_config_invalid"
@@ -71,6 +98,7 @@ func (s *Service) Start(ctx context.Context, handler http.Handler) error {
 		s.lastReason = "remote_listen_failed"
 		return err
 	}
+	s.startRenewalLocked(cfg)
 	return nil
 }
 
@@ -78,15 +106,44 @@ func (s *Service) Start(ctx context.Context, handler http.Handler) error {
 // Reconfiguration fails closed: if the new listener cannot start and the old
 // one cannot be restored, remote access stays down while LAN access survives.
 func (s *Service) Update(ctx context.Context, cfg Config) (Status, error) {
-	validated, err := validateConfig(cfg)
-	if err != nil {
-		return Status{}, err
-	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	old, err := s.store.config(ctx)
 	if err != nil {
+		return Status{}, err
+	}
+
+	// Discovery runs before validation, because with automatic on there is
+	// nothing to validate yet: the endpoint is what the router is about to say.
+	// Turning it off releases the mapping rather than leaving a hole open in
+	// somebody's router after they switched the feature off.
+	s.discoveryReason = ""
+	switch {
+	case cfg.Enabled && cfg.Automatic:
+		if old.Enabled && old.Automatic && s.mapped && old.ListenPort == cfg.ListenPort {
+			// Already forwarded and unchanged: saving an unrelated setting must
+			// not make somebody wait on the network again.
+			cfg.Endpoint = s.mapping.Endpoint()
+			cfg.MappedMethod = s.mapping.Method
+			cfg.MappedPort = s.mapping.ExternalPort
+		} else {
+			s.releaseMappingLocked()
+			cfg, s.discoveryReason = s.mapPortLocked(ctx, cfg)
+		}
+	case !cfg.Enabled:
+		s.stopRenewalLocked()
+		s.releaseMappingLocked()
+		cfg.MappedMethod = ""
+		cfg.MappedPort = 0
+	}
+
+	validated, err := validateConfig(cfg)
+	if err != nil {
+		if s.discoveryReason != "" {
+			// The endpoint is empty because the router declined, not because
+			// somebody typed something wrong. Those get different sentences.
+			return Status{}, discoveryError(s.discoveryReason)
+		}
 		return Status{}, err
 	}
 	peers, err := s.store.peers(ctx)
@@ -128,6 +185,9 @@ func (s *Service) Update(ctx context.Context, cfg Config) (Status, error) {
 			}
 			return Status{}, err
 		}
+		s.startRenewalLocked(validated)
+	} else {
+		s.stopRenewalLocked()
 	}
 	if err := s.store.saveConfig(ctx, validated); err != nil {
 		if s.runtime != nil {
@@ -141,6 +201,7 @@ func (s *Service) Update(ctx context.Context, cfg Config) (Status, error) {
 	}
 	if !validated.Enabled {
 		s.lastReason = ""
+		s.endpointChanged = false
 	}
 	saved, err := s.store.config(ctx)
 	if err != nil {
@@ -264,6 +325,13 @@ func (s *Service) statusLocked(_ context.Context, cfg Config, peers []Peer) (Sta
 			status.Peers = s.runtime.withStats(peers)
 		}
 	}
+
+	// A tunnel that is running and a router that declined are two separate
+	// facts, and collapsing them would produce the worst message of the two: a
+	// listener perfectly up, said to be broken, or a connection nothing outside
+	// can reach, said to be fine.
+	status.DiscoveryReason = s.discoveryReason
+	status.EndpointChanged = s.endpointChanged
 	for _, peer := range status.Peers {
 		if peer.LastHandshakeAt > 0 {
 			status.Reachability = "confirmed"
@@ -317,6 +385,11 @@ func (s *Service) recoverRuntimeLocked(ctx context.Context, cfg Config) {
 func (s *Service) Close() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// The renewal loop stops; the mapping deliberately stays. Somebody who
+	// closes Theia for the night has not asked their router to forget the
+	// forwarding -- only Disable means that, and the next start re-checks the
+	// address anyway.
+	s.stopRenewalLocked()
 	if s.runtime != nil {
 		s.runtime.close()
 		s.runtime = nil

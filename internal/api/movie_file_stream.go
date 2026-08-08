@@ -13,6 +13,7 @@ import (
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/library"
 	"github.com/Benitoow/theia-media/internal/stream"
+	"github.com/Benitoow/theia-media/internal/subtitles"
 )
 
 func (s *Server) handleMovieFileStreamInfo(w http.ResponseWriter, r *http.Request) {
@@ -82,6 +83,15 @@ func (s *Server) handleMovieFileStreamInfo(w http.ResponseWriter, r *http.Reques
 	if container == "" {
 		container = file.Extension
 	}
+	// Asked once per playback, which is what keeps a `.srt` dropped in this
+	// afternoon offered this evening without a rescan.
+	s.syncSidecars(file.Path, file.ID, func(id int64, found []subtitles.Sidecar) error {
+		return s.lib.SyncMovieFileSubtitles(r.Context(), id, found)
+	})
+	if reloaded, err := s.lib.GetMovieFile(r.Context(), movie.ID, file.ID); err == nil {
+		file.Media.SubtitleTracks = reloaded.Media.SubtitleTracks
+	}
+
 	progress := movie.Progress
 	writeJSON(w, http.StatusOK, streamInfoResponse{
 		ID:              movie.ID,
@@ -97,6 +107,8 @@ func (s *Server) handleMovieFileStreamInfo(w http.ResponseWriter, r *http.Reques
 		FFmpegSupported: ffmpeg.Supported(),
 		DurationSeconds: duration,
 		Progress:        &progress,
+		AudioTracks:     file.Media.AudioTracks,
+		SubtitleTracks:  file.Media.SubtitleTracks,
 	})
 }
 
@@ -150,7 +162,11 @@ func (s *Server) handleMovieFileStreamRemux(w http.ResponseWriter, r *http.Reque
 		defer s.activity.Begin()()
 	}
 
-	if file.Media.Status != library.MediaOK || file.Media.Video == nil {
+	// SubtitlesScanned is the third condition, and it only ever fires once per
+	// file: a library inspected before subtitles existed has every measurement
+	// except that one, and re-probing here costs a single ffmpeg run on a path
+	// that was about to start one anyway.
+	if file.Media.Status != library.MediaOK || file.Media.Video == nil || !file.Media.SubtitlesScanned {
 		info, err := s.ffmpeg.Probe(r.Context(), file.Path)
 		switch {
 		case errors.Is(err, ffmpeg.ErrUnsupportedPlatform):

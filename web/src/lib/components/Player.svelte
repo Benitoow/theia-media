@@ -15,9 +15,9 @@
 	let {
 		movie,
 		fileId = null,
-		audioTrackId = null,
 		streamBase = null,
 		progressPath = null,
+		subtitleBase = null,
 		title = null,
 		onclose,
 		onprogress
@@ -28,6 +28,17 @@
 	);
 	const progressRoute = $derived(progressPath ?? `/api/library/movies/${movie.id}/progress`);
 	const heading = $derived(title ?? displayTitle(movie));
+
+	// Which audio and which subtitles, owned here rather than by the page.
+	//
+	// It used to be the film page's business, which was wrong twice over. A
+	// choice made while watching belongs where the watching happens -- nobody
+	// leaves a film to change the language -- and the page's copy of the tracks
+	// was a snapshot taken before playback, so a file measured for the first
+	// time by this very playback showed an empty menu until somebody reloaded.
+	// The player asks /info for itself and gets both from the same answer.
+	let audioTrackId = $state(null);
+	let subtitleTrackId = $state(null);
 	const audioQuery = $derived(audioTrackId ? `audio=${audioTrackId}` : '');
 
 	/** @type {'checking' | 'resume' | 'playing' | 'preparing' | 'failed'} */
@@ -59,6 +70,15 @@
 	let helpOpen = $state(false);
 	/** @type {HTMLElement} */
 	let helpPanel = $state();
+	let tracksOpen = $state(false);
+	/** @type {HTMLElement} */
+	let tracksPanel = $state();
+	/** @type {HTMLTrackElement} */
+	let trackElement = $state();
+	// A file nobody has inspected only reveals its tracks when playback probes
+	// it. One refresh after the picture arrives fills the menu; a flag keeps it
+	// to one, because /info must never become a poll.
+	let refreshedAfterProbe = $state(false);
 
 	// While a scrub is in progress the bar follows the pointer rather than the
 	// video, otherwise the handle fights the person dragging it.
@@ -87,10 +107,31 @@
 	const bufferedPercent = $derived(duration > 0 ? Math.min(100, (buffered / duration) * 100) : 0);
 	const remaining = $derived(duration > 0 ? Math.max(0, duration - position) : 0);
 
+	const audioTracks = $derived(info?.audio_tracks ?? []);
+	const subtitleTracks = $derived(info?.subtitle_tracks ?? []);
+	// A single audio track is not a choice, and offering it would only force a
+	// remux for nothing. Subtitles always are: "none" is one of the answers.
+	const hasTrackMenu = $derived(audioTracks.length > 1 || subtitleTracks.length > 0);
+	const subtitleTrack = $derived(
+		subtitleTracks.find((track) => track.id === subtitleTrackId && track.kind === 'text') ?? null
+	);
+	// The cues are on the film's clock; a remuxed pipe restarts at zero on every
+	// seek. The same number that moved ffmpeg moves the text, so they cannot
+	// drift apart. Direct play needs no shift: its clock is the film's.
+	const subtitleSrc = $derived(
+		subtitleTrack && subtitleBase
+			? profiles.url(
+					`${subtitleBase}/subtitles/${subtitleTrack.id}` +
+						(isRemux && offset > 0 ? `?t=${Math.floor(offset)}` : '')
+				)
+			: null
+	);
+
 	let saveTimer;
 	let lastSaved = 0;
 	let returnFocus;
 	let helpReturnFocus;
+	let tracksReturnFocus;
 	let previousBodyOverflow;
 
 	onMount(async () => {
@@ -98,23 +139,7 @@
 		previousBodyOverflow = document.body.style.overflow;
 		document.body.style.overflow = 'hidden';
 
-		try {
-			const query = audioQuery ? `?${audioQuery}` : '';
-			info = await getJSON(profiles.url(`${base}/info${query}`));
-		} catch (error) {
-			phase = 'failed';
-			failureCode = error?.code ?? 'unavailable';
-			return;
-		}
-
-		// The server decides; it does not merely advise. A refusal is reported
-		// with its own reason rather than letting the element fail on its own and
-		// blaming "an unsupported format" for a codec the server already named.
-		if (info.mode === 'unsupported') {
-			phase = 'failed';
-			failureCode = info.reason_code ?? 'failed';
-			return;
-		}
+		if (!(await loadInfo())) return;
 
 		duration = info.duration_seconds || 0;
 
@@ -140,6 +165,34 @@
 			}
 		});
 	});
+
+	// One place asks the server how this file will be delivered, and with it
+	// what can be chosen while watching. Returns false when it has already put
+	// the player into a failed state.
+	async function loadInfo() {
+		try {
+			const query = audioQuery ? `?${audioQuery}` : '';
+			info = await getJSON(profiles.url(`${base}/info${query}`));
+		} catch (error) {
+			phase = 'failed';
+			failureCode = error?.code ?? 'unavailable';
+			return false;
+		}
+		// The server decides; it does not merely advise. A refusal is reported
+		// with its own reason rather than letting the element fail on its own
+		// and blaming "an unsupported format" for a codec already named.
+		if (info.mode === 'unsupported') {
+			phase = 'failed';
+			failureCode = info.reason_code ?? 'failed';
+			return false;
+		}
+		// A subtitle chosen before a re-measurement may no longer exist; track
+		// ids belong to one inspection.
+		if (subtitleTrackId && !subtitleTracks.some((track) => track.id === subtitleTrackId)) {
+			subtitleTrackId = null;
+		}
+		return true;
+	}
 
 	function start(from) {
 		offset = from;
@@ -175,6 +228,89 @@
 		source = `${base}/remux?${query}`;
 	}
 
+	// Changing the audio track is a new stream, not a setting: ffmpeg maps one
+	// track and cannot be told to swap it mid-pipe. The position is kept so the
+	// film carries on where it was, which is the only part the viewer sees.
+	async function chooseAudio(id) {
+		if (id === audioTrackId) return;
+		const at = position;
+		audioTrackId = id;
+		phase = 'preparing';
+		if (!(await loadInfo())) return;
+		duration = info.duration_seconds || duration;
+		start(at);
+	}
+
+	function chooseSubtitle(id) {
+		subtitleTrackId = id;
+		showSubtitleTrack();
+	}
+
+	// `default` on a <track> only counts while the document is parsed, and
+	// changing the video's src resets every text track to disabled. So the mode
+	// is asserted rather than declared, after each of those moments.
+	function showSubtitleTrack() {
+		tick().then(() => {
+			const tracks = video?.textTracks;
+			if (!tracks) return;
+			for (const track of tracks) {
+				track.mode = trackElement && track === trackElement.track ? 'showing' : 'disabled';
+			}
+			liftCues();
+		});
+	}
+
+	// Subtitles sit on the last line of the picture, which is exactly where the
+	// control bar appears. Measured in a real browser: the second line of a cue
+	// was behind the scrub bar for as long as the controls were up.
+	//
+	// `line` counts from the bottom when negative, so this is the standard way
+	// to say "four lines higher" without a vendor-prefixed pseudo-element. The
+	// text lifts while the controls are up and drops back when they fade, which
+	// is the behaviour every other player has trained people to expect.
+	function liftCues() {
+		const cues = trackElement?.track?.cues;
+		if (!cues || !video) return;
+
+		// Measured rather than guessed, in three steps that each cost something
+		// to get wrong.
+		//
+		// `line` as a count of lines was the obvious answer and does not work:
+		// it snaps to a line height the browser picks, and at this type size a
+		// two-line cue still sat under the scrub bar at -4. `lineAlign: 'end'`
+		// would anchor the bottom of the cue and is the right idea, but Chrome
+		// ignores it -- verified, the box stayed anchored by its top. So the
+		// position is computed here: the top of the cue, as a share of the
+		// picture, from its own line count and the real height of the controls.
+		const area = video.getBoundingClientRect().height;
+		if (!area) return;
+		const bar = hidden
+			? 0
+			: (shell?.querySelector('.player-controls')?.getBoundingClientRect().height ?? 0);
+
+		// A cue line is measured as a share of the picture, not of the viewport,
+		// because that is how the engine sizes it: browsers scale subtitle text
+		// with the video box and ignore the CSS length when it disagrees.
+		// Deriving it from the stylesheet gave 34.6px against a rendered 52 and
+		// left the second line under the bar. 6.5% of the height matches what
+		// Chrome actually draws, and follows the player when it is resized.
+		const lineHeight = area * 0.065;
+		const gap = area * 0.02;
+
+		for (const cue of cues) {
+			const lines = cue.text.split('\n').length;
+			const top = area - bar - lines * lineHeight - gap;
+			cue.snapToLines = false;
+			cue.line = Math.max(0, Math.min(95, (top / area) * 100));
+		}
+	}
+
+	$effect(() => {
+		// Reading `hidden` is what subscribes this to the controls fading.
+		void hidden;
+		liftCues();
+	});
+
 	function onLoadedMetadata() {
 		// Direct play knows its own length. A remux does not, so the value from
 		// the server stands.
@@ -194,6 +330,28 @@
 		if (video.videoWidth === 0 && video.videoHeight === 0) {
 			phase = 'failed';
 			failureCode = 'browser_cannot_decode_video';
+			return;
+		}
+		showSubtitleTrack();
+
+		// The picture proves the file was probed. A file that had never been
+		// inspected has only now revealed its tracks, so the menu is refilled
+		// once -- the exact bug where a chooser stayed empty until a reload.
+		if (!refreshedAfterProbe && info?.media_status !== 'ok') {
+			refreshedAfterProbe = true;
+			refreshTracks();
+		}
+	}
+
+	// Deliberately silent, unlike loadInfo: the film is playing. A refresh that
+	// fails costs a menu entry, and must not end a working playback.
+	async function refreshTracks() {
+		try {
+			const query = audioQuery ? `?${audioQuery}` : '';
+			const fresh = await getJSON(profiles.url(`${base}/info${query}`));
+			if (fresh?.mode && fresh.mode !== 'unsupported') info = fresh;
+		} catch {
+			// The menu simply keeps what it had.
 		}
 	}
 
@@ -316,6 +474,31 @@
 		showControls();
 	}
 
+	function openTracks(trigger = document.activeElement) {
+		tracksReturnFocus = trigger instanceof HTMLElement ? trigger : shell;
+		tracksOpen = true;
+		controlsVisible = true;
+		clearTimeout(idleTimer);
+
+		tick().then(() => {
+			const first = tracksPanel?.querySelector('[data-remote-default], button:not(:disabled)');
+			if (first instanceof HTMLElement) first.focus();
+		});
+	}
+
+	function closeTracks() {
+		tracksOpen = false;
+		showControls();
+
+		tick().then(() => {
+			if (tracksReturnFocus instanceof HTMLElement && tracksReturnFocus.isConnected) {
+				tracksReturnFocus.focus();
+			} else {
+				shell?.focus();
+			}
+		});
+	}
+
 	function isHelpKey(event) {
 		return (
 			!event.altKey &&
@@ -384,7 +567,7 @@
 		clearTimeout(idleTimer);
 		// Paused, seeking or buffering means the person is looking at the
 		// controls, so they stay.
-		if (paused || seeking || waiting || helpOpen) return;
+		if (paused || seeking || waiting || helpOpen || tracksOpen) return;
 
 		idleTimer = setTimeout(() => {
 			// Focus cannot be left sitting on a control that is about to become
@@ -428,6 +611,15 @@
 				// Let the panel's own close button keep its native activation.
 			} else if (event.key !== 'Tab') {
 				event.preventDefault();
+			}
+			return;
+		}
+
+		// The panel is the innermost thing open, so it is what Escape closes.
+		if (tracksOpen) {
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				closeTracks();
 			}
 			return;
 		}
@@ -492,6 +684,10 @@
 	function trapDialogFocus(event) {
 		if (event.key !== 'Tab' || !shell) return;
 
+		// The track panel is deliberately absent here. It is a popover over the
+		// control bar, not a second dialog: the button that opened it must stay
+		// reachable to close it, and trapping focus would put that button out of
+		// the tab order at exactly the wrong moment.
 		const scope = helpOpen ? helpPanel : shell;
 		if (!scope) return;
 
@@ -531,7 +727,60 @@
 			helpOpen = false;
 			helpReturnFocus = null;
 		}
+		if (phase !== 'playing' && tracksOpen) {
+			tracksOpen = false;
+			tracksReturnFocus = null;
+		}
 	});
+
+	// The panel owns its vertical axis, in the spirit of decision 27 and of the
+	// rule §9 of the design system took from it: inside a list, down means the
+	// next line, not whatever geometry ranks nearest. An edge press is left
+	// alone so leaving the list still falls through.
+	function onTracksKeydown(event) {
+		if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+		if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+
+		const options = [...(tracksPanel?.querySelectorAll('.track-option') ?? [])];
+		const index = options.indexOf(document.activeElement);
+		if (index < 0) return;
+
+		const next = index + (event.key === 'ArrowDown' ? 1 : -1);
+		if (next < 0 || next >= options.length) return;
+
+		event.preventDefault();
+		event.stopPropagation();
+		options[next].focus({ preventScroll: true });
+		options[next].scrollIntoView({
+			block: 'nearest',
+			behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+		});
+	}
+
+	/** A track's name is built only from the fields the probe actually returned. */
+	function audioLabel(track, index) {
+		const parts = [];
+		if (track.language) parts.push(languageName(track.language));
+		if (track.title) parts.push(track.title);
+		if (!parts.length) parts.push(t.film.audio.unnamed(index + 1));
+		if (track.codec) parts.push(track.codec.toUpperCase());
+		if (track.channels) parts.push(track.channels);
+		return parts.join(' · ');
+	}
+
+	function subtitleLabel(track, index) {
+		const parts = [];
+		if (track.language) parts.push(languageName(track.language));
+		if (track.title) parts.push(track.title);
+		if (!parts.length) parts.push(t.player.tracks.unnamedSubtitle(index + 1));
+		if (track.is_forced) parts.push(t.player.tracks.forced);
+		return parts.join(' · ');
+	}
+
+	// The catalogue owns the names; the server only ever sends the ISO code.
+	function languageName(code) {
+		return t.languages[code] ?? code.toUpperCase();
+	}
 
 	$effect(() => {
 		const currentPhase = phase;
@@ -622,7 +871,27 @@
 				onended={() => save(true, duration || position)}
 				onvolumechange={() => { muted = video.muted; volume = video.volume; }}
 				onclick={togglePlay}
-			></video>
+			>
+				<!--
+					One track element at a time, rather than all of them with modes
+					juggled. The browser is then never holding a track nobody chose,
+					and the src carries the seek, so the text arrives already on the
+					same clock as the picture.
+				-->
+				{#if subtitleSrc}
+					{#key subtitleSrc}
+						<track
+							bind:this={trackElement}
+							kind="subtitles"
+							src={subtitleSrc}
+							srclang={subtitleTrack.language || 'und'}
+							label={subtitleLabel(subtitleTrack, 0)}
+							onload={showSubtitleTrack}
+							default
+						/>
+					{/key}
+				{/if}
+			</video>
 		{/if}
 
 		{#if waiting || seeking || phase === 'preparing'}
@@ -734,6 +1003,18 @@
 					/>
 				</div>
 
+				{#if hasTrackMenu}
+					<button
+						type="button"
+						onclick={(event) => (tracksOpen ? closeTracks() : openTracks(event.currentTarget))}
+						class="player-icon-button"
+						class:player-icon-button--lit={subtitleTrack !== null}
+						aria-expanded={tracksOpen}
+					>
+						<Icon name="captions" label={t.player.tracks.open} />
+					</button>
+				{/if}
+
 				{#if phase === 'playing'}
 					<button
 						type="button"
@@ -749,6 +1030,98 @@
 				</button>
 			</div>
 		</div>
+
+		{#if tracksOpen}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<section
+				bind:this={tracksPanel}
+				class="player-tracks"
+				aria-label={t.player.tracks.title}
+				onkeydown={onTracksKeydown}
+			>
+				{#if audioTracks.length > 1}
+					<h2 class="label">{t.film.audio.title}</h2>
+					<ul class="track-list">
+						<li>
+							<button
+								type="button"
+								class="track-option"
+								class:track-option--chosen={!audioTrackId}
+								aria-pressed={!audioTrackId}
+								data-remote-default
+								onclick={() => chooseAudio(null)}
+							>
+								{t.film.audio.auto}
+							</button>
+						</li>
+						{#each audioTracks as track, index (track.id)}
+							<li>
+								<button
+									type="button"
+									class="track-option"
+									class:track-option--chosen={audioTrackId === track.id}
+									aria-pressed={audioTrackId === track.id}
+									onclick={() => chooseAudio(track.id)}
+								>
+									{audioLabel(track, index)}
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+
+				{#if subtitleTracks.length}
+					<h2 class="label" class:mt-8={audioTracks.length > 1}>{t.player.tracks.subtitles}</h2>
+					<ul class="track-list">
+						<li>
+							<button
+								type="button"
+								class="track-option"
+								class:track-option--chosen={!subtitleTrackId}
+								aria-pressed={!subtitleTrackId}
+								onclick={() => chooseSubtitle(null)}
+							>
+								{t.player.tracks.noSubtitles}
+							</button>
+						</li>
+						{#each subtitleTracks as track, index (track.id)}
+							<li>
+								{#if track.kind === 'text'}
+									<button
+										type="button"
+										class="track-option"
+										class:track-option--chosen={subtitleTrackId === track.id}
+										aria-pressed={subtitleTrackId === track.id}
+										onclick={() => chooseSubtitle(track.id)}
+									>
+										{subtitleLabel(track, index)}
+										{#if track.is_external}
+											<span class="track-note">{t.player.tracks.external}</span>
+										{/if}
+									</button>
+								{:else}
+									<!--
+										Listed, not hidden. Decision 3 refuses to render a bitmap
+										track because showing one means burning it into the
+										picture; a rip whose only subtitles are PGS would
+										otherwise look like a film that has none, and somebody
+										would go hunting for a setting that does not exist.
+									-->
+									<p class="track-option track-option--refused">
+										<span>{subtitleLabel(track, index)}</span>
+										<span class="track-note">{t.player.tracks.imageBased}</span>
+									</p>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+
+				<button type="button" class="tv-action mt-8 cursor-pointer" onclick={closeTracks}>
+					{t.player.tracks.close}
+				</button>
+			</section>
+		{/if}
 
 		{#if helpOpen && phase === 'playing'}
 			<section

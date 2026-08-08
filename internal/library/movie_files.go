@@ -43,12 +43,18 @@ type MovieFile struct {
 // may still carry a duration learned by the player, but it never invents a
 // codec, resolution, container or audio track from its filename.
 type FileMedia struct {
-	Status          string       `json:"status"`
-	Container       string       `json:"container,omitempty"`
-	DurationSeconds float64      `json:"duration_seconds,omitempty"`
-	Video           *VideoStream `json:"video,omitempty"`
-	AudioTracks     []AudioTrack `json:"audio_tracks"`
-	InspectedAt     *time.Time   `json:"inspected_at,omitempty"`
+	Status          string          `json:"status"`
+	Container       string          `json:"container,omitempty"`
+	DurationSeconds float64         `json:"duration_seconds,omitempty"`
+	Video           *VideoStream    `json:"video,omitempty"`
+	AudioTracks     []AudioTrack    `json:"audio_tracks"`
+	SubtitleTracks  []SubtitleTrack `json:"subtitle_tracks"`
+	InspectedAt     *time.Time      `json:"inspected_at,omitempty"`
+
+	// SubtitlesScanned distinguishes a file with no embedded subtitles from one
+	// inspected before Theia knew to look. Bookkeeping, not a measurement, so it
+	// stays on this side of the HTTP boundary.
+	SubtitlesScanned bool `json:"-"`
 }
 
 type VideoStream struct {
@@ -72,7 +78,7 @@ const movieFileColumns = `
 	id, movie_id, path, file_name, size_bytes, modified_at, is_primary,
 	media_status, media_container, media_duration_seconds,
 	video_stream_index, video_codec, video_width, video_height,
-	media_inspected_at`
+	media_inspected_at, subtitles_scanned`
 
 func scanMovieFile(row interface{ Scan(...any) error }) (MovieFile, error) {
 	var (
@@ -82,13 +88,14 @@ func scanMovieFile(row interface{ Scan(...any) error }) (MovieFile, error) {
 		container, videoCodec               sql.NullString
 		duration                            sql.NullFloat64
 		videoIndex, videoWidth, videoHeight sql.NullInt64
+		subtitlesScanned                    int
 	)
 	if err := row.Scan(
 		&file.ID, &file.MovieID, &file.Path, &file.FileName,
 		&file.SizeBytes, &modifiedAt, &primary,
 		&file.Media.Status, &container, &duration,
 		&videoIndex, &videoCodec, &videoWidth, &videoHeight,
-		&inspectedAt,
+		&inspectedAt, &subtitlesScanned,
 	); err != nil {
 		return MovieFile{}, err
 	}
@@ -99,6 +106,8 @@ func scanMovieFile(row interface{ Scan(...any) error }) (MovieFile, error) {
 	file.Media.Container = container.String
 	file.Media.DurationSeconds = duration.Float64
 	file.Media.AudioTracks = []AudioTrack{}
+	file.Media.SubtitleTracks = []SubtitleTrack{}
+	file.Media.SubtitlesScanned = subtitlesScanned != 0
 	if videoIndex.Valid && videoCodec.Valid {
 		file.Media.Video = &VideoStream{
 			StreamIndex: int(videoIndex.Int64),
@@ -207,7 +216,24 @@ func (s *Store) loadAudioTracks(ctx context.Context, files []MovieFile) error {
 			file.Media.AudioTracks = append(file.Media.AudioTracks, track)
 		}
 	}
-	return rows.Err()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	ids := make([]int64, 0, len(files))
+	for i := range files {
+		ids = append(ids, files[i].ID)
+	}
+	byFile, err := s.loadSubtitles(ctx, movieSubtitles, ids)
+	if err != nil {
+		return err
+	}
+	for i := range files {
+		if tracks := byFile[files[i].ID]; tracks != nil {
+			files[i].Media.SubtitleTracks = tracks
+		}
+	}
+	return nil
 }
 
 // SaveFileMedia atomically replaces the measured characteristics of one file.
@@ -229,7 +255,7 @@ func (s *Store) SaveFileMedia(ctx context.Context, movieID, fileID int64, media 
 		UPDATE movie_files SET
 			media_status = ?, media_container = ?, media_duration_seconds = ?,
 			video_stream_index = ?, video_codec = ?, video_width = ?, video_height = ?,
-			media_inspected_at = ?
+			media_inspected_at = ?, subtitles_scanned = 1
 		WHERE id = ? AND movie_id = ?`,
 		MediaOK, nullString(media.Container), nullPositiveFloat(media.DurationSeconds),
 		media.Video.StreamIndex, media.Video.Codec,
@@ -294,6 +320,10 @@ func (s *Store) SaveFileMedia(ctx context.Context, movieID, fileID int64, media 
 		}
 	}
 
+	if err := saveEmbeddedSubtitlesTx(ctx, tx, movieSubtitles, fileID, media.SubtitleTracks); err != nil {
+		return MovieFile{}, err
+	}
+
 	if media.DurationSeconds > 0 {
 		// The movie duration drives resume progress for both the old and new
 		// frontend. Keep a known value, but do not overwrite a duration recorded
@@ -326,7 +356,7 @@ func (s *Store) MarkFileMediaError(ctx context.Context, movieID, fileID int64) e
 			media_duration_seconds = NULL,
 			video_stream_index = NULL, video_codec = NULL,
 			video_width = NULL, video_height = NULL,
-			media_inspected_at = ?
+			media_inspected_at = ?, subtitles_scanned = 1
 		WHERE id = ? AND movie_id = ?`, MediaError, time.Now().Unix(), fileID, movieID)
 	if err != nil {
 		return fmt.Errorf("recording failed media inspection for file %d: %w", fileID, err)
@@ -337,6 +367,13 @@ func (s *Store) MarkFileMediaError(ctx context.Context, movieID, fileID int64) e
 	if _, err := tx.ExecContext(ctx,
 		`DELETE FROM movie_file_audio_tracks WHERE movie_file_id = ?`, fileID); err != nil {
 		return fmt.Errorf("clearing stale audio tracks for file %d: %w", fileID, err)
+	}
+	// Only the embedded tracks go. A `.srt` next to an unreadable film is still
+	// a file on disk, and its existence was never ffmpeg's finding to retract.
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM movie_file_subtitle_tracks
+		 WHERE movie_file_id = ? AND stream_index IS NOT NULL`, fileID); err != nil {
+		return fmt.Errorf("clearing stale subtitle tracks for file %d: %w", fileID, err)
 	}
 	return tx.Commit()
 }

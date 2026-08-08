@@ -63,7 +63,8 @@ func measuredFileMedia(info ffmpeg.MediaInfo) library.FileMedia {
 			Width:       info.Video.Width,
 			Height:      info.Video.Height,
 		},
-		AudioTracks: make([]library.AudioTrack, 0, len(info.AudioStreams)),
+		AudioTracks:    make([]library.AudioTrack, 0, len(info.AudioStreams)),
+		SubtitleTracks: make([]library.SubtitleTrack, 0, len(info.SubtitleStreams)),
 	}
 	for _, track := range info.AudioStreams {
 		media.AudioTracks = append(media.AudioTracks, library.AudioTrack{
@@ -73,6 +74,20 @@ func measuredFileMedia(info ffmpeg.MediaInfo) library.FileMedia {
 			Title:       track.Title,
 			Channels:    track.Channels,
 			IsDefault:   track.Default,
+		})
+	}
+	for _, track := range info.SubtitleStreams {
+		// Bitmap tracks are recorded alongside the text ones. Decision 3 refuses
+		// to render them, not to admit they exist: a rip whose only subtitles are
+		// PGS should say so rather than look like a film with none.
+		index := track.StreamIndex
+		media.SubtitleTracks = append(media.SubtitleTracks, library.SubtitleTrack{
+			StreamIndex: &index,
+			Codec:       track.Codec,
+			Language:    track.Language,
+			Title:       track.Title,
+			IsDefault:   track.Default,
+			IsForced:    track.Forced,
 		})
 	}
 	return media

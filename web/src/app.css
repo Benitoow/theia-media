@@ -1413,11 +1413,28 @@
 		margin-top: clamp(1rem, 3vw, 2.5rem);
 	}
 
+	/* The one nav target whose content is already a shape.
+
+	   Inheriting .nav-target's pill padding made the hover an oval: a 2.25rem
+	   round mark inside a 3.25rem-tall, 5rem-wide capsule. Squaring the target
+	   keeps §9's 3.25rem minimum in both axes and makes the highlight concentric
+	   with the picture instead of a lozenge around it. */
 	.nav-profile {
 		display: inline-flex;
+		inline-size: var(--target-min);
+		aspect-ratio: 1;
 		align-items: center;
+		justify-content: center;
 		margin-inline-start: 0.35rem;
-		padding-inline: 0.35rem;
+		padding-inline: 0;
+	}
+
+	/* The mark answers the pointer itself, as it does on the chooser's cards,
+	   rather than only lighting the ground under it. */
+	.nav-profile:hover .profile-mark,
+	.nav-profile:focus-visible .profile-mark,
+	.nav-profile[aria-current='page'] .profile-mark {
+		border-color: var(--color-bone);
 	}
 
 	/* Two stacked panels: identity, then the local facts. */
@@ -2356,6 +2373,142 @@
 		max-width: min(46rem, 90vw);
 		padding: clamp(1.5rem, 4vw, 3rem);
 		text-align: center;
+	}
+
+	/* Lit when subtitles are on, so the state is legible from the sofa without
+	   opening anything. */
+	.player-icon-button--lit {
+		background: rgba(237, 231, 220, 0.16);
+		color: var(--color-accent);
+	}
+
+	/* Audio and subtitles, over the control bar rather than in the middle of the
+	   picture: the list belongs beside the button that opened it, and a panel
+	   centred on the frame hides the very thing being adjusted. */
+	.player-tracks {
+		position: absolute;
+		z-index: 6;
+		right: clamp(1rem, 3vw, 2.5rem);
+		bottom: clamp(8rem, 14vh, 11rem);
+		width: min(26rem, calc(100vw - 2rem));
+		max-height: min(60svh, 34rem);
+		overflow-y: auto;
+		border: 1px solid rgba(237, 231, 220, 0.16);
+		border-radius: clamp(0.85rem, 1.6vw, 1.35rem);
+		padding: clamp(1.1rem, 2.4vw, 1.75rem);
+		background:
+			linear-gradient(135deg, rgba(237, 231, 220, 0.04), transparent 56%),
+			rgba(19, 18, 17, 0.96);
+		box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.58);
+		-webkit-backdrop-filter: blur(24px);
+		backdrop-filter: blur(24px);
+	}
+
+	.track-list {
+		display: flex;
+		flex-direction: column;
+		margin-top: 0.65rem;
+		gap: 0.2rem;
+	}
+
+	/* Full-width rows: §9 asks for a 3.25rem target and a list read at three
+	   metres, and a row that ends where its text ends is neither. */
+	.track-option {
+		display: flex;
+		width: 100%;
+		min-block-size: var(--target-min);
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0 0.6rem;
+		border: 0;
+		border-inline-start: 2px solid transparent;
+		border-radius: 0.5rem;
+		padding: 0.6rem 0.85rem;
+		background: transparent;
+		color: var(--color-bone);
+		cursor: pointer;
+		text-align: start;
+		transition:
+			background-color var(--duration-fast) var(--ease-cine),
+			border-color var(--duration-fast) var(--ease-cine);
+	}
+
+	.track-option:hover {
+		background: rgba(237, 231, 220, 0.08);
+	}
+
+	.track-option--chosen {
+		border-inline-start-color: var(--color-accent);
+		background: rgba(237, 231, 220, 0.06);
+	}
+
+	/* A track that is listed and cannot be chosen. Not a disabled button: there
+	   is no action here to disable, and a focus stop on a dead end would be one
+	   more press between somebody and their film. */
+	.track-option--refused {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.15rem;
+		color: var(--color-muted);
+		cursor: default;
+	}
+
+	.track-note {
+		font-size: var(--text-label);
+		letter-spacing: 0.08em;
+		color: var(--color-faint);
+		text-transform: uppercase;
+	}
+
+	/* Subtitles are read from the sofa like everything else. The browser default
+	   is a small white line on an opaque black box; this is the same type scale
+	   the rest of the interface uses, on a scrim that dims rather than blocks. */
+	.player-video::cue {
+		background: rgba(11, 10, 9, 0.72);
+		color: var(--color-bone);
+		font-family: var(--font-sans);
+		font-size: clamp(1rem, 2.4vw, 1.6rem);
+		line-height: 1.35;
+	}
+
+	/* The manual port and endpoint, folded away. Open by default only when the
+	   router has refused, which is the one moment they are the way forward. */
+	.remote-manual {
+		margin-top: 1.75rem;
+		border-top: 1px solid var(--color-line);
+		padding-top: 1.5rem;
+	}
+
+	.remote-manual > summary {
+		display: inline-flex;
+		list-style: none;
+	}
+
+	.remote-manual > summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.remote-manual > summary::after {
+		content: '';
+		width: 0.45rem;
+		height: 0.45rem;
+		border-right: 1.5px solid currentColor;
+		border-bottom: 1.5px solid currentColor;
+		margin-inline-start: 0.2rem;
+		transform: rotate(45deg) translate(-0.1rem, -0.1rem);
+	}
+
+	.remote-manual[open] > summary::after {
+		transform: rotate(-135deg) translate(-0.1rem, -0.1rem);
+	}
+
+	/* An address is read character by character, so it gets the tabular face and
+	   none of the label's letter-spacing. */
+	.remote-value--plain {
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--text-small);
+		letter-spacing: 0;
+		text-transform: none;
 	}
 
 	.player-shortcuts {

@@ -48,6 +48,29 @@
 		document.documentElement.lang = i18n.htmlLang;
 	});
 
+	// Never a broken-image icon.
+	//
+	// The rule already applied to profile marks, one component at a time. It has
+	// to be global, because a still, a poster and a backdrop all come from TMDB
+	// and any of them can be recorded and then unavailable -- seen on a specials
+	// episode whose still_path exists and whose image 404s, which drew the
+	// browser's torn-page glyph in the middle of the row.
+	//
+	// Capture phase, on the window: `error` from an <img> does not bubble, and
+	// this must cover artwork nobody has added yet as much as the artwork here
+	// today. Hiding rather than removing keeps the frame, which is the empty
+	// shape the design already draws for a film with no poster.
+	onMount(() => {
+		const hideBrokenArtwork = (event) => {
+			const image = event.target;
+			if (!(image instanceof HTMLImageElement)) return;
+			if (!image.src.includes('/api/images/')) return;
+			image.hidden = true;
+		};
+		window.addEventListener('error', hideBrokenArtwork, true);
+		return () => window.removeEventListener('error', hideBrokenArtwork, true);
+	});
+
 	const remoteFocusable = [
 		'a[href]',
 		'button:not(:disabled)',

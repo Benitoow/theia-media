@@ -14,11 +14,10 @@
 	let movie = $state(null);
 	let playing = $state(false);
 
-	// Which file the player will open, and optionally which measured audio track.
-	// Both are chosen by hand: M1-BE deliberately refuses to rank quality, so the
-	// only default here is the primary file the server already flagged.
+	// Which file the player will open. Chosen by hand: M1-BE deliberately
+	// refuses to rank quality, so the only default here is the primary file the
+	// server already flagged. Audio and subtitles are the player's business.
 	let fileId = $state(null);
-	let audioTrackId = $state(null);
 
 	const meta = $derived(movie?.metadata ?? {});
 	const backdrop = $derived(imageURL(meta.backdrop_path, 'w1280'));
@@ -61,9 +60,8 @@
 		movie = { ...movie, progress };
 	}
 
-	function onFileChoice({ fileId: nextFile, audioTrackId: nextTrack }) {
+	function onFileChoice({ fileId: nextFile }) {
 		fileId = nextFile ?? fileId;
-		audioTrackId = nextTrack ?? null;
 	}
 
 	// A measurement replaces the page's copy of that one file. Keeping the single
@@ -195,7 +193,6 @@
 						basePath={`/api/library/movies/${movie.id}`}
 						{files}
 						{fileId}
-						{audioTrackId}
 						onselect={onFileChoice}
 						onmeasure={onFileMeasured}
 					/>
@@ -238,7 +235,9 @@
 		<Player
 			{movie}
 			fileId={selectedFile?.id ?? null}
-			{audioTrackId}
+			subtitleBase={selectedFile
+				? `/api/library/movies/${movie.id}/files/${selectedFile.id}`
+				: null}
 			onprogress={syncProgress}
 			onclose={() => (playing = false)}
 		/>

@@ -16,23 +16,28 @@ func newStore(database *sql.DB) *store { return &store{db: database} }
 
 func (s *store) config(ctx context.Context) (Config, error) {
 	var cfg Config
-	var enabled int
+	var enabled, automatic int
 	err := s.db.QueryRowContext(ctx, `
-		SELECT enabled, listen_port, endpoint, updated_at
+		SELECT enabled, listen_port, endpoint, updated_at,
+		       automatic, mapped_method, mapped_port
 		FROM remote_access_config
-		WHERE id = 1`).Scan(&enabled, &cfg.ListenPort, &cfg.Endpoint, &cfg.UpdatedAt)
+		WHERE id = 1`).Scan(&enabled, &cfg.ListenPort, &cfg.Endpoint, &cfg.UpdatedAt,
+		&automatic, &cfg.MappedMethod, &cfg.MappedPort)
 	if err != nil {
 		return Config{}, fmt.Errorf("reading remote access configuration: %w", err)
 	}
 	cfg.Enabled = enabled != 0
+	cfg.Automatic = automatic != 0
 	return cfg, nil
 }
 
 func (s *store) saveConfig(ctx context.Context, cfg Config) error {
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE remote_access_config
-		SET enabled = ?, listen_port = ?, endpoint = ?, updated_at = unixepoch()
-		WHERE id = 1`, cfg.Enabled, cfg.ListenPort, cfg.Endpoint)
+		SET enabled = ?, listen_port = ?, endpoint = ?, updated_at = unixepoch(),
+		    automatic = ?, mapped_method = ?, mapped_port = ?
+		WHERE id = 1`, cfg.Enabled, cfg.ListenPort, cfg.Endpoint,
+		cfg.Automatic, cfg.MappedMethod, cfg.MappedPort)
 	if err != nil {
 		return fmt.Errorf("saving remote access configuration: %w", err)
 	}

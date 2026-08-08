@@ -38,6 +38,13 @@ type streamInfoResponse struct {
 	// from: a probe from a previous playback, or TMDB's runtime as a fallback.
 	DurationSeconds float64           `json:"duration_seconds,omitempty"`
 	Progress        *library.Progress `json:"progress,omitempty"`
+
+	// What can be chosen while watching. The player asks for this instead of
+	// inheriting a copy from the page behind it: the tracks of a file that has
+	// never been inspected are only measured when playback begins, so a page
+	// loaded before that would offer an empty menu until somebody reloaded it.
+	AudioTracks    []library.AudioTrack    `json:"audio_tracks,omitempty"`
+	SubtitleTracks []library.SubtitleTrack `json:"subtitle_tracks,omitempty"`
 }
 
 // handleStreamInfo says how a film will be delivered.

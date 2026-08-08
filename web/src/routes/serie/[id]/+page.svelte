@@ -153,6 +153,14 @@
 
 			{#if season && !loadingSeason}
 				<p class="label mt-4">{t.series.ownedEpisodes(season.episodes?.length ?? 0)}</p>
+				<!-- "Épisodes spéciaux, c'est quoi ?" was a fair question to have to
+				     ask. Season zero is where TMDB puts everything outside the
+				     numbering -- making-of, Christmas episodes, recaps -- and it only
+				     ever appears because a folder on disk is named Specials or
+				     Saison 00. Explaining it here is cheaper than being asked. -->
+				{#if seasonNumber === 0}
+					<p class="tv-copy mt-3 max-w-[46rem] text-small text-muted">{t.series.specialsHelp}</p>
+				{/if}
 			{/if}
 
 			{#if loadingSeason}

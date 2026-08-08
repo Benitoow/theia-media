@@ -1359,6 +1359,148 @@ Both of the roadmap's open points are now closed. What remains genuinely open is
 whether the photographic wordmark ever earns a surface inside the application;
 it currently has none, and none is invented for it.
 
+## 55. Audio and subtitles are chosen in the player, and the player asks for itself
+
+**Decided in V2-M5b, from a report after a real evening of watching.** The
+maintainer's words: *"pas de choix de piste audio quand disponible, et non plus
+pour les sous-titres."*
+
+The audio chooser existed. It was on the film page, under the file list, and it
+was invisible in exactly the case that matters. M1's contract is that a file is
+measured lazily — asking how a file will play must never download ffmpeg — so a
+file played for the first time is probed *by that playback*. The page had loaded
+before the probe, its copy of the tracks was empty, and it stayed empty until
+somebody reloaded. The chooser was not missing; it was one page load behind
+reality.
+
+Two things follow, and only the second is a bug fix.
+
+**The choice moves into the player.** Nobody leaves a film to change the
+language. `/info` was already the one request the player makes before playing,
+so it now carries `audio_tracks` and `subtitle_tracks` alongside the mode and the
+duration, and the player asks for it itself rather than inheriting a snapshot
+from the page behind it. The stale-copy failure cannot recur, because there is
+no copy. When playback probes a file that had never been measured, `/info` is
+asked once more — guarded by a flag, and silently, so a refresh that fails costs
+a menu entry and never a running film.
+
+**Subtitles are built, at last.** Decision 3 settled them in the first week and
+nothing had been written: text tracks in, image tracks out. `internal/subtitles`
+converts SRT and WebVTT in-process; ffmpeg extracts embedded tracks as WebVTT.
+Three details cost something to get right.
+
+- **The offset is not cosmetic.** A remuxed stream is a pipe restarted at a
+  timestamp, so the element's clock begins again at zero on every seek. Text on
+  the film's own clock would sit as far from the picture as the viewer has
+  travelled into it. The same `-ss` that seeks the video seeks the subtitle, so
+  the two cannot drift apart — measured on a generated MKV, a cue at 00:07.023
+  comes back at 00:00.023 for `t=7`.
+- **`.srt` files beside a film need no ffmpeg.** They are found by reading the
+  directory when the player asks how the file will play, which is once per
+  playback: a subtitle dropped in this afternoon is offered this evening without
+  a rescan, and a deleted one stops being offered. A browser-friendly MP4 with a
+  subtitle next to it gains subtitles without downloading 80 MB.
+- **windows-1252 is decoded, not assumed away.** French subtitle files are that
+  encoding as often as UTF-8, and a mis-decoded one is not a cosmetic problem:
+  every accented word in the film is wrong. Valid UTF-8 is left alone; anything
+  else is decoded as windows-1252, the safest single guess, and it needs no
+  dependency.
+
+**An image track is listed and refused, not hidden.** A BluRay rip whose only
+subtitles are PGS would otherwise look like a film with none, and somebody would
+go hunting for a setting that does not exist. The menu names the track and says
+why; the endpoint answers `subtitle_image_based` with 415.
+
+Two smaller things were fixed on the way. Episodes were still taking audio track
+zero, so the `PreferredAudio` correction made for films now applies to series
+too. And the subtitle's position is computed rather than declared: `line` as a
+count of lines snaps to a height the browser picks, and left the second line of a
+cue under the scrub bar; `lineAlign: 'end'` is the right idea and Chrome ignores
+it. The cue is placed from its own line count and the measured height of the
+control bar, in units of the picture — because that is what browsers scale
+subtitle text against, whatever the stylesheet says.
+
+A library measured before this change has every fact except this one, which is
+indistinguishable from a file that genuinely has no subtitles. Rather than reset
+274 films to `pending` and re-probe the lot — throwing away durations and
+resolutions already measured, to learn one new thing — `subtitles_scanned` marks
+the difference, and the next playback of a file re-probes it once. It was about
+to run ffmpeg anyway.
+
+## 56. The router is asked, not the owner
+
+**Decided in V2-M5b, over a first refusal.** The maintainer wrote: *"accès à
+distance à une documentation complexe et devrait se faire automatiquement, on
+avait rien de compliquer, on clique et ça marche."* The first answer given was
+that this could not be done without breaking decision 43, because "automatic"
+sounded like a relay. That answer was wrong about what was being asked. The
+clarification — *"quand je dis auto je parle de l'url et du port etc"* — named
+two facts, and neither of them needs a relay to obtain.
+
+M4 shipped a panel with a UDP port field, a public endpoint field, and a
+paragraph explaining how to forward a port on a router Theia has never seen.
+Four steps, three of them in somebody else's admin interface, in a product whose
+founding promise is no configuration.
+
+**Both facts belong to the gateway, and there are two standard ways to ask it.**
+UPnP IGD — SSDP to 239.255.255.250, then SOAP — and NAT-PMP — two datagrams to
+UDP 5351. Both are tried concurrently, because they fail by timing out and a
+router that speaks neither would otherwise cost the sum of two waits with
+somebody watching a spinner. `internal/portmap` implements both in the standard
+library, so the constraint on runtime dependencies is untouched.
+
+**Decision 43 is untouched, and that is the point rather than an excuse.** Both
+protocols speak only to the gateway on the local network. There is no relay, no
+rendezvous server, no STUN and no endpoint-discovery service anywhere in the
+path; the only internet calls Theia makes are still TMDB and GitHub Releases.
+The router is not the internet. It is the thing standing between this machine
+and it, and it already holds the address because it was given it.
+
+Three things this refuses to do:
+
+- **It will not lie about carrier-grade NAT.** A router behind CGNAT reports its
+  own 100.64.0.0/10 address perfectly happily, and a client configuration
+  pointing at one cannot work. That is checked and reported as the specific
+  thing it is — `remote_carrier_nat`, with the advice that asking the operator
+  for a public address is usually free — rather than left to fail as a timeout
+  on the evening somebody is away from home.
+- **It will not follow an SSDP reply anywhere.** That reply is an
+  unauthenticated datagram from anybody on the network, naming a URL this
+  process is about to fetch. The address is checked before the fetch: numeric,
+  private, and the same host that answered. Redirects are not followed and
+  connections are not kept.
+- **It will not leave a hole open.** Disabling withdraws the mapping. Closing
+  Theia does not, because somebody who shut the application for the night has
+  not asked their router to forget anything — and the next start re-checks the
+  address anyway, since a domestic connection is renumbered by a reboot.
+
+**The manual fields survive, folded away.** UPnP is off by default on some ISP
+firmware, CGNAT cannot be forwarded through at all, and somebody who has already
+forwarded the port by hand must not be told to undo it. The disclosure opens by
+itself exactly when the router has refused, which is the one moment it is the
+way forward. Typing an endpoint turns automatic off, because otherwise the next
+discovery would overwrite it and the field would read as not saving.
+
+Verified against the maintainer's own router, which is the only test that
+counts: UPnP answered in 0.74 s, mapped the UDP port, and reported a public
+address. Enabling through the API took 438 ms end to end and produced a running
+tunnel whose generated client configuration carried the discovered endpoint.
+
+## 57. A broken-image icon is a bug anywhere, so the rule is enforced anywhere
+
+**Decided in V2-M5b, from a screenshot.** A specials episode drew the browser's
+torn-page glyph in the middle of the row: TMDB had recorded a `still_path`, and
+the image behind it was not there. The `{#if}` guard was correct and
+insufficient — it covers a missing path, not a path that 404s.
+
+The rule already existed for profile marks and had been written one component at
+a time, which is why it did not hold: posters, backdrops, stills and avatars all
+come from the same cache and any of them can fail the same way. It is now one
+capture-phase listener in the layout, because `error` from an `<img>` does not
+bubble and because the rule has to cover artwork nobody has added yet. The image
+is hidden rather than removed, which leaves the empty frame the design already
+draws for a film with no poster.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

@@ -2,9 +2,14 @@
 	// Remote access, administered from the LAN only.
 	//
 	// The whole point of M4 is that the tunnel is the *only* way in from outside
-	// and that the historical HTTP port stays private. So this panel says so
-	// plainly: the router forwards UDP, never TCP, and CGNAT is an unsupported
-	// case rather than something Theia quietly works around.
+	// and that the historical HTTP port stays private.
+	//
+	// What this panel asks for has changed. It opened with a UDP port field, a
+	// public endpoint field and a paragraph of router instructions -- four steps
+	// in somebody else's admin interface, three of which Theia could have taken
+	// itself. It asks the router now. The instructions have not been deleted,
+	// only folded away: a box with UPnP switched off is a real evening, and it
+	// is then the only way through. See internal/portmap.
 	import { onMount } from 'svelte';
 	import { apiFetch, getJSON, formatTime } from '$lib/api.js';
 	import { strings as t, formatSize } from '$lib/strings.js';
@@ -25,9 +30,16 @@
 	let provision = $state(null);
 	/** @type {number | null} */
 	let revoking = $state(null);
+	// The port and the address are the router's to answer, so the fields that
+	// used to ask for them are folded away. They are still here, because a
+	// router that refuses to forward is a real case and a person who has
+	// forwarded the port themselves must not be told to undo it.
+	let manualOpen = $state(false);
 
 	const running = $derived(status?.state === 'running');
 	const failed = $derived(status?.state === 'error');
+	const automatic = $derived(status?.automatic !== false);
+	const discoveryFailed = $derived(Boolean(status?.discovery_reason));
 	const dirty = $derived(
 		status !== null &&
 			(String(status.listen_port) !== portDraft || (status.endpoint ?? '') !== endpointDraft)
@@ -42,7 +54,15 @@
 		status = next;
 		portDraft = String(next.listen_port ?? '');
 		endpointDraft = next.endpoint ?? '';
+		// A router that said no is exactly when the manual way is worth seeing.
+		if (next.discovery_reason) manualOpen = true;
 	}
+
+	// One button. Everything the tunnel needs is asked of the router: which port
+	// it will forward, and what address the internet sees. Both are facts the
+	// gateway already holds, and UPnP and NAT-PMP are how it says them -- to
+	// this machine, on this network, with nothing in between.
+	const enable = () => send({ enabled: true, automatic: true });
 
 	onMount(async () => {
 		try {
@@ -172,13 +192,6 @@
 	{:else}
 		<p class="tv-copy mb-6 max-w-[46rem]">{t.remote.intro}</p>
 
-		<!-- Said before anything can be switched on, not after. -->
-		<p class="remote-caution">
-			<Icon name="info" size={18} />
-			<span>{t.remote.router}</span>
-		</p>
-		<p class="remote-note">{t.remote.cgnat}</p>
-
 		<dl class="remote-status">
 			<div>
 				<dt>{t.remote.state}</dt>
@@ -195,8 +208,31 @@
 					<dt>{t.remote.reachability}</dt>
 					<dd>{status.reachability === 'confirmed' ? t.remote.confirmed : t.remote.unverified}</dd>
 				</div>
+				{#if status.endpoint}
+					<!-- Shown rather than asked for: this is what the router answered. -->
+					<div>
+						<dt>{t.remote.publicAddress}</dt>
+						<dd class="remote-value--plain">{status.endpoint}</dd>
+					</div>
+				{/if}
+				{#if status.mapped_method}
+					<div>
+						<dt>{t.remote.opened}</dt>
+						<dd>{t.remote.methods[status.mapped_method] ?? status.mapped_method}</dd>
+					</div>
+				{/if}
 			{/if}
 		</dl>
+
+		<!-- A public address that moved is worth interrupting for: every
+		     configuration handed out before it now points at somebody else. -->
+		{#if status.endpoint_changed}
+			<p class="remote-note remote-note--warn">{t.remote.addressChanged}</p>
+		{/if}
+
+		{#if discoveryFailed}
+			<p class="remote-error">{t.remote.discovery[status.discovery_reason] ?? t.remote.discovery.remote_router_silent}</p>
+		{/if}
 
 		{#if running}
 			<p class="remote-note">
@@ -210,45 +246,11 @@
 			<p class="remote-error">{reason(status.reason)}</p>
 		{/if}
 
-		<div class="remote-fields">
-			<label class="remote-field">
-				<span class="label">{t.remote.port}</span>
-				<input class="profile-input" type="text" inputmode="numeric" bind:value={portDraft} />
-				<span class="remote-help">{t.remote.portHelp}</span>
-			</label>
-
-			<label class="remote-field">
-				<span class="label">{t.remote.endpoint}</span>
-				<input
-					class="profile-input"
-					type="text"
-					bind:value={endpointDraft}
-					placeholder={t.remote.endpointPlaceholder}
-				/>
-				<span class="remote-help">{t.remote.endpointHelp}</span>
-				<span class="remote-help">{t.remote.endpointExamples}</span>
-			</label>
-		</div>
-
-		<!-- Both consequences are stated before the save, not discovered after. -->
-		{#if endpointChanged}
-			<p class="remote-note remote-note--warn">{t.remote.endpointChange}</p>
-		{/if}
-		{#if portChanged && running}
-			<p class="remote-note remote-note--warn">{t.remote.portChange}</p>
-		{/if}
-
 		{#if formError}
 			<p class="remote-error" role="status">{formError}</p>
 		{/if}
 
 		<div class="remote-actions">
-			{#if dirty}
-				<button type="button" class="tv-action cursor-pointer" onclick={saveConfig} disabled={busy}>
-					{busy ? t.remote.saving : t.remote.save}
-				</button>
-			{/if}
-
 			{#if status.enabled}
 				<button
 					type="button"
@@ -262,13 +264,78 @@
 				<button
 					type="button"
 					class="tv-action tv-action--primary cursor-pointer"
-					onclick={() => send({ enabled: true, listen_port: Number(portDraft), endpoint: endpointDraft.trim() })}
+					onclick={enable}
 					disabled={busy}
+					data-remote-default
 				>
-					{t.remote.enable}
+					{busy ? t.remote.opening : t.remote.enable}
 				</button>
 			{/if}
 		</div>
+
+		<!--
+			The old panel led with this: a UDP port, a public endpoint, and a
+			paragraph about forwarding a port on a router Theia has never seen.
+			Both fields are answers the gateway already holds, so it is asked
+			instead. They stay, folded away, because a router with UPnP switched
+			off is a real evening and somebody who forwarded the port by hand
+			must not be told to undo it.
+		-->
+		<details class="remote-manual" bind:open={manualOpen}>
+			<summary class="tv-action cursor-pointer">{t.remote.manual}</summary>
+
+			<p class="remote-caution">
+				<Icon name="info" size={18} />
+				<span>{t.remote.router}</span>
+			</p>
+			<p class="remote-note">{t.remote.cgnat}</p>
+
+			<div class="remote-fields">
+				<label class="remote-field">
+					<span class="label">{t.remote.port}</span>
+					<input class="profile-input" type="text" inputmode="numeric" bind:value={portDraft} />
+					<span class="remote-help">{t.remote.portHelp}</span>
+				</label>
+
+				<label class="remote-field">
+					<span class="label">{t.remote.endpoint}</span>
+					<input
+						class="profile-input"
+						type="text"
+						bind:value={endpointDraft}
+						placeholder={t.remote.endpointPlaceholder}
+					/>
+					<span class="remote-help">{t.remote.endpointHelp}</span>
+					<span class="remote-help">{t.remote.endpointExamples}</span>
+				</label>
+			</div>
+
+			<!-- Both consequences are stated before the save, not discovered after. -->
+			{#if endpointChanged}
+				<p class="remote-note remote-note--warn">{t.remote.endpointChange}</p>
+			{/if}
+			{#if portChanged && running}
+				<p class="remote-note remote-note--warn">{t.remote.portChange}</p>
+			{/if}
+
+			<div class="remote-actions">
+				{#if dirty}
+					<button type="button" class="tv-action cursor-pointer" onclick={saveConfig} disabled={busy}>
+						{busy ? t.remote.saving : t.remote.save}
+					</button>
+				{/if}
+				{#if !automatic}
+					<button
+						type="button"
+						class="tv-action cursor-pointer"
+						onclick={enable}
+						disabled={busy}
+					>
+						{t.remote.retryAutomatic}
+					</button>
+				{/if}
+			</div>
+		</details>
 
 		<h3 class="label mt-12 mb-4">{t.remote.devices}</h3>
 

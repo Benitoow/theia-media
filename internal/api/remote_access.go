@@ -13,6 +13,7 @@ import (
 
 type remoteAccessUpdate struct {
 	Enabled    *bool   `json:"enabled"`
+	Automatic  *bool   `json:"automatic"`
 	ListenPort *int    `json:"listen_port"`
 	Endpoint   *string `json:"endpoint"`
 }
@@ -55,11 +56,20 @@ func (s *Server) handleUpdateRemoteAccess(w http.ResponseWriter, r *http.Request
 	if body.Enabled != nil {
 		cfg.Enabled = *body.Enabled
 	}
+	if body.Automatic != nil {
+		cfg.Automatic = *body.Automatic
+	}
 	if body.ListenPort != nil {
 		cfg.ListenPort = *body.ListenPort
 	}
 	if body.Endpoint != nil {
 		cfg.Endpoint = strings.TrimSpace(*body.Endpoint)
+		// Typing an endpoint is what taking it over looks like. Leaving
+		// automatic on would let the next discovery overwrite it, which reads
+		// as the field not saving.
+		if body.Automatic == nil && cfg.Endpoint != "" {
+			cfg.Automatic = false
+		}
 	}
 	status, err := s.remote.Update(r.Context(), cfg)
 	if err != nil {
@@ -118,6 +128,12 @@ func (s *Server) writeRemoteAccessError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, remoteaccess.ErrInvalidPort):
 		status, code = http.StatusBadRequest, "invalid_remote_listen_port"
+	case errors.Is(err, remoteaccess.ErrCarrierNAT):
+		status, code = http.StatusConflict, remoteaccess.DiscoveryNotPublic
+	case errors.Is(err, remoteaccess.ErrRouterRefused):
+		status, code = http.StatusConflict, remoteaccess.DiscoveryRefused
+	case errors.Is(err, remoteaccess.ErrNoAutomaticEndpoint):
+		status, code = http.StatusConflict, remoteaccess.DiscoveryNoGateway
 	case errors.Is(err, remoteaccess.ErrInvalidEndpoint):
 		status, code = http.StatusBadRequest, "invalid_remote_endpoint"
 	case errors.Is(err, remoteaccess.ErrInvalidPeerName):

@@ -14,7 +14,7 @@ const episodeFileColumns = `
 	id, episode_item_id, path, file_name, size_bytes, modified_at, is_primary,
 	media_status, media_container, media_duration_seconds,
 	video_stream_index, video_codec, video_width, video_height,
-	media_inspected_at`
+	media_inspected_at, subtitles_scanned`
 
 func scanEpisodeFile(row interface{ Scan(...any) error }) (EpisodeFile, error) {
 	var (
@@ -24,13 +24,14 @@ func scanEpisodeFile(row interface{ Scan(...any) error }) (EpisodeFile, error) {
 		container, videoCodec               sql.NullString
 		duration                            sql.NullFloat64
 		videoIndex, videoWidth, videoHeight sql.NullInt64
+		subtitlesScanned                    int
 	)
 	if err := row.Scan(
 		&file.ID, &file.EpisodeItemID, &file.Path, &file.FileName,
 		&file.SizeBytes, &modifiedAt, &primary,
 		&file.Media.Status, &container, &duration,
 		&videoIndex, &videoCodec, &videoWidth, &videoHeight,
-		&inspectedAt,
+		&inspectedAt, &subtitlesScanned,
 	); err != nil {
 		return EpisodeFile{}, err
 	}
@@ -41,6 +42,8 @@ func scanEpisodeFile(row interface{ Scan(...any) error }) (EpisodeFile, error) {
 	file.Media.Container = container.String
 	file.Media.DurationSeconds = duration.Float64
 	file.Media.AudioTracks = []AudioTrack{}
+	file.Media.SubtitleTracks = []SubtitleTrack{}
+	file.Media.SubtitlesScanned = subtitlesScanned != 0
 	if videoIndex.Valid && videoCodec.Valid {
 		file.Media.Video = &VideoStream{
 			StreamIndex: int(videoIndex.Int64),
@@ -148,7 +151,24 @@ func (s *Store) loadEpisodeAudioTracks(ctx context.Context, files []EpisodeFile)
 			file.Media.AudioTracks = append(file.Media.AudioTracks, track)
 		}
 	}
-	return rows.Err()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	ids := make([]int64, 0, len(files))
+	for i := range files {
+		ids = append(ids, files[i].ID)
+	}
+	byFile, err := s.loadSubtitles(ctx, episodeSubtitles, ids)
+	if err != nil {
+		return err
+	}
+	for i := range files {
+		if tracks := byFile[files[i].ID]; tracks != nil {
+			files[i].Media.SubtitleTracks = tracks
+		}
+	}
+	return nil
 }
 
 // SaveEpisodeFileMedia atomically replaces measured media characteristics.
@@ -169,7 +189,7 @@ func (s *Store) SaveEpisodeFileMedia(ctx context.Context, itemID, fileID int64, 
 		UPDATE episode_files SET
 			media_status = ?, media_container = ?, media_duration_seconds = ?,
 			video_stream_index = ?, video_codec = ?, video_width = ?, video_height = ?,
-			media_inspected_at = ?
+			media_inspected_at = ?, subtitles_scanned = 1
 		WHERE id = ? AND episode_item_id = ?`,
 		MediaOK, nullString(media.Container), nullPositiveFloat(media.DurationSeconds),
 		media.Video.StreamIndex, media.Video.Codec,
@@ -233,6 +253,10 @@ func (s *Store) SaveEpisodeFileMedia(ctx context.Context, itemID, fileID int64, 
 		}
 	}
 
+	if err := saveEmbeddedSubtitlesTx(ctx, tx, episodeSubtitles, fileID, media.SubtitleTracks); err != nil {
+		return EpisodeFile{}, err
+	}
+
 	if media.DurationSeconds > 0 {
 		if _, err := tx.ExecContext(ctx, `
 			UPDATE episode_items SET duration_seconds = COALESCE(duration_seconds, ?)
@@ -260,7 +284,7 @@ func (s *Store) MarkEpisodeFileMediaError(ctx context.Context, itemID, fileID in
 			media_duration_seconds = NULL,
 			video_stream_index = NULL, video_codec = NULL,
 			video_width = NULL, video_height = NULL,
-			media_inspected_at = ?
+			media_inspected_at = ?, subtitles_scanned = 1
 		WHERE id = ? AND episode_item_id = ?`, MediaError, time.Now().Unix(), fileID, itemID)
 	if err != nil {
 		return fmt.Errorf("recording failed media inspection for episode file %d: %w", fileID, err)
@@ -271,6 +295,12 @@ func (s *Store) MarkEpisodeFileMediaError(ctx context.Context, itemID, fileID in
 	if _, err := tx.ExecContext(ctx,
 		`DELETE FROM episode_file_audio_tracks WHERE episode_file_id = ?`, fileID); err != nil {
 		return fmt.Errorf("clearing stale audio tracks for episode file %d: %w", fileID, err)
+	}
+	// External `.srt` files survive: see MarkFileMediaError.
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM episode_file_subtitle_tracks
+		 WHERE episode_file_id = ? AND stream_index IS NOT NULL`, fileID); err != nil {
+		return fmt.Errorf("clearing stale subtitle tracks for episode file %d: %w", fileID, err)
 	}
 	return tx.Commit()
 }

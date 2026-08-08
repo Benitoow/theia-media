@@ -71,7 +71,7 @@ not to TMDB.
 | Not included | Consequence |
 | --- | --- |
 | TV series | The catalogue model is films only. There are no seasons or episodes. |
-| Subtitles | Neither external nor embedded subtitle tracks are exposed in the player. |
+| Image subtitles | PGS and VobSub tracks are listed and refused: showing one means burning it into the picture, which is the full transcode below. Text tracks — embedded SRT/ASS and `.srt` files beside the film — are available on `main` for V2. |
 | Video transcoding | MPEG-2, VC-1 and other video codecs that need re-encoding are refused instead of pinning the CPU for hours. |
 | Accounts or permissions | There is no login, password or access control. See the warning above; it is not decorative. |
 | Built-in remote access or HTTPS | Theia serves plain HTTP on the LAN. It is not a relay, reverse proxy or VPN. |
@@ -92,12 +92,15 @@ The latest release remains v1.5.0. Development is backend-first, so source on
   tracks for a manual choice on the detail page.
 - M3 adds the complete series, season, playable-episode and stream backend.
 - M4 adds embedded userspace WireGuard, one-time device provisioning,
-  revocation and a viewer-only remote API.
+  revocation and a viewer-only remote API. Since M5b it asks the router for the
+  public address and the port forwarding itself, over UPnP IGD or NAT-PMP —
+  both of which speak only to the gateway on the local network. There is still
+  no relay, no rendezvous server and no control plane.
+- M5b adds subtitles — embedded text tracks and `.srt` files beside the media —
+  and moves the audio and subtitle choice into the player.
 
 Those are not invisible buttons waiting to be discovered. Their frontend work
 is tracked explicitly in [the V2 frontend handoff](docs/theia-v2-frontend.md).
-The secure remote backend currently requires API-level setup from the LAN; wait
-for M4-FE if you want the television-friendly settings flow.
 
 ## Install
 

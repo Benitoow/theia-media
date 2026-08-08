@@ -234,13 +234,14 @@ func verify(path, want string) error {
 // remain as compatibility shortcuts for the first streams; V2-M1 consumers use
 // Video and AudioStreams so a human can choose a real audio track.
 type MediaInfo struct {
-	Container    string        `json:"container,omitempty"`
-	VideoCodec   string        `json:"video_codec"`
-	AudioCodec   string        `json:"audio_codec"`
-	Video        VideoStream   `json:"video"`
-	AudioStreams []AudioStream `json:"audio_streams"`
-	Duration     time.Duration `json:"-"`
-	Seconds      float64       `json:"duration_seconds"`
+	Container       string           `json:"container,omitempty"`
+	VideoCodec      string           `json:"video_codec"`
+	AudioCodec      string           `json:"audio_codec"`
+	Video           VideoStream      `json:"video"`
+	AudioStreams    []AudioStream    `json:"audio_streams"`
+	SubtitleStreams []SubtitleStream `json:"subtitle_streams"`
+	Duration        time.Duration    `json:"-"`
+	Seconds         float64          `json:"duration_seconds"`
 }
 
 type VideoStream struct {
@@ -257,6 +258,18 @@ type AudioStream struct {
 	Title       string `json:"title,omitempty"`
 	Channels    string `json:"channels,omitempty"`
 	Default     bool   `json:"default"`
+}
+
+// SubtitleStream is one embedded subtitle track. The codec decides whether it
+// can be rendered at all -- see package subtitles and decision 3 -- so it is
+// reported even for the bitmap formats Theia refuses to burn in.
+type SubtitleStream struct {
+	StreamIndex int    `json:"stream_index"`
+	Codec       string `json:"codec"`
+	Language    string `json:"language,omitempty"`
+	Title       string `json:"title,omitempty"`
+	Default     bool   `json:"default"`
+	Forced      bool   `json:"forced"`
 }
 
 var (
@@ -345,8 +358,11 @@ func canonicalContainer(format, extension string) string {
 // so the parsing -- regexes over free text, the fragile half -- can be tested
 // without spawning anything.
 func parseProbeOutput(output string) MediaInfo {
-	info := MediaInfo{AudioStreams: []AudioStream{}}
-	currentAudio := -1
+	info := MediaInfo{AudioStreams: []AudioStream{}, SubtitleStreams: []SubtitleStream{}}
+	// Which stream the Metadata lines that follow belong to. Both are reset by
+	// every stream header, so a subtitle's title can never land on the audio
+	// track above it.
+	currentAudio, currentSubtitle := -1, -1
 
 	for _, line := range strings.Split(output, "\n") {
 		line = strings.TrimSuffix(line, "\r")
@@ -362,7 +378,7 @@ func parseProbeOutput(output string) MediaInfo {
 			kind := match[3]
 			codec := strings.ToLower(match[4])
 			rest := match[5]
-			currentAudio = -1
+			currentAudio, currentSubtitle = -1, -1
 
 			switch kind {
 			case "Video":
@@ -389,22 +405,38 @@ func parseProbeOutput(output string) MediaInfo {
 				if info.AudioCodec == "" {
 					info.AudioCodec = codec
 				}
+			case "Subtitle":
+				lowerRest := strings.ToLower(rest)
+				info.SubtitleStreams = append(info.SubtitleStreams, SubtitleStream{
+					StreamIndex: streamIndex,
+					Codec:       codec,
+					Language:    language,
+					Default:     strings.Contains(lowerRest, "(default)"),
+					Forced:      strings.Contains(lowerRest, "(forced)"),
+				})
+				currentSubtitle = len(info.SubtitleStreams) - 1
 			}
 			continue
 		}
 
 		// ffmpeg prints per-stream title/language on following Metadata lines.
-		// currentAudio is reset by every next stream, so subtitle metadata cannot
-		// leak into the preceding audio track.
-		if currentAudio >= 0 {
-			if match := metadataPattern.FindStringSubmatch(line); match != nil {
-				switch strings.ToLower(match[1]) {
-				case "title":
-					info.AudioStreams[currentAudio].Title = strings.TrimSpace(match[2])
-				case "language":
-					if info.AudioStreams[currentAudio].Language == "" {
-						info.AudioStreams[currentAudio].Language = strings.ToLower(strings.TrimSpace(match[2]))
-					}
+		// Both cursors are reset by every next stream, so a subtitle's title
+		// cannot leak into the audio track printed above it.
+		if match := metadataPattern.FindStringSubmatch(line); match != nil {
+			key := strings.ToLower(match[1])
+			value := strings.TrimSpace(match[2])
+			switch {
+			case currentAudio >= 0 && key == "title":
+				info.AudioStreams[currentAudio].Title = value
+			case currentAudio >= 0 && key == "language":
+				if info.AudioStreams[currentAudio].Language == "" {
+					info.AudioStreams[currentAudio].Language = strings.ToLower(value)
+				}
+			case currentSubtitle >= 0 && key == "title":
+				info.SubtitleStreams[currentSubtitle].Title = value
+			case currentSubtitle >= 0 && key == "language":
+				if info.SubtitleStreams[currentSubtitle].Language == "" {
+					info.SubtitleStreams[currentSubtitle].Language = strings.ToLower(value)
 				}
 			}
 		}

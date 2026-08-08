@@ -13,6 +13,7 @@ import (
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/library"
 	"github.com/Benitoow/theia-media/internal/stream"
+	"github.com/Benitoow/theia-media/internal/subtitles"
 )
 
 func (s *Server) handleEpisodeFileStreamInfo(w http.ResponseWriter, r *http.Request) {
@@ -54,8 +55,8 @@ func (s *Server) handleEpisodeFileStreamInfo(w http.ResponseWriter, r *http.Requ
 		audioCodec := ""
 		if selected != nil {
 			audioCodec = selected.Codec
-		} else if len(file.Media.AudioTracks) > 0 {
-			audioCodec = file.Media.AudioTracks[0].Codec
+		} else if track, ok := stream.PreferredAudio(file.Media.AudioTracks, func(t library.AudioTrack) string { return t.Codec }); ok {
+			audioCodec = track.Codec
 		}
 		decision = stream.Decide(file.Path, file.Media.Video.Codec, audioCodec)
 		reasonCode = decisionReasonCode(decision)
@@ -78,6 +79,15 @@ func (s *Server) handleEpisodeFileStreamInfo(w http.ResponseWriter, r *http.Requ
 	if container == "" {
 		container = file.Extension
 	}
+	// Asked once per playback, which is what keeps a `.srt` dropped in this
+	// afternoon offered this evening without a rescan.
+	s.syncSidecars(file.Path, file.ID, func(id int64, found []subtitles.Sidecar) error {
+		return s.lib.SyncEpisodeFileSubtitles(r.Context(), id, found)
+	})
+	if reloaded, err := s.lib.GetEpisodeFile(r.Context(), item.ID, file.ID); err == nil {
+		file.Media.SubtitleTracks = reloaded.Media.SubtitleTracks
+	}
+
 	progress := item.Progress
 	writeJSON(w, http.StatusOK, streamInfoResponse{
 		ID:              item.ID,
@@ -94,6 +104,8 @@ func (s *Server) handleEpisodeFileStreamInfo(w http.ResponseWriter, r *http.Requ
 		FFmpegSupported: ffmpeg.Supported(),
 		DurationSeconds: duration,
 		Progress:        &progress,
+		AudioTracks:     file.Media.AudioTracks,
+		SubtitleTracks:  file.Media.SubtitleTracks,
 	})
 }
 
@@ -152,7 +164,9 @@ func (s *Server) handleEpisodeFileStreamRemux(w http.ResponseWriter, r *http.Req
 		defer s.activity.Begin()()
 	}
 
-	if file.Media.Status != library.MediaOK || file.Media.Video == nil {
+	// See the film route: the third condition catches a file measured before
+	// Theia knew to look for subtitles, and fires once.
+	if file.Media.Status != library.MediaOK || file.Media.Video == nil || !file.Media.SubtitlesScanned {
 		info, err := s.ffmpeg.Probe(r.Context(), file.Path)
 		switch {
 		case errors.Is(err, ffmpeg.ErrUnsupportedPlatform):
@@ -192,8 +206,12 @@ func (s *Server) handleEpisodeFileStreamRemux(w http.ResponseWriter, r *http.Req
 	audioCodec := ""
 	if selected != nil {
 		audioCodec = selected.Codec
-	} else if len(file.Media.AudioTracks) > 0 {
-		audioCodec = file.Media.AudioTracks[0].Codec
+	} else if track, ok := stream.PreferredAudio(file.Media.AudioTracks, func(t library.AudioTrack) string { return t.Codec }); ok {
+		// Same compatibility choice the film route makes: map the track the
+		// browser can decode rather than burning a core transcoding past it.
+		audioCodec = track.Codec
+		defaulted := track
+		selected = &defaulted
 	}
 	decision := stream.Decide(file.Path, file.Media.Video.Codec, audioCodec)
 	if decision.Mode == stream.ModeUnsupported {

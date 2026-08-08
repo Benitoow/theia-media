@@ -23,6 +23,36 @@ export const strings = {
 		mainNavigation: 'Main navigation'
 	},
 
+	// Containers write the language as ISO 639, and not always the same variant:
+	// "fre" and "fra" both mean French, so does "fr". The server passes on the
+	// code it read (decision 25); this is where it becomes a word. An unknown
+	// code is shown in capitals, which is legible and invents nothing.
+	languages: {
+		fra: 'French', fre: 'French', fr: 'French',
+		eng: 'English', en: 'English',
+		spa: 'Spanish', es: 'Spanish',
+		deu: 'German', ger: 'German', de: 'German',
+		ita: 'Italian', it: 'Italian',
+		por: 'Portuguese', pt: 'Portuguese',
+		nld: 'Dutch', dut: 'Dutch', nl: 'Dutch',
+		jpn: 'Japanese', ja: 'Japanese',
+		zho: 'Chinese', chi: 'Chinese', zh: 'Chinese',
+		kor: 'Korean', ko: 'Korean',
+		rus: 'Russian', ru: 'Russian',
+		ara: 'Arabic', ar: 'Arabic',
+		pol: 'Polish', pl: 'Polish',
+		swe: 'Swedish', sv: 'Swedish',
+		dan: 'Danish', da: 'Danish',
+		nor: 'Norwegian', no: 'Norwegian',
+		fin: 'Finnish', fi: 'Finnish',
+		tur: 'Turkish', tr: 'Turkish',
+		ces: 'Czech', cze: 'Czech', cs: 'Czech',
+		ell: 'Greek', gre: 'Greek', el: 'Greek',
+		heb: 'Hebrew', he: 'Hebrew',
+		hin: 'Hindi', hi: 'Hindi',
+		und: 'Unspecified language', mul: 'Multilingual'
+	},
+
 	nav: {
 		home: 'Home',
 		library: 'Movies',
@@ -243,6 +273,21 @@ export const strings = {
 			ffmpeg_unavailable: 'ffmpeg could not be prepared. Check the connection, then try again.'
 		},
 
+		tracks: {
+			open: 'Audio and subtitles',
+			title: 'Audio and subtitles',
+			close: 'Close',
+			subtitles: 'Subtitles',
+			noSubtitles: 'None',
+			external: 'separate file',
+			forced: 'forced',
+			unnamedSubtitle: (index) => `Subtitles ${index}`,
+			// Decision 3: an image track can only be shown by burning it into
+			// the picture, which is the full transcode v1 refuses. Listed all
+			// the same, or somebody goes looking for it.
+			imageBased: 'image — cannot be shown'
+		},
+
 		shortcuts: {
 			open: 'Show keyboard shortcuts',
 			close: 'Close keyboard shortcuts',
@@ -286,7 +331,8 @@ export const strings = {
 			trackCount: (count) => (count > 1 ? `${count} audio tracks` : `${count} audio track`),
 			hint:
 				'Theia never picks a quality for you: several files exist and you decide which ' +
-				'one to play.'
+				'one to play.',
+			tracksInPlayer: 'Audio tracks and subtitles are chosen while the film plays.'
 		},
 		audio: {
 			title: 'Audio track',
@@ -308,7 +354,33 @@ export const strings = {
 	remote: {
 		heading: 'Remote access',
 		intro:
-			'Theia can be reached outside the local network through an embedded WireGuard tunnel. No account, no relay, no outside service: each device proves a key created here.',
+			'Theia can be reached from outside the local network through an embedded WireGuard tunnel. No account, no relay, no outside service: every device proves a key created here.',
+		opening: 'Opening the port…',
+		publicAddress: 'Public address',
+		opened: 'Port opened by',
+		methods: {
+			upnp: 'UPnP',
+			natpmp: 'NAT-PMP'
+		},
+		addressChanged:
+			'Your public address has changed since remote access was switched on. Devices created ' +
+			'before that point at an address that is no longer yours: create them again.',
+		manual: 'Set the port and address by hand',
+		retryAutomatic: 'Ask the router again',
+		// The server sends a code; these sentences belong to the interface.
+		discovery: {
+			remote_router_silent:
+				'Your router did not answer. Automatic port opening (UPnP or NAT-PMP) is probably ' +
+				'switched off in its settings — which is the default on some ISP boxes. Turn it on, ' +
+				'or open the port by hand below.',
+			remote_router_refused:
+				'Your router refused to open this port. It may already be forwarded to another ' +
+				'machine, or forwarding may be locked. Try another port, or open it by hand below.',
+			remote_carrier_nat:
+				'Your provider places you behind carrier-grade NAT: your connection has no public ' +
+				'address of its own, and no port forwarding can reach through it. Ask them for a ' +
+				'public IP address — it is usually free and immediate.'
+		},
 		router:
 			'Your router must forward the UDP port below to this machine. Never forward Theia’s TCP port: it has no authentication at all.',
 		cgnat:
@@ -414,6 +486,11 @@ export const strings = {
 		episodeNotFound: 'This episode could not be found.',
 		seasons: 'Seasons',
 		specials: 'Specials',
+		specialsHelp:
+			'Season 0 holds everything outside the numbering: making-of features, ' +
+			'Christmas episodes, recaps. It only appears when a "Specials" or ' +
+			'"Season 00" folder exists in your library, and it never takes part in ' +
+			'autoplay.',
 		season: (number) => `Season ${number}`,
 		ownedEpisodes: (n) => (n === 1 ? '1 episode owned' : `${n} episodes owned`),
 		episodeLabel: (number) => `Episode ${number}`,

@@ -891,6 +891,82 @@ HTTPS public, comptes, profils, sous-titres et transcodage vidéo.
 **Statut : aucun chantier backend.** Ce jalon appartient entièrement à la piste
 frontend et à la direction artistique.
 
+### M5b-BE — Sous-titres, pistes dans `/info`, ouverture de port automatique
+
+**Statut : implémenté et vérifié.** Décisions 55 à 57.
+
+Trois changements de contrat, tous additifs : aucun champ existant ne change de
+sens et aucune route n'est retirée.
+
+**1. `/info` porte désormais les pistes.** Les deux routes
+`GET /api/stream/{id}/files/{file_id}/info` et
+`GET /api/library/episodes/{id}/files/{file_id}/stream/info` ajoutent :
+
+```json
+{
+  "audio_tracks":    [ { "id": 3, "stream_index": 1, "codec": "aac",
+                         "language": "fra", "title": "Version française",
+                         "channels": "mono", "is_default": true } ],
+  "subtitle_tracks": [ { "id": 1, "stream_index": 2, "codec": "subrip",
+                         "language": "fra", "title": "Français",
+                         "kind": "text", "is_external": false,
+                         "is_default": true, "is_forced": false } ]
+}
+```
+
+`kind` vaut `"text"` ou `"image"`. Une piste `image` (PGS, VobSub) est **listée
+et jamais servie** : décision 3 refuse de l'incruster. Les deux tableaux sont
+absents quand le fichier n'a pas encore été mesuré — `/info` ne déclenche
+toujours pas ffmpeg (contrat M1 inchangé). Le frontend redemande `/info` une
+fois après le début de lecture si `media_status !== "ok"`.
+
+Les fichiers `.srt` voisins sont recensés à chaque appel de `/info`, par une
+lecture de dossier, donc sans ffmpeg : ils apparaissent avec
+`"is_external": true` et un `stream_index` absent.
+
+**2. Une route de sous-titres, deux formes identiques.**
+
+```
+GET /api/library/movies/{id}/files/{file_id}/subtitles/{track_id}?t=<secondes>
+GET /api/library/episodes/{id}/files/{file_id}/subtitles/{track_id}?t=<secondes>
+```
+
+Réponse `200 text/vtt; charset=utf-8`. `t` est **le même nombre que celui passé
+à `/remux`** : le flux réencapsulé est un tube redémarré à un horodatage, donc
+l'horloge de l'élément vidéo repart de zéro et les repères doivent être rebasés
+de la même façon. Erreurs : `415 subtitle_image_based`,
+`404 subtitle_track_not_found`, `400 invalid_subtitle_track_id`,
+`503 ffmpeg_unavailable`, `403 file_outside_library`.
+
+**3. Accès distant : `automatic`.** `GET /api/remote-access` ajoute
+`automatic`, `mapped_method` (`"upnp"` | `"natpmp"`), `mapped_port`,
+`discovery_reason` et `endpoint_changed`. `PUT` accepte `automatic`.
+
+`PUT {"enabled": true, "automatic": true}` suffit : le serveur demande au
+routeur le port et l'adresse publique, puis démarre le tunnel. Mesuré sur la box
+du mainteneur — 438 ms de bout en bout, UPnP, endpoint public réel. Poser
+`endpoint` à la main bascule `automatic` à `false`, sinon la découverte suivante
+écraserait la saisie.
+
+Échecs, en `409` avec un code stable, et repris à l'identique dans
+`discovery_reason` : `remote_router_silent`, `remote_router_refused`,
+`remote_carrier_nat`. Le frontend possède les phrases (décision 25).
+
+**Migrations.** `0010_subtitles.sql` crée `movie_file_subtitle_tracks` et
+`episode_file_subtitle_tracks` — une seule table par famille, `stream_index`
+pour l'embarqué et `source_path` pour l'externe, exclusifs par CHECK — et ajoute
+`subtitles_scanned` aux deux tables de fichiers. `0011_remote_automatic.sql`
+ajoute `automatic`, `mapped_method` et `mapped_port`.
+
+`subtitles_scanned` distingue « aucun sous-titre » de « mesuré avant que Theia
+sache regarder ». Une bibliothèque existante n'est pas réanalysée en bloc : la
+prochaine lecture d'un fichier le re-sonde une fois, sur un chemin qui allait
+lancer ffmpeg de toute façon.
+
+**Vérifié.** Suite Go complète, `gofmt` propre, parité des catalogues, sur le
+vrai fichier Star Wars du mainteneur (SRT servie rebasée à `t=1800`, PGS refusée
+en 415) et sur un corpus généré de quatre séries à pistes multiples.
+
 ### M6-BE — Optimisation matérielle
 
 **Statut : différé.**

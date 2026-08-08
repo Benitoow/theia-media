@@ -228,9 +228,52 @@ Le trait est dessiné en chemins et non en `<text>` : un favicon est chargé com
 une image, donc sans police web. Le fichier est vérifié en le décodant dans un
 `Image()`, pas en constatant qu'il existe.
 
+### M5b-FE — Pistes dans le lecteur, accès distant à un bouton
+
+**Statut : implémenté et vérifié.** Décisions 55 à 57. Issu d'un retour d'usage
+après une vraie soirée de visionnage, pas d'un jalon planifié.
+
+**Le menu de pistes vit dans le lecteur.** Un bouton CC dans la barre, un
+panneau au-dessus d'elle plutôt qu'au centre de l'image, deux sections : piste
+audio (masquée s'il n'y en a qu'une, ce qui n'est pas un choix) et sous-titres,
+avec « Aucun » en premier. Le panneau possède son axe vertical comme la liste de
+fichiers (§9), et n'est pas un second dialogue : le bouton qui l'ouvre doit
+rester atteignable pour le refermer.
+
+La page du film ne garde que le choix du fichier — le seul qui précède
+réellement le visionnage. Le sélecteur audio qui s'y trouvait était invisible
+dans le cas qui compte : voir décision 55.
+
+**Trois pièges mesurés, pas devinés.**
+
+- Changer de piste audio est un nouveau flux, pas un réglage : ffmpeg mappe une
+  piste et ne peut pas en changer en cours de tube. La position est conservée —
+  vérifié, lecture jusqu'à 8 s puis `?t=8&audio=15`, l'horloge reprend à 0:11.
+- Les sous-titres se placent en calculant, parce que `line` en nombre de lignes
+  s'aligne sur une hauteur choisie par le moteur et que Chrome ignore
+  `lineAlign: 'end'`. Position dérivée du nombre de lignes du repère et de la
+  hauteur réelle de la barre, en unités de l'image.
+- Une image d'illustration qui échoue ne montre jamais l'icône « image
+  cassée » : la règle est désormais un écouteur global en phase de capture
+  (décision 57).
+
+**L'accès distant tient en un bouton.** Plus de champ de port, plus de champ
+d'adresse, plus de paragraphe sur la redirection de port en tête de panneau. Le
+panneau affiche ce que le routeur a répondu — adresse publique, protocole
+utilisé — et un seul bouton. Le réglage manuel existe toujours, replié, et
+s'ouvre de lui-même quand le routeur a refusé.
+
+Les trois refus possibles ont chacun leur phrase, y compris le CGNAT, qui
+explique que demander une IP publique à l'opérateur est en général gratuit.
+
+**Vérifié à l'écran**, dans un vrai navigateur qui compose les images : survol du
+profil mesuré à 52 × 52 px (rond, plus ovale), panneau de pistes ouvert et
+sous-titres affichés au-dessus de la barre, panneau distant actif avec
+`77.194.186.253` et « Port ouvert par UPnP ».
+
 ### M6-FE — Contrôles de qualité et capacités matérielles
 
-**Statut : attend M6-BE.**
+**Statut : attend M6-BE. Prochain jalon.**
 
 Expose uniquement les modes réellement annoncés par le serveur, avec leurs
 coûts et indisponibilités. Aucun bouton décoratif pour une qualité que la machine

@@ -1,7 +1,13 @@
 // Package remoteaccess exposes Theia through a private, userspace WireGuard
 // network. It never creates an operating-system tunnel interface and never
-// contacts a control plane: the public UDP endpoint remains the owner's
-// responsibility.
+// contacts a control plane.
+//
+// The public UDP endpoint is obtained from the router itself -- see the
+// portmap package -- rather than typed in by hand. That is a change of who is
+// asked, not of who is trusted: UPnP and NAT-PMP speak only to the gateway on
+// the local network, so there is still no relay, no rendezvous server and no
+// endpoint-discovery service anywhere in the path. When the router declines,
+// the endpoint goes back to being the owner's to enter.
 package remoteaccess
 
 import (
@@ -43,6 +49,52 @@ var (
 	ErrInvalidPeerName = errors.New("invalid remote access peer name")
 )
 
+// ErrNoAutomaticEndpoint is returned when remote access was asked to switch
+// itself on, the router declined to forward anything, and no endpoint had been
+// entered by hand. The specific reason travels in the message and in Status;
+// this is the one the HTTP layer matches on.
+var ErrNoAutomaticEndpoint = errors.New("the router provided no public endpoint")
+
+// The three ways that can happen, each worth a different sentence to the person
+// reading it. They are wrapped alongside ErrNoAutomaticEndpoint, so a caller can
+// match either the family or the specific case.
+var (
+	ErrRouterSilent  = errors.New("no router answered UPnP or NAT-PMP")
+	ErrRouterRefused = errors.New("the router refused to forward the port")
+	ErrCarrierNAT    = errors.New("this connection is behind carrier-grade NAT")
+)
+
+// discoveryError turns a reason code back into the matchable error.
+func discoveryError(reason string) error {
+	switch reason {
+	case DiscoveryRefused:
+		return fmt.Errorf("%w: %w", ErrNoAutomaticEndpoint, ErrRouterRefused)
+	case DiscoveryNotPublic:
+		return fmt.Errorf("%w: %w", ErrNoAutomaticEndpoint, ErrCarrierNAT)
+	default:
+		return fmt.Errorf("%w: %w", ErrNoAutomaticEndpoint, ErrRouterSilent)
+	}
+}
+
+// Discovery reason codes. Stable strings, never sentences: the interface owns
+// every word a person reads (decision 25), and these are the four outcomes it
+// has to be able to explain.
+const (
+	// DiscoveryNoGateway: nothing answered UPnP or NAT-PMP. Usually the feature
+	// is simply switched off in the router's own settings.
+	DiscoveryNoGateway = "remote_router_silent"
+
+	// DiscoveryRefused: a router answered and declined -- the port is already
+	// forwarded elsewhere, or forwarding is locked down.
+	DiscoveryRefused = "remote_router_refused"
+
+	// DiscoveryNotPublic: the mapping worked and leads nowhere, because the
+	// address the router holds is itself behind the operator's NAT. No amount
+	// of port forwarding reaches through carrier-grade NAT, and saying so is
+	// the only useful answer.
+	DiscoveryNotPublic = "remote_carrier_nat"
+)
+
 // Config is the persisted remote-listener configuration. Endpoint is the
 // public host:port placed into newly generated client configurations; it is
 // never contacted by Theia itself.
@@ -51,6 +103,16 @@ type Config struct {
 	ListenPort int    `json:"listen_port"`
 	Endpoint   string `json:"endpoint"`
 	UpdatedAt  int64  `json:"updated_at"`
+
+	// Automatic asks the router for the port and the address instead of asking
+	// the owner. When it succeeds it fills Endpoint; when the router declines,
+	// whatever was typed by hand still stands.
+	Automatic bool `json:"automatic"`
+
+	// What the last successful discovery did, so the mapping can be withdrawn
+	// on the way out and the panel can name the protocol that answered.
+	MappedMethod string `json:"mapped_method,omitempty"`
+	MappedPort   int    `json:"mapped_port,omitempty"`
 }
 
 // Peer is one active client identity. PublicKey and Address are not secrets;
@@ -76,6 +138,14 @@ type Status struct {
 	ServerPublicKey string `json:"server_public_key,omitempty"`
 	Reachability    string `json:"reachability"`
 	Peers           []Peer `json:"peers"`
+
+	// DiscoveryReason is empty when the router forwarded the port. It is a code
+	// and never a sentence; the interface owns the words (decision 25).
+	DiscoveryReason string `json:"discovery_reason,omitempty"`
+
+	// EndpointChanged says the public address moved under an already-running
+	// tunnel, so devices provisioned before it need a new configuration.
+	EndpointChanged bool `json:"endpoint_changed,omitempty"`
 }
 
 // Provision is returned exactly once when a peer is created. ClientConfig and

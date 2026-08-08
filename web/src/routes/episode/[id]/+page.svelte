@@ -17,7 +17,6 @@
 	let episode = $state(null);
 	let playing = $state(false);
 	let fileId = $state(null);
-	let audioTrackId = $state(null);
 
 	const basePath = $derived(`/api/library/episodes/${episode?.id}`);
 	const files = $derived(episode?.files ?? []);
@@ -55,7 +54,6 @@
 			episode = await getJSON(profiles.url(`/api/library/episodes/${id}`));
 			fileId =
 				(episode.files?.find((file) => file.is_primary) ?? episode.files?.[0])?.id ?? null;
-			audioTrackId = null;
 			state = 'ready';
 		} catch {
 			state = 'missing';
@@ -69,9 +67,8 @@
 		episode = { ...episode, progress };
 	}
 
-	function onFileChoice({ fileId: nextFile, audioTrackId: nextTrack }) {
+	function onFileChoice({ fileId: nextFile }) {
 		fileId = nextFile ?? fileId;
-		audioTrackId = nextTrack ?? null;
 	}
 
 	function onFileMeasured(measured) {
@@ -80,7 +77,6 @@
 			...episode,
 			files: episode.files.map((file) => (file.id === measured.id ? measured : file))
 		};
-		if (measured.id === fileId) audioTrackId = null;
 	}
 </script>
 
@@ -137,7 +133,6 @@
 			{basePath}
 			{files}
 			{fileId}
-			{audioTrackId}
 			onselect={onFileChoice}
 			onmeasure={onFileMeasured}
 		/>
@@ -175,9 +170,11 @@
 			movie={episode}
 			title={playerTitle}
 			fileId={selectedFile?.id ?? null}
-			{audioTrackId}
 			streamBase={selectedFile
 				? `/api/library/episodes/${episode.id}/files/${selectedFile.id}/stream`
+				: null}
+			subtitleBase={selectedFile
+				? `/api/library/episodes/${episode.id}/files/${selectedFile.id}`
 				: null}
 			progressPath={`/api/library/episodes/${episode.id}/progress`}
 			onprogress={syncProgress}

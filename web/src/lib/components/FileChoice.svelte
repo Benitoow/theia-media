@@ -13,7 +13,13 @@
 	// basePath is the resource these files hang off:
 	// /api/library/movies/{id} or /api/library/episodes/{id}. Inspection sits at
 	// the same place under both, so one component serves films and episodes.
-	let { basePath, files = [], fileId, audioTrackId, onselect, onmeasure } = $props();
+	// The audio track used to be chosen here and is not any more: a choice made
+	// while watching belongs in the player, and this list's copy of the tracks
+	// was a snapshot taken before playback -- so a file first measured by that
+	// very playback offered an empty menu until somebody reloaded the page.
+	// What stays here is the one choice that genuinely precedes watching: which
+	// file plays.
+	let { basePath, files = [], fileId, onselect, onmeasure } = $props();
 
 	/** file id -> 'idle' | 'running', so two files can be inspected independently. */
 	let inspecting = $state({});
@@ -22,21 +28,10 @@
 
 	const many = $derived(files.length > 1);
 	const selected = $derived(files.find((file) => file.id === fileId) ?? files[0] ?? null);
-	const tracks = $derived(
-		selected?.media?.status === 'ok' ? (selected.media.audio_tracks ?? []) : []
-	);
-	// One track is not a choice. Offering it would only force a remux for nothing.
-	const choosableTracks = $derived(tracks.length > 1 ? tracks : []);
 
 	function selectFile(file) {
 		if (file.id === fileId) return;
-		// The audio track belongs to the file that was measured, so it cannot
-		// survive a change of file: track ids are per-file in M1-BE.
-		onselect?.({ fileId: file.id, audioTrackId: null });
-	}
-
-	function selectTrack(id) {
-		onselect?.({ fileId: selected.id, audioTrackId: id });
+		onselect?.({ fileId: file.id });
 	}
 
 	async function inspect(file) {
@@ -125,17 +120,6 @@
 		});
 	}
 
-	/** A track's name is built only from the fields the probe actually returned. */
-	function trackLabel(track, index) {
-		const parts = [];
-		if (track.language) parts.push(track.language.toUpperCase());
-		if (track.title) parts.push(track.title);
-		if (!parts.length) parts.push(t.film.audio.unnamed(index + 1));
-		if (track.codec) parts.push(track.codec.toUpperCase());
-		if (track.channels) parts.push(track.channels);
-		if (track.is_default) parts.push(t.film.audio.isDefault);
-		return parts.join(' · ');
-	}
 </script>
 
 <!--
@@ -236,39 +220,7 @@
 		{/each}
 	</ul>
 
-	{#if choosableTracks.length}
-		<div class="file-choice-audio">
-			<h3 class="label">{t.film.audio.title}</h3>
-			<ul class="file-choice-list" aria-label={t.film.audio.choose}>
-				<li class="file-row">
-					<button
-						type="button"
-						class="file-option file-option--compact"
-						class:file-option--chosen={!audioTrackId}
-						aria-pressed={!audioTrackId}
-						onclick={() => selectTrack(null)}
-					>
-						<span class="file-option-name">{t.film.audio.auto}</span>
-					</button>
-				</li>
-				{#each choosableTracks as track, index (track.id)}
-					<li class="file-row">
-						<button
-							type="button"
-							class="file-option file-option--compact"
-							class:file-option--chosen={audioTrackId === track.id}
-							aria-pressed={audioTrackId === track.id}
-							onclick={() => selectTrack(track.id)}
-						>
-							<span class="file-option-name">{trackLabel(track, index)}</span>
-						</button>
-					</li>
-				{/each}
-			</ul>
-
-			{#if audioTrackId}
-				<p class="file-choice-note">{t.film.audio.remuxNote}</p>
-			{/if}
-		</div>
+	{#if selected?.media?.status === 'ok' && (selected.media.audio_tracks?.length > 1 || selected.media.subtitle_tracks?.length)}
+		<p class="file-choice-note">{t.film.files.tracksInPlayer}</p>
 	{/if}
 </section>
