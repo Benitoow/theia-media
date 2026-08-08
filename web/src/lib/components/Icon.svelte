@@ -51,6 +51,19 @@
 		filter: 'M3.6 4.6h16.8l-6.5 7.7v6.1l-3.8 2.4v-8.5Z',
 		info: ['M12 3.6a8.4 8.4 0 1 0 0 16.8 8.4 8.4 0 0 0 0-16.8Z', 'M12 11v5.2', 'M12 7.8h.01'],
 
+		// A cog, for the panel that holds audio, subtitles and quality together.
+		// The button used to wear the closed-caption mark, which says
+		// "subtitles" and nothing about the other two, so the audio and quality
+		// sections went unfound. Drawn here rather than lifted from a pack, like
+		// everything else in this file: a ring, eight teeth on the 45s, and a
+		// hub. Teeth reach r=8.7, which keeps the whole mark inside the 24 grid.
+		settings: [
+			'M12 5.4a6.6 6.6 0 1 0 0 13.2 6.6 6.6 0 0 0 0-13.2Z',
+			'M12 9.2a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6Z',
+			'M18.6 12h2.1M5.4 12H3.3M12 5.4V3.3M12 18.6v2.1',
+			'M16.67 7.33l1.48-1.48M7.33 16.67l-1.48 1.48M16.67 16.67l1.48 1.48M7.33 7.33 5.85 5.85'
+		],
+
 		// The closed-caption mark: the one glyph everybody already reads as
 		// "subtitles", which matters more here than drawing something prettier.
 		captions: [

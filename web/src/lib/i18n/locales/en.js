@@ -277,8 +277,8 @@ export const strings = {
 		},
 
 		tracks: {
-			open: 'Audio and subtitles',
-			title: 'Audio and subtitles',
+			open: 'Audio, subtitles and quality',
+			title: 'Audio, subtitles and quality',
 			quality: 'Quality',
 			original: 'As the file is',
 			height: (h) => h + 'p',

@@ -1149,7 +1149,7 @@
 							aria-expanded={tracksOpen}
 							aria-haspopup="true"
 						>
-							<Icon name="captions" label={t.player.tracks.open} />
+							<Icon name="settings" label={t.player.tracks.open} />
 						</button>
 
 						{#if tracksOpen}

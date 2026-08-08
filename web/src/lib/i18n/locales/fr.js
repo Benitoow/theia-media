@@ -280,8 +280,8 @@ export const strings = {
 		},
 
 		tracks: {
-			open: 'Audio et sous-titres',
-			title: 'Audio et sous-titres',
+			open: 'Audio, sous-titres et qualité',
+			title: 'Audio, sous-titres et qualité',
 			quality: 'Qualité',
 			original: 'Qualité du fichier',
 			height: (h) => h + 'p',
