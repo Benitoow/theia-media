@@ -236,7 +236,15 @@ func TranscodeArgs(path string, d Decision, startSeconds float64, encoder string
 	if height > 0 {
 		// -2 keeps the aspect ratio and rounds the width to an even number,
 		// which every H.264 encoder requires and some crash without.
-		args = append(args, "-vf", "scale=-2:"+strconv.Itoa(height))
+		//
+		// setsar=1 is not decoration. Rounding the width to an even number
+		// leaves a remainder, and ffmpeg spends it on the sample aspect ratio to
+		// keep the display aspect exact: a 1920x804 source asked for 720 comes
+		// out 1720x720 with SAR 2880:2881. The source has square pixels, so the
+		// re-encode should too; a fractional SAR is a decoder's problem for a
+		// rounding error nobody can see. One even pixel of width is cheaper than
+		// non-square pixels.
+		args = append(args, "-vf", "scale=-2:"+strconv.Itoa(height)+",setsar=1")
 	}
 
 	args = append(args,
