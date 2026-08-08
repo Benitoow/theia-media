@@ -82,6 +82,11 @@ type Manager struct {
 	// both fetch 80 MB over each other.
 	mu       sync.Mutex
 	verified bool
+
+	// What this machine can encode with. Probed once, on the first playback
+	// that needs it -- see capabilities.go.
+	capsOnce sync.Once
+	caps     Capabilities
 }
 
 // New prepares a manager. dir is where the binary is kept.

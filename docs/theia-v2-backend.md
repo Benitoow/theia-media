@@ -969,7 +969,48 @@ en 415) et sur un corpus généré de quatre séries à pistes multiples.
 
 ### M6-BE — Optimisation matérielle
 
-**Statut : différé.**
+**Statut : implémenté et vérifié.** Décision 58.
+
+**Sonde d'encodeurs.** `ffmpeg.Manager.Capabilities(ctx)` essaie chaque candidat
+sur une image de rien et ne retient que ceux qui démarrent. Le binaire épinglé
+annonce les cinq sur toutes les plateformes ; sur la machine du mainteneur trois
+seulement fonctionnent. Sondé une fois par processus, paresseusement, jamais au
+démarrage.
+
+**Nouveaux champs sur `/info`** (films et épisodes) :
+
+```json
+{
+  "height": 804,
+  "transcode": { "available": true, "kind": "hardware",
+                 "encoder": "h264_amf", "busy": false },
+  "qualities": [ { "height": 0,   "mode": "remux" },
+                 { "height": 720, "mode": "transcode" },
+                 { "height": 480, "mode": "transcode" },
+                 { "height": 360, "mode": "transcode" } ]
+}
+```
+
+`qualities` ne contient jamais une hauteur supérieure à la source, et le tableau
+est absent quand aucun encodeur ne tourne. `kind` vaut `hardware` ou `software` ;
+c'est la seule chose que l'interface a besoin de savoir pour dire ce que coûte
+un changement.
+
+**Deux paramètres sur `/remux`** :
+
+- `?h=720` — une hauteur de l'échelle, sinon `400 invalid_height`.
+- `?video=transcode` — réencode sans changer la taille. C'est ainsi que le
+  navigateur signale ce qu'aucun serveur ne peut savoir : il a chargé le
+  fichier, il jouera le son, il ne produira jamais d'image.
+
+**Refus** : `503 transcode_busy` quand toutes les places sont prises — une en
+logiciel, trois en matériel. `415 video_transcode_required` quand aucun encodeur
+ne tourne.
+
+**Vérifié.** Sur le vrai fichier HEVC du mainteneur : `mode=remux` à 63 s puis
+`mode=transcode video_encoder=h264_amf` à 63 s, Chrome rapporte 1920×804 et
+décode. En 720p, la sortie mesure 1720×720. Cinq requêtes simultanées : deux
+admises, trois refusées en 503.
 
 Détection des capacités, transcodage vidéo à la volée, choix CPU/iGPU/GPU,
 limites de concurrence et observabilité locale. Ce travail ne commence pas

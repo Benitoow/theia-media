@@ -72,7 +72,7 @@ not to TMDB.
 | --- | --- |
 | TV series | The catalogue model is films only. There are no seasons or episodes. |
 | Image subtitles | PGS and VobSub tracks are listed and refused: showing one means burning it into the picture, which is the full transcode below. Text tracks — embedded SRT/ASS and `.srt` files beside the film — are available on `main` for V2. |
-| Video transcoding | MPEG-2, VC-1 and other video codecs that need re-encoding are refused instead of pinning the CPU for hours. |
+| Video transcoding | Refused in v1: MPEG-2, VC-1 and anything else needing re-encoding is named rather than pinning the CPU for hours. Since M6 on `main`, Theia probes what this machine can actually encode with and offers a quality ladder when something answers. |
 | Accounts or permissions | There is no login, password or access control. See the warning above; it is not decorative. |
 | Built-in remote access or HTTPS | Theia serves plain HTTP on the LAN. It is not a relay, reverse proxy or VPN. |
 | PWA or native TV/mobile apps | The shipped client is a responsive web interface. |
@@ -98,6 +98,11 @@ The latest release remains v1.5.0. Development is backend-first, so source on
   no relay, no rendezvous server and no control plane.
 - M5b adds subtitles — embedded text tracks and `.srt` files beside the media —
   and moves the audio and subtitle choice into the player.
+- M6 re-encodes the picture when the browser cannot decode it, and offers a
+  quality ladder. The encoder list is a probe, never a compile-time list: on the
+  developer's own machine three of seven candidates start. Measured there, a
+  1080p source runs at 1.04x real time in software and 4.56x on the GPU, which
+  is why one software transcode runs at a time.
 
 Those are not invisible buttons waiting to be discovered. Their frontend work
 is tracked explicitly in [the V2 frontend handoff](docs/theia-v2-frontend.md).

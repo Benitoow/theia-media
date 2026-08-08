@@ -39,7 +39,23 @@
 	// The player asks /info for itself and gets both from the same answer.
 	let audioTrackId = $state(null);
 	let subtitleTrackId = $state(null);
-	const audioQuery = $derived(audioTrackId ? `audio=${audioTrackId}` : '');
+
+	// V2-M6. `null` is the file as it is; a number is a height to re-encode to.
+	let qualityHeight = $state(null);
+	// Set when the browser has proved it cannot decode the picture. The server
+	// cannot know this -- HEVC plays in Safari and not in Chrome -- so this is
+	// the one fact only the client holds, sent back as a request to re-encode.
+	let forceTranscode = $state(false);
+
+	const audioQuery = $derived(
+		[
+			audioTrackId ? `audio=${audioTrackId}` : '',
+			qualityHeight ? `h=${qualityHeight}` : '',
+			forceTranscode ? 'video=transcode' : ''
+		]
+			.filter(Boolean)
+			.join('&')
+	);
 
 	/** @type {'checking' | 'resume' | 'playing' | 'preparing' | 'failed'} */
 	let phase = $state('checking');
@@ -109,9 +125,16 @@
 
 	const audioTracks = $derived(info?.audio_tracks ?? []);
 	const subtitleTracks = $derived(info?.subtitle_tracks ?? []);
+	// Only rungs this machine can actually produce. The server sends none when
+	// it has no encoder that runs, and the menu then has no quality section
+	// rather than a button that fails.
+	const qualities = $derived(info?.transcode?.available ? (info?.qualities ?? []) : []);
+	const transcodeKind = $derived(info?.transcode?.kind ?? null);
 	// A single audio track is not a choice, and offering it would only force a
 	// remux for nothing. Subtitles always are: "none" is one of the answers.
-	const hasTrackMenu = $derived(audioTracks.length > 1 || subtitleTracks.length > 0);
+	const hasTrackMenu = $derived(
+		audioTracks.length > 1 || subtitleTracks.length > 0 || qualities.length > 1
+	);
 	const subtitleTrack = $derived(
 		subtitleTracks.find((track) => track.id === subtitleTrackId && track.kind === 'text') ?? null
 	);
@@ -199,7 +222,10 @@
 		elapsed = 0;
 		triedRemux = false;
 
-		if (info.mode === 'direct') {
+		// Direct play hands over the file untouched, so it cannot honour a
+		// height or a re-encode. Either of those takes the ffmpeg route even
+		// when the container would otherwise have played as it is.
+		if (info.mode === 'direct' && !qualityHeight && !forceTranscode) {
 			source = base;
 			phase = 'playing';
 			return;
@@ -244,6 +270,19 @@
 	function chooseSubtitle(id) {
 		subtitleTrackId = id;
 		showSubtitleTrack();
+	}
+
+	// Changing quality is the same move as changing audio: ffmpeg is restarted
+	// with different arguments, and the only part the viewer should notice is
+	// that the film carries on where it was.
+	async function chooseQuality(height) {
+		if (height === qualityHeight) return;
+		const at = position;
+		qualityHeight = height;
+		phase = 'preparing';
+		if (!(await loadInfo())) return;
+		duration = info.duration_seconds || duration;
+		start(at);
 	}
 
 	// `default` on a <track> only counts while the document is parsed, and
@@ -338,6 +377,18 @@
 		// is badly out of sync", which is the wrong bug to go looking for. The
 		// server flags the codec as risky; this is the browser answering.
 		if (video.videoWidth === 0 && video.videoHeight === 0) {
+			// The browser has just proved what no server could ask it: it loaded
+			// the file, it will play the sound, and it will never produce a
+			// picture. Before M6 that was the end of the road and the honest
+			// thing to do was name the codec. Now there may be an encoder on
+			// this machine, so the film is asked for again, re-encoded --
+			// once, guarded by the flag, because a transcode that also fails
+			// must not loop.
+			if (info?.transcode?.available && !forceTranscode) {
+				forceTranscode = true;
+				start(position);
+				return;
+			}
 			phase = 'failed';
 			failureCode = 'browser_cannot_decode_video';
 			return;
@@ -1127,6 +1178,37 @@
 													audioTrackId === track.id,
 													() => chooseAudio(track.id),
 													false
+												)}
+											</li>
+										{/each}
+									</ul>
+								{/if}
+
+								{#if qualities.length > 1}
+									<h2 class="track-heading">
+										{t.player.tracks.quality}
+										{#if transcodeKind}
+											<span class="track-heading-note">
+												{t.player.tracks.kinds[transcodeKind] ?? ''}
+											</span>
+										{/if}
+									</h2>
+									<ul class="track-list">
+										{#each qualities as quality (quality.height)}
+											<li>
+												{@render trackOption(
+													{
+														primary: quality.height
+															? t.player.tracks.height(quality.height)
+															: t.player.tracks.original,
+														detail:
+															quality.mode === 'transcode' && quality.height
+																? t.player.tracks.reencoded
+																: ''
+													},
+													qualityHeight === (quality.height || null),
+													() => chooseQuality(quality.height || null),
+													audioTracks.length <= 1 && !subtitleTracks.length
 												)}
 											</li>
 										{/each}

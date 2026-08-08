@@ -59,6 +59,10 @@ type Server struct {
 	version   string
 	keySource config.KeySource
 	started   time.Time
+
+	// How many pictures may be re-encoded at once. See transcode.go: the
+	// ceiling comes from a measurement, not a preference.
+	transcodes *transcodeLimiter
 }
 
 // New builds a Server. Web is the compiled frontend, normally the embedded
@@ -79,6 +83,8 @@ func New(opts Options) *Server {
 		version:   opts.Version,
 		keySource: opts.KeySource,
 		started:   time.Now(),
+
+		transcodes: newTranscodeLimiter(),
 	}
 }
 

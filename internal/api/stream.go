@@ -45,6 +45,12 @@ type streamInfoResponse struct {
 	// loaded before that would offer an empty menu until somebody reloaded it.
 	AudioTracks    []library.AudioTrack    `json:"audio_tracks,omitempty"`
 	SubtitleTracks []library.SubtitleTrack `json:"subtitle_tracks,omitempty"`
+
+	// V2-M6. Qualities lists only what this machine can actually produce for
+	// this file, and Transcode says what producing it would cost.
+	Height    int            `json:"height,omitempty"`
+	Qualities []videoQuality `json:"qualities,omitempty"`
+	Transcode *transcodeInfo `json:"transcode,omitempty"`
 }
 
 // handleStreamInfo says how a film will be delivered.

@@ -2551,6 +2551,9 @@
 		max-height: min(56svh, 30rem);
 		overflow-y: auto;
 		overscroll-behavior: contain;
+		/* Firefox and the standard property. Two values: thumb, then track. */
+		scrollbar-color: rgba(237, 231, 220, 0.28) transparent;
+		scrollbar-width: thin;
 		border: 1px solid rgba(237, 231, 220, 0.14);
 		border-radius: 1rem;
 		padding: 0.85rem;
@@ -2574,6 +2577,38 @@
 			opacity: 0;
 			transform: translateY(0.5rem) scale(0.97);
 		}
+	}
+
+	/* The last piece of platform paint in the player.
+	   A film with four audio tracks makes this list scroll, and Windows drew its
+	   own light-grey bar with arrow buttons down the side of a panel built in
+	   the dark -- the same fault the volume slider had, in the same place. Drawn
+	   here to the scrub bar's geometry: a 4px line, bone at low alpha, no
+	   buttons, no track. */
+	.player-tracks::-webkit-scrollbar {
+		width: 0.75rem;
+	}
+
+	.player-tracks::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	.player-tracks::-webkit-scrollbar-thumb {
+		border: 0.25rem solid transparent;
+		border-radius: 999px;
+		background: rgba(237, 231, 220, 0.28);
+		background-clip: content-box;
+	}
+
+	.player-tracks::-webkit-scrollbar-thumb:hover {
+		background: rgba(237, 231, 220, 0.45);
+		background-clip: content-box;
+	}
+
+	/* The arrow buttons at each end are a Windows habit no other surface here
+	   has, and they cannot be styled into anything worth keeping. */
+	.player-tracks::-webkit-scrollbar-button {
+		display: none;
 	}
 
 	/* On a phone the anchor stops being useful and starts being a hazard: the
@@ -2605,6 +2640,15 @@
 		font-weight: 500;
 		letter-spacing: 0.18em;
 		text-transform: uppercase;
+	}
+
+	/* What the machine will use, said next to the heading rather than repeated
+	   on every rung: "carte graphique" or "processeur" is one fact about this
+	   computer, not a property of 720p. */
+	.track-heading-note {
+		margin-inline-start: 0.5rem;
+		color: var(--color-accent-dim);
+		letter-spacing: 0.12em;
 	}
 
 	.track-list + .track-heading {
@@ -2663,16 +2707,26 @@
 		white-space: nowrap;
 	}
 
-	/* What confirms it. --muted at 5.42:1, never --faint: this is read, and §3
-	   reserves faint for decoration. */
+	/* What confirms it -- and, often, what actually distinguishes it.
+	   --muted at 5.42:1, never --faint: this is read, and §3 reserves faint for
+	   decoration.
+
+	   It wraps to two lines rather than truncating on one. A real BluRay rip has
+	   three English audio tracks, so every primary line says "Anglais" and the
+	   detail is the only thing telling them apart -- and truncation turned that
+	   into "DTS 5.1 70MM THEATRICAL V3 BY H...", "AAC 2.0 70MM THEATRICAL
+	   MATRIX...", "COMMENTARY WITH GEORGE LUCA...". The row grows; §9's 3.25rem
+	   is a floor, not a ceiling. */
 	.track-detail {
+		display: -webkit-box;
 		overflow: hidden;
 		color: var(--color-muted);
 		font-size: clamp(0.6875rem, 0.72vw, 0.8125rem);
 		letter-spacing: 0.1em;
-		text-overflow: ellipsis;
+		line-height: 1.35;
 		text-transform: uppercase;
-		white-space: nowrap;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
 	}
 
 	/* The tick reserves its column whether or not it is drawn, so choosing a

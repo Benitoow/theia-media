@@ -112,7 +112,7 @@ partir d'une ancienne conversation.
 | V2-M4 — accès distant | [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a) | Implémenté et vérifié, mode distant confirmé par le mainteneur | Aucun |
 | V2-M5 — logo/navigation | Aucun chantier backend | Implémenté (décision 54) | Aucun |
 | V2-M5b — retours d'usage | Sous-titres, pistes dans `/info`, ouverture de port automatique (décisions 55–57) | Menu de pistes dans le lecteur, panneau distant à un bouton | Aucun |
-| V2-M6 — optimisation matérielle | Différé | Attend `M6-BE` | Prochain jalon ouvert |
+| V2-M6 — optimisation matérielle | Encodeurs sondés, transcodage, échelle de qualité (décision 58) | Section Qualité dans le lecteur, bascule automatique | Aucun |
 
 ### V2-M1 — Dédoublonnage de fichiers + sélection de qualité
 Le chantier resté en suspens depuis plusieurs sessions. Le flux visible est

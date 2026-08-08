@@ -273,11 +273,24 @@ sous-titres affichés au-dessus de la barre, panneau distant actif avec
 
 ### M6-FE — Contrôles de qualité et capacités matérielles
 
-**Statut : attend M6-BE. Prochain jalon.**
+**Statut : implémenté et vérifié.** Décision 58.
 
-Expose uniquement les modes réellement annoncés par le serveur, avec leurs
-coûts et indisponibilités. Aucun bouton décoratif pour une qualité que la machine
-ne sait pas produire.
+Une troisième section dans le panneau du lecteur, alimentée uniquement par
+`qualities`. Aucun bouton décoratif : sans encodeur qui tourne, le serveur
+n'envoie rien et la section n'existe pas.
+
+Le titre de section porte le coût — « carte graphique » ou « processeur » —
+parce que c'est un fait sur cette machine, pas une propriété du 720p, et parce
+que l'écart mesuré est de 4,56× contre 1,04×.
+
+**La bascule automatique est la vraie fonctionnalité.** Quand `videoWidth` reste
+à 0 après les métadonnées, le lecteur ne se contente plus de nommer le codec :
+si `transcode.available`, il redemande le même film avec `video=transcode`, à la
+même position. Une seule fois, gardée par un drapeau. Vérifié sur le fichier
+HEVC du mainteneur, qui joue.
+
+Changer de qualité conserve la position, comme changer de piste audio : c'est le
+même geste côté serveur, ffmpeg relancé avec d'autres arguments.
 
 ## 3. Checklist de démarrage pour Claude
 

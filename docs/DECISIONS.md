@@ -1501,6 +1501,57 @@ bubble and because the rule has to cover artwork nobody has added yet. The image
 is hidden rather than removed, which leaves the empty frame the design already
 draws for a film with no poster.
 
+## 58. The furnace is lit, because the evidence finally arrived
+
+**Decided in V2-M6.** Decision 1 kept full video transcoding out of v1 and
+called it "the real furnace". The founding spec put GPU transcoding in v2 under
+one condition, written before a line of this project existed: *only if direct
+play and CPU remux prove insufficient in real use.*
+
+They did, and not in theory. The maintainer watched a film and reported that
+the sound was badly out of sync. It was not: Chrome had loaded an HEVC Main 10
+rip, played its audio, and never produced a picture — `canPlayType` empty,
+`videoWidth` 0, not one frame decoded. Direct play cannot help, a remux copies
+the same undecodable stream, and the honest answer M5b shipped was to name the
+codec and stop. That is a file the household owns and cannot watch.
+
+**Nothing here is inferred from a list.** The pinned ffmpeg advertises
+`h264_nvenc`, `h264_qsv`, `h264_amf`, `h264_mf` and `libx264` on every platform,
+because all five are compiled in; whether any runs depends on the card and the
+driver. Each candidate is asked to encode one frame of nothing, and only the
+ones that come back are offered. Measured on the maintainer's desktop:
+`usable=h264_amf,h264_mf,libx264`, `refused=h264_nvenc,h264_qsv,h264_vaapi,
+h264_videotoolbox` — NVENC cannot load `nvcuda.dll`, QSV cannot create an MFX
+session, both instantly, because there is no NVIDIA card and no Intel graphics.
+
+**The ceiling is a measurement, not a preference.** On a 1080p HEVC source at
+720p, `libx264` runs at **1.04×** real time and `h264_amf` at **4.56×**. One
+software transcode therefore consumes the entire margin; a second does not run
+at half speed, it makes both stall, and neither viewer can tell why. So the
+limit is one in software and three on hardware, and beyond it the answer is a
+refusal with its own code rather than a queue nobody can see.
+
+**The browser is the only thing that knows.** `hevc` is classified risky rather
+than unsupported because Safari plays it and Chrome does not, and no server can
+ask a client what it will decode. So the client answers: when the picture never
+arrives, the player asks for the same film again with `video=transcode`. Once,
+guarded, because a transcode that also fails must not loop. Verified end to end
+on the file that started this — the log shows `mode=remux` at 63 s, then
+`mode=transcode video_encoder=h264_amf` at 63 s, and Chrome reports 1920×804
+with frames decoding. Star Wars plays.
+
+Three refusals kept:
+
+- **Nothing above the source.** A 1080p file offers 720 and below. Upscaling
+  spends a GPU inventing detail that is not in the file.
+- **Nothing this machine cannot make.** With no encoder that runs, the player
+  shows no quality section at all rather than a button that fails. The rung
+  list comes from the probe, and `/info` only probes an ffmpeg already on disk —
+  M1's promise was that asking how a file plays must never *download* it.
+- **Nothing about the cost is hidden.** The section heading says "carte
+  graphique" or "processeur", because on this machine those are 4.56× and 1.04×
+  and the difference belongs to whoever is deciding.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

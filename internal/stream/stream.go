@@ -29,9 +29,25 @@ const (
 	// re-encoding the audio.
 	ModeRemux Mode = "remux"
 
-	// ModeUnsupported means the video codec would need a full transcode.
+	// ModeUnsupported means the video codec would need a full transcode and
+	// this machine has no encoder that runs.
 	ModeUnsupported Mode = "unsupported"
+
+	// ModeTranscode re-encodes the picture. V2-M6, and the thing decision 1
+	// deliberately kept out of v1 -- "the real furnace".
+	//
+	// What changed is not the appetite for it but the evidence. The spec put
+	// GPU transcoding in v2 "only if direct play and CPU remux prove
+	// insufficient in real use", and they did: an HEVC rip the maintainer
+	// actually owns plays sound over a picture Chrome never decodes. Measured on
+	// that file at 720p, libx264 runs at 1.04x real time -- which is not a
+	// margin, it is a coin toss against a stall -- and h264_amf at 4.56x.
+	ModeTranscode Mode = "transcode"
 )
+
+// Qualities are the heights offered, largest first. Nothing above the source is
+// ever listed: upscaling spends a GPU to invent detail that is not there.
+var Qualities = []int{1080, 720, 480, 360}
 
 // AudioAction is what happens to the audio track when remuxing.
 type AudioAction string
@@ -192,6 +208,113 @@ func remuxArgs(path string, d Decision, startSeconds float64, audioStreamIndex *
 
 func formatSeconds(s float64) string {
 	return strconv.FormatFloat(s, 'f', 3, 64)
+}
+
+// TranscodeArgs re-encodes the picture to H.264 at a target height.
+//
+// encoder comes from a probe, never from a list (see ffmpeg.Capabilities).
+// Height zero keeps the source size, which is what "Original" means for a file
+// whose only problem is a codec the browser refuses.
+func TranscodeArgs(path string, d Decision, startSeconds float64, encoder string, height int, audioStreamIndex *int) []string {
+	args := []string{"-hide_banner", "-loglevel", "error"}
+	if startSeconds > 0 {
+		args = append(args, "-ss", formatSeconds(startSeconds))
+	}
+
+	audioMap := "0:a:0?"
+	if audioStreamIndex != nil {
+		audioMap = "0:" + strconv.Itoa(*audioStreamIndex)
+	}
+
+	args = append(args,
+		"-i", path,
+		"-map", "0:v:0",
+		"-map", audioMap,
+		"-c:v", encoder,
+	)
+
+	if height > 0 {
+		// -2 keeps the aspect ratio and rounds the width to an even number,
+		// which every H.264 encoder requires and some crash without.
+		args = append(args, "-vf", "scale=-2:"+strconv.Itoa(height))
+	}
+
+	args = append(args,
+		"-b:v", targetBitrate(height),
+		"-maxrate", targetBitrate(height),
+		"-bufsize", targetBufsize(height),
+		// Two seconds between keyframes. Seeking a fragmented stream lands on
+		// one, so this is how far a seek can miss; longer is cheaper and reads
+		// as imprecision.
+		"-g", "48",
+		// 4:2:0 8-bit. The source may be 10-bit HEVC -- the case that started
+		// all this -- and a browser will not decode 10-bit H.264 either.
+		"-pix_fmt", "yuv420p",
+	)
+
+	if encoder == "libx264" {
+		// veryfast is the honest setting for something that has to keep up with
+		// playback. Measured at 1.04x real time on a 1080p HEVC source; a
+		// slower preset would look better and stall.
+		args = append(args, "-preset", "veryfast", "-tune", "zerolatency")
+	}
+
+	if d.Audio == AudioTranscode {
+		args = append(args, "-c:a", "aac", "-b:a", "192k", "-ac", "2")
+	} else {
+		args = append(args, "-c:a", "copy")
+	}
+
+	return append(args,
+		"-movflags", "+frag_keyframe+empty_moov+default_base_moof",
+		"-f", "mp4",
+		"pipe:1",
+	)
+}
+
+// targetBitrate is deliberately generous. This is a household network moving
+// bytes between two rooms, not a CDN paying for them, and a starved encoder is
+// the one thing worse than no quality choice at all.
+func targetBitrate(height int) string {
+	switch {
+	case height <= 0 || height >= 1080:
+		return "8M"
+	case height >= 720:
+		return "5M"
+	case height >= 480:
+		return "2500k"
+	default:
+		return "1200k"
+	}
+}
+
+func targetBufsize(height int) string {
+	switch {
+	case height <= 0 || height >= 1080:
+		return "16M"
+	case height >= 720:
+		return "10M"
+	case height >= 480:
+		return "5M"
+	default:
+		return "2400k"
+	}
+}
+
+// AvailableHeights lists what can be offered for a source of this height.
+//
+// Never above the source, and never a rung so close to it that it is a
+// different number for the same picture: a 1080p file offers 720 and below, not
+// a "1080p" that re-encodes for nothing.
+func AvailableHeights(sourceHeight int) []int {
+	var heights []int
+	for _, height := range Qualities {
+		if sourceHeight > 0 && height >= sourceHeight {
+			continue
+		}
+		heights = append(heights, height)
+	}
+	return heights
 }
 
 // PreferredAudio picks which measured track to play when the viewer has not

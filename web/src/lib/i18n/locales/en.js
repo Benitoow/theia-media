@@ -261,6 +261,9 @@ export const strings = {
 			media_not_inspected: 'Analyse this file before choosing an audio track.',
 			media_unreadable:
 				'This file could not be decoded. It may be incomplete or corrupted.',
+			transcode_busy:
+				'Another playback is already re-encoding video on this machine. Wait for it to ' +
+				'finish, or choose the file as it is, which needs no computation.',
 			video_transcode_required:
 				'This file uses a video format that needs full conversion, planned for a later milestone.',
 			movie_unavailable: 'The movie could not be read from the database.',
@@ -276,6 +279,14 @@ export const strings = {
 		tracks: {
 			open: 'Audio and subtitles',
 			title: 'Audio and subtitles',
+			quality: 'Quality',
+			original: 'As the file is',
+			height: (h) => h + 'p',
+			reencoded: 're-encoded',
+			kinds: {
+				hardware: 'graphics card',
+				software: 'processor'
+			},
 			subtitles: 'Subtitles',
 			noSubtitles: 'None',
 			external: 'separate file',

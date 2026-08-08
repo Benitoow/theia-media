@@ -92,6 +92,19 @@ func (s *Server) handleMovieFileStreamInfo(w http.ResponseWriter, r *http.Reques
 		file.Media.SubtitleTracks = reloaded.Media.SubtitleTracks
 	}
 
+	// V2-M6. A picture no browser decodes stops being a refusal when this
+	// machine has an encoder that runs.
+	capabilities := s.videoCapabilities(r.Context())
+	ladder := qualityLadder(file.Media, decision, capabilities.Available)
+	if decision.Mode == stream.ModeUnsupported && capabilities.Available {
+		decision.Mode = stream.ModeTranscode
+		reasonCode = "video_transcode"
+	}
+	height := 0
+	if file.Media.Video != nil {
+		height = file.Media.Video.Height
+	}
+
 	progress := movie.Progress
 	writeJSON(w, http.StatusOK, streamInfoResponse{
 		ID:              movie.ID,
@@ -109,6 +122,9 @@ func (s *Server) handleMovieFileStreamInfo(w http.ResponseWriter, r *http.Reques
 		Progress:        &progress,
 		AudioTracks:     file.Media.AudioTracks,
 		SubtitleTracks:  file.Media.SubtitleTracks,
+		Height:          height,
+		Qualities:       ladder,
+		Transcode:       &capabilities,
 	})
 }
 
@@ -150,6 +166,10 @@ func (s *Server) handleMovieFileStreamRemux(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	audioID, audioRequested, ok := requestedAudioID(w, r)
+	if !ok {
+		return
+	}
+	wantedHeight, heightRequested, ok := requestedHeight(w, r)
 	if !ok {
 		return
 	}
@@ -221,10 +241,33 @@ func (s *Server) handleMovieFileStreamRemux(w http.ResponseWriter, r *http.Reque
 		selected = &defaulted
 	}
 	decision := stream.Decide(file.Path, file.Media.Video.Codec, audioCodec)
-	if decision.Mode == stream.ModeUnsupported {
-		writeJSONError(w, http.StatusUnsupportedMediaType, "video_transcode_required")
-		return
+
+	// V2-M6. The picture is re-encoded when the browser cannot decode it at all,
+	// or when somebody has asked for a smaller one. Both need an encoder that
+	// runs on this machine -- probed, never assumed.
+	needsTranscode := decision.Mode == stream.ModeUnsupported || heightRequested || forcedTranscode(r)
+	var encoder ffmpeg.Encoder
+	if needsTranscode {
+		best, available := s.ffmpeg.Capabilities(r.Context()).Best()
+		if !available {
+			writeJSONError(w, http.StatusUnsupportedMediaType, "video_transcode_required")
+			return
+		}
+		encoder = best
+		s.transcodes.setKind(encoder.Kind)
+
+		// The furnace is lit once at a time in software. Refusing is the honest
+		// answer: two concurrent software transcodes do not run at half speed,
+		// they both stall, and nobody watching either one can tell why.
+		release, got := s.transcodes.acquire()
+		if !got {
+			writeJSONError(w, http.StatusServiceUnavailable, "transcode_busy")
+			return
+		}
+		defer release()
+		decision.Mode = stream.ModeTranscode
 	}
+
 	if audioRequested && decision.Mode == stream.ModeDirect {
 		decision.Mode = stream.ModeRemux
 		decision.Audio = stream.AudioCopy
@@ -247,16 +290,30 @@ func (s *Server) handleMovieFileStreamRemux(w http.ResponseWriter, r *http.Reque
 			start = parsed
 		}
 	}
-	args := stream.RemuxArgs(file.Path, decision, start)
 	selectedIndex := -1
+	var audioStreamIndex *int
 	if selected != nil {
 		selectedIndex = selected.StreamIndex
-		args = stream.RemuxArgsForAudio(file.Path, decision, start, selected.StreamIndex)
+		audioStreamIndex = &selected.StreamIndex
 	}
-	s.log.Info("remuxing selected film file",
+
+	var args []string
+	switch {
+	case decision.Mode == stream.ModeTranscode:
+		args = stream.TranscodeArgs(file.Path, decision, start, encoder.Name, wantedHeight, audioStreamIndex)
+	case audioStreamIndex != nil:
+		args = stream.RemuxArgsForAudio(file.Path, decision, start, *audioStreamIndex)
+	default:
+		args = stream.RemuxArgs(file.Path, decision, start)
+	}
+
+	s.log.Info("streaming selected film file",
 		"film_id", movie.ID,
 		"file_id", file.ID,
+		"mode", decision.Mode,
 		"video", file.Media.Video.Codec,
+		"video_encoder", encoder.Name,
+		"height", wantedHeight,
 		"audio", audioCodec,
 		"audio_track_id", audioID,
 		"audio_stream_index", selectedIndex,

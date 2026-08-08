@@ -263,6 +263,9 @@ export const strings = {
 			media_not_inspected: 'Analysez ce fichier avant de choisir une piste audio.',
 			media_unreadable:
 				"Ce fichier n'a pas pu être décodé. Il est peut-être incomplet ou corrompu.",
+			transcode_busy:
+				'Une autre lecture réencode déjà une vidéo sur cette machine. Attendez qu’elle ' +
+				'se termine, ou choisissez la qualité du fichier, qui ne demande aucun calcul.',
 			video_transcode_required:
 				'Le format vidéo de ce fichier demande une conversion complète, prévue pour un jalon ultérieur.',
 			movie_unavailable: 'Le film ne peut pas être lu depuis la base de données.',
@@ -279,6 +282,14 @@ export const strings = {
 		tracks: {
 			open: 'Audio et sous-titres',
 			title: 'Audio et sous-titres',
+			quality: 'Qualité',
+			original: 'Qualité du fichier',
+			height: (h) => h + 'p',
+			reencoded: 'réencodée',
+			kinds: {
+				hardware: 'carte graphique',
+				software: 'processeur'
+			},
 			subtitles: 'Sous-titres',
 			noSubtitles: 'Aucun',
 			external: 'fichier joint',
