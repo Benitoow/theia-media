@@ -357,9 +357,28 @@
 		const lineHeight = cueFont * 2.2;
 		const gap = area * 0.015;
 
+		// `line` is a share of the *element*, and object-fit: contain means the
+		// element is not the picture. A 2.39:1 film in a 16/9 window paints
+		// 1280x536 inside 1280x720 and puts 92px of black above and below it,
+		// measured on a real scope rip. Anchoring to the element floated the text
+		// a sixth of the way up the frame, over the actors rather than under
+		// them.
+		//
+		// So the resting place is the bottom of the picture, wherever letterboxing
+		// puts it. A film with no bars is the same calculation with a zero bar,
+		// which is why there is no special case for it.
+		const ratio = video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : 0;
+		const width = video.getBoundingClientRect().width;
+		const picture = ratio && width ? Math.min(area, width / ratio) : area;
+		const pictureBottom = area - (area - picture) / 2;
+
+		// Whichever comes first: the bottom of the picture, or the top of the
+		// control bar when it is up.
+		const floor = Math.min(pictureBottom, area - bar);
+
 		for (const cue of cues) {
 			const lines = cue.text.split('\n').length;
-			const top = area - bar - lines * lineHeight - gap;
+			const top = floor - lines * lineHeight - gap;
 			cue.snapToLines = false;
 			cue.line = Math.max(0, Math.min(95, (top / area) * 100));
 		}
