@@ -1643,8 +1643,8 @@ expensive, and not worth paying until it is needed.
 
 ## 61. V2 is released, and its planning documents are archived rather than kept
 
-`v2.0.0` publishes thirty-seven commits and roughly twenty-four thousand lines
-that had accumulated on `main` since `v1.5.0`: series, multi-file films,
+`v2.0.0` publishes roughly twenty-four thousand lines that had accumulated on
+`main` since `v1.5.0` across seven milestones: series, multi-file films,
 household profiles, WireGuard remote access, track selection in the player,
 hardware-probed transcoding, and English beside French.
 
