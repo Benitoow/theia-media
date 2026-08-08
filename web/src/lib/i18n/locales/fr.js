@@ -298,6 +298,10 @@ export const strings = {
 			// Décision 3 : une piste image ne peut être affichée qu'en la
 			// gravant dans l'image, ce qui est le transcodage complet que la v1
 			// refuse. Elle est listée quand même, sinon on la cherche.
+			commentary: 'Commentaire',
+			// ffmpeg écrit « stereo » et « mono » ; le reste (5.1, 7.1, 3.0) se lit
+			// déjà tel quel et n'a pas à être traduit.
+			channels: { mono: 'Mono', stereo: 'Stéréo' },
 			imageBased: 'image — non affichable'
 		},
 

@@ -135,6 +135,17 @@
 	const hasTrackMenu = $derived(
 		audioTracks.length > 1 || subtitleTracks.length > 0 || qualities.length > 1
 	);
+	// What can actually be turned on, and what merely explains itself.
+	const textSubtitles = $derived(subtitleTracks.filter((track) => track.kind === 'text'));
+	// Decision 3 refuses to render a bitmap track, and listing one was the way
+	// to stop a PGS-only rip looking like a film with no subtitles at all. But
+	// on a disc rip that also carries an SRT it is a dead row under a live one,
+	// which reads as a choice that does not work. So it is shown only when it is
+	// the only thing there is.
+	const refusedSubtitles = $derived(
+		textSubtitles.length ? [] : subtitleTracks.filter((track) => track.kind !== 'text')
+	);
+
 	const subtitleTrack = $derived(
 		subtitleTracks.find((track) => track.id === subtitleTrackId && track.kind === 'text') ?? null
 	);
@@ -838,11 +849,41 @@
 	// People choose by language; the codec only confirms the choice. So the
 	// language leads at reading size and the rest sits under it as metadata,
 	// which is the same hierarchy the card grid uses for a title and its year.
+	// A release title is written for a forum post, not for a menu: one real file
+	// carried "DTS 5.1  70mm Theatrical v3 by hairy_hen", which pushed the two
+	// facts that separate the tracks -- how many channels, which codec -- off the
+	// end of the line. So the detail is built from the measurements, and the
+	// title only joins it when it is short enough to be a name rather than a
+	// paragraph.
+	const titleIsShortEnough = (title) => !!title && title.length <= 24;
+
+	// ffmpeg's channel layout is precise and unreadable: "5.1(side)" is 5.1.
+	// The parenthetical says where the surrounds sit, which changes nothing for
+	// somebody picking a track.
+	function channelLabel(channels) {
+		if (!channels) return null;
+		const base = channels.replace(/\(.*\)/, '').trim();
+		return t.player.tracks.channels[base] ?? base;
+	}
+
+	// The commentary track is the one people most need to tell apart, and the
+	// container does not flag it in what the server sends. The title is the only
+	// signal there is, so it is read for the word -- a heuristic, deliberately,
+	// and it only changes a label.
+	const looksLikeCommentary = (title) => /commentary|commentaire/i.test(title || '');
+
 	function audioLabel(track, index) {
 		const primary = track.language
 			? languageName(track.language)
 			: track.title || t.film.audio.unnamed(index + 1);
-		return { primary, detail: detailOf([track.title, track.codec?.toUpperCase(), track.channels], primary) };
+		const parts = looksLikeCommentary(track.title)
+			? [t.player.tracks.commentary, channelLabel(track.channels)]
+			: [
+					channelLabel(track.channels),
+					track.codec?.toUpperCase(),
+					titleIsShortEnough(track.title) ? track.title : null
+				];
+		return { primary, detail: detailOf(parts, primary) };
 	}
 
 	function subtitleLabel(track, index) {
@@ -1145,7 +1186,6 @@
 							type="button"
 							onclick={(event) => (tracksOpen ? closeTracks() : openTracks(event.currentTarget))}
 							class="player-icon-button"
-							class:player-icon-button--lit={subtitleTrack !== null}
 							aria-expanded={tracksOpen}
 							aria-haspopup="true"
 						>
@@ -1226,29 +1266,28 @@
 												audioTracks.length <= 1
 											)}
 										</li>
-										{#each subtitleTracks as track, index (track.id)}
+										{#each textSubtitles as track, index (track.id)}
 											<li>
-												{#if track.kind === 'text'}
-													{@render trackOption(
-														subtitleLabel(track, index),
-														subtitleTrackId === track.id,
-														() => chooseSubtitle(track.id),
-														false
-													)}
-												{:else}
-													<!--
-														Listed, not hidden. Decision 3 refuses to render a
-														bitmap track because showing one means burning it
-														into the picture; a rip whose only subtitles are
-														PGS would otherwise look like a film that has
-														none, and somebody would go hunting for a setting
-														that does not exist.
-													-->
-													<p class="track-option track-option--refused">
-														<span class="track-primary">{subtitleLabel(track, index).primary}</span>
-														<span class="track-detail">{t.player.tracks.imageBased}</span>
-													</p>
-												{/if}
+												{@render trackOption(
+													subtitleLabel(track, index),
+													subtitleTrackId === track.id,
+													() => chooseSubtitle(track.id),
+													false
+												)}
+											</li>
+										{/each}
+										{#each refusedSubtitles as track, index (track.id)}
+											<li>
+												<!--
+													Only reached when the file has no text track at all.
+													Decision 3 refuses to render a bitmap subtitle, and
+													saying so beats a film that silently appears to have
+													no subtitles.
+												-->
+												<p class="track-option track-option--refused">
+													<span class="track-primary">{subtitleLabel(track, index).primary}</span>
+													<span class="track-detail">{t.player.tracks.imageBased}</span>
+												</p>
 											</li>
 										{/each}
 									</ul>

@@ -295,6 +295,10 @@ export const strings = {
 			// Decision 3: an image track can only be shown by burning it into
 			// the picture, which is the full transcode v1 refuses. Listed all
 			// the same, or somebody goes looking for it.
+			commentary: 'Commentary',
+			// ffmpeg writes "stereo" and "mono"; the rest (5.1, 7.1, 3.0) already
+			// reads as itself and needs no translation.
+			channels: { mono: 'Mono', stereo: 'Stereo' },
 			imageBased: 'image — cannot be shown'
 		},
 
