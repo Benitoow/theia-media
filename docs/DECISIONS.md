@@ -1738,6 +1738,45 @@ The general lesson, which is not about Svelte: **a component that reads shared
 async state must await it, not assume somebody above it already did.** Ordering
 that happens to hold is not ordering.
 
+## 64. The presentation site lives in the repository, builds without a bundler, and fetches nothing
+
+`site/` holds a landing page, published to GitHub Pages by
+`.github/workflows/pages.yml`. It exists because a README is written for someone
+who already found the repository, and the question the project actually has to
+answer first is *what is this and where do I get it*.
+
+Four decisions inside it, each of which had an easier alternative:
+
+**Both languages render from one template.** `page.mjs` is the markup once, as a
+function of a catalogue; `build.mjs` writes `index.html` and `en/index.html`
+from it and **fails if a key exists in one catalogue and not the other**. The
+easy version — a page in French with a JavaScript toggle — puts one language in
+the markup and the other in a script, which is the arrangement decision 32 was
+written against. A new language is a third file in `locales/`.
+
+**No bundler and no dependency of its own.** Plain Node writing strings. The two
+fonts come from the `@fontsource-variable` packages `web/` already installs, so
+the build errors out if `npm ci` has not run there rather than shipping a page
+that silently falls back to Georgia.
+
+**Nothing is fetched at runtime.** No analytics, no CDN, no font service, no
+call to the GitHub API. A site for a project whose whole argument is that it
+does not phone home cannot itself phone home. The version number is the one
+thing that would have justified an API call, and it is avoided instead: download
+links point at `releases/latest/download/<asset>`, which GitHub redirects to the
+newest release, so they never go stale and need no script. The only JavaScript
+on the page promotes the likely platform in a list that is fully present in the
+markup.
+
+**`styles.css` restates the design system rather than importing it.** The site
+is outside the application bundle and cannot reach `app.css`. That duplication
+is deliberate but it is a liability: a value here that differs from the
+application is a bug, not a liberty, and the file says so at the top.
+
+The comparison table is the README's, including the five rows that go against
+Theia. A landing page is exactly where the temptation is to drop them, which is
+exactly why they stay.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

@@ -1,0 +1,60 @@
+name: Site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'docs/screenshots/**'
+      - 'assets/social-preview.png'
+      - 'web/static/favicon.svg'
+      - 'web/static/apple-touch-icon.png'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# A deploy in flight is never cancelled: a half-published site is worse than a
+# late one. A queued one is, because only the newest matters.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # Only the two @fontsource-variable packages, which are the site's
+      # runtime dependencies. Everything else in web/ is dev tooling the site
+      # never touches.
+      - run: npm ci --omit=dev
+        working-directory: web
+
+      # Fails if the two catalogues have drifted, so a key can never be missing
+      # from one language on a public page.
+      - run: node site/build.mjs
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

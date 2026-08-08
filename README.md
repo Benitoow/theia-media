@@ -17,6 +17,13 @@
   <img alt="No CGO" src="https://img.shields.io/badge/CGO-disabled-2a2724?style=flat-square">
 </p>
 
+<p align="center">
+  <a href="https://benitoow.github.io/theia-media/"><strong>theia-media</strong></a> ·
+  <a href="https://github.com/Benitoow/theia-media/releases/latest">Download</a> ·
+  <a href="#what-theia-does">What it does</a> ·
+  <a href="#what-theia-deliberately-does-not-do">What it refuses</a>
+</p>
+
 Theia turns folders of movie and series files into a browser-based library for
 the TV, phone and computer already in your home. There is no account, no
 subscription, no cloud library, no Docker ceremony and no separate frontend to
@@ -470,6 +477,7 @@ web/src/lib/i18n/      reactive locale state and French/English catalogues
 web-dist/              generated static frontend embedded into the binary
 docs/                  founding spec, design system and decision record
 docs/archive/          the V2 planning documents, kept for their reasoning
+site/                  the presentation site, two languages from one template
 assets/                licensed source imagery and brand assets
 .github/               contribution guide, security policy, issue templates, CI
 ```
