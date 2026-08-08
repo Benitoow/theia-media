@@ -2764,16 +2764,35 @@
 	   does, and it survives a white scene, which a semi-transparent black box
 	   does not do any better. Weight goes to 500: cream at 400 with a shadow
 	   goes slightly soft, and this is the one piece of type read while moving. */
-	.player-video::cue {
-		background: transparent;
+	/* Painted here rather than by the browser.
+
+	   `line` on a cue is a request, not an instruction: Chrome maps it through a
+	   safe area of its own and refuses to put text where it thinks text should
+	   not go. On a 2.39:1 rip that meant asking for the bottom of the picture and
+	   getting three-fifths of the way up it, over the actors, whatever number was
+	   sent. Measured, then screenshotted, then measured again.
+
+	   So the track runs in `hidden` mode -- cues still fire, nothing is drawn --
+	   and this layer is positioned against the picture the video element actually
+	   paints, and carries the broadcast treatment described just above. */
+	.player-subtitles {
+		position: absolute;
+		z-index: 2;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.15em;
+		inset-inline: 0;
+		padding-inline: 8%;
+		pointer-events: none;
+		text-align: center;
+		transition: bottom var(--duration-base) var(--ease-cine);
+	}
+
+	.player-subtitle-line {
+		max-width: 100%;
 		color: var(--color-bone);
 		font-family: var(--font-sans);
-		/* Sized for a television, not a laptop. Broadcast practice puts subtitle
-		   type between about 1/30 and 1/25 of picture height; the previous
-		   ceiling of 1.75rem measured 2.8% of a 1080p frame, which is a caption
-		   on a monitor. 2.375rem lands at 3.5% at that height and the floor
-		   keeps a phone sane. §4's viewing-distance layer, applied where it
-		   matters most. */
 		font-size: clamp(1.0625rem, 2.6vw, 2.375rem);
 		font-weight: 500;
 		line-height: 1.3;
@@ -2785,6 +2804,11 @@
 			-0.045em -0.045em 0.06em rgba(11, 10, 9, 0.9),
 			0 0.06em 0.35em rgba(0, 0, 0, 0.7);
 	}
+
+	/* There is deliberately no ::cue rule. The track runs in `hidden` mode, so
+	   the browser never paints a cue and any styling here would be dead: the
+	   treatment lives on .player-subtitle-line above, where it applies to what
+	   is actually drawn. */
 
 	/* The manual port and endpoint, folded away. Open by default only when the
 	   router has refused, which is the one moment they are the way forward. */

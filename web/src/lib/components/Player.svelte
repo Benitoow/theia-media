@@ -91,6 +91,10 @@
 	let tracksPanel = $state();
 	/** @type {HTMLTrackElement} */
 	let trackElement = $state();
+	/** The lines currently on screen, painted by this component. */
+	let subtitleLines = $state([]);
+	/** Distance from the bottom of the video element, in pixels. */
+	let subtitleBottom = $state(0);
 	// A file nobody has inspected only reveals its tracks when playback probes
 	// it. One refresh after the picture arrives fills the menu; a flag keeps it
 	// to one, because /info must never become a poll.
@@ -299,15 +303,33 @@
 	// `default` on a <track> only counts while the document is parsed, and
 	// changing the video's src resets every text track to disabled. So the mode
 	// is asserted rather than declared, after each of those moments.
+	// `hidden`, not `showing`: the cues still fire, and nothing is painted by the
+	// browser. What the viewer reads is drawn by this component instead, because
+	// the engine would not put it where it belongs -- see .player-subtitles.
 	function showSubtitleTrack() {
 		tick().then(() => {
 			const tracks = video?.textTracks;
 			if (!tracks) return;
 			for (const track of tracks) {
-				track.mode = trackElement && track === trackElement.track ? 'showing' : 'disabled';
+				track.mode = trackElement && track === trackElement.track ? 'hidden' : 'disabled';
 			}
+			const active = trackElement?.track;
+			if (active) {
+				active.removeEventListener('cuechange', readActiveCues);
+				active.addEventListener('cuechange', readActiveCues);
+			}
+			readActiveCues();
 			liftCues();
 		});
+	}
+
+	// One string per line, so a two-line cue stays two lines and the shadow is
+	// drawn per line rather than around a block.
+	function readActiveCues() {
+		const cues = trackElement?.track?.activeCues;
+		subtitleLines = cues?.length
+			? [...cues].flatMap((cue) => cue.text.split('\n')).filter((line) => line.trim())
+			: [];
 	}
 
 	// Subtitles sit on the last line of the picture, which is exactly where the
@@ -318,7 +340,32 @@
 	// to say "four lines higher" without a vendor-prefixed pseudo-element. The
 	// text lifts while the controls are up and drops back when they fade, which
 	// is the behaviour every other player has trained people to expect.
+	// How far the subtitle layer sits above the bottom of the video element, in
+	// pixels. Recomputed whenever the picture, the furniture or the window moves.
+	function placeSubtitles() {
+		if (!video) return;
+		const box = video.getBoundingClientRect();
+		if (!box.height) return;
+
+		// object-fit: contain means the element is not the picture. A 2.39:1 film
+		// paints 1280x536 inside a 1280x720 element, so anchoring to the element
+		// would float the text a sixth of the way up the frame.
+		const ratio = video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : 0;
+		const picture = ratio ? Math.min(box.height, box.width / ratio) : box.height;
+		const letterbox = (box.height - picture) / 2;
+
+		const bar = hidden
+			? 0
+			: (shell?.querySelector('.player-controls')?.getBoundingClientRect().height ?? 0);
+
+		// Sit just inside the bottom of the picture, and step above the control
+		// bar when it covers that. The gap is a share of the picture so it holds
+		// at every size.
+		subtitleBottom = Math.max(letterbox + picture * 0.04, bar + picture * 0.04);
+	}
+
 	function liftCues() {
+		placeSubtitles();
 		const cues = trackElement?.track?.cues;
 		if (!cues || !video) return;
 
@@ -385,8 +432,11 @@
 	}
 
 	$effect(() => {
-		// Reading `hidden` is what subscribes this to the controls fading.
+		// Reading `hidden` is what subscribes this to the controls fading, and
+		// reading the line count re-places the layer when a one-line cue is
+		// replaced by a two-line one.
 		void hidden;
+		void subtitleLines.length;
 		liftCues();
 	});
 
@@ -950,7 +1000,9 @@
 	});
 </script>
 
-<svelte:window onkeydown={onKeydown} />
+<!-- The layer is placed in pixels against the picture, so a resize or a rotation
+     has to re-measure it; going full screen is the case that matters most. -->
+<svelte:window onkeydown={onKeydown} onresize={placeSubtitles} />
 
 <!--
 	One row, defined once. Audio and subtitles differ in what they list, not in
@@ -1073,6 +1125,21 @@
 					{/key}
 				{/if}
 			</video>
+
+			<!--
+				The subtitles, drawn here rather than by the browser. The track runs
+				in `hidden` mode so the cues still fire and nothing is painted twice;
+				placeSubtitles puts this layer against the bottom of the picture the
+				video element actually paints, which is not the same as the bottom of
+				the element on anything wider than 16/9.
+			-->
+			{#if subtitleLines.length}
+				<div class="player-subtitles" style="bottom: {subtitleBottom}px" aria-hidden="true">
+					{#each subtitleLines as line, index (index + line)}
+						<span class="player-subtitle-line">{line}</span>
+					{/each}
+				</div>
+			{/if}
 		{/if}
 
 		{#if waiting || seeking || phase === 'preparing'}
