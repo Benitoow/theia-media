@@ -28,6 +28,12 @@ type streamInfoResponse struct {
 	MediaStatus  string `json:"media_status,omitempty"`
 	VideoRisky   bool   `json:"video_risky,omitempty"`
 
+	// The measured video codec, lowercase, e.g. "hevc". Sent so the browser can
+	// remember its own verdict per codec rather than for "risky files" as a
+	// bucket: whether a machine decodes HEVC says nothing about AV1, and the
+	// next codec to join riskyVideo must not inherit an old answer.
+	VideoCodec string `json:"video_codec,omitempty"`
+
 	// Whether ffmpeg is already on disk. The interface uses it to warn that the
 	// first remux will pause to download 80 MB, rather than looking frozen.
 	FFmpegReady     bool `json:"ffmpeg_ready"`

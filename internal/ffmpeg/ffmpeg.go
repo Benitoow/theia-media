@@ -87,6 +87,11 @@ type Manager struct {
 	// that needs it -- see capabilities.go.
 	capsOnce sync.Once
 	caps     Capabilities
+
+	// And what it can decode with on the way in. Same laziness, same reason --
+	// see decoders.go. The empty string is a valid answer.
+	decoderOnce sync.Once
+	decoder     string
 }
 
 // New prepares a manager. dir is where the binary is kept.

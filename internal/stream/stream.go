@@ -213,10 +213,19 @@ func formatSeconds(s float64) string {
 // TranscodeArgs re-encodes the picture to H.264 at a target height.
 //
 // encoder comes from a probe, never from a list (see ffmpeg.Capabilities).
+// hwaccel likewise, and the empty string is a real answer meaning "decode on the
+// CPU" -- see ffmpeg.HardwareDecoder for why that is often the right one.
 // Height zero keeps the source size, which is what "Original" means for a file
 // whose only problem is a codec the browser refuses.
-func TranscodeArgs(path string, d Decision, startSeconds float64, encoder string, height int, audioStreamIndex *int) []string {
+func TranscodeArgs(path string, d Decision, startSeconds float64, encoder, hwaccel string, height int, audioStreamIndex *int) []string {
 	args := []string{"-hide_banner", "-loglevel", "error"}
+
+	// An input option, so it has to precede -i. Before -ss as well, so the seek
+	// is performed by the accelerated demux path rather than after it.
+	if hwaccel != "" {
+		args = append(args, "-hwaccel", hwaccel)
+	}
+
 	if startSeconds > 0 {
 		args = append(args, "-ss", formatSeconds(startSeconds))
 	}

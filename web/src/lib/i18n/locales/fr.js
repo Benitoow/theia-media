@@ -592,6 +592,13 @@ export const strings = {
 		language: 'Langue',
 		languageHint:
 			'Ce choix reste dans ce navigateur. Il traduit l’interface sans retélécharger ni retraduire les métadonnées TMDB déjà en cache.',
+		playback: 'Lecture',
+		playbackHint:
+			'Certains navigateurs annoncent savoir lire un format sans tenir la cadence : le son avance alors sur l’image. Theia s’en aperçoit pendant la lecture, bascule vers un réencodage à la même définition, et s’en souvient pour les films suivants.',
+		playbackForget: 'Réessayer la lecture directe',
+		playbackNone: 'Aucun format n’a été mis de côté sur ce navigateur.',
+		playbackSome: (n) =>
+			n === 1 ? '1 format réencodé sur ce navigateur.' : n + ' formats réencodés sur ce navigateur.',
 		server: 'Serveur',
 		version: 'Version',
 		port: 'Port',

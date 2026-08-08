@@ -3,6 +3,7 @@
 	import { apiFetch, getJSON, formatTime, displayTitle } from '$lib/api.js';
 	import { strings as t } from '$lib/strings.js';
 	import { profiles } from '$lib/profiles.svelte.js';
+	import { codecPlayback } from '$lib/codec-playback.svelte.js';
 	import Icon from './Icon.svelte';
 
 	// fileId and audioTrackId come from the chooser on the film page. When they
@@ -195,6 +196,7 @@
 	onDestroy(() => {
 		clearInterval(saveTimer);
 		clearTimeout(idleTimer);
+		clearTimeout(paceTimer);
 		save(true);
 		document.body.style.overflow = previousBodyOverflow;
 		queueMicrotask(() => {
@@ -224,6 +226,21 @@
 			failureCode = info.reason_code ?? 'failed';
 			return false;
 		}
+		// A verdict this browser already reached, on an earlier film. Without it
+		// every HEVC file would open with the same few seconds of sound running
+		// ahead of the picture before the measurement below caught up; with it,
+		// only the first one ever does. The re-encode starts at the source size,
+		// so nothing but the codec changes.
+		if (
+			!forceTranscode &&
+			info.video_risky &&
+			info.transcode?.available &&
+			codecPlayback.strugglesWith(info.video_codec)
+		) {
+			forceTranscode = true;
+			return loadInfo();
+		}
+
 		// A subtitle chosen before a re-measurement may no longer exist; track
 		// ids belong to one inspection.
 		if (subtitleTrackId && !subtitleTracks.some((track) => track.id === subtitleTrackId)) {
@@ -474,6 +491,7 @@
 			return;
 		}
 		showSubtitleTrack();
+		watchDecodePace();
 
 		// The picture proves the file was probed. A file that had never been
 		// inspected has only now revealed its tracks, so the menu is refilled
@@ -482,6 +500,60 @@
 			refreshedAfterProbe = true;
 			refreshTracks();
 		}
+	}
+
+	// The half of the problem the check above cannot see.
+	//
+	// videoWidth === 0 catches a browser that decodes nothing. The worse case is
+	// a browser that decodes *something*: on the maintainer's machine Chrome
+	// reports 1920x804, readyState 4 and a picture, and then renders it far
+	// slower than the film runs while the sound keeps perfect time. The symptom
+	// people report is "the sound is way ahead of the picture"; the cause is that
+	// the remux handed the browser a codec it cannot keep up with.
+	//
+	// No API will say so in advance. canPlayType answers "probably" for HEVC and
+	// mediaCapabilities.decodingInfo answers smooth and power-efficient, both on
+	// the machine where it does not work. So it is measured: presented frames per
+	// second *of film*, which a stall in the network cannot flatter because both
+	// halves of the ratio stop together.
+	//
+	// Ten is chosen to sit nowhere near either answer. Every real film runs at
+	// 23.976 or more and a healthy decoder matches it; the broken case measures
+	// close to zero. Deliberately not the source frame rate, which the server
+	// does not store: a fixed floor needs no schema change to be right.
+	const decodeFloorFPS = 10;
+	let paceTimer;
+
+	function watchDecodePace() {
+		clearTimeout(paceTimer);
+		// Only a risky remux is worth measuring. H.264 that already plays does not
+		// need watching, and a transcode is this check's own answer.
+		if (!isRemux || !info?.video_risky || forceTranscode) return;
+		if (!video?.getVideoPlaybackQuality) return;
+
+		const sample = () => ({
+			frames: video.getVideoPlaybackQuality().totalVideoFrames,
+			at: video.currentTime
+		});
+
+		const first = sample();
+		paceTimer = setTimeout(() => {
+			if (!video || paused || seeking || forceTranscode) return;
+			const second = sample();
+			const played = second.at - first.at;
+			// Too little film went by to judge: buffering, or a pause the flags
+			// above did not catch. Say nothing rather than guess.
+			if (played < 1.5) return;
+
+			const fps = (second.frames - first.frames) / played;
+			if (fps >= decodeFloorFPS) return;
+
+			codecPlayback.recordStruggle(info?.video_codec);
+			if (info?.transcode?.available) {
+				forceTranscode = true;
+				start(position);
+			}
+		}, 2500);
 	}
 
 	// Deliberately silent, unlike loadInfo: the film is playing. A refresh that

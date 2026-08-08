@@ -1552,6 +1552,95 @@ Three refusals kept:
   graphique" or "processeur", because on this machine those are 4.56× and 1.04×
   and the difference belongs to whoever is deciding.
 
+## 59. Whether a browser keeps up is measured, never asked
+
+Decision 58 lit the furnace for a picture Chrome **never decodes**. This is its
+other half: a picture Chrome decodes and cannot keep up with.
+
+Reported as "a very big delay between the sound and the image" on a real HEVC
+Main 10 rip, in "Qualité du fichier" — the remux. The same file at 720p, same
+DTS track, is perfectly in sync. The remux copies the video, so the browser does
+the decoding; it produced a picture, reported `1920x804` and `readyState 4`, and
+then rendered far slower than the film runs while the audio, trivially
+transcoded to AAC, kept perfect time. The existing guard did not fire because it
+tests `videoWidth === 0`, which is the case where nothing is decoded at all.
+
+**No API answers this in advance, and two of them lie about it.** Measured on the
+machine where playback is broken:
+
+| Asked | Answer |
+|---|---|
+| `canPlayType('video/mp4; codecs="hev1…"')` | `probably` |
+| `mediaCapabilities.decodingInfo(…)` | `supported: true, smooth: true, powerEfficient: true` |
+
+`decodingInfo` returned the same for AV1. It is designed for exactly this
+question and it is not usable for it, so nothing here consults it. Do not
+reintroduce a pre-flight check on that basis.
+
+What is used instead is the playback itself: presented frames per second **of
+film**, sampled twice about 2.5 s apart, `Δ totalVideoFrames / Δ currentTime`.
+Both halves of that ratio stop together, so buffering cannot flatter it. Below
+**10** the browser is not keeping up. The floor is fixed rather than derived from
+the source frame rate, which the server does not store: every real film runs at
+23.976 or more and the broken case measures near zero, so a constant is both
+correct and free of a schema change.
+
+Three consequences:
+
+- **The re-encode keeps the source resolution.** `?video=transcode` with no `h`
+  reaches `TranscodeArgs` with `height = 0`, adds no `scale`, and returns
+  1920x804 H.264 — verified. Only the codec changes. Falling back to 720p would
+  have cost definition on a machine measured at eight times real time.
+- **The verdict belongs to the browser**, in `localStorage`, for the reason
+  decision 32 gives for the language: the television and the laptop have
+  different GPUs and different builds, and an answer from one is a lie on the
+  other. It is keyed by codec rather than by "risky", so the next codec to join
+  that set inherits nothing. Settings carry the way back, for the day a driver
+  fixes it.
+- **Only a risky remux is watched.** H.264 that already plays is never measured.
+
+Two things left standing on purpose. The legacy `/api/stream/{id}/info` route
+carries neither flag, so a playback started through it cannot arm the detector;
+the film page always passes a file id, so the interface does not use that route,
+and teaching a third handler the decision logic costs more than it returns. And
+after a switch the menu still labels the top rung "Qualité du fichier" while a
+re-encode runs, because `qualityLadder` only rewrites that entry for
+`ModeUnsupported`.
+
+**Unverified here, and it must be checked on the maintainer's browser.** The
+preview pane does not composite frames, and it inverted this very measurement:
+it reported the HEVC remux at 24 frames per second and the transcode at 0.5,
+which is the opposite of the machine the bug was reported from. The threshold is
+reasoned and the plumbing around it is verified end to end; the threshold itself
+is not.
+
+## 60. Hardware decoding is probed, and `auto` is not a candidate
+
+`TranscodeArgs` encoded on the GPU and decoded on the CPU. `internal/ffmpeg/decoders.go`
+now probes an `-hwaccel` the same way `capabilities.go` probes encoders: each
+candidate is asked to decode one frame, once, lazily, on the first playback that
+transcodes. On the maintainer's AMD desktop it reports
+`usable=d3d11va,dxva2 refused=cuda chosen=d3d11va`.
+
+The ordering is measured, not alphabetical, transcoding that HEVC rip to 720p:
+
+| | Speed |
+|---|---|
+| none, software decode | 8.1x |
+| `d3d11va` | **9.86x** |
+| `dxva2` | 5.37x |
+| `auto` | 3.8x |
+
+**Two accelerations are slower than none, including the one that picks for
+itself.** `auto` is therefore not in the candidate list and `dxva2` sits behind
+`d3d11va`. The empty string remains a valid answer: software decoding at 8.1x
+has ample margin and is correct everywhere.
+
+The honest limit of this: a probe proves a method *starts*, not that it is
+*faster*. If the chosen one is ever slower in real use, replace the liveness
+probe with a short benchmark against software. That is more truthful and more
+expensive, and not worth paying until it is needed.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

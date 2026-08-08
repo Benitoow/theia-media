@@ -100,6 +100,7 @@ func (s *Server) handleEpisodeFileStreamInfo(w http.ResponseWriter, r *http.Requ
 		Container:       container,
 		MediaStatus:     file.Media.Status,
 		VideoRisky:      decision.VideoRisky,
+		VideoCodec:      videoCodecOf(file.Media),
 		FFmpegReady:     s.ffmpeg != nil && s.ffmpeg.Available(),
 		FFmpegSupported: ffmpeg.Supported(),
 		DurationSeconds: duration,

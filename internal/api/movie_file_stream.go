@@ -116,6 +116,7 @@ func (s *Server) handleMovieFileStreamInfo(w http.ResponseWriter, r *http.Reques
 		Container:       container,
 		MediaStatus:     file.Media.Status,
 		VideoRisky:      decision.VideoRisky,
+		VideoCodec:      videoCodecOf(file.Media),
 		FFmpegReady:     s.ffmpeg != nil && s.ffmpeg.Available(),
 		FFmpegSupported: ffmpeg.Supported(),
 		DurationSeconds: duration,
@@ -300,7 +301,10 @@ func (s *Server) handleMovieFileStreamRemux(w http.ResponseWriter, r *http.Reque
 	var args []string
 	switch {
 	case decision.Mode == stream.ModeTranscode:
-		args = stream.TranscodeArgs(file.Path, decision, start, encoder.Name, wantedHeight, audioStreamIndex)
+		// Probed on the first transcode and remembered, like the encoder. An
+		// empty answer means decode on the CPU, which is correct everywhere.
+		args = stream.TranscodeArgs(file.Path, decision, start,
+			encoder.Name, s.ffmpeg.HardwareDecoder(r.Context()), wantedHeight, audioStreamIndex)
 	case audioStreamIndex != nil:
 		args = stream.RemuxArgsForAudio(file.Path, decision, start, *audioStreamIndex)
 	default:
@@ -429,6 +433,16 @@ func requestedAudioID(w http.ResponseWriter, r *http.Request) (int64, bool, bool
 		return 0, false, false
 	}
 	return id, true, true
+}
+
+// videoCodecOf is the measured codec, or empty when the file has not been
+// inspected. Lowercase, because it is a key the browser stores its own verdict
+// under and "HEVC" and "hevc" must not become two answers.
+func videoCodecOf(media library.FileMedia) string {
+	if media.Status != library.MediaOK || media.Video == nil {
+		return ""
+	}
+	return strings.ToLower(media.Video.Codec)
 }
 
 func decisionReasonCode(decision stream.Decision) string {

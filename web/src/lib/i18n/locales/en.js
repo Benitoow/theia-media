@@ -588,6 +588,13 @@ export const strings = {
 		language: 'Language',
 		languageHint:
 			'This choice stays in this browser. It translates the interface without downloading or retranslating cached TMDB metadata.',
+		playback: 'Playback',
+		playbackHint:
+			'Some browsers claim to play a format and then cannot keep up, so the sound runs ahead of the picture. Theia notices during playback, switches to a re-encode at the same resolution, and remembers it for later films.',
+		playbackForget: 'Try direct playback again',
+		playbackNone: 'No format has been set aside on this browser.',
+		playbackSome: (n) =>
+			n === 1 ? '1 format re-encoded on this browser.' : n + ' formats re-encoded on this browser.',
 		server: 'Server',
 		version: 'Version',
 		port: 'Port',

@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { getJSON } from '$lib/api.js';
 	import { i18n } from '$lib/i18n/index.svelte.js';
+	import { codecPlayback } from '$lib/codec-playback.svelte.js';
 	import { strings as t, formatUptime } from '$lib/strings.js';
 	import ConnectPanel from '$lib/components/ConnectPanel.svelte';
 
@@ -176,6 +177,25 @@
 						{locale.label}
 					</button>
 				{/each}
+			</div>
+		</section>
+
+		<!-- Also a browser preference, and for the same reason: whether this
+		     machine keeps up with a codec says nothing about the next one. -->
+		<section class="mb-14 border-b border-line pb-14">
+			<h2 class="label mb-5">{t.settings.playback}</h2>
+			<p class="text-small mb-5 max-w-prose text-muted">{t.settings.playbackHint}</p>
+			<div class="flex flex-wrap items-center gap-5">
+				<span class="text-small text-parchment">
+					{codecPlayback.count
+						? t.settings.playbackSome(codecPlayback.count)
+						: t.settings.playbackNone}
+				</span>
+				{#if codecPlayback.count}
+					<button type="button" class="tv-action cursor-pointer" onclick={() => codecPlayback.forget()}>
+						{t.settings.playbackForget}
+					</button>
+				{/if}
 			</div>
 		</section>
 
