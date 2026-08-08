@@ -1,0 +1,106 @@
+name: Bug report
+description: Something does not work
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time. The fields below are the ones that
+        usually decide whether a bug can be reproduced at all — a playback
+        report without the file's codecs generally cannot be.
+
+        **Do not report a security problem here.** Use
+        [private reporting](https://github.com/Benitoow/theia-media/security/advisories/new).
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Theia version
+      description: From Settings, or `theia -version`.
+      placeholder: v2.0.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system running Theia
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      description: >
+        Where you were watching, not where the server runs. Television browsers
+        and phones behave differently from a desktop, and codec support varies
+        between them more than anything else.
+      placeholder: Chrome 141 on Windows / Safari on an Apple TV / Samsung Tizen
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "### If this is a playback problem"
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Playback mode
+      description: >
+        Shown next to the title in the player, and selectable under the cog.
+      options:
+        - Not a playback problem
+        - Direct play
+        - Remux ("Qualité du fichier")
+        - Re-encode (720p, 480p, 360p)
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: media
+    attributes:
+      label: The file
+      description: >
+        The single most useful thing you can paste: the `Stream #` lines from
+        `ffmpeg -i "your-file.mkv"`. Container, video codec, audio codec and
+        subtitle tracks are what determine which path Theia takes.
+      render: text
+      placeholder: |
+        Stream #0:0: Video: hevc (Main 10), yuv420p10le(tv), 1920x804, 23.98 fps
+        Stream #0:1(eng): Audio: dts (DTS), 48000 Hz, 5.1(side)
+        Stream #0:2(eng): Subtitle: subrip
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Server output
+      description: >
+        What Theia printed in its terminal around the problem. Redact paths you
+        would rather not publish.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I am on the latest release, or I have said which older one I am on and why.
+          required: true
+        - label: This is not a report that the LAN port has no login — that is [documented and deliberate](https://github.com/Benitoow/theia-media/blob/main/.github/SECURITY.md).
+          required: true

@@ -1,0 +1,50 @@
+name: Feature request
+description: Suggest something Theia should do
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Theia is deliberately small, and a good part of the project is what it
+        refuses to do. Several popular requests are already settled decisions
+        rather than open questions — accounts and permissions, live TV, a plugin
+        system, music and photos, native apps.
+
+        That does not make your idea unwelcome. It means the answer may be
+        "already decided, here is why", and the reasoning will be in
+        [DECISIONS.md](https://github.com/Benitoow/theia-media/blob/main/docs/DECISIONS.md).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: >
+        The situation, not the solution. "I have three people in the house and
+        they keep resuming each other's films" is more useful than "add
+        profiles", because it leaves room for a better answer.
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you had in mind
+      description: How you imagine it working, if you have a view.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried instead
+      description: >
+        Workarounds, other tools, or the reason the current behaviour does not
+        cover it.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have looked at "What Theia deliberately does not do" in the README.
+          required: true
+        - label: I have searched DECISIONS.md for this, or I am asking for a decision to be reopened with new evidence.
+          required: true
