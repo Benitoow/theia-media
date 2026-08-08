@@ -11,6 +11,11 @@ import { getJSON, apiFetch } from '$lib/api.js';
 const storageKey = 'theia.profile';
 
 class Profiles {
+	// Shared across every caller of ready(), so the first page to ask starts the
+	// single request and the rest wait on it rather than firing their own.
+	/** @type {Promise<unknown> | null} */
+	#ready = null;
+
 	/** @type {Array<{id: number, name?: string, is_default: boolean, has_avatar: boolean, avatar_version?: number}>} */
 	list = $state([]);
 	/** @type {number | null} */
@@ -33,6 +38,22 @@ class Profiles {
 	// appears the moment there is an actual choice to make.
 	get needsSelection() {
 		return this.loaded && this.active === null && this.list.length > 1;
+	}
+
+	// Awaited by anything that builds a ?profile= URL.
+	//
+	// A page's onMount runs before its layout's, so a page that reached straight
+	// for url() asked the server for the *default* profile's history: the home
+	// screen offered to resume a film nobody in the house had started, and the
+	// player wrote its position onto the wrong viewer. Both were only visible on
+	// a cold load, which is why they survived the milestone.
+	//
+	// A failed load resolves rather than rejects: a server without profiles still
+	// serves the library, and no screen should be held back over the question of
+	// who is watching.
+	ready() {
+		if (!this.#ready) this.#ready = this.load().catch(() => {});
+		return this.#ready;
 	}
 
 	async load() {

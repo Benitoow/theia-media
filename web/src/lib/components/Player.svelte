@@ -211,6 +211,10 @@
 	// the player into a failed state.
 	async function loadInfo() {
 		try {
+			// Belt and braces: the pages that mount the player already wait for it,
+			// but a position written against the wrong viewer is not a mistake that
+			// announces itself, so the player does not assume.
+			await profiles.ready();
 			const query = audioQuery ? `?${audioQuery}` : '';
 			info = await getJSON(profiles.url(`${base}/info${query}`));
 		} catch (error) {

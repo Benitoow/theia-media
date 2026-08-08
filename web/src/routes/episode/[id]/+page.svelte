@@ -51,6 +51,7 @@
 	async function load(id) {
 		state = 'loading';
 		try {
+			await profiles.ready();
 			episode = await getJSON(profiles.url(`/api/library/episodes/${id}`));
 			fileId =
 				(episode.files?.find((file) => file.is_primary) ?? episode.files?.[0])?.id ?? null;

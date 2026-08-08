@@ -64,6 +64,9 @@ export function displayYear(item) {
  * place to change it is here.
  */
 export async function getAllMovies(onProgress) {
+	// The watch-state filter and the resume badges come from the profile's own
+	// progress, so the answer to who is watching has to be in hand first.
+	await profiles.ready();
 	const pageSize = 500;
 	let offset = 0;
 	let total = Infinity;

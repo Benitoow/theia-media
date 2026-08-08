@@ -16,6 +16,7 @@
 
 	onMount(async () => {
 		try {
+			await profiles.ready();
 			const payload = await getJSON(profiles.url('/api/library/series?limit=500'));
 			series = payload.series ?? [];
 			state = 'ready';

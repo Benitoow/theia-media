@@ -34,7 +34,9 @@
 		// Asked first: what follows depends on which side of the tunnel this is.
 		await remote.load();
 		try {
-			await profiles.load();
+			// ready(), not load(): the page's onMount has already run and may have
+			// started this very request. See profiles.svelte.js.
+			await profiles.ready();
 			// The application opens by asking who is watching, whenever this
 			// browser has no answer -- or has one that was deleted elsewhere.
 			if (profiles.needsSelection && !inProfiles) goto('/profils');

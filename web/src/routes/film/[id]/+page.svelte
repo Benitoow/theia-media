@@ -39,6 +39,7 @@
 
 	onMount(async () => {
 		try {
+			await profiles.ready();
 			movie = await getJSON(profiles.url(`/api/library/movies/${$page.params.id}`));
 			// `files` only exists on the detail payload. The primary file is the
 			// server's existing bookkeeping, not a quality judgement, so it is a

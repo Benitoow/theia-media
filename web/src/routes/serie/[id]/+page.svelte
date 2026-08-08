@@ -29,6 +29,7 @@
 
 	onMount(async () => {
 		try {
+			await profiles.ready();
 			series = await getJSON(profiles.url(`/api/library/series/${$page.params.id}`));
 			state = 'ready';
 			// Open on the first real season rather than on the specials, which are

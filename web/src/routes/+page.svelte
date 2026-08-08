@@ -63,6 +63,9 @@
 		// something deliberately forbidden is still the wrong request to make:
 		// the guard is a boundary, not a fallback (decision 44).
 		await remote.load();
+		// Who is watching decides what the rows contain, so it has to be settled
+		// before the first request rather than alongside it.
+		await profiles.ready();
 		const [library, onboarding, series] = await Promise.allSettled([
 			getJSON(profiles.url('/api/library/home')),
 			remote.isRemote ? Promise.resolve({ needed: false }) : getJSON('/api/onboarding'),
