@@ -339,6 +339,44 @@ a player.
   the timestamp under the pointer.
 - **Scrims, not a wash.** Two gradients, top and bottom, so the text has a floor
   without dimming the film.
+- **The bar never wraps.** A control row that reflows into two lines moves the
+  play button out from under a thumb mid-press. Below 30rem the volume control
+  and the shortcuts button go instead — a phone has hardware volume keys, and a
+  keyboard-shortcuts panel on a touchscreen is help for a keyboard nobody is
+  holding. Everything that stays keeps its 3.25rem target.
+- **The clock shows two numbers.** Elapsed in `--bone` at 500, total in
+  `--muted`, separated by a drawn hairline rather than a slash glyph, which sits
+  at the wrong optical height at this size. A third number for the remaining
+  time is the other two subtracted, and it was printed in `--faint`.
+- **Audio and subtitles are a popover, not a panel.** It is a child of the
+  button that opens it, so it is anchored by construction: `right: 0` against
+  the button's own box rather than a measured offset from the frame. Positioned
+  against the frame it sat 117px from its control on a 900px viewport and read
+  as a slab that happened to appear. Below 30rem it pins to the frame instead,
+  because a 21rem panel aligned to a button 60px from the right edge starts off
+  the left of a 390px screen.
+- **A track is two lines.** The language leads at reading size, because that is
+  what the choice is made on; codec, channels and provenance sit under it as a
+  tracked label in `--muted`. One middot-joined string put four facts at one
+  weight, which at three metres is a wall. A detail that merely repeats the line
+  above it is dropped — a French track titled "Français" read as
+  `Français · Français`.
+- **The chosen track carries a tick**, in gold, in a column that is reserved
+  whether or not it is drawn. A 2px rule at 6% fill does not survive the room.
+  The popover has no dismiss button: Escape, the toggle, and a press outside.
+- **Subtitles are shadowed, never boxed.** A `background` on `::cue` is painted
+  per line, so a two-line cue gets two slabs of different widths with a ragged
+  step between them. A tight four-way shadow plus one soft drop follows the
+  letterforms instead of boxing them, and holds on saturated colour bars — the
+  worst case there is. Type runs to 2.375rem, about 3.5% of a 1080p frame,
+  which is broadcast practice; the previous ceiling measured 2.8% and read as a
+  caption on a monitor.
+- **Cues lift when the furniture appears.** `line` as a count of lines snaps to
+  a height the engine picks, and `lineAlign: 'end'` is ignored by Chrome, so the
+  position is computed from the cue's own line count and the measured height of
+  the control bar. Measured at 1080p: 79.06% with the bar up, 90.76% with it
+  down. The engine maps that request through a safe area of its own; what this
+  controls is the delta, which is all it needs to control.
 - **Keyboard shortcuts are discoverable.** `?` opens an in-player help panel,
   also reachable from an icon button in the control bar. While it is open the
   underlying controls are inert, Tab stays inside the panel, Escape closes the

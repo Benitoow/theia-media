@@ -2176,11 +2176,37 @@
 		transition: opacity var(--duration-base) var(--ease-cine);
 	}
 
+	/* Title and state on one line, sharing the width: stacked, the badge sat
+	   under the title and over the film with nothing but a gradient behind it. */
+	.player-heading {
+		display: flex;
+		min-width: 0;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.35rem 0.85rem;
+	}
+
 	.player-title {
+		overflow: hidden;
 		color: var(--color-bone);
 		font-size: clamp(1rem, 1.3vw, 1.375rem);
 		font-weight: 600;
 		letter-spacing: -0.01em;
+		text-overflow: ellipsis;
+		text-shadow: 0 1px 0.5rem rgba(0, 0, 0, 0.55);
+		white-space: nowrap;
+	}
+
+	.player-badge {
+		flex: none;
+		border: 1px solid rgba(237, 231, 220, 0.22);
+		border-radius: 999px;
+		padding: 0.2rem 0.6rem;
+		color: var(--color-muted);
+		font-size: var(--text-micro);
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		white-space: nowrap;
 	}
 
 	.player-controls {
@@ -2194,9 +2220,12 @@
 		transition: opacity var(--duration-base) var(--ease-cine);
 	}
 
+	/* Never wraps. A control bar that reflows into two rows moves the play
+	   button under somebody's thumb mid-press; the clock gives up its width
+	   first instead, and the icons keep their 3.25rem targets throughout. */
 	.player-buttons {
 		display: flex;
-		flex-wrap: wrap;
+		flex-wrap: nowrap;
 		align-items: center;
 		gap: clamp(0.15rem, 0.6vw, 0.5rem);
 	}
@@ -2240,17 +2269,40 @@
 		background: #fff;
 	}
 
+	/* The clock. Tabular figures so the bar does not twitch every second, and the
+	   elapsed time carries the weight because that is the number being read --
+	   the total is a fact you check once. The slash is drawn rather than typed:
+	   a punctuation glyph at this size sits at the wrong optical height. */
 	.player-time {
+		display: flex;
+		min-width: 0;
+		align-items: baseline;
+		gap: 0.5rem;
 		margin-inline-start: 0.6rem;
-		color: var(--color-bone);
 		font-size: clamp(0.8125rem, 0.9vw, 0.9375rem);
 		font-variant-numeric: tabular-nums;
 		white-space: nowrap;
 	}
 
-	.player-remaining {
-		margin-inline-start: 0.75rem;
-		color: var(--color-faint);
+	.player-time-now {
+		color: var(--color-bone);
+		font-weight: 500;
+	}
+
+	.player-time-total {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		color: var(--color-muted);
+	}
+
+	.player-time-total::before {
+		width: 1px;
+		height: 0.75em;
+		background: currentColor;
+		content: '';
+		opacity: 0.45;
+		transform: skewX(-16deg) translateY(0.05em);
 	}
 
 	.player-volume {
@@ -2260,24 +2312,96 @@
 	}
 
 	/* Collapsed until asked for: a volume slider permanently open is furniture,
-	   and a TV remote adjusts volume with its own buttons anyway. */
+	   and a TV remote adjusts volume with its own buttons anyway.
+
+	   Drawn rather than left to `accent-color`. It was the one control in the
+	   bar still wearing the platform's own paint, sitting a few pixels from a
+	   scrub bar that had been designed to the millimetre -- and on Windows the
+	   native track is a flat grey slab that belongs to no part of this. The
+	   geometry below is the scrub bar's, at a smaller scale, so the two read as
+	   one family. */
 	.volume-slider {
 		width: 0;
 		min-block-size: auto;
-		height: 0.25rem;
+		height: 1.25rem;
 		padding: 0;
+		border: 0;
 		opacity: 0;
 		transition:
 			width var(--duration-fast) var(--ease-cine),
 			opacity var(--duration-fast) var(--ease-cine);
-		accent-color: var(--color-accent);
+		appearance: none;
+		background: transparent;
 		cursor: pointer;
+	}
+
+	.volume-slider::-webkit-slider-runnable-track {
+		height: 0.25rem;
+		border-radius: 999px;
+		background: rgba(237, 231, 220, 0.3);
+		box-shadow: inset 0 0 0 1px rgba(11, 10, 9, 0.35);
+	}
+
+	.volume-slider::-moz-range-track {
+		height: 0.25rem;
+		border-radius: 999px;
+		background: rgba(237, 231, 220, 0.3);
+	}
+
+	.volume-slider::-moz-range-progress {
+		height: 0.25rem;
+		border-radius: 999px;
+		background: var(--color-bone);
+	}
+
+	/* Bone, not gold. §3 budgets five uses of the accent per screen and the
+	   scrub bar has already spent one on the thing that matters more. */
+	.volume-slider::-webkit-slider-thumb {
+		width: 0.7rem;
+		height: 0.7rem;
+		border: 0;
+		border-radius: 50%;
+		margin-top: -0.225rem;
+		background: var(--color-bone);
+		box-shadow: 0 1px 3px rgba(11, 10, 9, 0.6);
+		appearance: none;
+	}
+
+	.volume-slider::-moz-range-thumb {
+		width: 0.7rem;
+		height: 0.7rem;
+		border: 0;
+		border-radius: 50%;
+		background: var(--color-bone);
+		box-shadow: 0 1px 3px rgba(11, 10, 9, 0.6);
 	}
 
 	.player-volume:hover .volume-slider,
 	.player-volume:focus-within .volume-slider {
 		width: clamp(4rem, 7vw, 6.5rem);
 		opacity: 1;
+	}
+
+	/* A phone is not a small desktop. Refusing to wrap keeps the play button
+	   under the same thumb from one second to the next, but at 390px the row
+	   then overflowed: the volume icon sat on top of the clock and fullscreen
+	   was pushed off the edge entirely.
+
+	   What goes is what the device already does better. A phone has hardware
+	   volume keys, and a keyboard-shortcuts panel on a touchscreen is help for
+	   a keyboard nobody is holding. Play, ten seconds either way, the clock,
+	   subtitles and fullscreen stay -- and every one of them keeps its 3.25rem
+	   target.
+
+	   Declared after .player-icon-button and .player-volume on purpose: one
+	   class each, so the specificity ties and source order is what settles it.
+	   Written above them first, and the buttons simply stayed on screen. Same
+	   trap .player-hidden documents. */
+	@media (max-width: 30rem) {
+		.player-volume,
+		.player-icon-button--desktop {
+			display: none;
+		}
 	}
 
 	/* -----------------------------------------------------------------------
@@ -2299,13 +2423,22 @@
 		opacity: 0.55;
 	}
 
+	/* The unplayed part has to survive the film behind it.
+	   Measured over a colour-bar test pattern: at 18% bone the rest of the bar
+	   vanished completely across the yellow and green bands, so the only thing
+	   on screen saying how long the film is disappeared depending on the shot.
+	   A darker floor under a brighter line fixes it without making the bar loud:
+	   the inset shadow is what keeps the edge readable on white. */
 	.scrub-track {
 		position: relative;
 		width: 100%;
 		height: 0.25rem;
 		overflow: hidden;
 		border-radius: 999px;
-		background: rgba(237, 231, 220, 0.18);
+		background: rgba(237, 231, 220, 0.3);
+		box-shadow:
+			inset 0 0 0 1px rgba(11, 10, 9, 0.35),
+			0 1px 3px rgba(11, 10, 9, 0.5);
 		transition: height var(--duration-fast) var(--ease-cine);
 	}
 
@@ -2320,7 +2453,7 @@
 		position: absolute;
 		inset-block: 0;
 		left: 0;
-		background: rgba(237, 231, 220, 0.28);
+		background: rgba(237, 231, 220, 0.45);
 		transition: width var(--duration-base) linear;
 	}
 
@@ -2376,39 +2509,114 @@
 	}
 
 	/* Lit when subtitles are on, so the state is legible from the sofa without
-	   opening anything. */
+	   opening anything. A ring rather than a fill: a filled circle in the bar
+	   would compete with the play button, which §6b keeps as the only one. */
 	.player-icon-button--lit {
-		background: rgba(237, 231, 220, 0.16);
+		box-shadow: inset 0 0 0 1.5px var(--color-accent-dim);
+		background: rgba(200, 162, 74, 0.14);
 		color: var(--color-accent);
 	}
 
-	/* Audio and subtitles, over the control bar rather than in the middle of the
-	   picture: the list belongs beside the button that opened it, and a panel
-	   centred on the frame hides the very thing being adjusted. */
+	.player-icon-button--lit:hover {
+		background: rgba(200, 162, 74, 0.22);
+	}
+
+	/* An open popover keeps its button looking pressed, so the pair reads as one
+	   object rather than a panel hovering near an idle icon. */
+	.player-icon-button[aria-expanded='true'] {
+		background: rgba(237, 231, 220, 0.16);
+	}
+
+	/* -----------------------------------------------------------------------
+	   Audio and subtitles
+	   -----------------------------------------------------------------------
+	   A popover belonging to a control, not a panel that appears near it. The
+	   anchor is the button's own box, so the two travel together at every
+	   viewport and there is no positioning code to drift. */
+	.player-tracks-anchor {
+		position: relative;
+		display: inline-flex;
+	}
+
 	.player-tracks {
 		position: absolute;
 		z-index: 6;
-		right: clamp(1rem, 3vw, 2.5rem);
-		bottom: clamp(8rem, 14vh, 11rem);
-		width: min(26rem, calc(100vw - 2rem));
-		max-height: min(60svh, 34rem);
+		right: 0;
+		/* Above the button, clear of it by one step of the spacing scale. */
+		bottom: calc(100% + 0.6rem);
+		width: min(21rem, calc(100vw - 2rem));
+		/* Bounded so it can never be clipped by its own frame: the previous
+		   panel ran past the bottom of a 560px-tall window and cut its last row
+		   in half with no scrollbar to say so. */
+		max-height: min(56svh, 30rem);
 		overflow-y: auto;
-		border: 1px solid rgba(237, 231, 220, 0.16);
-		border-radius: clamp(0.85rem, 1.6vw, 1.35rem);
-		padding: clamp(1.1rem, 2.4vw, 1.75rem);
+		overscroll-behavior: contain;
+		border: 1px solid rgba(237, 231, 220, 0.14);
+		border-radius: 1rem;
+		padding: 0.85rem;
 		background:
-			linear-gradient(135deg, rgba(237, 231, 220, 0.04), transparent 56%),
-			rgba(19, 18, 17, 0.96);
-		box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.58);
-		-webkit-backdrop-filter: blur(24px);
-		backdrop-filter: blur(24px);
+			linear-gradient(150deg, rgba(237, 231, 220, 0.05), transparent 60%),
+			rgba(15, 14, 13, 0.94);
+		box-shadow:
+			0 0.25rem 0.75rem rgba(0, 0, 0, 0.4),
+			0 1.75rem 3.5rem rgba(0, 0, 0, 0.6);
+		-webkit-backdrop-filter: blur(28px) saturate(1.1);
+		backdrop-filter: blur(28px) saturate(1.1);
+		/* Rises from the button rather than fading in place, so the eye is told
+		   where it came from. §8: --duration-base, --ease-cine, and `both` so the
+		   reduced-motion guard leaves it visible rather than at its `from`. */
+		animation: track-rise var(--duration-base) var(--ease-cine) both;
+		transform-origin: bottom right;
+	}
+
+	@keyframes track-rise {
+		from {
+			opacity: 0;
+			transform: translateY(0.5rem) scale(0.97);
+		}
+	}
+
+	/* On a phone the anchor stops being useful and starts being a hazard: the
+	   button sits about 60px from the right edge, so a 21rem panel aligned to it
+	   would begin 28px off the left of a 375px screen. Below this width it pins
+	   to the frame instead and keeps the same gutter as everything else. */
+	@media (max-width: 30rem) {
+		.player-tracks {
+			position: fixed;
+			right: 1rem;
+			bottom: calc(var(--target-min) + 2.5rem);
+			left: 1rem;
+			width: auto;
+			max-height: 50svh;
+			transform-origin: bottom center;
+		}
+	}
+
+	/* Sections read as sections. The separation used to be an `mt-8` written in
+	   the markup on one of the two headings, which is layout stated in the wrong
+	   file and only half the time. */
+	/* §4's viewing-distance layer, applied here because the player is the one
+	   surface actually read from a sofa: tracked labels 11px to 13px, chrome
+	   body 16px to 19px. The base stays the small-screen floor. */
+	.track-heading {
+		padding: 0.5rem 0.75rem 0.4rem;
+		color: var(--color-muted);
+		font-size: clamp(0.6875rem, 0.72vw, 0.8125rem);
+		font-weight: 500;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+	}
+
+	.track-list + .track-heading {
+		margin-top: 0.5rem;
+		border-top: 1px solid var(--color-line);
+		padding-top: 0.9rem;
 	}
 
 	.track-list {
 		display: flex;
 		flex-direction: column;
-		margin-top: 0.65rem;
-		gap: 0.2rem;
+		gap: 0.1rem;
 	}
 
 	/* Full-width rows: §9 asks for a 3.25rem target and a list read at three
@@ -2417,58 +2625,111 @@
 		display: flex;
 		width: 100%;
 		min-block-size: var(--target-min);
-		flex-wrap: wrap;
 		align-items: center;
-		gap: 0 0.6rem;
+		gap: 0.75rem;
 		border: 0;
-		border-inline-start: 2px solid transparent;
-		border-radius: 0.5rem;
-		padding: 0.6rem 0.85rem;
+		border-radius: 0.6rem;
+		padding: 0.5rem 0.75rem;
 		background: transparent;
 		color: var(--color-bone);
 		cursor: pointer;
 		text-align: start;
-		transition:
-			background-color var(--duration-fast) var(--ease-cine),
-			border-color var(--duration-fast) var(--ease-cine);
+		transition: background-color var(--duration-fast) var(--ease-cine);
 	}
 
 	.track-option:hover {
-		background: rgba(237, 231, 220, 0.08);
+		background: rgba(237, 231, 220, 0.07);
 	}
 
 	.track-option--chosen {
-		border-inline-start-color: var(--color-accent);
-		background: rgba(237, 231, 220, 0.06);
+		background: rgba(237, 231, 220, 0.05);
+	}
+
+	.track-lines {
+		display: flex;
+		min-width: 0;
+		flex: 1;
+		flex-direction: column;
+		gap: 0.1rem;
+	}
+
+	/* What the choice is made on, at reading size. */
+	.track-primary {
+		overflow: hidden;
+		color: var(--color-bone);
+		font-size: clamp(1rem, 1.05vw, 1.1875rem);
+		line-height: 1.25;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* What confirms it. --muted at 5.42:1, never --faint: this is read, and §3
+	   reserves faint for decoration. */
+	.track-detail {
+		overflow: hidden;
+		color: var(--color-muted);
+		font-size: clamp(0.6875rem, 0.72vw, 0.8125rem);
+		letter-spacing: 0.1em;
+		text-overflow: ellipsis;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+
+	/* The tick reserves its column whether or not it is drawn, so choosing a
+	   track cannot shift the text of every row beside it. */
+	.track-tick {
+		display: inline-flex;
+		width: 1.125rem;
+		flex: none;
+		align-items: center;
+		justify-content: center;
+		color: var(--color-accent);
 	}
 
 	/* A track that is listed and cannot be chosen. Not a disabled button: there
 	   is no action here to disable, and a focus stop on a dead end would be one
 	   more press between somebody and their film. */
 	.track-option--refused {
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 0.15rem;
-		color: var(--color-muted);
 		cursor: default;
 	}
 
-	.track-note {
-		font-size: var(--text-label);
-		letter-spacing: 0.08em;
-		color: var(--color-faint);
-		text-transform: uppercase;
+	.track-option--refused .track-primary {
+		color: var(--color-muted);
 	}
 
-	/* Subtitles are read from the sofa like everything else. The browser default
-	   is a small white line on an opaque black box; this is the same type scale
-	   the rest of the interface uses, on a scrim that dims rather than blocks. */
+	/* -----------------------------------------------------------------------
+	   Subtitles on the picture
+	   -----------------------------------------------------------------------
+	   No box. A background on ::cue is drawn per line, so a two-line cue gets two
+	   slabs of different widths with a ragged step between them -- which is what
+	   the previous version looked like, and it reads as a browser default rather
+	   than as part of this interface.
+
+	   A tight four-way shadow plus one soft drop does the same job and follows
+	   the letterforms instead of boxing them. It is what a broadcast subtitle
+	   does, and it survives a white scene, which a semi-transparent black box
+	   does not do any better. Weight goes to 500: cream at 400 with a shadow
+	   goes slightly soft, and this is the one piece of type read while moving. */
 	.player-video::cue {
-		background: rgba(11, 10, 9, 0.72);
+		background: transparent;
 		color: var(--color-bone);
 		font-family: var(--font-sans);
-		font-size: clamp(1rem, 2.4vw, 1.6rem);
-		line-height: 1.35;
+		/* Sized for a television, not a laptop. Broadcast practice puts subtitle
+		   type between about 1/30 and 1/25 of picture height; the previous
+		   ceiling of 1.75rem measured 2.8% of a 1080p frame, which is a caption
+		   on a monitor. 2.375rem lands at 3.5% at that height and the floor
+		   keeps a phone sane. §4's viewing-distance layer, applied where it
+		   matters most. */
+		font-size: clamp(1.0625rem, 2.6vw, 2.375rem);
+		font-weight: 500;
+		line-height: 1.3;
+		text-shadow:
+			0 0 0.09em rgba(11, 10, 9, 0.95),
+			0.045em 0.045em 0.06em rgba(11, 10, 9, 0.9),
+			-0.045em 0.045em 0.06em rgba(11, 10, 9, 0.9),
+			0.045em -0.045em 0.06em rgba(11, 10, 9, 0.9),
+			-0.045em -0.045em 0.06em rgba(11, 10, 9, 0.9),
+			0 0.06em 0.35em rgba(0, 0, 0, 0.7);
 	}
 
 	/* The manual port and endpoint, folded away. Open by default only when the

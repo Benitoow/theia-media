@@ -276,7 +276,6 @@ export const strings = {
 		tracks: {
 			open: 'Audio and subtitles',
 			title: 'Audio and subtitles',
-			close: 'Close',
 			subtitles: 'Subtitles',
 			noSubtitles: 'None',
 			external: 'separate file',

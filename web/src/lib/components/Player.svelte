@@ -288,14 +288,24 @@
 			? 0
 			: (shell?.querySelector('.player-controls')?.getBoundingClientRect().height ?? 0);
 
-		// A cue line is measured as a share of the picture, not of the viewport,
-		// because that is how the engine sizes it: browsers scale subtitle text
-		// with the video box and ignore the CSS length when it disagrees.
-		// Deriving it from the stylesheet gave 34.6px against a rendered 52 and
-		// left the second line under the bar. 6.5% of the height matches what
-		// Chrome actually draws, and follows the player when it is resized.
-		const lineHeight = area * 0.065;
-		const gap = area * 0.02;
+		// The height of one cue line, which no API will tell you: the cue box
+		// lives in a closed shadow root. The font size mirrors
+		// `.player-video::cue` in app.css -- changing one means changing the
+		// other -- and the multiplier is measured, not assumed, because Chrome
+		// does not honour `line-height` on ::cue.
+		//
+		// What `line` buys is worth being precise about. Measured at 1080p on a
+		// one-line cue, it goes from 79.06% with the bar up to 90.76% with it
+		// down: an 11.7-point lift, which is the bar's own height. The engine
+		// then maps that request through a safe area of its own, so the absolute
+		// resting position is Chrome's to decide and lands in the lower third,
+		// where a subtitle belongs. What this controls reliably -- and all it
+		// needs to control -- is that the text moves out of the way of the
+		// furniture and comes back when the furniture goes.
+		const root = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+		const cueFont = Math.min(Math.max(root * 1.0625, window.innerWidth * 0.026), root * 2.375);
+		const lineHeight = cueFont * 2.2;
+		const gap = area * 0.015;
 
 		for (const cue of cues) {
 			const lines = cue.text.split('\n').length;
@@ -484,6 +494,19 @@
 			const first = tracksPanel?.querySelector('[data-remote-default], button:not(:disabled)');
 			if (first instanceof HTMLElement) first.focus();
 		});
+	}
+
+	// Anywhere else dismisses it, which is what removed the "Fermer" button that
+	// used to sit at the bottom of the panel. §6b: the furniture is icons, and a
+	// popover that already answers Escape, its own toggle and a press outside
+	// does not need a full row spelling out the word.
+	function onShellPointerDown(event) {
+		showControls();
+		if (!tracksOpen) return;
+		if (event.target instanceof Node && tracksPanel?.closest('.player-tracks-anchor')?.contains(event.target)) {
+			return;
+		}
+		closeTracks();
 	}
 
 	function closeTracks() {
@@ -757,24 +780,44 @@
 		});
 	}
 
-	/** A track's name is built only from the fields the probe actually returned. */
+	// A row is two lines, not one string.
+	//
+	// Joining everything with middots gave "Anglais · Original 5.1 · AC3 ·
+	// 5.1(side)" -- four facts at one weight, which at three metres is a wall.
+	// People choose by language; the codec only confirms the choice. So the
+	// language leads at reading size and the rest sits under it as metadata,
+	// which is the same hierarchy the card grid uses for a title and its year.
 	function audioLabel(track, index) {
-		const parts = [];
-		if (track.language) parts.push(languageName(track.language));
-		if (track.title) parts.push(track.title);
-		if (!parts.length) parts.push(t.film.audio.unnamed(index + 1));
-		if (track.codec) parts.push(track.codec.toUpperCase());
-		if (track.channels) parts.push(track.channels);
-		return parts.join(' · ');
+		const primary = track.language
+			? languageName(track.language)
+			: track.title || t.film.audio.unnamed(index + 1);
+		return { primary, detail: detailOf([track.title, track.codec?.toUpperCase(), track.channels], primary) };
 	}
 
 	function subtitleLabel(track, index) {
-		const parts = [];
-		if (track.language) parts.push(languageName(track.language));
-		if (track.title) parts.push(track.title);
-		if (!parts.length) parts.push(t.player.tracks.unnamedSubtitle(index + 1));
-		if (track.is_forced) parts.push(t.player.tracks.forced);
-		return parts.join(' · ');
+		const primary = track.language
+			? languageName(track.language)
+			: track.title || t.player.tracks.unnamedSubtitle(index + 1);
+		return {
+			primary,
+			detail: detailOf(
+				[
+					track.title,
+					track.is_forced ? t.player.tracks.forced : null,
+					track.is_external ? t.player.tracks.external : null
+				],
+				primary
+			)
+		};
+	}
+
+	// A detail that merely repeats the line above it is noise: a French track
+	// titled "Français" was rendering as "Français · Français".
+	function detailOf(parts, primary) {
+		const kept = parts
+			.filter(Boolean)
+			.filter((part) => part.toLowerCase() !== primary.toLowerCase());
+		return kept.join(' · ');
 	}
 
 	// The catalogue owns the names; the server only ever sends the ISO code.
@@ -798,6 +841,33 @@
 
 <svelte:window onkeydown={onKeydown} />
 
+<!--
+	One row, defined once. Audio and subtitles differ in what they list, not in
+	how a choice looks, and writing the markup twice is how the two drift apart.
+-->
+{#snippet trackOption(label, chosen, choose, first)}
+	<button
+		type="button"
+		class="track-option"
+		class:track-option--chosen={chosen}
+		aria-pressed={chosen}
+		onclick={choose}
+		{...first ? { 'data-remote-default': '' } : {}}
+	>
+		<span class="track-lines">
+			<span class="track-primary">{label.primary}</span>
+			{#if label.detail}
+				<span class="track-detail">{label.detail}</span>
+			{/if}
+		</span>
+		<!-- A tick, not a tinted row. The chosen state has to survive three
+		     metres, and a 2px rule at 6% opacity did not. -->
+		<span class="track-tick" aria-hidden="true">
+			{#if chosen}<Icon name="check" size={18} />{/if}
+		</span>
+	</button>
+{/snippet}
+
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
 	bind:this={shell}
@@ -809,7 +879,7 @@
 	tabindex="-1"
 	onkeydown={trapDialogFocus}
 	onpointermove={showControls}
-	onpointerdown={showControls}
+	onpointerdown={onShellPointerDown}
 >
 	{#if phase === 'failed'}
 		<div class="player-message">
@@ -885,7 +955,7 @@
 							kind="subtitles"
 							src={subtitleSrc}
 							srclang={subtitleTrack.language || 'und'}
-							label={subtitleLabel(subtitleTrack, 0)}
+							label={subtitleLabel(subtitleTrack, 0).primary}
 							onload={showSubtitleTrack}
 							default
 						/>
@@ -908,10 +978,15 @@
 			<button type="button" onclick={() => { save(true); onclose(); }} class="player-icon-button">
 				<Icon name="back" label={t.player.close} />
 			</button>
-			<div class="min-w-0">
-				<p class="player-title truncate">{heading}</p>
+			<div class="player-heading">
+				<p class="player-title">{heading}</p>
 				{#if isRemux}
-					<p class="micro mt-1">{t.player.remuxBadge}</p>
+					<!-- Was `.micro`, which is --faint at 2.64:1 -- a ratio measured
+					     against --ink, and this sits over whatever the film happens to
+					     be showing. §3 reserves faint for decoration and forbids it for
+					     anything read. A bordered pill in --muted instead: it reads as
+					     chrome rather than as a caption trying to disappear. -->
+					<span class="player-badge">{t.player.remuxBadge}</span>
 				{/if}
 			</div>
 		</header>
@@ -973,13 +1048,12 @@
 					<Icon name="forward10" label={t.player.forward10} />
 				</button>
 
-				<div class="player-time tabular-nums">
-					<span>{formatTime(position)}</span>
-					<span class="text-faint"> / </span>
-					<span class="text-muted">{duration > 0 ? formatTime(duration) : '—'}</span>
-					{#if remaining > 0}
-						<span class="player-remaining">−{formatTime(remaining)}</span>
-					{/if}
+				<!-- Two numbers, not three. The remaining time was the same fact as
+				     the other two subtracted, printed in --faint, which §3 reserves
+				     for decoration and forbids for anything read. -->
+				<div class="player-time">
+					<span class="player-time-now">{formatTime(position)}</span>
+					<span class="player-time-total">{duration > 0 ? formatTime(duration) : '—'}</span>
 				</div>
 
 				<span class="flex-1"></span>
@@ -1004,22 +1078,109 @@
 				</div>
 
 				{#if hasTrackMenu}
-					<button
-						type="button"
-						onclick={(event) => (tracksOpen ? closeTracks() : openTracks(event.currentTarget))}
-						class="player-icon-button"
-						class:player-icon-button--lit={subtitleTrack !== null}
-						aria-expanded={tracksOpen}
-					>
-						<Icon name="captions" label={t.player.tracks.open} />
-					</button>
+					<!--
+						The panel lives inside this wrapper rather than floating in the
+						player, so it is anchored by construction and cannot drift.
+
+						It used to be positioned against the frame: measured on a 900px
+						viewport, the panel's right edge sat 117px away from the right
+						edge of the button that opened it, which reads as a slab that
+						happened to appear rather than a menu belonging to a control.
+						Anchoring in CSS also means it follows the button at every
+						viewport without a line of measuring code.
+					-->
+					<div class="player-tracks-anchor">
+						<button
+							type="button"
+							onclick={(event) => (tracksOpen ? closeTracks() : openTracks(event.currentTarget))}
+							class="player-icon-button"
+							class:player-icon-button--lit={subtitleTrack !== null}
+							aria-expanded={tracksOpen}
+							aria-haspopup="true"
+						>
+							<Icon name="captions" label={t.player.tracks.open} />
+						</button>
+
+						{#if tracksOpen}
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<section
+								bind:this={tracksPanel}
+								class="player-tracks"
+								aria-label={t.player.tracks.title}
+								onkeydown={onTracksKeydown}
+							>
+								{#if audioTracks.length > 1}
+									<h2 class="track-heading">{t.film.audio.title}</h2>
+									<ul class="track-list">
+										<li>
+											{@render trackOption(
+												{ primary: t.film.audio.auto, detail: '' },
+												!audioTrackId,
+												() => chooseAudio(null),
+												true
+											)}
+										</li>
+										{#each audioTracks as track, index (track.id)}
+											<li>
+												{@render trackOption(
+													audioLabel(track, index),
+													audioTrackId === track.id,
+													() => chooseAudio(track.id),
+													false
+												)}
+											</li>
+										{/each}
+									</ul>
+								{/if}
+
+								{#if subtitleTracks.length}
+									<h2 class="track-heading">{t.player.tracks.subtitles}</h2>
+									<ul class="track-list">
+										<li>
+											{@render trackOption(
+												{ primary: t.player.tracks.noSubtitles, detail: '' },
+												!subtitleTrackId,
+												() => chooseSubtitle(null),
+												audioTracks.length <= 1
+											)}
+										</li>
+										{#each subtitleTracks as track, index (track.id)}
+											<li>
+												{#if track.kind === 'text'}
+													{@render trackOption(
+														subtitleLabel(track, index),
+														subtitleTrackId === track.id,
+														() => chooseSubtitle(track.id),
+														false
+													)}
+												{:else}
+													<!--
+														Listed, not hidden. Decision 3 refuses to render a
+														bitmap track because showing one means burning it
+														into the picture; a rip whose only subtitles are
+														PGS would otherwise look like a film that has
+														none, and somebody would go hunting for a setting
+														that does not exist.
+													-->
+													<p class="track-option track-option--refused">
+														<span class="track-primary">{subtitleLabel(track, index).primary}</span>
+														<span class="track-detail">{t.player.tracks.imageBased}</span>
+													</p>
+												{/if}
+											</li>
+										{/each}
+									</ul>
+								{/if}
+							</section>
+						{/if}
+					</div>
 				{/if}
 
 				{#if phase === 'playing'}
 					<button
 						type="button"
 						onclick={(event) => openHelp(event.currentTarget)}
-						class="player-icon-button"
+						class="player-icon-button player-icon-button--desktop"
 					>
 						<Icon name="help" label={t.player.shortcuts.open} />
 					</button>
@@ -1031,97 +1192,6 @@
 			</div>
 		</div>
 
-		{#if tracksOpen}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<section
-				bind:this={tracksPanel}
-				class="player-tracks"
-				aria-label={t.player.tracks.title}
-				onkeydown={onTracksKeydown}
-			>
-				{#if audioTracks.length > 1}
-					<h2 class="label">{t.film.audio.title}</h2>
-					<ul class="track-list">
-						<li>
-							<button
-								type="button"
-								class="track-option"
-								class:track-option--chosen={!audioTrackId}
-								aria-pressed={!audioTrackId}
-								data-remote-default
-								onclick={() => chooseAudio(null)}
-							>
-								{t.film.audio.auto}
-							</button>
-						</li>
-						{#each audioTracks as track, index (track.id)}
-							<li>
-								<button
-									type="button"
-									class="track-option"
-									class:track-option--chosen={audioTrackId === track.id}
-									aria-pressed={audioTrackId === track.id}
-									onclick={() => chooseAudio(track.id)}
-								>
-									{audioLabel(track, index)}
-								</button>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-
-				{#if subtitleTracks.length}
-					<h2 class="label" class:mt-8={audioTracks.length > 1}>{t.player.tracks.subtitles}</h2>
-					<ul class="track-list">
-						<li>
-							<button
-								type="button"
-								class="track-option"
-								class:track-option--chosen={!subtitleTrackId}
-								aria-pressed={!subtitleTrackId}
-								onclick={() => chooseSubtitle(null)}
-							>
-								{t.player.tracks.noSubtitles}
-							</button>
-						</li>
-						{#each subtitleTracks as track, index (track.id)}
-							<li>
-								{#if track.kind === 'text'}
-									<button
-										type="button"
-										class="track-option"
-										class:track-option--chosen={subtitleTrackId === track.id}
-										aria-pressed={subtitleTrackId === track.id}
-										onclick={() => chooseSubtitle(track.id)}
-									>
-										{subtitleLabel(track, index)}
-										{#if track.is_external}
-											<span class="track-note">{t.player.tracks.external}</span>
-										{/if}
-									</button>
-								{:else}
-									<!--
-										Listed, not hidden. Decision 3 refuses to render a bitmap
-										track because showing one means burning it into the
-										picture; a rip whose only subtitles are PGS would
-										otherwise look like a film that has none, and somebody
-										would go hunting for a setting that does not exist.
-									-->
-									<p class="track-option track-option--refused">
-										<span>{subtitleLabel(track, index)}</span>
-										<span class="track-note">{t.player.tracks.imageBased}</span>
-									</p>
-								{/if}
-							</li>
-						{/each}
-					</ul>
-				{/if}
-
-				<button type="button" class="tv-action mt-8 cursor-pointer" onclick={closeTracks}>
-					{t.player.tracks.close}
-				</button>
-			</section>
-		{/if}
 
 		{#if helpOpen && phase === 'playing'}
 			<section

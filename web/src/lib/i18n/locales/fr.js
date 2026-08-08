@@ -279,7 +279,6 @@ export const strings = {
 		tracks: {
 			open: 'Audio et sous-titres',
 			title: 'Audio et sous-titres',
-			close: 'Fermer',
 			subtitles: 'Sous-titres',
 			noSubtitles: 'Aucun',
 			external: 'fichier joint',
