@@ -1641,6 +1641,37 @@ The honest limit of this: a probe proves a method *starts*, not that it is
 probe with a short benchmark against software. That is more truthful and more
 expensive, and not worth paying until it is needed.
 
+## 61. V2 is released, and its planning documents are archived rather than kept
+
+`v2.0.0` publishes thirty-four commits and roughly twenty-four thousand lines
+that had accumulated on `main` since `v1.5.0`: series, multi-file films,
+household profiles, WireGuard remote access, track selection in the player,
+hardware-probed transcoding, and English beside French.
+
+The five documents that ran that cycle — the roadmap, the backend and frontend
+handoffs, and the two discovery notes — move to
+[`archive/`](archive/README.md). **This supersedes the pointers in decision 41**,
+which named `theia-v2-backend.md` and `theia-v2-frontend.md` at their old paths.
+That decision stays as written, because it was true: those documents did own
+those surfaces, and the sequencing it describes is how V2 got built.
+
+They are archived rather than deleted for the reason this whole file exists. A
+finished plan still holds why a milestone was ordered where it was and what was
+rejected, and none of that survives in the code. What they must not do is look
+current: five process documents sitting beside the three governing ones is how a
+newcomer mistakes a finished plan for the present state.
+
+The two-track, backend-first split ends with the cycle it was invented for.
+Post-v2 work reads the founding spec, this file and the design system, and
+records a decision when it settles an argument.
+
+The one thing left undone at release: **the README screenshots predate the v2
+interface.** They show the 2:3 poster grid, before the 16/9 cards, the wordmark
+in the navigation, profiles and series. Neither browser available to the agent
+could produce replacements — the preview pane does not composite frames, and the
+Chrome extension was not connected — so the release ships with a note above the
+images saying so, rather than with images that quietly misrepresent the product.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

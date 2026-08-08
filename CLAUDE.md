@@ -14,26 +14,16 @@ anything; they answer most questions that would otherwise be asked again.
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Every decision already taken, with its reasoning and, where it matters, the bug that forced it. Check here before re-opening a question. |
 | [`docs/design-system.md`](docs/design-system.md) | Colour, type, spacing, motion, focus. §6 — *the card grid is exempt* — is the single most important constraint in the interface. |
 
-V2 work has three additional coordination documents:
+**V2 shipped in `v2.0.0`.** Its five coordination documents — the roadmap, the
+two track handoffs and the two discovery notes — now live in
+[`docs/archive/`](docs/archive/README.md). They describe a finished plan and are
+kept for their reasoning, not as a description of the current state. Do not
+consult them to learn how something works today; read the code and the three
+documents above.
 
-| Document | What it settles |
-|---|---|
-| [`docs/theia-v2-roadmap.md`](docs/theia-v2-roadmap.md) | Product order, shared scope, blockers and milestone status. |
-| [`docs/theia-v2-backend.md`](docs/theia-v2-backend.md) | Backend work, API/data handoffs and evidence that must be published before frontend work starts. |
-| [`docs/theia-v2-frontend.md`](docs/theia-v2-frontend.md) | Frontend work waiting behind each backend handoff, including visual and D-pad acceptance criteria. |
-
-The V2 delivery split is per milestone, not permanent. Backend still lands
-first, and the frontend still consumes a merged, documented contract rather than
-a conversation: M1, M3 and M4 were built that way with Codex on the backend.
-**M2 is the exception — the maintainer assigned both its tracks to Claude on
-2026-08-03**, so the same agent writes the handoff and then consumes it. That
-makes the handoff more important, not less: it is the only thing standing
-between the two halves, and it must be published as if a different agent were
-going to read it.
-
-Whoever holds a track, an agent must read the backend handoff for its milestone
-instead of inferring the API from old code or conversation history. Any backend
-contract change updates both track documents in the same commit.
+The backend-first, two-track split that built V2 is over with it. Post-v2 work is
+ordinary work: read the three documents, make the change, and record a decision
+when it settles an argument.
 
 If a change contradicts one of them, the document is changed first, in the same
 commit, with the reasoning written down. `DECISIONS.md` is append-only in
