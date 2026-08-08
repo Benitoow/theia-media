@@ -356,7 +356,15 @@ export const strings = {
 		intro:
 			'Theia can be reached from outside the local network through an embedded WireGuard tunnel. No account, no relay, no outside service: every device proves a key created here.',
 		opening: 'Opening the port…',
-		publicAddress: 'Public address',
+		publicAddress: 'Tunnel entry point',
+		tunnelAddress: 'Address to open once connected',
+		howItWorks:
+			'The entry point is not a web address: nothing answers there in a browser, and that ' +
+			'is correct. It is for WireGuard. Install WireGuard on the device, import the ' +
+			'configuration created below, turn the tunnel on, then open the address above.',
+		step1: 'Install WireGuard on the device (App Store, Google Play, wireguard.com).',
+		step2: 'Import this configuration: scan the code, or open the downloaded .conf file.',
+		step3: 'Turn the tunnel on, then open this address in the browser:',
 		opened: 'Port opened by',
 		methods: {
 			upnp: 'UPnP',

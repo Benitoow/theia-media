@@ -2511,6 +2511,54 @@
 		text-transform: none;
 	}
 
+	/* What to do with the configuration that was just handed over. Numbered,
+	   because the order matters and because the step people skipped -- install
+	   WireGuard first -- is invisible when it is prose. */
+	.provision-steps {
+		display: flex;
+		width: 100%;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin: 1.25rem 0 0;
+		padding: 0;
+		list-style: none;
+		counter-reset: provision-step;
+		text-align: start;
+	}
+
+	.provision-steps > li {
+		display: flex;
+		align-items: baseline;
+		gap: 0.65rem;
+		color: var(--color-parchment);
+		font-size: var(--text-small);
+		line-height: 1.5;
+	}
+
+	.provision-steps > li::before {
+		counter-increment: provision-step;
+		content: counter(provision-step);
+		flex: none;
+		min-inline-size: 1.5rem;
+		border: 1px solid var(--color-line);
+		border-radius: 999px;
+		color: var(--color-accent);
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--text-label);
+		line-height: 1.4rem;
+		text-align: center;
+	}
+
+	/* On its own line: an address broken across two lines mid-octet is the one
+	   thing on this panel somebody has to copy correctly. */
+	.provision-url {
+		display: block;
+		margin-top: 0.3rem;
+		color: var(--color-bone);
+		font-family: var(--font-mono, ui-monospace, monospace);
+		white-space: nowrap;
+	}
+
 	.player-shortcuts {
 		position: absolute;
 		z-index: 5;

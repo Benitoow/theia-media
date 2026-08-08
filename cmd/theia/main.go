@@ -124,7 +124,19 @@ func run() error {
 		tmdbClient = tmdb.New(apiKey)
 		log.Info("TMDB metadata enabled", "key_source", keySource, "key", config.Redact(apiKey))
 	} else {
-		log.Warn("no TMDB API key configured, films will be listed without metadata")
+		// Naming the three places it looked, and the directory the last one is
+		// relative to. A locally built binary has no key compiled in and falls
+		// back to config.local.json in the *working directory* -- so running the
+		// same binary from elsewhere silently produces a library with no
+		// artwork, and the message that only said "no key" sent somebody
+		// looking for a key that had not moved.
+		working, err := os.Getwd()
+		if err != nil {
+			working = "the working directory"
+		}
+		log.Warn("no TMDB API key configured, films will be listed without artwork",
+			"looked_in", "tmdb_api_key in config.json, the key compiled into this build, config.local.json",
+			"working_directory", working)
 	}
 
 	store := library.NewStore(database)

@@ -209,10 +209,25 @@
 					<dd>{status.reachability === 'confirmed' ? t.remote.confirmed : t.remote.unverified}</dd>
 				</div>
 				{#if status.endpoint}
-					<!-- Shown rather than asked for: this is what the router answered. -->
+					<!--
+						Shown rather than asked for: this is what the router answered.
+
+						Labelled as the tunnel's endpoint and never as an address to
+						open, because host:port in a browser-shaped interface reads as
+						a link. Somebody typed it into Chrome and met
+						ERR_CONNECTION_REFUSED, which is correct -- it is a WireGuard
+						UDP endpoint and nothing listens there for HTTP -- and told
+						them nothing. The address to actually open sits beside it.
+					-->
 					<div>
 						<dt>{t.remote.publicAddress}</dt>
 						<dd class="remote-value--plain">{status.endpoint}</dd>
+					</div>
+				{/if}
+				{#if status.tunnel_url}
+					<div>
+						<dt>{t.remote.tunnelAddress}</dt>
+						<dd class="remote-value--plain">{status.tunnel_url}</dd>
 					</div>
 				{/if}
 				{#if status.mapped_method}
@@ -235,6 +250,9 @@
 		{/if}
 
 		{#if running}
+			<!-- Said before anything else, because it is what the two addresses
+			     above are for, and what the panel was otherwise silent on. -->
+			<p class="remote-note">{t.remote.howItWorks}</p>
 			<p class="remote-note">
 				{status.reachability === 'confirmed' ? t.remote.confirmedHelp : t.remote.unverifiedHelp}
 			</p>

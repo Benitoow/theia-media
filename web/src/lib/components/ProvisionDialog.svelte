@@ -115,6 +115,26 @@
 			<div class="provision-qr">{@html provision.qr_svg}</div>
 			<p class="provision-scan">{t.remote.provisionScan}</p>
 
+			<!--
+				What to do with it, numbered.
+
+				The dialog used to hand over a QR code, a tunnel address and three
+				buttons, and never said that WireGuard has to be installed, nor
+				which address to open once it is connected. The public endpoint on
+				the settings page looks like a web address; somebody typed it into a
+				browser and got a connection refused, which is exactly what a UDP
+				endpoint does when asked for HTTP. `tunnel_url` was in the payload
+				from the start and shown nowhere.
+			-->
+			<ol class="provision-steps">
+				<li>{t.remote.step1}</li>
+				<li>{t.remote.step2}</li>
+				<li>
+					{t.remote.step3}
+					<span class="provision-url">{provision.tunnel_url}</span>
+				</li>
+			</ol>
+
 			<dl class="provision-facts">
 				<div>
 					<dt>{t.remote.address}</dt>

@@ -359,7 +359,15 @@ export const strings = {
 		intro:
 			'Theia peut être joint hors du réseau local par un tunnel WireGuard embarqué. Aucun compte, aucun relais, aucun service extérieur : chaque appareil prouve une clé créée ici.',
 		opening: 'Ouverture du port…',
-		publicAddress: 'Adresse publique',
+		publicAddress: 'Point d’entrée du tunnel',
+		tunnelAddress: 'Adresse à ouvrir une fois connecté',
+		howItWorks:
+			'Le point d’entrée n’est pas une adresse web : rien n’y répond dans un navigateur, ' +
+			'c’est normal. Il sert à WireGuard. Installez WireGuard sur l’appareil, importez la ' +
+			'configuration créée ci-dessous, activez le tunnel, puis ouvrez l’adresse ci-dessus.',
+		step1: 'Installez WireGuard sur l’appareil (App Store, Google Play, wireguard.com).',
+		step2: 'Importez cette configuration : scannez le code, ou ouvrez le fichier .conf téléchargé.',
+		step3: 'Activez le tunnel, puis ouvrez cette adresse dans le navigateur :',
 		opened: 'Port ouvert par',
 		methods: {
 			upnp: 'UPnP',
