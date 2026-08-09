@@ -1,49 +1,49 @@
 {
-  "version": "v2.0.1",
-  "publishedAt": "2026-08-09T10:24:14Z",
-  "url": "https://github.com/Benitoow/theia-media/releases/tag/v2.0.1",
+  "version": "v2.0.2",
+  "publishedAt": "2026-08-09T21:47:09Z",
+  "url": "https://github.com/Benitoow/theia-media/releases/tag/v2.0.2",
   "assets": [
     {
       "file": "theia-windows-amd64.exe",
       "platform": "windows",
       "architecture": "x64",
       "size": 17723904,
-      "sha256": "07aa27d1d263f25276bc57745b335dd5d0f736ecbe5496f4a21e468f04b0a87c"
+      "sha256": "99966767720c1066d66a32084795d88a6805a2f798e0082983935051c5fd3a89"
     },
     {
       "file": "theia-windows-arm64.exe",
       "platform": "windows",
       "architecture": "ARM64",
       "size": 16559104,
-      "sha256": "6a06cdbbc43ee7a551b14a5a0d8617376af18840e0865eb63589a31d3d76bf85"
+      "sha256": "83bf4229a7d625dd06a9f29ecdd3458f5096b2e1d075c40a87760a5e6b851e23"
     },
     {
       "file": "theia-darwin-arm64",
       "platform": "macos",
       "architecture": "Apple Silicon",
       "size": 16725378,
-      "sha256": "f8e8e70ae78735800fa9be78db221beffca09d5ada99241a117eb543a17e7f7d"
+      "sha256": "4b814646ab4dab28763400bbb4d7976f5532238cba48af9d1e3709a275ae72a0"
     },
     {
       "file": "theia-darwin-amd64",
       "platform": "macos",
       "architecture": "Intel",
       "size": 17533888,
-      "sha256": "7c53c351f82e68bdf3cc47c014e290a299a2b364ea95f3ab9c3800c03645cd0c"
+      "sha256": "dd58d07f13e94730ed42b4c4cdc8185484644b4b747b29d03a9769e013164ed1"
     },
     {
       "file": "theia-linux-amd64",
       "platform": "linux",
       "architecture": "x64",
       "size": 17305762,
-      "sha256": "9d8a057cc80f7fffc1252ae61308c6044caa1c6360a07c6f61df04ab25416a10"
+      "sha256": "aac37c3b22688600d75f0c4c342e66c8ba58dab19bd3ae42e40db149546f6b79"
     },
     {
       "file": "theia-linux-arm64",
       "platform": "linux",
       "architecture": "ARM64",
       "size": 16384162,
-      "sha256": "0e8f57d070b1e17a280c9092f614f650f1e074af081300089221bc35477e17a4"
+      "sha256": "ad6314fe6c6016be21e3492a783c141951d7cd990133a2b20333d4374d3de255"
     }
   ]
 }
