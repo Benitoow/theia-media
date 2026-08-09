@@ -340,9 +340,9 @@ not on first launch.
 
 ### Measured, not estimated
 
-Taken on Windows 11 (`amd64`) against the development library, using the binary
-built from this repository. Reproduce them with `Get-Process theia` and
-`Get-ChildItem` on the data directory.
+Taken on Windows 11 (`amd64`, Ryzen AI 9 HX 370, 12 cores, Radeon 890M) against
+the development library, using the binary built from this repository. Reproduce
+them with `Get-Process theia` and `Get-ChildItem` on the data directory.
 
 | Measurement | Value |
 | --- | --- |
@@ -360,12 +360,45 @@ barely registers, because it is a file being read and written to a socket.
 Re-encoding is different and does spend a GPU or a core, on FFmpeg rather than on
 Theia.
 
-**Recommended for a household library:** any x86-64 or arm64 machine with
-**512 MB of free RAM** and **1 GB of free disk** beyond the media itself —
-roughly twenty-five times the memory measured above, which is headroom rather
-than requirement. A `linux/arm64` build ships, so a single-board computer is in
-scope on paper; nothing smaller than the Windows machine above has been tested,
-and that is worth saying rather than implying.
+## System requirements
+
+| | Minimum | Recommended |
+| --- | --- | --- |
+| CPU | Any 64-bit `x86-64` or `arm64` | 4 cores, if you ever re-encode |
+| Free RAM | 256 MB | 1 GB |
+| Free disk, beyond the media | 200 MB | 500 MB |
+| Network to the viewer | 100 Mbit/s wired, or 5 GHz Wi-Fi | Gigabit wired, for 4K remux |
+| Client | A browser that decodes the file's codec | The same, on a screen you own |
+
+**These are generous.** Theia's own resident memory is 18–22 MB; the 256 MB floor
+is there so the operating system still has page cache to read media with, not
+because the process needs it. The 200 MB of disk is 17 MB of binary, 79 MB of
+FFmpeg once it is fetched, and room for the catalogue and the artwork.
+
+**How the disk grows.** The catalogue is **0.53 MB** for 40 films, 12 series and
+151 episodes. Artwork is cached lazily, only for what has actually been shown, at
+about **60 KB per image** — measured twice, 4.2 MB across 71 images and 19.4 MB
+across 323. Extrapolating rather than measuring: a thousand films with a poster
+and a backdrop each is roughly **120 MB** of artwork, and the catalogue stays in
+single-digit megabytes.
+
+**The network is the limit, not the server.** Direct play and remux are a file
+being read and written to a socket; locally that ran at **79 MB/s**, which is
+632 Mbit/s. What has to fit is the file's own bitrate: a 1080p x265 encode is
+typically 4–10 Mbit/s, a 1080p Blu-ray remux 20–40, and a 4K remux can pass 80.
+Those three are typical figures, not measurements.
+
+**Re-encoding is the one expensive path**, and only for codecs no browser
+decodes, or for HEVC a browser turns out not to keep up with. On the machine
+above, one 1080p software re-encode runs at about **8× real time**, and **9.9×**
+with `d3d11va` decoding in front of it. One runs at a time by design: two
+concurrent transcodes do not each run at half speed, they both stall.
+
+**What has not been tested.** `linux/arm64` and `darwin/arm64` builds ship and CI
+cross-compiles all six targets, but nothing smaller than the desktop above has
+actually been run. A Raspberry Pi is in scope on paper and unverified in
+practice; direct play should be untroubled there and re-encoding almost certainly
+will not be. That is worth stating rather than implying.
 
 ## How Theia compares
 
@@ -481,6 +514,77 @@ site/                  the presentation site, two languages from one template
 assets/                licensed source imagery and brand assets
 .github/               contribution guide, security policy, issue templates, CI
 ```
+
+## Why this project uses AI
+
+Theia is written by one person with AI assistants. **About half its commits carry
+a `Co-Authored-By: Claude` trailer**, and the trailer is not a complete record —
+other assistants contributed without adding one. Count them yourself:
+
+```bash
+git log --grep='Co-Authored-By: Claude' --oneline | wc -l
+```
+
+Saying so is the point of this section: the code is public and GPL-3.0, and
+anyone reading it is entitled to know how it was made.
+
+**Theia itself contains no AI.** No model runs in the binary, nothing is inferred
+about your library, nothing is sent anywhere to be analysed. The only outbound
+connections are still TMDB and GitHub Releases. This section is about how the
+software was written, not about what it does.
+
+### What it changed about the project
+
+The three governing documents are not process theatre; they exist because an
+assistant starts every session knowing nothing.
+
+- [`docs/spec-fondatrice.md`](docs/spec-fondatrice.md) states what Theia refuses
+  to be, so scope creep has to argue with a document rather than with a mood.
+- [`docs/DECISIONS.md`](docs/DECISIONS.md) is append-only in spirit — supersede an
+  entry, never quietly rewrite it — because a settled question will otherwise be
+  re-opened every few sessions by someone with no memory of settling it.
+- [`docs/design-system.md`](docs/design-system.md) fixes colour, type, spacing and
+  motion, so "make it look better" cannot mean six different things.
+
+Writing the reasoning down turned out to be worth doing for its own sake. The
+decision log is the most useful file in the repository, and it exists because of
+how the project is built.
+
+### The standard that makes it work
+
+**Report what you verified, not what you assumed.** The characteristic failure of
+an AI assistant is not bad code; it is a confident summary of work it never ran.
+So a change here is finished when it has been executed against a real library and
+the result observed, and "I could not verify this" is an acceptable answer where
+an optimistic one is not.
+
+That standard was not adopted in the abstract. It was bought:
+
+- A shuffle for the nightly suggestion **passed every test** and returned every
+  twenty-third film. Two of its three versions failed in ways that read as
+  correct. It was caught by printing the ids ([decision 30](docs/DECISIONS.md)).
+- The favicon had been **undecodable since M2** because of two hyphens inside an
+  XML comment. The file existed, the tests were green, and nothing displayed it.
+  It is now verified by loading it into an `Image()` and reading back `32×32`
+  ([decision 54](docs/DECISIONS.md)).
+- A profile ordering bug **shipped in `v2.0.0`**: on a cold load the player wrote
+  its position against the wrong viewer. It was invisible unless the first page
+  you landed on was the one that mattered, and it was found while taking a
+  screenshot of the feature ([decision 63](docs/DECISIONS.md)).
+
+Every one of those was found by looking at the running product. None would have
+been found by reading the diff.
+
+### Where the line is
+
+The maintainer reviews and approves everything, and the constraints in §3 of the
+founding spec are not negotiable by an assistant: no CGO, no runtime dependency
+beyond FFmpeg, no Docker requirement, no telemetry, and **no unverified image** —
+nothing decorative is ever fetched from the web, and every asset in `assets/` is
+supplied by the maintainer with its licence checked first.
+
+If that trade does not suit you, the history is public and every claim above is
+checkable with `git log`.
 
 ## Contributing
 
