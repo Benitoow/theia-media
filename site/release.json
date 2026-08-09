@@ -1,0 +1,49 @@
+{
+  "version": "v2.0.1",
+  "publishedAt": "2026-08-09T10:24:14Z",
+  "url": "https://github.com/Benitoow/theia-media/releases/tag/v2.0.1",
+  "assets": [
+    {
+      "file": "theia-windows-amd64.exe",
+      "platform": "windows",
+      "architecture": "x64",
+      "size": 17723904,
+      "sha256": "07aa27d1d263f25276bc57745b335dd5d0f736ecbe5496f4a21e468f04b0a87c"
+    },
+    {
+      "file": "theia-windows-arm64.exe",
+      "platform": "windows",
+      "architecture": "ARM64",
+      "size": 16559104,
+      "sha256": "6a06cdbbc43ee7a551b14a5a0d8617376af18840e0865eb63589a31d3d76bf85"
+    },
+    {
+      "file": "theia-darwin-arm64",
+      "platform": "macos",
+      "architecture": "Apple Silicon",
+      "size": 16725378,
+      "sha256": "f8e8e70ae78735800fa9be78db221beffca09d5ada99241a117eb543a17e7f7d"
+    },
+    {
+      "file": "theia-darwin-amd64",
+      "platform": "macos",
+      "architecture": "Intel",
+      "size": 17533888,
+      "sha256": "7c53c351f82e68bdf3cc47c014e290a299a2b364ea95f3ab9c3800c03645cd0c"
+    },
+    {
+      "file": "theia-linux-amd64",
+      "platform": "linux",
+      "architecture": "x64",
+      "size": 17305762,
+      "sha256": "9d8a057cc80f7fffc1252ae61308c6044caa1c6360a07c6f61df04ab25416a10"
+    },
+    {
+      "file": "theia-linux-arm64",
+      "platform": "linux",
+      "architecture": "ARM64",
+      "size": 16384162,
+      "sha256": "0e8f57d070b1e17a280c9092f614f650f1e074af081300089221bc35477e17a4"
+    }
+  ]
+}

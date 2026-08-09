@@ -1,0 +1,50 @@
+<!--
+  Source for social-preview.png.
+  Authored in-repository; no Internet asset. The embedded image is the real
+  Theia player capture in docs/screenshots/player.webp, recorded with the
+  original media defined by docs/screenshots/source-player-demo-media.svg.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Theia personal media server</title>
+  <desc id="desc">A bilingual black-and-gold social card with a real Theia player capture.</desc>
+  <defs>
+    <clipPath id="player-clip">
+      <rect x="553" y="57" width="582" height="516" rx="25"/>
+    </clipPath>
+    <linearGradient id="player-scrim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0.48" stop-color="#0b0a09" stop-opacity="0"/>
+      <stop offset="1" stop-color="#0b0a09" stop-opacity="0.94"/>
+    </linearGradient>
+    <linearGradient id="brand-rule" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c8a24a"/>
+      <stop offset="1" stop-color="#c8a24a" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="#0b0a09"/>
+  <rect x="36" y="36" width="1128" height="558" rx="31" fill="none" stroke="#2a2724" stroke-width="2"/>
+
+  <g transform="translate(74 78)">
+    <text x="0" y="0" fill="#ede7dc" font-family="Georgia, 'Times New Roman', serif" font-size="27" letter-spacing="12">THEIA</text>
+    <rect x="0" y="24" width="248" height="2" fill="url(#brand-rule)"/>
+    <text x="0" y="80" fill="#8c857a" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="4">PERSONAL MEDIA SERVER</text>
+    <text x="0" y="185" fill="#ede7dc" font-family="Georgia, 'Times New Roman', serif" font-size="68">YOUR FILMS.</text>
+    <text x="0" y="257" fill="#ede7dc" font-family="Georgia, 'Times New Roman', serif" font-size="68">VOS FILMS.</text>
+    <text x="0" y="320" fill="#c8a24a" font-family="Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="3">ONE BINARY · UN BINAIRE</text>
+    <text x="0" y="430" fill="#8c857a" font-family="Arial, sans-serif" font-size="13" letter-spacing="3">LOCAL · OPEN SOURCE · NO ACCOUNT</text>
+  </g>
+
+  <g clip-path="url(#player-clip)">
+    <image href="../docs/screenshots/player.webp" x="553" y="57" width="582" height="516" preserveAspectRatio="xMidYMid slice"/>
+    <rect x="553" y="57" width="582" height="516" fill="url(#player-scrim)"/>
+    <text x="587" y="102" fill="#ede7dc" font-family="Arial, sans-serif" font-size="13" font-weight="700">THEIA DEMO</text>
+    <rect x="588" y="481" width="511" height="4" rx="2" fill="#2a2724"/>
+    <rect x="588" y="481" width="188" height="4" rx="2" fill="#c8a24a"/>
+    <circle cx="614" cy="525" r="22" fill="#ede7dc"/>
+    <path d="M608 514 L608 536 L625 525 Z" fill="#0b0a09"/>
+    <circle cx="672" cy="525" r="21" fill="none" stroke="#8c857a"/>
+    <circle cx="724" cy="525" r="21" fill="none" stroke="#8c857a"/>
+    <text x="767" y="531" fill="#8c857a" font-family="Arial, sans-serif" font-size="12">42:18 / 2:01:08</text>
+  </g>
+  <rect x="553" y="57" width="582" height="516" rx="25" fill="none" stroke="#2a2724" stroke-width="2"/>
+</svg>

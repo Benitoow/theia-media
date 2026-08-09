@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-labelledby="title desc">
+  <title id="title">Theia player demonstration media</title>
+  <desc id="desc">An original abstract cinema frame with a warm horizon, authored for the Theia website.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#080706"/>
+      <stop offset="0.58" stop-color="#12100d"/>
+      <stop offset="1" stop-color="#2a2115"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#070605"/>
+      <stop offset="0.55" stop-color="#0b0a09"/>
+      <stop offset="1" stop-color="#17120d"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#f5dfad"/>
+      <stop offset="0.58" stop-color="#e3c173"/>
+      <stop offset="1" stop-color="#c8a24a"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#c8a24a" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#c8a24a" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="grain" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="3" seed="23" stitchTiles="stitch" result="noise"/>
+      <feColorMatrix in="noise" type="saturate" values="0" result="mono"/>
+      <feComponentTransfer in="mono" result="faded">
+        <feFuncA type="table" tableValues="0 0.055"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" in2="faded" mode="screen"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#grain)">
+    <rect width="1920" height="1080" fill="url(#sky)"/>
+    <ellipse cx="1240" cy="600" rx="560" ry="480" fill="url(#glow)"/>
+    <circle cx="1255" cy="632" r="244" fill="url(#sun)"/>
+    <path d="M0 665 C370 620 690 694 1040 650 C1360 610 1600 618 1920 670 L1920 1080 L0 1080 Z" fill="url(#ground)"/>
+    <path d="M0 665 C370 620 690 694 1040 650 C1360 610 1600 618 1920 670" fill="none" stroke="#e3c173" stroke-width="3" stroke-opacity="0.82"/>
+    <path d="M230 845 L230 420 L510 420 L510 845" fill="#0b0a09" stroke="#2a2724" stroke-width="3"/>
+    <path d="M305 420 L370 318 L435 420" fill="#0b0a09" stroke="#2a2724" stroke-width="3"/>
+    <rect x="310" y="530" width="120" height="315" fill="#131211"/>
+    <path d="M1490 1080 L1575 505 L1690 1080 Z" fill="#090807"/>
+    <path d="M0 820 C490 770 850 835 1250 792 C1510 765 1715 782 1920 815" fill="none" stroke="#ede7dc" stroke-width="1" stroke-opacity="0.16"/>
+
+    <g transform="translate(118 138)">
+      <text x="0" y="0" fill="#ede7dc" font-family="Georgia, 'Times New Roman', serif" font-size="29" letter-spacing="14">THEIA</text>
+      <rect x="0" y="27" width="258" height="2" fill="#c8a24a"/>
+      <text x="0" y="78" fill="#8c857a" font-family="Arial, sans-serif" font-size="15" letter-spacing="5">ORIGINAL DEMO MEDIA · 2026</text>
+    </g>
+
+    <g transform="translate(1490 230) rotate(90)">
+      <text x="0" y="0" fill="#8c857a" font-family="Arial, sans-serif" font-size="14" letter-spacing="5">A FILM FRAME MADE FOR THE PLAYER</text>
+    </g>
+  </g>
+</svg>

@@ -11,6 +11,12 @@ on:
       - 'web/static/apple-touch-icon.png'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
+  # A release changes sizes, dates and digests without changing main. Rebuild
+  # the site once the Release workflow has finished so the public metadata
+  # follows the published binaries instead of waiting for another commit.
+  workflow_run:
+    workflows: ['Release']
+    types: [completed]
 
 permissions:
   contents: read
@@ -25,6 +31,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,9 +48,22 @@ jobs:
       - run: npm ci --omit=dev
         working-directory: web
 
-      # Fails if the two catalogues have drifted, so a key can never be missing
-      # from one language on a public page.
-      - run: node site/build.mjs
+      # Metadata is fetched at build time only. The generated page performs no
+      # GitHub API request and the committed release.json remains the offline
+      # fallback for local, reproducible builds.
+      - name: Read the latest published release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node site/fetch-release.mjs site/release.generated.json
+
+      # Fails on catalogue drift, missing downloads or malformed metadata.
+      - name: Build the French and English pages
+        env:
+          THEIA_RELEASE_JSON: site/release.generated.json
+        run: node site/build.mjs
+
+      - name: Check the generated site
+        run: node site/check.mjs
 
       - uses: actions/upload-pages-artifact@v3
         with:

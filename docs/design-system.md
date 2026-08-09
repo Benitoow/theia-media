@@ -634,3 +634,74 @@ formatters without replacing the current page or losing focus. Catalogue parity
 is a frontend build check. TMDB titles, synopses, genres and credits already
 cached as `fr-FR` do not change and are not fetched again: they are film data,
 not interface chrome.
+
+## 12. Public presentation site
+
+The application helps somebody choose a film they already own. The public site
+has a different first job: prove what Theia is, make the cost and limits legible,
+then let somebody try it. It keeps the identity above and changes the
+composition, not the brand.
+
+### 12.1 The first screen contains proof
+
+The hero places three things in one sequence: the promise, a product proof and
+the download station. A display title is still allowed, but it no longer earns a
+half-empty viewport merely by being large. The player is the one flourish on the
+page and takes the visual weight the old negative space held.
+
+A player proof has two valid forms:
+
+1. a capture of the real player, with the media source and its right to be used
+   recorded beside the asset;
+2. an interactive reconstruction of the player's chrome, explicitly labelled
+   as a demonstration.
+
+The current hero combines them honestly: a real capture produced from the
+repository-authored demo media, with demonstration controls above it. A mockup
+must never be worded or framed as a capture. Replacing the media later changes
+the asset and provenance record, not this rule.
+
+### 12.2 Three moments are the ceiling
+
+The public site shows at most three visual product moments: discover the local
+library, watch through the player, and reach an authorised device remotely. It
+does not reproduce the application's navigation or turn every feature into a
+section. Detailed capability lists and the exhaustive competitor table live in
+the README, where somebody asking for detail can choose to read them.
+
+Screenshots keep their application colours and aspect ratio. No page-wide grade,
+decorative image or second flourish competes with the player. Missing imagery is
+replaced by a structured fact panel, not a stock photograph.
+
+### 12.3 Download station
+
+Download is a two-step choice:
+
+1. operating system: Windows, macOS or Linux;
+2. architecture: x64/ARM64 or Intel/Apple Silicon.
+
+The system controls are 54px pills. Architecture rows are at least 62px high and
+show the exact file facts available at build time. JavaScript may reveal one
+system panel, but it never guesses architecture or starts a download. Without
+JavaScript, the three panels and six links remain readable and usable.
+
+Signing and launch warnings appear before the architecture links, not after the
+download has surprised somebody. Version, date, size and SHA-256 are build-time
+metadata; a missing fact is omitted. Links themselves use GitHub's
+`releases/latest/download/` contract and need no runtime API.
+
+### 12.4 Copy and emphasis
+
+- Consequence precedes jargon: « un appareil autorisé » before « WireGuard ».
+- Three differences and three limits are enough. Limits appear before the final
+  invitation to download.
+- No superlative claims that depend on another platform's current product.
+- Gold remains reserved for the mark's rule, focus, and playback progress. A
+  selected option uses `--raised` and `--fg`, not another gold badge.
+- The same French/English template, visible FAQ and accessible names are a
+  publishing contract, not optional polish.
+
+The site reflows at 1100px, 700px and the 390px floor. Controls remain at least
+44px, the range hit area remains 44px even though its painted rule is 4px, and
+the track popover stays inside the player. Motion uses §8 and disappears under
+`prefers-reduced-motion`; information does not.

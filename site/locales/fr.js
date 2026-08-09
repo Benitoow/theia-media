@@ -1,180 +1,180 @@
-// French catalogue. The site ships in French and English for the same reason
-// the application does; a new language is a new file beside this one, never a
-// hunt through the template.
+// French catalogue. Keep it strictly shape-compatible with en.js: the site
+// build walks both catalogues recursively and refuses a partial translation.
 export default {
 	lang: 'fr',
 	dir: '',
-	other: { code: 'en', label: 'English', href: 'en/' },
+	canonical: 'https://benitoow.github.io/theia-media/',
+	ogLocale: 'fr_FR',
+	other: { code: 'en', label: 'EN', href: 'en/' },
 
-	title: 'Theia — votre médiathèque, un seul binaire',
-	description:
-		'Un serveur multimédia personnel dans un seul binaire Go. Films et séries, métadonnées TMDB, transcodage, profils et accès distant WireGuard. Aucune configuration, aucun compte, aucun abonnement.',
+	meta: {
+		title: 'Theia — Votre film. Pas la plateforme.',
+		description:
+			'Theia transforme les dossiers de votre appareil en médiathèque web personnelle, sans compte, abonnement ni cloud obligatoire.',
+		ogAlt:
+			'Theia, serveur média personnel : une capture réelle du lecteur et un téléchargement explicite par système et architecture.'
+	},
 
-	nav: { features: 'Ce que c’est', shots: 'À l’écran', download: 'Télécharger', github: 'GitHub' },
+	skip: 'Aller au contenu',
+	nav: {
+		label: 'Navigation principale',
+		moments: 'L’expérience',
+		difference: 'La différence',
+		download: 'Télécharger'
+	},
 
 	hero: {
-		kicker: 'Serveur multimédia personnel',
-		title: 'Vos films.\nUn binaire.\nVotre réseau.',
-		lede: 'Theia transforme des dossiers de films et de séries en une médiathèque que l’on ouvre depuis la télévision, le téléphone ou l’ordinateur déjà présents dans la maison. Pas de compte, pas d’abonnement, pas de Docker, pas d’interface à installer à côté. Vous lancez le binaire, vous choisissez les dossiers, vous regardez.',
-		cta: 'Télécharger',
-		ctaOther: 'Toutes les plateformes',
-		source: 'Voir le code',
-		meta: 'GPL-3.0 · Windows, macOS, Linux · 17 Mo'
+		eyebrow: 'Un serveur média. Un seul binaire.',
+		title: 'Votre film. Pas la plateforme.',
+		lead:
+			'Choisissez vos dossiers. Theia organise votre bibliothèque et lit vos films sur les appareils de la maison — sans compte, abonnement ni cloud obligatoire.'
 	},
 
-	claims: {
-		title: 'Trois choses, et elles tiennent',
-		items: [
-			{
-				k: 'Un fichier',
-				t: 'Rien à installer autour',
-				d: 'Le serveur, l’interface, la base de données et le lecteur sont dans le même exécutable. La seule dépendance externe est FFmpeg, que Theia télécharge lui-même, épinglé et vérifié par empreinte SHA-256.'
-			},
-			{
-				k: 'Aucun compte',
-				t: 'Rien à créer, rien à connecter',
-				d: 'Pas d’inscription, pas de bibliothèque dans le nuage, pas de plan payant qui débloque le matériel de votre propre machine. Les seules connexions sortantes vont à TMDB pour les métadonnées et à GitHub pour les mises à jour.'
-			},
-			{
-				k: 'Chez vous',
-				t: 'Les fichiers ne bougent pas',
-				d: 'Vos films restent là où ils sont, sur vos disques. Theia les lit, les indexe et les diffuse sur votre réseau. Rien n’est téléversé, rien n’est analysé ailleurs, rien n’est mesuré.'
-			}
-		]
-	},
-
-	shots: {
-		title: 'À l’écran',
-		lede: 'L’interface est en français par défaut ; l’anglais est complet et bascule sans recharger. Les affiches, résumés et vignettes viennent de TMDB.',
-		home: 'L’accueil propose de reprendre le film laissé en cours, puis ce qui est commencé, récent, le mieux noté, et une suggestion qui change chaque jour.',
-		library: 'La bibliothèque : recherche sur le titre, le réalisateur, le genre et l’année, cinq tris, filtres par genre et par état de visionnage.',
-		series: 'Les séries vivent à côté des films, dans la même grille.',
-		serie: 'Une série, saison par saison, avec la reprise gardée épisode par épisode.',
-		settings: 'L’accès distant : un tunnel WireGuard embarqué, éteint tant que vous ne l’allumez pas.',
-		onboarding: 'Au premier lancement, une adresse et un QR code. Il n’y a rien d’autre à configurer.',
-		profiles: 'Chacun sa progression. Un nom, une photo, aucun mot de passe.'
-	},
-
-	does: {
-		title: 'Ce que Theia fait',
-		groups: [
-			{
-				t: 'La bibliothèque',
-				items: [
-					'Analyse un ou plusieurs dossiers et tient un catalogue SQLite local.',
-					'Lit un titre et une année dans des noms de fichiers ordinaires. Un fichier apparaît même quand l’analyse échoue.',
-					'Regroupe plusieurs fichiers sous un même film : un remux et un encodage 1080p font une fiche, pas deux.',
-					'Gère les séries : saisons, épisodes, reprise par épisode.',
-					'Récupère titres, résumés, affiches, durées, notes, réalisateur, genres et distribution depuis TMDB, et met les images en cache.'
-				]
-			},
-			{
-				t: 'Le visionnage',
-				items: [
-					'Un accueil construit autour de ce que vous regardiez.',
-					'Un lecteur qui laisse choisir la piste audio, les sous-titres et la qualité pendant le film.',
-					'Des sous-titres pris dans le fichier ou dans le .srt posé à côté, dessinés par Theia pour qu’ils tombent sur l’image et non dans les bandes noires.',
-					'La position enregistrée en continu, et une recherche qui fonctionne même sur un flux remuxé.'
-				]
-			},
-			{
-				t: 'La maison',
-				items: [
-					'Des profils : un nom, une photo locale facultative, une progression séparée. Aucun mot de passe, aucun rôle.',
-					'Un accès distant WireGuard embarqué, avec appairage à usage unique et révocation par appareil. Aucun relais, aucun serveur de rendez-vous.',
-					'Deux langues, le français par défaut, le choix appartenant à chaque navigateur.'
-				]
-			},
-			{
-				t: 'L’exploitation',
-				items: [
-					'Une adresse et un QR code au premier lancement.',
-					'Des mises à jour vérifiées par empreinte, refusées pendant une lecture, et réversibles si le nouveau binaire ne démarre pas.'
-				]
-			}
-		]
-	},
-
-	refuses: {
-		title: 'Ce que Theia refuse',
-		lede: 'La moitié de l’argument. Ces absences sont des décisions, écrites et datées, pas une feuille de route.',
-		items: [
-			['Des comptes et des permissions', 'Un foyer n’est pas une organisation. Le port local n’a pas d’authentification, et c’est délibéré.'],
-			['La télévision en direct et les enregistrements', 'Un autre produit, avec ses tuners et ses grilles.'],
-			['Un système de greffons', 'La surface d’extension d’un logiciel est aussi sa surface de panne.'],
-			['La musique et les photos', 'Deux médiathèques de plus, deux fois le travail, aucun rapport avec un film.'],
-			['Des applications natives', 'Le navigateur de votre télévision existe déjà.'],
-			['La moindre mesure d’usage', 'Rien n’est compté, rien n’est envoyé.']
-		]
-	},
-
-	numbers: {
-		title: 'Mesuré, pas estimé',
-		lede: 'Relevé sur la machine du mainteneur, sur une bibliothèque réelle. Aucun chiffre ici n’est une estimation.',
-		items: [
-			['17 Mo', 'le binaire, interface comprise'],
-			['18 Mo', 'de mémoire vive au repos'],
-			['22 Mo', 'pendant un remux soutenu'],
-			['0,8 Mo', 'la base SQLite'],
-			['0', 'conteneur, service, dépendance système'],
-			['1', 'dépendance externe : FFmpeg, téléchargé et vérifié']
-		]
-	},
-
-	download: {
-		title: 'Télécharger',
-		lede: 'Choisissez votre plateforme. Le lien pointe toujours sur la dernière version publiée.',
-		detected: 'Détecté sur cet appareil',
-		all: 'Toutes les plateformes',
-		digest:
-			'GitHub publie une empreinte SHA-256 pour chaque fichier, sur la page de la version. C’est la même empreinte que le mécanisme de mise à jour de Theia vérifie avant d’installer quoi que ce soit.',
-		steps: {
-			title: 'Après le téléchargement',
-			windows: [
-				'Lancez <code>theia.exe</code>. Windows SmartScreen prévient qu’il ne connaît pas l’éditeur : <em>Informations complémentaires</em>, puis <em>Exécuter quand même</em>.',
-				'Une adresse et un QR code s’affichent. Ouvrez-les depuis n’importe quel appareil du réseau.'
+	playerDemo: {
+		status: 'Capture réelle · commandes de démonstration',
+		title: 'Theia Demo',
+		alt: 'Capture réelle du lecteur Theia montrant un paysage abstrait original, noir et or.',
+		caption:
+			'Capture réelle du lecteur Theia sur un média original créé pour cette page. Les commandes reproduisent le chrome interactif du lecteur.',
+		play: 'Lire',
+		pause: 'Mettre en pause',
+		back10: 'Reculer de 10 secondes',
+		forward10: 'Avancer de 10 secondes',
+		mute: 'Couper le son',
+		unmute: 'Rétablir le son',
+		tracksOpen: 'Audio, sous-titres et qualité',
+		tracksTitle: 'Audio, sous-titres et qualité',
+		audio: 'Piste audio',
+		quality: 'Qualité',
+		subtitles: 'Sous-titres',
+		loading: 'Préparation de la lecture…',
+		position: 'Position dans le film',
+		volume: 'Volume',
+		noJs:
+			'Sans JavaScript, la capture et toutes les informations restent visibles ; seules les commandes de démonstration sont statiques.',
+		trackOptions: {
+			audio: [
+				['Automatique', ''],
+				['Français', '5.1 · DTS']
 			],
-			macos: [
-				'<code>chmod +x theia-darwin-arm64</code> puis lancez-le depuis le terminal.',
-				'macOS bloque un binaire non notarisé : <em>Réglages Système → Confidentialité et sécurité → Ouvrir quand même</em>.'
+			quality: [
+				['1080p', 'Fichier original'],
+				['720p', 'Réencodé']
 			],
-			linux: [
-				'<code>chmod +x theia-linux-amd64</code> puis <code>./theia-linux-amd64</code>.',
-				'Aucun paquet, aucun service à déclarer. Un <code>systemd</code> si vous en voulez un, jamais parce qu’il le faut.'
+			subtitles: [
+				['Aucun', ''],
+				['Français', 'SRT externe']
 			]
-		},
-		warning: {
-			title: 'Avant de l’exposer',
-			body:
-				'Theia n’a pas d’authentification sur son port local, et c’est une décision. N’ouvrez jamais le port 8383 sur votre box. Pour y accéder de l’extérieur, servez-vous de l’accès distant intégré : un tunnel WireGuard séparé, une clé par appareil, et des droits de lecture seule.'
 		}
 	},
 
-	compare: {
-		title: 'Face aux autres',
-		lede: 'Les lignes qui vont contre Theia restent. Elles sont la raison pour laquelle il est petit.',
-		head: ['', 'Theia', 'Plex', 'Jellyfin', 'Emby'],
-		rows: [
-			['Un seul binaire, sans dépendance', 'Oui', 'Non', 'Non', 'Non'],
-			['Aucun compte pour un usage local', 'Oui', 'Compte requis', 'Oui', 'Oui'],
-			['Aucune fonction payante', 'Oui', 'Pass Plex', 'Oui', 'Emby Premiere'],
-			['Aucune mesure d’usage', 'Oui', 'Non', 'Oui', 'Partielle'],
-			['Films et séries', 'Oui', 'Oui', 'Oui', 'Oui'],
-			['Accès distant sans service tiers', 'Oui', 'Via Plex', 'Manuel', 'Via Emby'],
-			['Télévision en direct et enregistrement', 'Non', 'Oui', 'Oui', 'Oui'],
-			['Musique, photos, livres', 'Non', 'Oui', 'Oui', 'Oui'],
-			['Applications natives TV et mobile', 'Non', 'Oui', 'Oui', 'Oui'],
-			['Greffons et extensions', 'Non', 'Oui', 'Oui', 'Oui'],
-			['Plusieurs utilisateurs avec droits', 'Non', 'Oui', 'Oui', 'Oui']
+	downloads: {
+		eyebrow: 'Essayer maintenant',
+		title: 'Votre système d’abord. L’architecture ensuite.',
+		lead: 'Theia ne déclenche jamais un fichier deviné. Choisissez explicitement les deux.',
+		statusIdle: 'Aucun système sélectionné.',
+		statusSelected: 'Système sélectionné :',
+		systems: { windows: 'Windows', macos: 'macOS', linux: 'Linux' },
+		chooseArch: 'Choisir une architecture',
+		download: 'Télécharger Theia pour',
+		releaseNotes: 'Notes de version',
+		shaLabel: 'Empreintes SHA-256',
+		noJs: 'JavaScript est désactivé : les six fichiers restent disponibles ci-dessous.',
+		warnings: {
+			windows:
+				'SmartScreen peut prévenir que l’éditeur est inconnu : Theia n’est pas signé. Vérifiez l’empreinte, puis choisissez « Informations complémentaires » et « Exécuter quand même ».',
+			macos:
+				'macOS peut bloquer l’ouverture : Theia n’est pas notarisé. Après vérification de l’empreinte, utilisez Réglages Système → Confidentialité et sécurité → Ouvrir quand même.',
+			linux: 'Rendez le binaire exécutable avec chmod +x, puis lancez-le depuis votre terminal.'
+		}
+	},
+
+	moments: {
+		eyebrow: 'Trois moments, pas un inventaire',
+		title: 'De vos dossiers au canapé. Puis plus loin.',
+		lead: 'Theia se comprend par ce qu’il permet de faire, pas par une procession de captures.',
+		items: [
+			{
+				label: 'DÉCOUVRIR',
+				title: 'Vos dossiers deviennent une bibliothèque.',
+				body:
+					'Au premier lancement, vous indiquez où sont vos films et séries. Theia analyse, classe et présente ce qui est déjà sur cet appareil.',
+				alt: 'Capture réelle de la bibliothèque Theia, avec des films présentés en cartes panoramiques.'
+			},
+			{
+				label: 'REGARDER',
+				title: 'Le lecteur fait le travail difficile.',
+				body:
+					'Lecture directe quand c’est possible, adaptation quand c’est nécessaire. La piste audio, les sous-titres et la qualité restent compréhensibles.',
+				alt: ''
+			},
+			{
+				label: 'ACCÉDER À DISTANCE',
+				title: 'Un appareil autorisé. Pas un compte externe.',
+				body:
+					'Theia prépare un accès WireGuard pour retrouver votre bibliothèque hors de chez vous, sans héberger vos médias dans un service Theia.',
+				alt: 'Capture réelle des réglages d’accès distant WireGuard dans Theia.'
+			}
 		],
-		note: 'Établi en août 2026 à partir de la documentation publique de chaque projet, et mesuré sur Theia lui-même.'
+		watchFacts: [
+			['Audio', 'VF · DTS 5.1'],
+			['Sous-titres', 'Français · SRT'],
+			['Qualité', 'Original · 1080p']
+		]
+	},
+
+	difference: {
+		eyebrow: 'Pourquoi Theia',
+		title: 'Moins d’écosystème. Plus de maîtrise.',
+		items: [
+			['Un binaire', 'Le serveur, l’interface, la base et le lecteur voyagent ensemble. Pas de pile Docker à assembler.'],
+			['Pas de compte Theia', 'Votre bibliothèque reste sur votre machine. L’accès local ne dépend pas d’un service distant.'],
+			['Le navigateur suffit', 'Téléviseur, téléphone ou ordinateur : ouvrez Theia, choisissez qui regarde, lancez le film.']
+		],
+		limitsTitle: 'Les limites, dites avant le téléchargement',
+		limits: [
+			'Theia est plus jeune et moins extensible que Plex ou Jellyfin.',
+			'Le transcodage dépend des codecs et de la puissance de votre machine.',
+			'Les sous-titres image comme PGS ou VobSub sont signalés mais ne sont pas rendus.'
+		],
+		compare: 'Lire la comparaison détaillée sur GitHub',
+		safetyTitle: 'Sûr par défaut, à condition de ne pas improviser le réseau.',
+		safetyBody:
+			'Theia est pensé pour votre réseau local. Ne publiez pas son port d’administration sur Internet : utilisez l’accès distant WireGuard intégré. Le code est GPL-3.0 et chaque binaire publié possède une empreinte SHA-256.'
+	},
+
+	closing: {
+		eyebrow: 'Prêt à essayer',
+		title: 'Votre bibliothèque est déjà là.',
+		body: 'Il reste à choisir le binaire qui correspond vraiment à votre machine.',
+		cta: 'Choisir mon système'
+	},
+
+	faq: {
+		eyebrow: 'Trois réponses utiles',
+		title: 'Avant de lancer le binaire',
+		items: [
+			[
+				'Mes fichiers quittent-ils ma machine ?',
+				'Non pour le fonctionnement normal : Theia lit vos dossiers et sert l’interface depuis cet appareil. Les métadonnées de films et séries peuvent être recherchées auprès de TMDB.'
+			],
+			[
+				'Pourquoi Windows ou macOS affiche-t-il un avertissement ?',
+				'Les binaires publiés ne sont pas encore signés pour SmartScreen ni notarisés par Apple. L’avertissement est attendu ; vérifiez l’empreinte SHA-256 avant de continuer.'
+			],
+			[
+				'Est-ce un remplacement complet de Plex ou Jellyfin ?',
+				'Pas pour tout le monde. Theia vise une installation plus directe et un usage domestique clair. Il assume un écosystème plus petit et moins d’extensions.'
+			]
+		]
 	},
 
 	footer: {
-		licence: 'Theia est un logiciel libre sous licence GNU General Public License v3.0.',
-		tmdb: 'Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB.',
-		credits:
-			'FFmpeg est téléchargé à la demande et reste sous sa propre licence. Inter et Playfair Display sont servis localement sous SIL Open Font License 1.1.',
-		links: { repo: 'Code source', releases: 'Versions', issues: 'Signaler un problème', security: 'Sécurité' }
+		body:
+			'Theia est un logiciel libre sous GPL-3.0. Lecture et transcodage : FFmpeg, sous sa propre licence.',
+		tmdb: 'This product uses the TMDB API but is not endorsed or certified by TMDB.',
+		navLabel: 'Liens légaux et projet',
+		source: 'Code source',
+		license: 'Licence GPL-3.0'
 	}
 };
