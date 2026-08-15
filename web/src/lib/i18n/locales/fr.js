@@ -57,6 +57,7 @@ export const strings = {
 	nav: {
 		home: 'Accueil',
 		library: 'Films',
+		search: 'Rechercher',
 		settings: 'Réglages',
 		back: 'Retour'
 	},
@@ -365,7 +366,7 @@ export const strings = {
 		noOverview: "Aucun synopsis n'est disponible pour ce film.",
 		unmatched:
 			"Ce fichier n'a pas été identifié sur TMDB. Il reste listé sous le nom que porte le fichier ; " +
-			'renommer celui-ci relance une recherche à la prochaine analyse.'
+			'« Ce n’est pas le bon film » permet de chercher la bonne fiche.'
 	},
 
 	remote: {
@@ -528,7 +529,8 @@ export const strings = {
 		next: 'Épisode suivant',
 		lastOwned: 'Dernier épisode possédé',
 		unmatched:
-			'Cette série n’a pas été identifiée sur TMDB. Elle reste listée sous le nom de son dossier.',
+			'Cette série n’a pas été identifiée sur TMDB. Elle reste listée sous le nom de son dossier ; ' +
+			'« Ce n’est pas la bonne série » permet de chercher la bonne fiche.',
 		noOverview: 'Aucun synopsis n’est disponible.',
 		play: 'Lire l’épisode',
 		resumeAtMinutes: (minutes) => `Reprendre à ${minutes} min`
@@ -650,6 +652,95 @@ export const strings = {
 			'Facultatif. Laissez vide pour utiliser la clé fournie avec Theia. Une clé saisie ici est prioritaire.',
 		keyPlaceholder: 'Laisser vide pour utiliser la clé intégrée',
 		milestone: 'Theia v1'
+	},
+
+	search: {
+		title: 'Rechercher',
+		label: 'Rechercher dans la bibliothèque',
+		placeholder: 'Un titre, une année, un réalisateur…',
+		prompt: 'Une seule recherche, dans les films et les séries à la fois.',
+		searching: 'Recherche…',
+		films: 'Films',
+		series: 'Séries',
+		empty: (query) => `Rien ne correspond à « ${query} ».`,
+		truncated: 'Seuls les premiers résultats sont affichés. Précisez la recherche.',
+		failed: 'La recherche n’a pas abouti.',
+		results: (n) => (n === 1 ? '1 résultat' : `${n} résultats`)
+	},
+
+	watched: {
+		mark: 'Marquer comme vu',
+		unmark: 'Marquer comme non vu',
+		marking: 'Enregistrement…',
+		badge: 'Vu',
+		hint:
+			'Un film laissé en route quitte la rangée « Reprendre » ; un film vu ailleurs se note ici ' +
+			'sans avoir à le relancer.',
+		failed: 'L’état n’a pas pu être enregistré.'
+	},
+
+	match: {
+		wrongFilm: 'Ce n’est pas le bon film',
+		wrongSeries: 'Ce n’est pas la bonne série',
+		heading: 'Choisir la bonne fiche',
+		intro:
+			'Theia identifie un fichier en cherchant son titre sur TMDB. Quand elle se trompe, ' +
+			'voici ce qu’elle a écarté.',
+		searchLabel: 'Chercher un autre titre',
+		searchPlaceholder: 'Titre à chercher sur TMDB',
+		search: 'Chercher',
+		searching: 'Recherche…',
+		choose: 'Choisir cette fiche',
+		applying: 'Application…',
+		none: 'Aucune fiche ne correspond à cette recherche.',
+		noOverview: 'Pas de synopsis.',
+		pinnedHint:
+			'Une fiche choisie ici ne sera plus remplacée : Theia continuera de la rafraîchir, ' +
+			'mais par son identifiant et non par une nouvelle recherche.',
+		revert: 'Revenir au choix automatique',
+		reverted: 'Theia cherchera de nouveau elle-même.',
+		close: 'Fermer',
+		errors: {
+			metadata_source_missing:
+				'Aucune clé TMDB n’est configurée : il n’y a rien à choisir.',
+			metadata_key_rejected: 'TMDB a refusé la clé configurée.',
+			metadata_not_found: 'TMDB n’a rien renvoyé pour cette recherche.',
+			metadata_unavailable: 'TMDB n’a pas répondu.',
+			no_such_item: 'Cet élément n’existe plus dans la bibliothèque.',
+			unknown: 'La fiche n’a pas pu être changée.'
+		}
+	},
+
+	diagnostics: {
+		heading: 'Cette machine',
+		intro:
+			'Ce que Theia a mesuré ici, plutôt que supposé. Rien de tout cela n’est téléchargé ' +
+			'pour répondre à la question.',
+		ffmpeg: 'ffmpeg',
+		ffmpegUnsupported: 'Aucune version n’est publiée pour ce système.',
+		ffmpegAbsent: 'Pas encore téléchargé. Il ne l’est qu’au premier fichier qui en a besoin.',
+		ffmpegPresent: 'Téléchargé et vérifié.',
+		encoders: 'Encodeurs disponibles',
+		encodersUnprobed: 'Non mesurés tant que ffmpeg n’est pas là.',
+		encodersNone: 'Aucun encodeur n’a répondu : le réencodage est indisponible.',
+		hardware: 'carte graphique',
+		software: 'processeur',
+		decoder: 'Décodage matériel',
+		decoderNone: 'Aucun',
+		images: 'Affiches en cache',
+		imagesEmpty: 'Rien en cache pour l’instant.',
+		imagesUsage: (count, size) =>
+			count === 1 ? `1 image, ${size}` : `${count} images, ${size}`,
+		watching: 'Surveillance',
+		watchInterval: (seconds) =>
+			`Les dossiers sont relus toutes les ${seconds} secondes. Un film déposé dedans ` +
+			`apparaît sans que personne ne demande rien.`,
+		watchOff: 'Aucune surveillance : les dossiers ne sont lus que sur demande.',
+		scanningNow: 'Une analyse est en cours.',
+		counts: 'Contenu',
+		films: 'Films',
+		series: 'Séries',
+		episodes: 'Épisodes'
 	},
 
 	errors: {

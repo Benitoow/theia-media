@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -153,4 +154,30 @@ func (c *Cache) lockFor(key string) func() {
 		}
 		c.mu.Unlock()
 	}
+}
+
+// Usage reports how much disk the cached artwork is using.
+//
+// Walked rather than counted as it goes: the cache is written by several
+// goroutines and read by a settings page nobody opens twice a minute, so a
+// running total maintained under a lock would be machinery bought for nothing.
+func (c *Cache) Usage() (files int, bytes int64, err error) {
+	err = filepath.WalkDir(c.dir, func(_ string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			// A cache directory that has partly gone missing is not a reason to
+			// fail the page it is reported on.
+			return nil
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return nil
+		}
+		files++
+		bytes += info.Size()
+		return nil
+	})
+	return files, bytes, err
 }

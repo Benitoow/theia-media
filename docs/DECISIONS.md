@@ -1819,6 +1819,228 @@ in the repository and embeds only the verified player capture. The published
 PNG therefore explains the product without inheriting the unverified poster
 rights that made the first concept unsuitable for Open Graph.
 
+## 66. The library reads the disk on its own, by looking rather than by listening
+
+**The zero-configuration promise had a hole in it.** Adding a film meant opening
+the settings page and pressing a button. The founding scenario is "plug the
+machine in, it works"; nothing in it says "and then go and tell it what you did".
+A scan was only ever triggered at startup or by hand, and the only tickers in the
+whole binary belonged to the updater and to remote access.
+
+**Filesystem notifications were considered first, and rejected.** `fsnotify` is
+the obvious answer and it is a pure-Go dependency, so no guardrail forbids it.
+What forbids it is the storage this project expects. `internal/scanner` opens by
+saying that a real library lives on external drives and network shares; inotify
+and `ReadDirectoryChangesW` do not cross an SMB mount. A notifier that silently
+delivers nothing on exactly the storage the product is built for is worse than no
+notifier, because it looks like it works. It also needs a watch descriptor per
+directory, which is a limit to run into rather than a limit to reason about.
+
+**So the disk is read, and the answer is compared with the last one.** A pass
+walks the roots with `scanner.Scan` — the same walk, stat calls only — and
+reduces what it saw to one 64-bit fingerprint. Unchanged means nothing happens:
+no generation is burned, no row is written, nothing is logged. Reading the disk
+and reconciling with the database are two very different costs, and only the
+cheap one is paid on a quiet minute.
+
+**Sixty seconds, because the thing being spent is not CPU.** A stat-only walk of
+a few thousand entries costs nothing measurable. An external drive that has spun
+down is what a shorter interval actually spends. A film appearing within a minute
+is indistinguishable from instant for the person who just put it there.
+
+**A file written in the last fifteen seconds is left out of the fingerprint.** A
+film arriving over the network is not there all at once, and indexing it halfway
+produces a card with no duration, a failed inspection and a wasted TMDB lookup,
+all of which have to be undone. Excluding recent files means a copy in progress
+reads as "nothing has changed yet" rather than as a new film — and the pass after
+it finishes sees it properly. This is also why the walk logs nothing: an unplugged
+drive is reported once per root per pass, which at a pass a minute is fourteen
+hundred identical warnings a day burying the one line that matters.
+
+**Outstanding metadata reconciles even when the disk has not moved.** Metadata
+work is not created by files changing: a library larger than one batch of two
+hundred spreads over several passes by design, and an outage or a rejected key
+leaves rows to retry. Judged by the disk alone a settled library would keep its
+gaps for ever, because nothing on disk is ever going to change again to prompt
+another look. The queries that choose what to fetch are the ones that decide what
+counts as outstanding, so a lookup that failed answers "nothing due" until its
+retry falls due and this cannot spin.
+
+**The watcher owns the folder list.** The settings handler hands it a new one and
+asks for an immediate pass, so a folder added on that page fills the library
+while the user is still looking at it. It owns the list rather than reading the
+configuration because a background goroutine and an HTTP request were otherwise
+reading and writing the same slice.
+
+Verified against the configured library: startup scan, then a film copied in at
+18:47:39 and indexed at 18:48:13 with its metadata fetched. Three scans in three
+minutes — startup, one metadata catch-up, one real change — and none on the
+quiet ticks.
+
+## 67. A wrong match is corrected in the interface, not on the filesystem
+
+**Supersedes the README's "manual TMDB matching" refusal.** That row said
+correcting a wrong match was done by renaming the file. It was the only entry in
+that table that made the user pay for the server's mistake rather than describing
+a boundary, and it is unactionable from the television the remote belongs to.
+
+**It is not a metadata editor, and must not become one.** There are no fields to
+type into and nothing to correct by hand. There is a list of the records the
+automatic search passed over, ranked the way `pick` ranks them — exact title
+first, then popularity — so that the film the matcher chose leads and the
+alternative sits directly under it. Decision 11 already documented the failure
+this exists for: searching "The Handmaiden" returns the making-of above the film,
+because TMDB orders by text relevance. Confirmed again on the real library, where
+the candidate list for Star Wars is the film and then *The Making of Star Wars*.
+
+**A correction is an identity, not a snapshot.** Decision 9 keeps metadata cached
+and never frozen, so every record is re-read when it ages out. If that re-read
+searched the filename again it would rediscover the same wrong film and quietly
+undo the correction ninety days after somebody made it. So a corrected row is
+marked `tmdb_locked` and refreshed **by id** instead. The identity stops moving;
+the data does not.
+
+**A series is corrected with its whole cascade.** Every season and every episode
+title came from whichever show the series was matched to, so replacing only the
+series record leaves a page headed by the right show and filled with another
+one's episodes — worse than the original mistake, because it looks deliberate.
+`refreshSeries` was split out of `enrichSeries` for this and is reused whole,
+rather than a second implementation of the same cascade drifting beside the first.
+
+**Correcting stays on the LAN.** It changes what a file *is* for the whole
+household and it spends the TMDB quota, which puts it on the administration side
+of decision 44. The list of candidates is refused remotely too, for the second of
+those reasons.
+
+**Reverting exists.** Handing a film back to the automatic matcher clears the pin
+and puts the row back in the queue, and asks the watcher for a pass so the poster
+is right again in a minute rather than whenever the folder next changes.
+
+## 68. Being watched is something a viewer may simply state
+
+Decision 17 defines when a film *becomes* watched, from the position reported
+during playback. Two ordinary situations have no position to report. A film
+abandoned twenty minutes in sits in the continue-watching row for ever, because
+nothing will ever finish it. A film seen somewhere else is not on this server's
+record at all.
+
+**Stored as a statement, not as a position at the end.** `finishedRule` is
+recomputed from the position on every report — deliberately, so that starting a
+film again returns it to the row — which means a position wound to the end would
+be erased by the first second of playback. The position is cleared instead:
+a film already seen starts at the beginning when it goes on again, not eight
+seconds before the credits.
+
+**Marking unwatched is forgetting the position**, so it is the same operation
+`DELETE /progress` already performed, under the name the client means when it
+asks. A film nobody has watched and a film somebody un-watched are the same
+state, and keeping them apart would be inventing a distinction to store.
+
+**It travels.** Saying where you got to and saying you have seen it are both the
+viewer describing their own viewing, so both are allowed on the remote listener.
+Decision 44's line is at managing the household and the server; it does not move.
+
+## 69. One search, answered by the server, over both catalogues
+
+`/films` searched films and `/series` searched series, each by filtering a
+catalogue it had already downloaded. Both are good pages. Between them they made
+you decide whether the thing you half-remembered was a film or a series before
+you were allowed to look for it.
+
+**The server answers, which is what makes it work from outside the house.** A
+phone on the WireGuard listener asks a question and gets twenty rows back,
+instead of pulling the whole library down to filter it locally. `/films` keeps
+its client-side filtering: its sorts, genres and watch-state filters are instant
+and that trade still holds at household scale.
+
+**Matching happens in Go, not in SQL.** SQLite's `LIKE` cannot see past an
+accent — "amelie" matches "Amélie" in no collation available without CGO, and CGO
+is the first prohibition in the founding spec. `searchKey` therefore mirrors the
+one in `web/src/lib/api.js`, folding accents through an explicit table rather
+than buying `golang.org/x/text` for one function. The candidate query stays
+narrow, so what crosses the boundary is a few columns per title rather than every
+synopsis and cast list; only the rows that matched are read in full. If a library
+ever grows large enough for that to be felt, the answer is a folded column
+written at scan time, not a different matching rule.
+
+**A page, not a field in the navigation pill.** At three metres the pill is
+already carrying as much as it can, and a text box there would take the first
+D-pad press away from the library — decision 35 measured exactly that for the
+profile control.
+
+## 70. The measurements are shown, because the standard is to report what was verified
+
+Decisions 58, 59 and 60 measure what a machine can do: which encoders answer when
+asked to produce one frame, whether a hardware decoder exists, what the software
+fallback costs in real time. All of it was used silently. The project's own
+standard for a milestone is to report what was verified rather than what was
+assumed, and that is easier to hold to when the verification is on a page
+somebody can read.
+
+The settings page now names the ffmpeg state, the encoders that answered and what
+each one runs on, the hardware decoder, the size of the artwork cache, the folders
+being watched and how often, and what the last pass did.
+
+**Nothing here probes anything that is not already on disk.** `Capabilities`
+reaches `Manager.Path`, which downloads ffmpeg when it is missing. Asking what
+this machine can do must never be the thing that causes a download, so the probe
+is gated on `Available()` and the page says "not measured yet" rather than
+fetching sixty megabytes to fill a field. This is the same promise M1 made for
+`/info`.
+
+While writing it, one older breach of decision 25 was removed: `settingsResponse`
+carried a French sentence advising the user to add a TMDB key. Nothing in the
+interface ever read it — the catalogues already own that sentence — and a French
+paragraph inside a Go struct is precisely what that decision exists to prevent.
+
+## 71. The seek strip is built from keyframes, once, and is never waited for
+
+Dragging the bar showed a timestamp and nothing else, which tells you where you
+are and not what is there. The frames now shown under the cursor are one JPEG
+sheet of a hundred tiles, windowed by `background-position` — one decode for the
+whole strip rather than a hundred image elements.
+
+**Keyframes only.** `-skip_frame nokey` is what makes this affordable: a
+two-hour film is read at a fraction of the cost of a full decode. The `fps`
+filter still lays the frames on an even time grid, taking the nearest decoded
+frame to each mark, so one tile reliably means one interval even though a
+source's keyframes are not evenly spaced. A hundred frames over two hours is one
+every seventy seconds, which is what a scrub preview is for; more would be a
+longer encode and a larger download for a picture nobody studies.
+
+**It is a comfort, and behaves like one.** It is asked for once when a player
+opens and never awaited. Three states reach the interface — ready, building, or
+nothing — and the last two draw the timestamp alone, exactly as before. One
+encode runs at a time, because decision 58 measured that a single software
+transcode consumes the whole real-time margin on this machine and the film
+somebody is watching is worth more than the strip under their cursor.
+
+**And it never downloads ffmpeg.** `Manager.Path` fetches the binary when it is
+missing, so the build is gated on `Available()` and a machine without one simply
+has no previews. Same promise as `/info` and the encoder probe.
+
+**The client measures the tile.** The pinned upstream build ships ffmpeg and no
+ffprobe — the reason `Probe` already shells out to ffmpeg — so the server cannot
+say how wide a tile came out without guessing an aspect ratio the file may not
+have. The browser divides the loaded sheet's natural width by the column count
+instead, which is a fact rather than a guess.
+
+Two faults found by running it rather than by reading it. ffmpeg chooses its
+muxer from the file extension and refused `.jpg.tmp` outright — *"Unable to
+choose an output format"* — so the format is now named and the temporary file
+carries a real extension. And a file that cannot be built was re-attempted on
+every request: three identical failures in a third of a second while a player
+polled. Failures are now remembered for the life of the process, which is not
+persisted on purpose, since a restart is usually an upgrade and an upgrade is a
+reason to try again.
+
+Verified against a four-minute file: a hundred tiles at 2.4-second intervals, a
+1600×900 sheet of 160×90 tiles weighing 205 KB, and the browser resolving the
+midpoint of the bar to `background-position: 0px -450px` — column 0, row 5,
+tile 50 — with the timestamp reading 2:00. The hover itself was not seen: the
+in-app preview pane does not composite frames, so the appearance of the strip
+under a moving cursor remains unverified.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

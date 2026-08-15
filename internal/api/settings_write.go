@@ -80,6 +80,14 @@ func (s *Server) handleUpdateSettings(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		s.cfg.LibraryPaths = cleaned
+
+		// The watcher owns this list once it is running, and a folder added
+		// here should fill the library while the user is still on the page
+		// rather than at the top of the next minute.
+		if s.watcher != nil {
+			s.watcher.SetRoots(cleaned)
+			s.watcher.Wake()
+		}
 	}
 
 	if body.TMDBAPIKey != nil {

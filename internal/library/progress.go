@@ -235,3 +235,55 @@ func boolToInt(b bool) int {
 	}
 	return 0
 }
+
+// SetWatched marks a film as watched without anybody having played it.
+//
+// This is not SaveProgress with the position wound to the end. finishedRule is
+// recomputed from the position on every report, deliberately, so that starting
+// a film again returns it to the continue-watching row -- which means a position
+// at the end would be undone by the first second of playback. Being watched is
+// a statement, so it is stored as one.
+//
+// The position is cleared rather than set to the duration. A film you have
+// already seen should start at the beginning when you put it on again, not
+// eight seconds before the credits.
+func (s *Store) SetWatched(ctx context.Context, profileID, id int64, now time.Time) (Progress, error) {
+	var duration sql.NullFloat64
+	err := s.db.QueryRowContext(ctx,
+		`SELECT duration_seconds FROM movies WHERE id = ?`, id).Scan(&duration)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Progress{}, ErrNoSuchMovie
+	}
+	if err != nil {
+		return Progress{}, fmt.Errorf("marking film %d watched: %w", id, err)
+	}
+
+	watchedAt := now.Unix()
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Progress{}, fmt.Errorf("marking film %d watched: %w", id, err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO movie_progress (profile_id, movie_id, position_seconds, watched_at, finished)
+		VALUES (?, ?, 0, ?, 1)
+		ON CONFLICT(profile_id, movie_id) DO UPDATE SET
+			position_seconds = 0,
+			watched_at       = excluded.watched_at,
+			finished         = 1`,
+		profileID, id, watchedAt,
+	); err != nil {
+		return Progress{}, fmt.Errorf("marking film %d watched: %w", id, err)
+	}
+	if err := mirrorLegacyMovieProgress(ctx, tx, profileID, id, 0, watchedAt, 1); err != nil {
+		return Progress{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Progress{}, fmt.Errorf("marking film %d watched: %w", id, err)
+	}
+
+	at := time.Unix(watchedAt, 0).UTC()
+	return Progress{Finished: true, WatchedAt: &at, DurationSeconds: duration.Float64}, nil
+}

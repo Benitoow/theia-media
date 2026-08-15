@@ -52,6 +52,10 @@ type tvSearchResult struct {
 	OriginalName string  `json:"original_name"`
 	FirstAirDate string  `json:"first_air_date"`
 	Popularity   float64 `json:"popularity"`
+
+	// Shown, not matched on. See Candidates.
+	Overview   string `json:"overview"`
+	PosterPath string `json:"poster_path"`
 }
 
 type tvSearchResponse struct {

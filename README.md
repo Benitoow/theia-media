@@ -66,10 +66,15 @@ without a reload. Titles, synopses and artwork come from TMDB.
 
 **Library**
 
-- Scans one or more folders at startup or on demand and keeps a local SQLite
-  catalogue.
+- Scans one or more folders and keeps a local SQLite catalogue. It then **keeps
+  watching them**: a film dropped into a folder is indexed on its own, without
+  anybody opening the settings page. A file still being copied is left alone
+  until it has finished arriving.
 - Extracts a useful title and year from ordinary release filenames. A file still
   appears when parsing or metadata matching fails.
+- Lets you **correct a wrong match**: the film page offers the records TMDB
+  returned and passed over, and the one you choose is kept — later refreshes
+  re-read that record by id instead of searching the filename again.
 - Groups several files under one film — a remux and a 1080p encode are one card,
   not two — and lets you pick the file on the detail page.
 - Handles **TV series**: shows, seasons, episodes and per-episode resume.
@@ -83,12 +88,21 @@ without a reload. Titles, synopses and artwork come from TMDB.
   nightly suggestion. Each row leads to the full library, pre-filtered.
 - A library page with search across title, director, genre and year, five sorts
   and filters by genre and watch state.
+- One **search across films and series at once**, answered by the server, so a
+  phone on the remote link asks a question instead of downloading the catalogue
+  to filter it.
+- **Marking a film or episode watched by hand**, for the one abandoned halfway
+  that nothing will ever finish, and for the one already seen somewhere else.
 - A player with audio, subtitle and quality selection while the film runs.
   Subtitles come from embedded text tracks or `.srt` files sitting beside the
   media, and are drawn by Theia rather than by the browser so they land on the
   picture instead of in the letterbox.
 - Playback position saved continuously, with resume, and seeking that works even
   on a remuxed stream.
+- **Frames under the seek bar**: a strip of thumbnails built from the file's
+  keyframes the first time it is opened, so dragging shows the scene rather than
+  only a timestamp. Built only if ffmpeg is already on disk — asking for one
+  never downloads it.
 
 **Household**
 
@@ -109,17 +123,21 @@ without a reload. Titles, synopses and artwork come from TMDB.
 - Checks GitHub Releases for updates and installs one only when asked. An update
   is refused while something is playing, and is reversible if the new binary
   fails to start.
+- Reports what it measured about the machine rather than what it assumed: the
+  ffmpeg state, the encoders that actually answered and whether each runs on the
+  graphics card or the processor, the hardware decoder, the size of the artwork
+  cache and what the last scan did. Nothing is downloaded in order to answer.
 
 ## What Theia deliberately does not do
 
 | Not included | Consequence |
 | --- | --- |
 | Accounts or permissions | There is no login, password or access control on the LAN. See the warning above; it is not decorative. |
+| Editing metadata by hand | A wrong match can be *replaced* with another TMDB record (see above), but no title, synopsis, poster or cast can be typed in. Theia shows what TMDB holds, or the filename. |
 | Image subtitles | PGS and VobSub tracks cannot be shown without burning them into the picture. They are named rather than silently missing, and only when the file has no text track at all. |
 | HTTPS on the LAN | Theia serves plain HTTP locally. Remote access is encrypted by WireGuard instead. |
 | PWA or native TV/mobile apps | The shipped client is a responsive web interface, built for a D-pad. |
 | Background-service installer | The binary runs in the foreground. Starting it at boot is left to the operating system. |
-| Manual TMDB matching | Search exists over what has already been matched. Correcting a *wrong* match is done by renaming the file, which makes the next scan look it up again. |
 | Live TV, DVR, plugins | Out of scope, permanently. |
 
 The reasoning behind each boundary lives in

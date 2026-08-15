@@ -7,7 +7,9 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
 	import FileChoice from '$lib/components/FileChoice.svelte';
+	import MatchDialog from '$lib/components/MatchDialog.svelte';
 	import { profiles } from '$lib/profiles.svelte.js';
+	import { remote } from '$lib/remote.svelte.js';
 
 	/** @type {'loading' | 'ready' | 'missing'} */
 	let state = $state('loading');
@@ -36,6 +38,59 @@
 
 	const files = $derived(movie?.files ?? []);
 	const selectedFile = $derived(files.find((file) => file.id === fileId) ?? null);
+
+	const watched = $derived(!!movie?.progress?.finished);
+
+	// Correcting a match changes what a file *is* for the whole household, so it
+	// is administration and the remote listener refuses it. A button that always
+	// fails is worse than no button (decision 44).
+	let correcting = $state(false);
+	let watchedBusy = $state(false);
+	let watchedFailed = $state(false);
+
+	// Marking watched, and taking it back.
+	//
+	// Unmarking is exactly forgetting the position, which is why it is a DELETE
+	// on the same resource rather than a second verb: a film nobody has watched
+	// and a film somebody un-watched are the same state.
+	async function toggleWatched() {
+		if (!movie) return;
+		watchedBusy = true;
+		watchedFailed = false;
+		try {
+			const path = profiles.url(`/api/library/movies/${movie.id}/watched`);
+			if (watched) {
+				const res = await fetch(path, { method: 'DELETE' });
+				if (!res.ok) throw new Error(String(res.status));
+				movie = { ...movie, progress: { position_seconds: 0, finished: false } };
+			} else {
+				syncProgress(await getJSON(path, { method: 'PUT' }));
+			}
+		} catch {
+			watchedFailed = true;
+		} finally {
+			watchedBusy = false;
+		}
+	}
+
+	// A correction replaces the record wholesale, so the page is re-read rather
+	// than patched: the poster, the synopsis, the cast and the runtime all
+	// belong to the film that was just chosen.
+	async function onMatchApplied(updated) {
+		correcting = false;
+		if (updated) {
+			movie = updated;
+			return;
+		}
+		// Reverted to automatic. Nothing has been looked up yet, so the page
+		// keeps what it has until the next pass fills it in.
+		try {
+			movie = await getJSON(profiles.url(`/api/library/movies/${$page.params.id}`));
+		} catch {
+			// Leaving the page as it stands is honest: the correction was
+			// cleared on the server whether or not this re-read worked.
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -172,15 +227,43 @@
 						{/if}
 					</div>
 
-					<button
-						type="button"
-						onclick={() => (playing = true)}
-						class="tv-action tv-action--primary mb-12 cursor-pointer"
-						data-remote-default
-					>
-						<Icon name="play" size={18} />
-						<span>{resumable ? t.player.resumeAtMinutes(resumeMinutes) : t.player.play}</span>
-					</button>
+					<div class="film-actions mb-12">
+						<button
+							type="button"
+							onclick={() => (playing = true)}
+							class="tv-action tv-action--primary cursor-pointer"
+							data-remote-default
+						>
+							<Icon name="play" size={18} />
+							<span>{resumable ? t.player.resumeAtMinutes(resumeMinutes) : t.player.play}</span>
+						</button>
+
+						<button
+							type="button"
+							onclick={toggleWatched}
+							disabled={watchedBusy}
+							class="tv-action cursor-pointer"
+							aria-pressed={watched}
+						>
+							<Icon name={watched ? 'check' : 'plus'} size={16} />
+							<span>{watchedBusy ? t.watched.marking : watched ? t.watched.unmark : t.watched.mark}</span>
+						</button>
+
+						{#if !remote.isRemote}
+							<button
+								type="button"
+								onclick={() => (correcting = true)}
+								class="tv-action cursor-pointer"
+							>
+								<Icon name="search" size={16} />
+								<span>{t.match.wrongFilm}</span>
+							</button>
+						{/if}
+					</div>
+
+					{#if watchedFailed}
+						<p class="mb-8 text-small text-error" role="alert">{t.watched.failed}</p>
+					{/if}
 
 					<!-- The files behind the film. One card in the catalogue, the choice
 					     of what actually plays made here, by hand.
@@ -243,4 +326,26 @@
 			onclose={() => (playing = false)}
 		/>
 	{/if}
+
+	{#if correcting}
+		<MatchDialog
+			kind="movies"
+			id={movie.id}
+			title={displayTitle(movie)}
+			onapplied={onMatchApplied}
+			onclose={() => (correcting = false)}
+		/>
+	{/if}
 {/if}
+
+<style>
+	/* The play button keeps its weight; what sits beside it is deliberately
+	   quieter. Wrapping rather than scrolling, because at 1280 on a television
+	   these three do not fit on one line and a hidden action is a missing one. */
+	.film-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem;
+	}
+</style>

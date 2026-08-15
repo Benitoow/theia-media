@@ -20,6 +20,7 @@
 	const inSeries = $derived(
 		path === '/series' || path.startsWith('/serie/') || path.startsWith('/episode/')
 	);
+	const inSearch = $derived(path === '/recherche');
 	const inSettings = $derived(path === '/reglages' || path.startsWith('/reglages/'));
 	// The chooser owns the whole viewport: the navigation is suppressed for that
 	// route only, so the first arrow key lands on a profile rather than on a link.
@@ -208,6 +209,18 @@
 				aria-current={inSeries ? 'page' : undefined}
 			>
 				{t.series.title}
+			</a>
+			<!-- One search for both catalogues. It is its own page rather than a
+			     field in this pill: at three metres the pill is already carrying
+			     as much as it can, and a text box here would take the first D-pad
+			     press away from the library (decision 35 measured the same thing
+			     for the profile control). -->
+			<a
+				href="/recherche"
+				class="nav-target nav-link label"
+				aria-current={inSearch ? 'page' : undefined}
+			>
+				{t.nav.search}
 			</a>
 			<!-- Settings, scanning, onboarding and the updater are LAN-only, and
 			     the remote guard refuses them outright. A link that always 403s is

@@ -171,3 +171,46 @@ func TestRemoteAllowlistCoversProfileReadsAndRefusesProfileManagement(t *testing
 		}
 	}
 }
+
+// The routes added after V2 land on both sides of decision 44's line, and which
+// side each one is on is the whole point. Saying you have seen something is
+// viewing; deciding what a file *is* is administration.
+func TestRemoteAllowlistPlacesTheNewRoutesOnTheRightSide(t *testing.T) {
+	allowed := []struct{ method, path string }{
+		// Marking watched is the viewer describing their own viewing, exactly
+		// as saving a position is.
+		{http.MethodPut, "/api/library/movies/7/watched"},
+		{http.MethodDelete, "/api/library/movies/7/watched"},
+		{http.MethodPut, "/api/library/episodes/7/watched"},
+		{http.MethodDelete, "/api/library/episodes/7/watched"},
+		// Searching reads the catalogue, which a remote viewer may already do.
+		{http.MethodGet, "/api/library/search"},
+		// Seek previews are part of watching, like artwork.
+		{http.MethodGet, "/api/previews/0123456789abcdef0123456789abcdef"},
+		{http.MethodGet, "/api/stream/7/preview"},
+	}
+	for _, tc := range allowed {
+		if !remoteRouteAllowed(tc.method, tc.path) {
+			t.Errorf("%s %s was refused remotely, want allowed", tc.method, tc.path)
+		}
+	}
+
+	refused := []struct{ method, path string }{
+		// Correcting a match changes what a file is for the whole household and
+		// spends the TMDB quota. Reading the candidate list spends it too, which
+		// is why even the GET stays on the LAN.
+		{http.MethodPut, "/api/library/movies/7/match"},
+		{http.MethodDelete, "/api/library/movies/7/match"},
+		{http.MethodPut, "/api/library/series/7/match"},
+		{http.MethodDelete, "/api/library/series/7/match"},
+		{http.MethodGet, "/api/library/movies/7/match/candidates"},
+		{http.MethodGet, "/api/library/series/7/match/candidates"},
+		// What this machine can do is a server question, not a viewing one.
+		{http.MethodGet, "/api/diagnostics"},
+	}
+	for _, tc := range refused {
+		if remoteRouteAllowed(tc.method, tc.path) {
+			t.Errorf("%s %s was allowed remotely, want refused", tc.method, tc.path)
+		}
+	}
+}

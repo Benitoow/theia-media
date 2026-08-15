@@ -67,6 +67,13 @@ type staleCandidate struct {
 	ID    int64
 	Title string
 	Year  int
+
+	// TMDBID and Locked are how a corrected match survives a refresh. Locked
+	// means somebody chose this film by hand, so the refresh reads that record
+	// by id rather than searching the title again and finding the same wrong
+	// answer it found the first time.
+	TMDBID int
+	Locked bool
 }
 
 // StaleMetadata returns films whose metadata has never been fetched or has
@@ -74,7 +81,7 @@ type staleCandidate struct {
 // progress on every scan.
 func (s *Store) StaleMetadata(ctx context.Context, now time.Time, limit int) ([]staleCandidate, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, title, year
+		SELECT id, title, year, tmdb_id, tmdb_locked
 		FROM movies
 		WHERE metadata_status = ?
 		   OR (metadata_status = ? AND metadata_fetched_at < ?)
@@ -94,15 +101,20 @@ func (s *Store) StaleMetadata(ctx context.Context, now time.Time, limit int) ([]
 	var out []staleCandidate
 	for rows.Next() {
 		var (
-			c    staleCandidate
-			year sql.NullInt64
+			c            staleCandidate
+			year, tmdbID sql.NullInt64
+			locked       int
 		)
-		if err := rows.Scan(&c.ID, &c.Title, &year); err != nil {
+		if err := rows.Scan(&c.ID, &c.Title, &year, &tmdbID, &locked); err != nil {
 			return nil, fmt.Errorf("finding films that need metadata: %w", err)
 		}
 		if year.Valid {
 			c.Year = int(year.Int64)
 		}
+		if tmdbID.Valid {
+			c.TMDBID = int(tmdbID.Int64)
+		}
+		c.Locked = locked == 1
 		out = append(out, c)
 	}
 	return out, rows.Err()
@@ -195,7 +207,18 @@ func (s *Service) enrich(ctx context.Context, report *ScanReport) {
 			return
 		}
 
-		film, err := s.tmdb.Lookup(ctx, candidate.Title, candidate.Year)
+		// A film somebody matched by hand is refreshed by id. Searching its
+		// title again would rediscover whatever wrong film that title leads to,
+		// and quietly undo the correction ninety days after it was made.
+		var (
+			film *tmdb.Film
+			err  error
+		)
+		if candidate.Locked && candidate.TMDBID > 0 {
+			film, err = s.tmdb.Details(ctx, candidate.TMDBID)
+		} else {
+			film, err = s.tmdb.Lookup(ctx, candidate.Title, candidate.Year)
+		}
 		switch {
 		case err == nil:
 			if err := s.store.SaveMetadata(ctx, candidate.ID, film, time.Now()); err != nil {

@@ -137,6 +137,11 @@ type searchResult struct {
 	OriginalTitle string  `json:"original_title"`
 	ReleaseDate   string  `json:"release_date"`
 	Popularity    float64 `json:"popularity"`
+
+	// Read only when the results are being shown to somebody rather than
+	// resolved to a single id. See Candidates.
+	Overview   string `json:"overview"`
+	PosterPath string `json:"poster_path"`
 }
 
 type searchResponse struct {

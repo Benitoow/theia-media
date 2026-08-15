@@ -19,6 +19,7 @@ import (
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
+	"github.com/Benitoow/theia-media/internal/preview"
 	"github.com/Benitoow/theia-media/internal/profiles"
 	"github.com/Benitoow/theia-media/internal/remoteaccess"
 	"github.com/Benitoow/theia-media/internal/updater"
@@ -27,15 +28,25 @@ import (
 // Options is everything the server needs. A struct rather than a parameter
 // list because this has grown once per milestone and will grow again.
 type Options struct {
-	Config    *config.Config
-	Library   *library.Service
-	Images    *imagecache.Cache
-	FFmpeg    *ffmpeg.Manager
-	State     *db.State
-	Updater   *updater.Updater
-	Activity  *activity.Tracker
-	Profiles  *profiles.Store
-	Remote    *remoteaccess.Service
+	Config   *config.Config
+	Library  *library.Service
+	Images   *imagecache.Cache
+	FFmpeg   *ffmpeg.Manager
+	State    *db.State
+	Updater  *updater.Updater
+	Activity *activity.Tracker
+	Profiles *profiles.Store
+	Remote   *remoteaccess.Service
+
+	// Watcher keeps the library in step with the disk. It owns the list of
+	// watched folders, so the settings handler tells it when that list changes.
+	// Nil in tests that do not care, and every use of it is guarded.
+	Watcher *library.Watcher
+
+	// Previews builds the frames shown under a dragged seek bar. Optional
+	// everywhere: nil simply means no previews.
+	Previews *preview.Manager
+
 	Web       fs.FS
 	Version   string
 	KeySource config.KeySource
@@ -54,6 +65,8 @@ type Server struct {
 	activity  *activity.Tracker
 	profiles  *profiles.Store
 	remote    *remoteaccess.Service
+	watcher   *library.Watcher
+	previews  *preview.Manager
 	web       fs.FS
 	log       *slog.Logger
 	version   string
@@ -78,6 +91,8 @@ func New(opts Options) *Server {
 		activity:  opts.Activity,
 		profiles:  opts.Profiles,
 		remote:    opts.Remote,
+		watcher:   opts.Watcher,
+		previews:  opts.Previews,
 		web:       opts.Web,
 		log:       opts.Logger,
 		version:   opts.Version,
@@ -93,6 +108,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("GET /api/settings", s.handleSettings)
+	mux.HandleFunc("GET /api/diagnostics", s.handleDiagnostics)
 	mux.HandleFunc("PUT /api/settings", s.handleUpdateSettings)
 	mux.HandleFunc("GET /api/onboarding", s.handleOnboarding)
 	mux.HandleFunc("POST /api/onboarding/complete", s.handleCompleteOnboarding)
@@ -119,6 +135,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/library/movies/{id}/files/{file_id}/subtitles/{track_id}", s.handleMovieFileSubtitle)
 	mux.HandleFunc("PUT /api/library/movies/{id}/progress", s.handleSaveProgress)
 	mux.HandleFunc("DELETE /api/library/movies/{id}/progress", s.handleResetProgress)
+	// Marking unwatched is exactly forgetting the position, so it is the same
+	// handler under the name the client means when it asks.
+	mux.HandleFunc("PUT /api/library/movies/{id}/watched", s.handleSetWatched)
+	mux.HandleFunc("DELETE /api/library/movies/{id}/watched", s.handleResetProgress)
 	mux.HandleFunc("GET /api/library/series", s.handleSeriesList)
 	mux.HandleFunc("GET /api/library/series/home", s.handleSeriesHome)
 	mux.HandleFunc("GET /api/library/series/{id}", s.handleSeries)
@@ -128,9 +148,27 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/library/episodes/{id}/files/{file_id}/subtitles/{track_id}", s.handleEpisodeFileSubtitle)
 	mux.HandleFunc("PUT /api/library/episodes/{id}/progress", s.handleSaveEpisodeProgress)
 	mux.HandleFunc("DELETE /api/library/episodes/{id}/progress", s.handleResetEpisodeProgress)
+	mux.HandleFunc("PUT /api/library/episodes/{id}/watched", s.handleSetEpisodeWatched)
+	mux.HandleFunc("DELETE /api/library/episodes/{id}/watched", s.handleResetEpisodeProgress)
+	mux.HandleFunc("GET /api/library/search", s.handleSearch)
+	// Correcting a mismatch. LAN only: it changes what a file *is*, for
+	// everybody, and remoteRouteAllowed refuses these paths.
+	mux.HandleFunc("GET /api/library/movies/{id}/match/candidates", s.handleMovieCandidates)
+	mux.HandleFunc("PUT /api/library/movies/{id}/match", s.handleSetMovieMatch)
+	mux.HandleFunc("DELETE /api/library/movies/{id}/match", s.handleClearMovieMatch)
+	mux.HandleFunc("GET /api/library/series/{id}/match/candidates", s.handleSeriesCandidates)
+	mux.HandleFunc("PUT /api/library/series/{id}/match", s.handleSetSeriesMatch)
+	mux.HandleFunc("DELETE /api/library/series/{id}/match", s.handleClearSeriesMatch)
 	mux.HandleFunc("GET /api/library/stats", s.handleLibraryStats)
 	mux.HandleFunc("POST /api/library/scan", s.handleScan)
 	mux.HandleFunc("GET /api/images/{size}/{name}", s.handleImage)
+	// Seek previews. The sheet is served from one route for every kind of item,
+	// because its key is a digest of the file and does not know or care whether
+	// that file is a film or an episode.
+	mux.HandleFunc("GET /api/previews/{key}", s.handlePreviewSheet)
+	mux.HandleFunc("GET /api/stream/{id}/preview", s.handleMoviePreview)
+	mux.HandleFunc("GET /api/stream/{id}/files/{file_id}/preview", s.handleMovieFilePreview)
+	mux.HandleFunc("GET /api/library/episodes/{id}/files/{file_id}/stream/preview", s.handleEpisodeFilePreview)
 	mux.HandleFunc("GET /api/stream/{id}/info", s.handleStreamInfo)
 	mux.HandleFunc("GET /api/stream/{id}/remux", s.handleStreamRemux)
 	mux.HandleFunc("GET /api/stream/{id}", s.handleStreamDirect)

@@ -2500,6 +2500,27 @@
 		white-space: nowrap;
 	}
 
+	/* One frame of the sheet, windowed by background-position. Sitting above the
+	   timestamp rather than replacing it: the number is the fact, the picture is
+	   the reminder of which scene that number is. */
+	.scrub-frame {
+		display: block;
+		margin: 0 auto 0.4rem;
+		border: 1px solid var(--color-line);
+		border-radius: 0.25rem;
+		background-color: var(--color-ink);
+		background-repeat: no-repeat;
+	}
+
+	/* Loaded only so the browser can report naturalWidth. Never drawn. */
+	.scrub-sheet-probe {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		opacity: 0;
+		pointer-events: none;
+	}
+
 	.player-message {
 		position: relative;
 		z-index: 1;

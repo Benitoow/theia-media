@@ -28,6 +28,7 @@ import (
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
+	"github.com/Benitoow/theia-media/internal/preview"
 	"github.com/Benitoow/theia-media/internal/profiles"
 	"github.com/Benitoow/theia-media/internal/remoteaccess"
 	"github.com/Benitoow/theia-media/internal/tmdb"
@@ -171,6 +172,18 @@ func run() error {
 	// browser-friendly containers is never.
 	transcoder := ffmpeg.New(filepath.Join(dataDir, "bin"), log)
 	watching := activity.New()
+
+	// Keeps the library in step with the disk on its own. It owns the watched
+	// folders from here on: the settings handler hands it the new list, so that
+	// this goroutine and an HTTP request are never reading the same slice.
+	watcher := library.NewWatcher(libraryService, cfg.LibraryPaths, log)
+
+	// The frames shown under a dragged seek bar. Builds nothing until a player
+	// asks, and never when ffmpeg is not already on disk.
+	previews, err := preview.New(filepath.Join(dataDir, "cache", "previews"), transcoder, log)
+	if err != nil {
+		return err
+	}
 	viewers := profiles.New(database)
 	remote := remoteaccess.New(database, dataDir, cfg.Port, log)
 	defer remote.Close()
@@ -250,6 +263,8 @@ func run() error {
 		Activity:  watching,
 		Profiles:  viewers,
 		Remote:    remote,
+		Watcher:   watcher,
+		Previews:  previews,
 		Web:       webFS,
 		Version:   version,
 		KeySource: keySource,
@@ -290,12 +305,10 @@ func run() error {
 	// Scan in the background rather than before serving. A library on a slow
 	// external drive would otherwise hold the interface hostage at exactly the
 	// moment the user is trying to see whether the thing works at all.
-	go func() {
-		if _, err := libraryService.Scan(ctx, cfg.LibraryPaths); err != nil &&
-			!errors.Is(err, context.Canceled) {
-			log.Error("the initial scan failed", "error", err)
-		}
-	}()
+	//
+	// The watcher performs that first scan and then keeps going, so that a film
+	// dropped into a folder appears on its own. Nothing here waits for it.
+	go watcher.Run(ctx)
 
 	// Checks only, never installs. Applying is an explicit action, because a
 	// media server that restarts itself unannounced is one nobody trusts.

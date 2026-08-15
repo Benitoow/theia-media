@@ -12,6 +12,8 @@
 	import { strings as t, formatDecimal } from '$lib/strings.js';
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
 	import EpisodeRow from '$lib/components/EpisodeRow.svelte';
+	import MatchDialog from '$lib/components/MatchDialog.svelte';
+	import { remote } from '$lib/remote.svelte.js';
 
 	/** @type {'loading' | 'ready' | 'missing'} */
 	let state = $state('loading');
@@ -41,6 +43,19 @@
 			state = 'missing';
 		}
 	});
+
+	// Correcting a series is worth more than correcting a film: every season and
+	// every episode title came from whichever show it was matched to, so getting
+	// the show wrong gets the whole page wrong. The server re-reads the cascade.
+	let correcting = $state(false);
+
+	async function onMatchApplied(updated) {
+		correcting = false;
+		if (updated) series = updated;
+		const seasons = series?.seasons ?? [];
+		const current = seasons.find((s) => s.season_number === seasonNumber) ?? seasons[0];
+		if (current) await selectSeason(current.season_number);
+	}
 
 	async function selectSeason(number) {
 		if (number === seasonNumber) return;
@@ -127,7 +142,17 @@
 						</p>
 					{/if}
 
-					<p class="tv-copy mb-10 max-w-[46rem]">{meta.overview || t.series.noOverview}</p>
+					<p class="tv-copy mb-8 max-w-[46rem]">{meta.overview || t.series.noOverview}</p>
+
+					{#if !remote.isRemote}
+						<button
+							type="button"
+							onclick={() => (correcting = true)}
+							class="tv-action mb-10 cursor-pointer"
+						>
+							<span>{t.match.wrongSeries}</span>
+						</button>
+					{/if}
 				</div>
 			</div>
 
@@ -177,4 +202,14 @@
 			<a href="/series" class="tv-link label mt-10">← {t.nav.back}</a>
 		</div>
 	</article>
+
+	{#if correcting}
+		<MatchDialog
+			kind="series"
+			id={series.id}
+			title={displayTitle(series)}
+			onapplied={onMatchApplied}
+			onclose={() => (correcting = false)}
+		/>
+	{/if}
 {/if}

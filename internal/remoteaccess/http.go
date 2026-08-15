@@ -165,9 +165,19 @@ func remoteRouteAllowed(method, path string) bool {
 			return true
 		case strings.HasPrefix(path, "/api/profiles/") && strings.HasSuffix(path, "/avatar"):
 			return true
+		// Choosing what a file is remains administration, so the list of
+		// possible matches is not readable from outside either -- it would
+		// otherwise let a remote device spend the household's TMDB quota.
+		case strings.HasSuffix(path, "/match/candidates"):
+			return false
 		case strings.HasPrefix(path, "/api/library/"):
 			return true
 		case strings.HasPrefix(path, "/api/images/"):
+			return true
+		// Seek previews are part of watching, like artwork. Asking for one can
+		// start a build, which is CPU this household is choosing to spend on a
+		// film one of its own devices is playing.
+		case strings.HasPrefix(path, "/api/previews/"):
 			return true
 		case strings.HasPrefix(path, "/api/stream/"):
 			return true
@@ -178,9 +188,13 @@ func remoteRouteAllowed(method, path string) bool {
 
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 	if (method == http.MethodPut || method == http.MethodDelete) && len(parts) == 5 {
+		// Saying where you got to, and saying you have seen it, are both the
+		// viewer describing their own viewing. Neither is administration, so
+		// both travel; decision 44 draws the line at managing the household and
+		// the server, and it stays where it is.
 		return parts[0] == "api" && parts[1] == "library" &&
 			(parts[2] == "movies" || parts[2] == "episodes") &&
-			parts[3] != "" && parts[4] == "progress"
+			parts[3] != "" && (parts[4] == "progress" || parts[4] == "watched")
 	}
 	if method == http.MethodPost && len(parts) == 7 {
 		return parts[0] == "api" && parts[1] == "library" &&

@@ -113,3 +113,32 @@ func (s *Store) SaveEpisodeDuration(ctx context.Context, id int64, seconds float
 	}
 	return nil
 }
+
+// SetEpisodeWatched marks one episode watched. See Store.SetWatched for why
+// this is a statement rather than a position at the end of the file.
+func (s *Store) SetEpisodeWatched(ctx context.Context, profileID, id int64, now time.Time) (Progress, error) {
+	var duration sql.NullFloat64
+	err := s.db.QueryRowContext(ctx,
+		`SELECT duration_seconds FROM episode_items WHERE id = ?`, id).Scan(&duration)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Progress{}, ErrNoSuchEpisodeItem
+	}
+	if err != nil {
+		return Progress{}, fmt.Errorf("marking episode %d watched: %w", id, err)
+	}
+
+	watchedAt := now.Unix()
+	if _, err := s.db.ExecContext(ctx, `
+		INSERT INTO episode_progress (profile_id, episode_item_id, position_seconds, watched_at, finished)
+		VALUES (?, ?, 0, ?, 1)
+		ON CONFLICT(profile_id, episode_item_id) DO UPDATE SET
+			position_seconds = 0,
+			watched_at       = excluded.watched_at,
+			finished         = 1`,
+		profileID, id, watchedAt); err != nil {
+		return Progress{}, fmt.Errorf("marking episode %d watched: %w", id, err)
+	}
+
+	at := time.Unix(watchedAt, 0).UTC()
+	return Progress{Finished: true, WatchedAt: &at, DurationSeconds: duration.Float64}, nil
+}

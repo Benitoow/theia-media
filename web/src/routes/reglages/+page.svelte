@@ -4,7 +4,7 @@
 	import { getJSON } from '$lib/api.js';
 	import { i18n } from '$lib/i18n/index.svelte.js';
 	import { codecPlayback } from '$lib/codec-playback.svelte.js';
-	import { strings as t, formatUptime } from '$lib/strings.js';
+	import { strings as t, formatUptime, formatSize } from '$lib/strings.js';
 	import ConnectPanel from '$lib/components/ConnectPanel.svelte';
 
 	let health = $state(null);
@@ -13,6 +13,7 @@
 	let connect = $state(null);
 	let update = $state(null);
 	let updateBusy = $state(false);
+	let diagnostics = $state(null);
 
 	let editing = $state(false);
 	let saving = $state(false);
@@ -116,12 +117,13 @@
 
 	async function refresh() {
 		try {
-			[health, stats, settings, connect, update] = await Promise.all([
+			[health, stats, settings, connect, update, diagnostics] = await Promise.all([
 				getJSON('/api/health'),
 				getJSON('/api/library/stats'),
 				getJSON('/api/settings'),
 				getJSON('/api/onboarding'),
-				getJSON('/api/update')
+				getJSON('/api/update'),
+				getJSON('/api/diagnostics')
 			]);
 		} catch {
 			// The layout already shows a dead page well enough; a settings screen
@@ -390,6 +392,107 @@
 			{/if}
 		</section>
 
+		{#if diagnostics}
+			<!-- What this machine measured about itself.
+			     Decisions 58, 59 and 60 probe the encoders, the decoder and the
+			     cost of the software fallback, and then used all of it silently.
+			     The project's own rule is to report what was verified rather than
+			     what was assumed, which is easier to keep to when it is on a page. -->
+			<section class="mb-14 border-b border-line pb-14">
+				<h2 class="label mb-5">{t.diagnostics.heading}</h2>
+				<p class="tv-copy mb-6 max-w-prose">{t.diagnostics.intro}</p>
+
+				<dl class="diagnostics-grid">
+					<div>
+						<dt class="label">{t.diagnostics.watching}</dt>
+						<dd class="text-small text-parchment">
+							{#if diagnostics.library.watch_interval_seconds > 0}
+								{t.diagnostics.watchInterval(diagnostics.library.watch_interval_seconds)}
+							{:else}
+								{t.diagnostics.watchOff}
+							{/if}
+							{#if diagnostics.library.scanning}
+								<span class="mt-1 block text-muted">{t.diagnostics.scanningNow}</span>
+							{/if}
+						</dd>
+					</div>
+
+					<div>
+						<dt class="label">{t.diagnostics.counts}</dt>
+						<dd class="text-small text-parchment">
+							{t.diagnostics.films} {diagnostics.library.films} ·
+							{t.diagnostics.series} {diagnostics.library.series} ·
+							{t.diagnostics.episodes} {diagnostics.library.episodes}
+						</dd>
+					</div>
+
+					<div>
+						<dt class="label">{t.diagnostics.ffmpeg}</dt>
+						<dd class="text-small text-parchment">
+							{#if !diagnostics.ffmpeg.supported}
+								{t.diagnostics.ffmpegUnsupported}
+							{:else if diagnostics.ffmpeg.present}
+								{t.diagnostics.ffmpegPresent}
+							{:else}
+								{t.diagnostics.ffmpegAbsent}
+							{/if}
+						</dd>
+					</div>
+
+					<div>
+						<dt class="label">{t.diagnostics.encoders}</dt>
+						<dd class="text-small text-parchment">
+							{#if !diagnostics.ffmpeg.probed}
+								{t.diagnostics.encodersUnprobed}
+							{:else if diagnostics.ffmpeg.encoders.length === 0}
+								{t.diagnostics.encodersNone}
+							{:else}
+								<ul class="diagnostics-list">
+									{#each diagnostics.ffmpeg.encoders as encoder (encoder.name)}
+										<li>
+											<code>{encoder.name}</code>
+											<span class="text-muted">
+												· {encoder.kind === 'hardware'
+													? t.diagnostics.hardware
+													: t.diagnostics.software}
+											</span>
+										</li>
+									{/each}
+								</ul>
+							{/if}
+						</dd>
+					</div>
+
+					{#if diagnostics.ffmpeg.probed}
+						<div>
+							<dt class="label">{t.diagnostics.decoder}</dt>
+							<dd class="text-small text-parchment">
+								{#if diagnostics.ffmpeg.hardware_decoder}
+									<code>{diagnostics.ffmpeg.hardware_decoder}</code>
+								{:else}
+									{t.diagnostics.decoderNone}
+								{/if}
+							</dd>
+						</div>
+					{/if}
+
+					<div>
+						<dt class="label">{t.diagnostics.images}</dt>
+						<dd class="text-small text-parchment">
+							{#if diagnostics.images.files > 0}
+								{t.diagnostics.imagesUsage(
+									diagnostics.images.files,
+									formatSize(diagnostics.images.bytes)
+								)}
+							{:else}
+								{t.diagnostics.imagesEmpty}
+							{/if}
+						</dd>
+					</div>
+				</dl>
+			</section>
+		{/if}
+
 		<section>
 			<h2 class="label mb-5">{t.settings.metadata}</h2>
 			{#if settings.tmdb.configured}
@@ -485,3 +588,29 @@
 		<p class="micro mt-16 border-t border-line pt-6">{t.settings.milestone}</p>
 	{/if}
 </main>
+
+<style>
+	/* Two columns where there is room, one where there is not. Definition list
+	   rather than a table: these are labelled facts, not rows to compare. */
+	.diagnostics-grid {
+		display: grid;
+		gap: 1.5rem 2.5rem;
+		grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+		margin: 0;
+	}
+
+	.diagnostics-grid dd {
+		margin: 0.5rem 0 0;
+		line-height: 1.55;
+	}
+
+	.diagnostics-list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.diagnostics-list li + li {
+		margin-top: 0.25rem;
+	}
+</style>

@@ -239,3 +239,108 @@ func onlyMovie(t *testing.T, s *Service) Movie {
 // defaultProfileID is the profile migration 0009 creates. Tests that do not
 // care which viewer they are speak for that one.
 const defaultProfileID int64 = 1
+
+func TestMarkingWatchedClearsTheContinueWatchingRow(t *testing.T) {
+	// The case this exists for: a film abandoned twenty minutes in. Nothing
+	// will ever finish it, so without a way to say so it sits in the row for
+	// good.
+	service, root := newTestService(t)
+	writeFile(t, root, "Stalker (1979).mkv")
+	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
+		t.Fatal(err)
+	}
+	id := onlyMovie(t, service).ID
+
+	if _, err := service.SaveProgress(t.Context(), defaultProfileID, id, 1200, 9660); err != nil {
+		t.Fatal(err)
+	}
+	if rows, _ := service.store.ContinueWatching(t.Context(), defaultProfileID, 10); len(rows) != 1 {
+		t.Fatalf("continue watching holds %d films, want 1 before it is marked", len(rows))
+	}
+
+	got, err := service.SetWatched(t.Context(), defaultProfileID, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Finished {
+		t.Error("finished = false, want true")
+	}
+	if got.WatchedAt == nil {
+		t.Error("watched_at is absent, want a date")
+	}
+	// Cleared rather than wound to the end: a film already seen starts at the
+	// beginning when it goes on again.
+	if got.PositionSeconds != 0 {
+		t.Errorf("position = %v, want 0", got.PositionSeconds)
+	}
+
+	rows, err := service.store.ContinueWatching(t.Context(), defaultProfileID, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Errorf("continue watching holds %d films after marking, want none", len(rows))
+	}
+}
+
+func TestMarkingUnwatchedIsForgettingThePosition(t *testing.T) {
+	service, root := newTestService(t)
+	writeFile(t, root, "Solaris (1972).mkv")
+	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
+		t.Fatal(err)
+	}
+	id := onlyMovie(t, service).ID
+
+	if _, err := service.SetWatched(t.Context(), defaultProfileID, id); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.ResetProgress(t.Context(), defaultProfileID, id); err != nil {
+		t.Fatal(err)
+	}
+
+	film, err := service.Get(t.Context(), defaultProfileID, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if film.Progress.Finished {
+		t.Error("finished = true after being marked unwatched, want false")
+	}
+	if film.Progress.WatchedAt != nil {
+		t.Error("watched_at survived being marked unwatched")
+	}
+}
+
+func TestMarkingWatchedIsNotUndoneUntilPlaybackResumes(t *testing.T) {
+	// finishedRule is recomputed from the position on every report, so storing
+	// "watched" as a position at the end would be erased by the first second of
+	// playback. It is stored as a statement instead, and only playing the film
+	// again takes it back.
+	service, root := newTestService(t)
+	writeFile(t, root, "Alien (1979).mkv")
+	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
+		t.Fatal(err)
+	}
+	id := onlyMovie(t, service).ID
+
+	if _, err := service.SetWatched(t.Context(), defaultProfileID, id); err != nil {
+		t.Fatal(err)
+	}
+	film, err := service.Get(t.Context(), defaultProfileID, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !film.Progress.Finished {
+		t.Fatal("the film did not stay marked watched")
+	}
+
+	if _, err := service.SaveProgress(t.Context(), defaultProfileID, id, 600, 6900); err != nil {
+		t.Fatal(err)
+	}
+	film, err = service.Get(t.Context(), defaultProfileID, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if film.Progress.Finished {
+		t.Error("watching it again left it marked watched, want it back in the row")
+	}
+}

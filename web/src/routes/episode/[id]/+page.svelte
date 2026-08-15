@@ -72,6 +72,32 @@
 		fileId = nextFile ?? fileId;
 	}
 
+	const watched = $derived(!!episode?.progress?.finished);
+	let watchedBusy = $state(false);
+	let watchedFailed = $state(false);
+
+	// The common case for a series: watched up to episode six somewhere else,
+	// and nothing on this server knows it. Same contract as the film page.
+	async function toggleWatched() {
+		if (!episode) return;
+		watchedBusy = true;
+		watchedFailed = false;
+		try {
+			const path = profiles.url(`/api/library/episodes/${episode.id}/watched`);
+			if (watched) {
+				const res = await fetch(path, { method: 'DELETE' });
+				if (!res.ok) throw new Error(String(res.status));
+				episode = { ...episode, progress: { position_seconds: 0, finished: false } };
+			} else {
+				syncProgress(await getJSON(path, { method: 'PUT' }));
+			}
+		} catch {
+			watchedFailed = true;
+		} finally {
+			watchedBusy = false;
+		}
+	}
+
 	function onFileMeasured(measured) {
 		if (!episode || !measured?.id) return;
 		episode = {
@@ -118,15 +144,32 @@
 					</p>
 				{/if}
 
-				<button
-					type="button"
-					onclick={() => (playing = true)}
-					class="tv-action tv-action--primary mt-2 mb-8 cursor-pointer"
-					data-remote-default
-				>
-					<Icon name="play" size={18} />
-					<span>{resumable ? t.series.resumeAtMinutes(resumeMinutes) : t.series.play}</span>
-				</button>
+				<div class="episode-actions mt-2 mb-8">
+					<button
+						type="button"
+						onclick={() => (playing = true)}
+						class="tv-action tv-action--primary cursor-pointer"
+						data-remote-default
+					>
+						<Icon name="play" size={18} />
+						<span>{resumable ? t.series.resumeAtMinutes(resumeMinutes) : t.series.play}</span>
+					</button>
+
+					<button
+						type="button"
+						onclick={toggleWatched}
+						disabled={watchedBusy}
+						class="tv-action cursor-pointer"
+						aria-pressed={watched}
+					>
+						<Icon name={watched ? 'check' : 'plus'} size={16} />
+						<span>{watchedBusy ? t.watched.marking : watched ? t.watched.unmark : t.watched.mark}</span>
+					</button>
+				</div>
+
+				{#if watchedFailed}
+					<p class="mb-6 text-small text-error" role="alert">{t.watched.failed}</p>
+				{/if}
 			</div>
 		</div>
 
@@ -183,3 +226,12 @@
 		/>
 	{/if}
 {/if}
+
+<style>
+	.episode-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem;
+	}
+</style>

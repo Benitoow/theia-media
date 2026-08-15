@@ -24,9 +24,6 @@ type tmdbSettings struct {
 	// not involve reading source code. The key itself is never sent.
 	Source config.KeySource `json:"source"`
 
-	// Shown verbatim when no key is configured. Explaining what to do beats a
-	// library that silently has no posters.
-	Advice      string `json:"advice,omitempty"`
 	Attribution string `json:"attribution"`
 }
 
@@ -39,10 +36,6 @@ type settingsResponse struct {
 	TMDB         tmdbSettings `json:"tmdb"`
 }
 
-const noKeyAdvice = "Aucune clé TMDB n'est configurée : les films sont listés " +
-	"d'après leur nom de fichier, sans affiche ni synopsis. Ajoutez une clé " +
-	"dans le champ tmdb_api_key de config.json pour activer les métadonnées."
-
 // handleSettings reports the running configuration. It never includes the API
 // key, only whether there is one and where it came from.
 func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
@@ -51,10 +44,6 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		Source:      s.keySource,
 		Attribution: TMDBAttribution,
 	}
-	if !tmdbInfo.Configured {
-		tmdbInfo.Advice = noKeyAdvice
-	}
-
 	writeJSON(w, http.StatusOK, settingsResponse{
 		Version:      s.version,
 		Port:         s.cfg.Port,
@@ -105,4 +94,17 @@ func (s *Server) handleImage(w http.ResponseWriter, r *http.Request) {
 	// it can be cached in the browser indefinitely.
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	http.ServeContent(w, r, filepath.Base(local), info.ModTime(), file)
+}
+
+// libraryRoots is the list of watched folders to act on right now.
+//
+// The watcher owns that list while it is running, because it reads it from a
+// goroutine while the settings handler writes it from an HTTP request. Falling
+// back to the configuration keeps the server usable without one, which is how
+// most of the tests build it.
+func (s *Server) libraryRoots() []string {
+	if s.watcher != nil {
+		return s.watcher.Roots()
+	}
+	return s.cfg.LibraryPaths
 }

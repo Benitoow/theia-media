@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Benitoow/theia-media/internal/library"
 )
@@ -93,7 +94,7 @@ func (s *Server) handleLibraryStats(w http.ResponseWriter, r *http.Request) {
 // library of a few thousand files takes seconds, and a progress stream is worth
 // building once there is a real interface to show it in.
 func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
-	report, err := s.lib.Scan(r.Context(), s.cfg.LibraryPaths)
+	report, err := s.lib.Scan(r.Context(), s.libraryRoots())
 	switch {
 	case errors.Is(err, library.ErrScanInProgress):
 		writeJSONError(w, http.StatusConflict, "a scan is already running")
@@ -169,4 +170,43 @@ func intQuery(r *http.Request, name string, fallback int) int {
 		return fallback
 	}
 	return n
+}
+
+// handleSearch answers one query across films and series.
+//
+// This exists because the catalogue was searchable in two places and neither
+// knew about the other: you had to decide whether the thing you half-remembered
+// was a film or a series before you were allowed to look for it.
+//
+// Searching on the server rather than filtering a downloaded catalogue is also
+// what makes this usable from outside the house. A phone on the WireGuard
+// listener asks a question and gets twenty rows back, instead of pulling the
+// whole library down to grep it locally.
+func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return
+	}
+
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	// A ceiling on the query itself, not on the work: nothing sensible is this
+	// long, and the folding walks every rune it is given.
+	if len(query) > 200 {
+		query = query[:200]
+	}
+
+	results, err := s.lib.Search(r.Context(), profileID, query)
+	if err != nil {
+		s.log.Error("the search failed", "error", err)
+		writeJSONError(w, http.StatusInternalServerError, "the library could not be searched")
+		return
+	}
+	// Never null: the interface iterates these without checking.
+	if results.Movies == nil {
+		results.Movies = []library.Movie{}
+	}
+	if results.Series == nil {
+		results.Series = []library.Series{}
+	}
+	writeJSON(w, http.StatusOK, results)
 }

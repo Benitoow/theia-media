@@ -80,6 +80,31 @@ func NewService(store *Store, client *tmdb.Client, log *slog.Logger) *Service {
 // HasMetadataSource reports whether a TMDB key was configured.
 func (s *Service) HasMetadataSource() bool { return s.tmdb != nil }
 
+// HasOutstandingMetadata reports whether any film or series is still waiting on
+// a TMDB lookup that is due now.
+//
+// This exists for the watcher. Metadata work is not created by files changing:
+// a library larger than one batch spreads over several passes by design, and an
+// outage or a rejected key leaves rows to retry. Judging by the disk alone, a
+// library that had settled would keep its gaps forever, because nothing on disk
+// is ever going to change again to prompt another look.
+//
+// A failed lookup answers false until its retry falls due, so this cannot spin:
+// the same queries that choose what to fetch decide what counts as outstanding.
+func (s *Service) HasOutstandingMetadata(ctx context.Context) bool {
+	if s.tmdb == nil {
+		return false
+	}
+	now := time.Now()
+	if films, err := s.store.StaleMetadata(ctx, now, 1); err == nil && len(films) > 0 {
+		return true
+	}
+	if series, err := s.store.StaleSeriesMetadata(ctx, now, 1); err == nil && len(series) > 0 {
+		return true
+	}
+	return false
+}
+
 // LastScan returns the most recent report, or nil if nothing has run yet.
 func (s *Service) LastScan() *ScanReport {
 	s.mu.Lock()
@@ -131,6 +156,11 @@ func (s *Service) GetSeason(ctx context.Context, profileID, seriesID int64, numb
 
 func (s *Service) GetEpisodeItem(ctx context.Context, profileID, id int64) (EpisodeItem, error) {
 	return s.store.GetEpisodeItem(ctx, profileID, id)
+}
+
+// Search looks for a title across both catalogues at once.
+func (s *Service) Search(ctx context.Context, profileID int64, query string) (Results, error) {
+	return s.store.Search(ctx, profileID, query)
 }
 
 func (s *Service) SeriesHome(ctx context.Context, profileID int64, limit int) (*SeriesHome, error) {
@@ -192,6 +222,16 @@ func (s *Service) SaveProgress(ctx context.Context, profileID, id int64, positio
 // ResetProgress forgets a viewing position.
 func (s *Service) ResetProgress(ctx context.Context, profileID, id int64) error {
 	return s.store.ResetProgress(ctx, profileID, id)
+}
+
+// SetWatched marks a film watched without playing it.
+func (s *Service) SetWatched(ctx context.Context, profileID, id int64) (Progress, error) {
+	return s.store.SetWatched(ctx, profileID, id, time.Now())
+}
+
+// SetEpisodeWatched marks one episode watched without playing it.
+func (s *Service) SetEpisodeWatched(ctx context.Context, profileID, id int64) (Progress, error) {
+	return s.store.SetEpisodeWatched(ctx, profileID, id, time.Now())
 }
 
 // SaveDuration records a duration learned from probing a file.

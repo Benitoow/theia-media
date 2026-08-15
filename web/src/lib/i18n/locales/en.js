@@ -56,6 +56,7 @@ export const strings = {
 	nav: {
 		home: 'Home',
 		library: 'Movies',
+		search: 'Search',
 		settings: 'Settings',
 		back: 'Back'
 	},
@@ -362,7 +363,7 @@ export const strings = {
 		noOverview: 'No overview is available for this movie.',
 		unmatched:
 			'This file could not be identified on TMDB. It remains listed under its filename; ' +
-			'renaming the file will trigger another search during the next scan.'
+			'“This is not the right film” looks for the right record.'
 	},
 
 	remote: {
@@ -524,7 +525,8 @@ export const strings = {
 		next: 'Next episode',
 		lastOwned: 'Last episode owned',
 		unmatched:
-			'This series was not identified on TMDB. It remains listed under its folder name.',
+			'This series was not identified on TMDB. It remains listed under its folder name; ' +
+			'“This is not the right series” looks for the right record.',
 		noOverview: 'No overview is available.',
 		play: 'Play episode',
 		resumeAtMinutes: (minutes) => `Resume at ${minutes} min`
@@ -646,6 +648,93 @@ export const strings = {
 			'Optional. Leave this blank to use the key provided with Theia. A key entered here takes priority.',
 		keyPlaceholder: 'Leave blank to use the built-in key',
 		milestone: 'Theia v1'
+	},
+
+	search: {
+		title: 'Search',
+		label: 'Search the library',
+		placeholder: 'A title, a year, a director…',
+		prompt: 'One search, across films and series at once.',
+		searching: 'Searching…',
+		films: 'Films',
+		series: 'Series',
+		empty: (query) => `Nothing matches “${query}”.`,
+		truncated: 'Only the first results are shown. Narrow the search.',
+		failed: 'The search did not complete.',
+		results: (n) => (n === 1 ? '1 result' : `${n} results`)
+	},
+
+	watched: {
+		mark: 'Mark as watched',
+		unmark: 'Mark as unwatched',
+		marking: 'Saving…',
+		badge: 'Watched',
+		hint:
+			'A film left half-finished leaves the “Continue” row; a film watched elsewhere can be ' +
+			'recorded here without playing it again.',
+		failed: 'That could not be saved.'
+	},
+
+	match: {
+		wrongFilm: 'This is not the right film',
+		wrongSeries: 'This is not the right series',
+		heading: 'Choose the right record',
+		intro:
+			'Theia identifies a file by searching TMDB for its title. When it gets that wrong, ' +
+			'here is what it passed over.',
+		searchLabel: 'Search for another title',
+		searchPlaceholder: 'Title to search on TMDB',
+		search: 'Search',
+		searching: 'Searching…',
+		choose: 'Choose this one',
+		applying: 'Applying…',
+		none: 'No record matches that search.',
+		noOverview: 'No synopsis.',
+		pinnedHint:
+			'A record chosen here is not replaced again: Theia keeps refreshing it, but by its ' +
+			'identifier rather than by searching the title afresh.',
+		revert: 'Go back to choosing automatically',
+		reverted: 'Theia will look it up on its own again.',
+		close: 'Close',
+		errors: {
+			metadata_source_missing: 'No TMDB key is configured, so there is nothing to choose from.',
+			metadata_key_rejected: 'TMDB refused the configured key.',
+			metadata_not_found: 'TMDB returned nothing for that search.',
+			metadata_unavailable: 'TMDB did not answer.',
+			no_such_item: 'That item is no longer in the library.',
+			unknown: 'The record could not be changed.'
+		}
+	},
+
+	diagnostics: {
+		heading: 'This machine',
+		intro:
+			'What Theia measured here, rather than assumed. None of it is downloaded in order to ' +
+			'answer the question.',
+		ffmpeg: 'ffmpeg',
+		ffmpegUnsupported: 'No build is published for this system.',
+		ffmpegAbsent: 'Not downloaded yet. It arrives with the first file that needs it.',
+		ffmpegPresent: 'Downloaded and verified.',
+		encoders: 'Available encoders',
+		encodersUnprobed: 'Not measured until ffmpeg is here.',
+		encodersNone: 'No encoder answered: re-encoding is unavailable.',
+		hardware: 'graphics card',
+		software: 'processor',
+		decoder: 'Hardware decoding',
+		decoderNone: 'None',
+		images: 'Cached artwork',
+		imagesEmpty: 'Nothing cached yet.',
+		imagesUsage: (count, size) => (count === 1 ? `1 image, ${size}` : `${count} images, ${size}`),
+		watching: 'Watching',
+		watchInterval: (seconds) =>
+			`The folders are re-read every ${seconds} seconds. A film dropped into one appears ` +
+			`without anybody asking.`,
+		watchOff: 'Not watching: the folders are only read on request.',
+		scanningNow: 'A scan is running.',
+		counts: 'Contents',
+		films: 'Films',
+		series: 'Series',
+		episodes: 'Episodes'
 	},
 
 	errors: {

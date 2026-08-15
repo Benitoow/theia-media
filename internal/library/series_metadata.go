@@ -258,71 +258,91 @@ func (s *Service) enrichSeries(ctx context.Context, report *ScanReport) {
 		if ctx.Err() != nil {
 			return
 		}
-		var series *tmdb.TVSeries
-		if candidate.TMDBID > 0 {
-			series, err = s.tmdb.TVDetails(ctx, candidate.TMDBID)
-		} else {
-			series, err = s.tmdb.LookupTV(ctx, candidate.Title, candidate.Year)
-		}
-		switch {
-		case err == nil:
-			if err := s.store.SaveSeriesMetadata(ctx, candidate.ID, series, time.Now()); err != nil {
-				s.log.Warn("could not save series metadata", "title", candidate.Title, "error", err)
-				report.Problems = append(report.Problems,
-					scanner.Problem{Kind: scanner.KindSaveFailed})
-				continue
-			}
-			report.Enriched++
-
-		case errors.Is(err, tmdb.ErrNotFound):
-			_ = s.store.MarkSeriesMetadataOutcome(ctx, candidate.ID, statusNotFound, time.Now())
-			report.NotFound++
-			continue
-
-		case errors.Is(err, tmdb.ErrUnauthorized):
-			s.log.Error("TMDB rejected the API key, stopping series metadata lookups")
-			report.Problems = append(report.Problems,
-				scanner.Problem{Kind: scanner.KindMetadataKeyRejected})
+		if stop := s.refreshSeries(ctx, candidate, report); stop {
 			return
-
-		case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
-			return
-
-		default:
-			s.log.Warn("series metadata lookup failed", "title", candidate.Title, "error", err)
-			_ = s.store.MarkSeriesMetadataOutcome(ctx, candidate.ID, statusError, time.Now())
-			report.MetadataErrors++
-			continue
-		}
-
-		seasonNumbers, err := s.store.LocalSeasonNumbers(ctx, candidate.ID)
-		if err != nil {
-			s.log.Warn("could not read local seasons", "series_id", candidate.ID, "error", err)
-			report.MetadataErrors++
-			continue
-		}
-		for _, number := range seasonNumbers {
-			season, err := s.tmdb.TVSeasonDetails(ctx, series.TMDBID, number)
-			switch {
-			case err == nil:
-				if err := s.store.SaveSeasonMetadata(ctx, candidate.ID, season, time.Now()); err != nil {
-					s.log.Warn("could not save season metadata", "series_id", candidate.ID,
-						"season", number, "error", err)
-					report.MetadataErrors++
-				}
-			case errors.Is(err, tmdb.ErrNotFound):
-				_ = s.store.MarkSeasonMetadataOutcome(ctx, candidate.ID, number, statusNotFound, time.Now())
-				report.NotFound++
-			case errors.Is(err, tmdb.ErrUnauthorized):
-				report.Problems = append(report.Problems,
-					scanner.Problem{Kind: scanner.KindMetadataKeyRejected})
-				return
-			case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
-				return
-			default:
-				_ = s.store.MarkSeasonMetadataOutcome(ctx, candidate.ID, number, statusError, time.Now())
-				report.MetadataErrors++
-			}
 		}
 	}
+}
+
+// refreshSeries brings one series, its seasons and its episodes up to date.
+//
+// Split out of enrichSeries so that correcting a match can reuse it: a series
+// pinned to a different show has to re-read every season and every episode
+// title, and a second implementation of that cascade would be a second place
+// for it to drift.
+//
+// It reports whether the whole pass should stop. A rejected API key and a
+// cancelled context are the two things that will fail identically for every
+// remaining series, so they end the pass instead of being retried per row.
+func (s *Service) refreshSeries(ctx context.Context, candidate staleSeriesCandidate, report *ScanReport) (stop bool) {
+	var (
+		series *tmdb.TVSeries
+		err    error
+	)
+	if candidate.TMDBID > 0 {
+		series, err = s.tmdb.TVDetails(ctx, candidate.TMDBID)
+	} else {
+		series, err = s.tmdb.LookupTV(ctx, candidate.Title, candidate.Year)
+	}
+	switch {
+	case err == nil:
+		if err := s.store.SaveSeriesMetadata(ctx, candidate.ID, series, time.Now()); err != nil {
+			s.log.Warn("could not save series metadata", "title", candidate.Title, "error", err)
+			report.Problems = append(report.Problems,
+				scanner.Problem{Kind: scanner.KindSaveFailed})
+			return false
+		}
+		report.Enriched++
+
+	case errors.Is(err, tmdb.ErrNotFound):
+		_ = s.store.MarkSeriesMetadataOutcome(ctx, candidate.ID, statusNotFound, time.Now())
+		report.NotFound++
+		return false
+
+	case errors.Is(err, tmdb.ErrUnauthorized):
+		s.log.Error("TMDB rejected the API key, stopping series metadata lookups")
+		report.Problems = append(report.Problems,
+			scanner.Problem{Kind: scanner.KindMetadataKeyRejected})
+		return true
+
+	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+		return true
+
+	default:
+		s.log.Warn("series metadata lookup failed", "title", candidate.Title, "error", err)
+		_ = s.store.MarkSeriesMetadataOutcome(ctx, candidate.ID, statusError, time.Now())
+		report.MetadataErrors++
+		return false
+	}
+
+	seasonNumbers, err := s.store.LocalSeasonNumbers(ctx, candidate.ID)
+	if err != nil {
+		s.log.Warn("could not read local seasons", "series_id", candidate.ID, "error", err)
+		report.MetadataErrors++
+		return false
+	}
+	for _, number := range seasonNumbers {
+		season, err := s.tmdb.TVSeasonDetails(ctx, series.TMDBID, number)
+		switch {
+		case err == nil:
+			if err := s.store.SaveSeasonMetadata(ctx, candidate.ID, season, time.Now()); err != nil {
+				s.log.Warn("could not save season metadata", "series_id", candidate.ID,
+					"season", number, "error", err)
+				report.MetadataErrors++
+			}
+		case errors.Is(err, tmdb.ErrNotFound):
+			_ = s.store.MarkSeasonMetadataOutcome(ctx, candidate.ID, number, statusNotFound, time.Now())
+			report.NotFound++
+		case errors.Is(err, tmdb.ErrUnauthorized):
+			report.Problems = append(report.Problems,
+				scanner.Problem{Kind: scanner.KindMetadataKeyRejected})
+			return true
+		case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+			return true
+		default:
+			_ = s.store.MarkSeasonMetadataOutcome(ctx, candidate.ID, number, statusError, time.Now())
+			report.MetadataErrors++
+		}
+	}
+	return false
 }
