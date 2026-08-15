@@ -41,3 +41,23 @@ site/dist/
 # OS noise
 .DS_Store
 Thumbs.db
+
+# Work from other projects that ended up in this checkout.
+#
+# An Android debloat script and a set of Xiaomi wallpaper APKs, around 750 MB of
+# them, were sitting untracked in the working tree. Nothing here belongs to
+# Theia and none of it is licence-checked, which matters because this repository
+# is public and GPL-3.0: one `git add -A` was the whole distance between a
+# stray APK and a published one.
+#
+# They are ignored rather than deleted -- they are somebody's work, and moving
+# them somewhere sensible is a decision for whoever made them.
+/.superwallpaper-tools/
+/superwallpapers/
+/debloat-log.txt
+/wallpapers-log.txt
+/packages-*.txt
+/restore.sh
+
+# Throwaway parser spike from M3. Empty, and kept out so it stays that way.
+/spike-m3-parser/
