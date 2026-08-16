@@ -47,10 +47,12 @@ func compressible(contentType string) bool {
 		"text/vtt",
 		"image/svg+xml",
 		"application/manifest+json",
-		// TrueType is uncompressed glyph outlines, and compresses about as well
-		// as WOFF2 does internally: the two shipped faces go from 177 KB to
-		// 68 KB on the way out. WOFF2 and WOFF are deliberately absent -- they
-		// carry their own compression, and gzipping them again only costs CPU.
+		// TrueType is uncompressed glyph outlines and gzips to roughly the size
+		// WOFF2 reaches on its own. Nothing shipped is TrueType today -- both
+		// faces are WOFF2 -- but a file dropped into static/ would be, and the
+		// rule belongs with the other text types rather than in a surprise.
+		// WOFF2 and WOFF are deliberately absent: they carry their own
+		// compression, and gzipping them again only costs CPU.
 		"font/ttf",
 		"application/x-font-ttf",
 		"application/font-sfnt":

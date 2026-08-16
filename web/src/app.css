@@ -3,46 +3,54 @@
 /* ---------------------------------------------------------------------------
    Fonts
    ---------------------------------------------------------------------------
-   Two faces are shipped, both supplied by the maintainer, both self-hosted.
+   Both faces are SIL Open Font License 1.1, self-hosted, and declared by hand
+   rather than by importing @fontsource's own stylesheet -- that ships Cyrillic
+   and Latin-Extended alongside Latin, and while a browser would only download
+   the subset it needs, every subset would still be embedded in the Go binary.
+   Latin covers French completely, accents and the OE ligature included.
+
+   CINZEL carries the display register -- heroes, film titles, the wordmark. A
+   Roman inscriptional face after the capitals cut on Trajan's column, which is
+   the right voice for a server named after a Greek Titaness. Lowercase draws
+   as small capitals, so a title keeps its shape without text-transform.
+
+   JOST carries the label register -- .label, .micro, section headings, the
+   navigation and the phone's tab bar. Geometric where Cinzel is inscriptional,
+   which is the contrast that stops the two registers reading as one, and it
+   holds its counters at the small sizes the labels are set in.
+
+   Prose is deliberately neither. Cinzel is small caps and Jost is a display
+   geometric; a synopsis set in either at the three-metre rule is a legibility
+   problem, not a style. --font-ui falls to the platform's own interface face,
+   which ships nothing and is already tuned for reading.
+
    There is no CDN request anywhere in this application.
-
-   AUGUSTUS carries the display register -- heroes, film titles, the wordmark.
-   A classical inscriptional serif, which suits a server named after a Greek
-   Titaness better than a Didone revival did. 394 glyphs; French is complete,
-   accents and all, which is the first thing that was checked because the
-   interface defaults to French.
-
-   DALEK PINPOINT BOLD carries the label register -- the uppercase, wide-tracked
-   strings section 4 calls the signature move, plus navigation and section
-   headings. A small-caps face with Greek and Phoenician overtones; 416 glyphs,
-   full Latin Extended-A, accents drawn rather than dropped.
-
-   Prose is deliberately not either of them. Both are display faces, and a
-   synopsis set in small caps at the three-metre rule is a legibility problem,
-   not a style. --font-ui therefore falls to the platform's own interface face,
-   which is the one thing on any device already tuned for reading and which
-   ships nothing.
-
-   TrueType rather than WOFF2: no converter is available here and none is worth
-   installing for it. The Go server gzips font/ttf on the way out, which brings
-   Augustus to 27 KB and Dalek to 41 KB -- together still less than the 85 KB of
-   WOFF2 they replace.
    --------------------------------------------------------------------------- */
 
 @font-face {
-	font-family: 'Augustus';
+	font-family: 'Cinzel Variable';
 	font-style: normal;
 	font-display: swap;
-	font-weight: 400;
-	src: url('$lib/fonts/augustus.ttf') format('truetype');
+	font-weight: 400 900;
+	src: url('@fontsource-variable/cinzel/files/cinzel-latin-wght-normal.woff2')
+		format('woff2-variations');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
+		U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF,
+		U+FFFD;
 }
 
 @font-face {
-	font-family: 'Dalek Pinpoint';
+	font-family: 'Jost Variable';
 	font-style: normal;
 	font-display: swap;
-	font-weight: 700;
-	src: url('$lib/fonts/dalek-pinpoint-bold.ttf') format('truetype');
+	font-weight: 100 900;
+	src: url('@fontsource-variable/jost/files/jost-latin-wght-normal.woff2')
+		format('woff2-variations');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
+		U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF,
+		U+FFFD;
 }
 
 /* ---------------------------------------------------------------------------
@@ -80,8 +88,8 @@
 	   --font-label is the chrome: the uppercase wide-tracked strings, the
 	   navigation, section headings -- short, deliberate, never prose.
 	   --font-ui is for reading, and is the platform's own, on purpose. */
-	--font-display: 'Augustus', 'Trajan Pro', Georgia, 'Times New Roman', serif;
-	--font-label: 'Dalek Pinpoint', 'Copperplate Gothic', 'Segoe UI', Roboto, sans-serif;
+	--font-display: 'Cinzel Variable', 'Trajan Pro', Georgia, 'Times New Roman', serif;
+	--font-label: 'Jost Variable', 'Futura', 'Century Gothic', 'Segoe UI', Roboto, sans-serif;
 	--font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
 		sans-serif;
 
@@ -422,11 +430,10 @@
 		color: var(--color-bone);
 		font-family: var(--font-label);
 		font-size: clamp(1.125rem, 1.35vw, 1.5rem);
-		/* Dalek is a single bold weight, so the old 600 would have been
-		   synthesised into a smear. The tracking opens a touch because a
-		   small-caps face set tight closes its own counters. */
-		font-weight: 400;
-		letter-spacing: 0.01em;
+		/* Jost is a variable face, so the heading can carry real weight rather
+		   than a synthesised one. */
+		font-weight: 500;
+		letter-spacing: 0.005em;
 		line-height: 1.2;
 	}
 
@@ -3294,6 +3301,76 @@
 	/* §4's viewing-distance layer, applied here because the player is the one
 	   surface actually read from a sofa: tracked labels 11px to 13px, chrome
 	   body 16px to 19px. The base stays the small-screen floor. */
+	/* Subtitle sync, at the foot of the subtitle list.
+	   Three targets in a row on the narrowest panel there is, so they are sized
+	   by section 9's floor rather than by what looks tidy, and the readout in
+	   the middle is itself the reset -- a fourth button would not have fitted
+	   and a separate one would have been pressed by accident. */
+	.track-offset {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem 1rem;
+		margin-block-start: 0.75rem;
+		border-top: 1px solid var(--color-line);
+		padding-block-start: 0.75rem;
+	}
+
+	.track-offset-label {
+		color: var(--color-muted);
+		font-size: var(--text-label);
+		letter-spacing: var(--text-label--letter-spacing);
+		text-transform: uppercase;
+	}
+
+	.track-offset-controls {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	.track-offset-step,
+	.track-offset-value {
+		min-block-size: var(--target-min);
+		border: 1px solid var(--color-line);
+		border-radius: 999px;
+		background: transparent;
+		color: var(--color-bone);
+		cursor: pointer;
+		transition:
+			border-color var(--duration-fast) var(--ease-cine),
+			color var(--duration-fast) var(--ease-cine);
+	}
+
+	.track-offset-step {
+		min-inline-size: var(--target-min);
+		font-size: 1.125rem;
+		line-height: 1;
+	}
+
+	.track-offset-value {
+		min-inline-size: 5.5rem;
+		font-variant-numeric: tabular-nums;
+		font-size: var(--text-small);
+	}
+
+	/* At zero there is nothing to reset, so the readout stops offering. It keeps
+	   its size and its place -- a control that disappears moves the two beside
+	   it, and those are being pressed repeatedly. */
+	.track-offset-value:disabled {
+		color: var(--color-muted);
+		cursor: default;
+	}
+
+	@media (any-hover: hover) and (any-pointer: fine) {
+		.track-offset-step:hover,
+		.track-offset-value:not(:disabled):hover {
+			border-color: var(--color-accent);
+			color: var(--color-accent-bright);
+		}
+	}
+
 	.track-heading {
 		padding: 0.5rem 0.75rem 0.4rem;
 		color: var(--color-muted);

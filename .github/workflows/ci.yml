@@ -22,6 +22,49 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
 
+  interface:
+    name: Interface guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      # The guard drives a real browser against a real binary, because every
+      # fault it exists to catch -- an overflowing layout, a refused font, a
+      # target too small for a thumb -- renders a page that looks correct.
+      - name: Build the binary the guard will drive
+        env:
+          CGO_ENABLED: '0'
+        run: go build -trimpath -o theia ./cmd/theia
+
+      # Chromium only. The other two engines would triple the download for
+      # assertions about geometry that do not differ between them.
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+
+      - run: npm test
+        working-directory: web
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: interface-guard-failures
+          path: web/test-results/
+          retention-days: 7
+
   build:
     name: ${{ matrix.goos }}/${{ matrix.goarch }}
     needs: test

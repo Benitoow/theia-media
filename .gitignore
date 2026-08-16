@@ -61,3 +61,8 @@ Thumbs.db
 
 # Throwaway parser spike from M3. Empty, and kept out so it stays that way.
 /spike-m3-parser/
+
+# Playwright's own output. The guard writes traces and screenshots only when
+# something fails, and those belong to the run that produced them.
+web/test-results/
+web/playwright-report/

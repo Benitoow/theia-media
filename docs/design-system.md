@@ -116,8 +116,8 @@ the brand rather than alarming.
 ### The three registers
 
 ```css
---font-display: "Augustus", "Trajan Pro", Georgia, "Times New Roman", serif;
---font-label:   "Dalek Pinpoint", "Copperplate Gothic", "Segoe UI", Roboto, sans-serif;
+--font-display: "Cinzel Variable", "Trajan Pro", Georgia, "Times New Roman", serif;
+--font-label:   "Jost Variable", Futura, "Century Gothic", "Segoe UI", Roboto, sans-serif;
 --font-ui:      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 ```
 
@@ -136,18 +136,19 @@ face rather than anything shipped. Both shipped faces are display faces; a
 synopsis set in small caps at the three-metre rule is a legibility problem, not
 a style.
 
-**Augustus has no lowercase.** Measured, not assumed: `abcdef` and `ABCDEF` are
-the same width, because the lowercase codepoints draw capital glyphs. That is
-what a Roman inscriptional face is, and it means the display register is
-all-caps whatever the source string says. `text-transform` is therefore
-redundant there, and titles should be written in ordinary sentence case in the
-catalogues — the face does the rest. French accented capitals all draw: É È Ê
-Ï Ô Ù Ç Œ, checked one by one.
+**Cinzel draws lowercase as small capitals.** Measured, not assumed: `abcdef`
+is 150 units against `ABCDEF` at 158, so there is a real case distinction and a
+title keeps its shape without `text-transform`. Write titles in ordinary
+sentence case in the catalogues; the face does the rest.
 
-**Dalek Pinpoint is small caps**, with real lowercase forms that are simply
-smaller capitals, and full Latin Extended-A. Accents are drawn rather than
-dropped, which is the reason it survived selection and two other candidates did
-not.
+**Jost has true lowercase** (116 against 145) and real weights, being a
+variable face, so a section heading can carry weight 500 rather than a
+synthesised one.
+
+Both were checked glyph by glyph for É È Ê Ï Ô Ù Ç Œ œ and for `?` `!` `·` `—`.
+Both are complete. That list is not ceremony: the face this replaced drew its
+question mark as a figure 9, and one of the candidates refused alongside it
+drew accented letters with no accent at all.
 
 The first family in each stack is self-hosted; the remaining system fonts are
 deliberate fallbacks. See §10 for the shipped files.
@@ -670,61 +671,63 @@ rather than here:
 
 ## 10. Fonts, as shipped
 
-**Augustus** for the display register and **Dalek Pinpoint Bold** for the label
-register, both supplied by the maintainer, both self-hosted in
-`web/src/lib/fonts/`. Prose has no shipped face at all — see §4.
+**Cinzel Variable** for the display register and **Jost Variable** for the label
+register. Both SIL Open Font License 1.1, which is GPL-compatible and imposes
+nothing on the rest of the project. Prose has no shipped face at all — see §4.
 
-### What they replaced, and what that cost
+They are self-hosted, not linked. The packages come from npm
+(`@fontsource-variable/*`), but their stylesheets are deliberately not imported:
+those ship Cyrillic and Latin-Extended alongside Latin, and while a browser
+would only download the subset it needs, every subset would still be embedded in
+the binary. `web/src/app.css` declares both `@font-face` rules by hand against
+the Latin files only, which covers both shipped interface languages completely.
 
-Playfair Display Variable and Inter Variable were here until v2.2.0, both SIL
-Open Font License 1.1, which is GPL-compatible and imposes nothing on the rest
-of the project. **The faces that replaced them do not carry that licence.**
-Augustus records only "Converted by ALLTYPE" and no author; Dalek Pinpoint is
-© 2018 Keith Bates / K-Type and points at a licence page rather than stating
-terms. Neither is OFL, and neither states redistribution terms in the file.
+Cost: two WOFF2 files, 52 KB together, hashed into `_app/immutable/` and so
+covered by the immutable cache header the Go server already sets. They are not
+gzipped on the way out — WOFF2 carries its own compression and doing it twice
+only spends CPU. `font/ttf` *is* in the compressible list for anything dropped
+into `static/`, and a test pins the WOFF exclusion.
 
-This repository is public and GPL-3.0, and shipping a font inside a released
-binary is redistribution. **That is the maintainer's call to make and it has
-been made**, but it is written down here rather than left to be discovered,
-because §10 previously advertised the opposite and the claim was load-bearing.
+### What was tried in between, and why it was withdrawn
 
-### The formats
+v2.2.0 shipped **Augustus** and **Dalek Pinpoint Bold**, and §10 said plainly
+that neither carried an open licence. Checked properly afterwards, both were
+worse than unclear:
 
-TrueType, not WOFF2. No converter is available in this toolchain and none was
-worth installing for two files. The Go server compresses `font/ttf` on the way
-out (decision 74 covers the middleware, decision 79 the type), which brings
-Augustus to 30 KB and Dalek to 45 KB — 76 KB together against the 85 KB of
-WOFF2 they replace, so the change costs nothing on the wire.
+- **Dalek Pinpoint** is K-Type's, and K-Type's free fonts are for "personal use
+  among friends and family". Webfont use requires a paid licence, embedding in
+  a software product requires the Enterprise tier, and every tier forbids giving
+  the file to others — which a public repository does by existing.
+- **Augustus** is not orphaned. It is Paulo W's, published by Intellecta Design,
+  a commercial foundry that sells it; the copy circulating on free-font sites
+  carries no licence and only an "ALLTYPE" conversion stamp.
 
-WOFF and WOFF2 are deliberately *not* in the compressible list: they carry their
-own compression and gzipping them again only spends CPU.
+Neither could ship in a GPL-3.0 repository that publishes binaries, so the
+identity was kept and the files were changed. Cinzel is the same Roman
+inscriptional brief as Augustus and does it better — real small capitals where
+Augustus had no case distinction at all, and a working question mark where
+Augustus drew a figure 9. Jost gives the label register the geometric contrast
+Dalek gave it, with real weights instead of one.
 
-### Augustus needed repairing before a browser would take it
+Three other OFL candidates were rendered and refused: **Marcellus SC** and
+**Cormorant SC** are Roman small-caps faces too close to Cinzel to give the two
+registers any contrast, and **Julius Sans One** is too light to hold a label at
+three metres.
 
-Shipped as it arrived, every browser refused it outright — the file is a 1999
-ALLTYPE conversion carrying two defects that OpenType sanitisers reject:
+### Verify a face, do not look at one
 
-- `OTS parsing error: overlapping tables` — the `glyf` table declared itself 130
-  bytes longer than the glyph data actually is, and the overhang ran into
-  `cmap`. The `loca` table gives the true extent, 73,316 bytes, ending twelve
-  bytes clear of `cmap`, so the length was simply wrong and no glyph was lost by
-  correcting it.
-- `cmap: language id should be zero: 1` — both cmap subtables carried language
-  1, which the specification reserves for Macintosh-language-specific subtables.
-  The field takes no part in character lookup.
-
-The file in the repository is the repaired one: every table re-emitted in order,
-four-byte aligned, with fresh offsets, fresh per-table checksums and a fresh
-`checkSumAdjustment`. Verified afterwards at 394 glyphs with French complete,
-and confirmed loading in Chrome (`document.fonts.check('16px Augustus')`).
+The rule that came out of shipping a font nobody had seen: **a screenshot does
+not verify a web font.** Georgia sits behind the display stack and Georgia is a
+good serif, so a refused face renders a page that looks entirely correct —
+including the specimen sheet a face is chosen from. `document.fonts.check()` is
+one line and is the only thing that answers the question. The frontend guard in
+`web/tests/` asserts it on every page.
 
 **There is no CDN request anywhere in the application**, which is not a
 preference but the project's no-external-calls rule.
 
 The system stacks are still listed behind both faces in §4 and still work — they
-are what renders during the swap, and what a browser that refuses a face falls
-back to. That fallback is why the failure above was nearly missed: the page
-looked fine, in Georgia.
+are what renders during the swap.
 
 ## 11. Implementation status
 
