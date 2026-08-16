@@ -152,33 +152,50 @@
 {:else}
 	<!-- Chrome again: the identity goes in full here, as on the hero. -->
 	<article>
-		<header class="relative isolate min-h-[68svh] overflow-hidden">
+		<!-- The header exists to hold the backdrop. Without one it still claimed
+		     68svh, which on an unmatched film left roughly 340px of empty black
+		     between the navigation and the title. It keeps enough height for the
+		     poster to overlap something, and no more. -->
+		<header
+			class="relative isolate overflow-hidden {backdrop ? 'min-h-[68svh]' : 'min-h-[34svh]'}"
+		>
 			{#if backdrop}
 				<img
 					src={backdrop}
 					alt=""
 					fetchpriority="high"
-					class="absolute inset-0 -z-20 h-full w-full scale-[1.015] object-cover opacity-[0.58]"
+					class="absolute inset-0 -z-20 h-full w-full scale-[1.015] object-cover opacity-[0.72]"
 				/>
 			{/if}
-			<div
-				class="absolute inset-0 -z-10"
-				style="background:
-					linear-gradient(to top, var(--color-ink) 2%, rgba(11,10,9,0.58) 48%, rgba(11,10,9,0.08) 100%),
-					linear-gradient(to right, rgba(11,10,9,0.7), transparent 70%)"
-			></div>
+			<div class="picture-veil picture-veil--detail"></div>
 		</header>
 
-		<div class="page-shell relative z-10 -mt-52 pb-20">
+		<!-- The pull is what makes the poster overlap the backdrop. With no
+		     backdrop there is nothing to overlap, and pulling the same 208px
+		     anyway put the title behind the navigation bar. -->
+		<div class="page-shell relative z-10 pb-20 {backdrop ? '-mt-52' : '-mt-20'}">
 			<div class="flex flex-col gap-10 md:flex-row md:items-end md:gap-14">
 				<!-- Poster keeps the grid's locked 2:3 and its plainness. -->
-				<div class="w-48 shrink-0 self-start lg:w-56 2xl:w-64">
+				<!-- Section 6.1 keeps a real 2:3 poster on this page because it "has
+				     the room for it". A 390px phone does not: at w-48 the poster
+				     was 53% of the screen width, and the title, the metadata and
+				     the play button were all below the fold behind it. The
+				     backdrop above is already showing the artwork, so here it
+				     shrinks to a token of itself rather than competing. -->
+				<div class="w-28 shrink-0 self-start sm:w-48 lg:w-56 2xl:w-64">
 					<div
 						class="aspect-[2/3] overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface
 						       shadow-[0_1.75rem_4rem_rgba(0,0,0,0.42)]"
 					>
 						{#if poster}
 							<img src={poster} alt="" decoding="async" class="h-full w-full object-cover" />
+						{:else}
+							<!-- Same stand-in the grid uses, for the same reason: an empty
+							     framed rectangle this size reads as a picture that failed
+							     to load rather than as a film TMDB never recognised. -->
+							<div class="poster-fallback" aria-hidden="true">
+								<span class="poster-fallback-initial">{displayTitle(movie).trim()[0] ?? '?'}</span>
+							</div>
 						{/if}
 					</div>
 

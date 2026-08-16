@@ -39,12 +39,7 @@
 		alt=""
 		class="absolute inset-0 -z-20 h-full w-full object-cover object-center opacity-55"
 	/>
-	<div
-		class="absolute inset-0 -z-10"
-		style="background:
-			linear-gradient(to right, var(--color-ink) 0%, rgba(11,10,9,0.9) 48%, rgba(11,10,9,0.3) 100%),
-			linear-gradient(to top, var(--color-ink) 0%, transparent 55%)"
-	></div>
+	<div class="picture-veil picture-veil--welcome"></div>
 
 	{#if info}
 		<div class="page-shell grid min-h-screen items-center gap-10 py-32 xl:grid-cols-[0.8fr_1.2fr]">

@@ -585,7 +585,7 @@
 			</section>
 		{/if}
 
-		<p class="micro mt-16 border-t border-line pt-6">{t.settings.milestone}</p>
+		<p class="micro mt-16 border-t border-line pt-6">{t.settings.milestone(settings.version)}</p>
 	{/if}
 </main>
 

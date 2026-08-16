@@ -8,6 +8,7 @@
 	import { profiles } from '$lib/profiles.svelte.js';
 	import { remote } from '$lib/remote.svelte.js';
 	import ProfileMark from '$lib/components/ProfileMark.svelte';
+	import Icon from '$lib/components/Icon.svelte';
 
 	let { children } = $props();
 
@@ -195,7 +196,9 @@
 			     the nav while it loads. See .brand-wordmark. -->
 			<span class="brand-wordmark"><span class="brand-word">{t.appName}</span></span>
 		</a>
-		<div class="flex items-center">
+		<!-- Named so the small-viewport rule can wrap it: at the 375px floor the
+		     destinations do not fit on one line beside the mark. -->
+		<div class="site-nav-links flex items-center">
 			<a
 				href="/films"
 				class="nav-target nav-link label"
@@ -265,12 +268,57 @@
 
 {@render children()}
 
+{#if !inProfiles}
+	<!--
+		The phone's navigation.
+
+		The bar at the top is a desktop object: four tracked uppercase labels, a
+		wordmark and a profile mark, which at 375px needed 459px of a 327px pill.
+		It was made to wrap, and wrapping worked -- it was also 17% of the
+		viewport, permanently, with the wordmark alone on its own line. Reading it
+		on a phone for the first time settled it.
+
+		So the destinations move to where a thumb already is. This is the shape
+		every streaming application on a phone has converged on, and the reason is
+		reach rather than fashion: the top of a 6-inch screen is the one place a
+		hand holding the phone cannot go. The pill stays above, carrying only the
+		identity and whose history is being written.
+
+		Two navigations in the markup, never two on screen: each is display:none
+		outside its own width, so only one is ever in the accessibility tree.
+	-->
+	<nav class="tab-bar" aria-label={t.a11y.mainNavigation}>
+		<a href="/" class="tab" aria-current={atHome ? 'page' : undefined}>
+			<Icon name="home" size={22} />
+			<span class="tab-label">{t.nav.home}</span>
+		</a>
+		<a href="/films" class="tab" aria-current={inLibrary ? 'page' : undefined}>
+			<Icon name="film" size={22} />
+			<span class="tab-label">{t.nav.library}</span>
+		</a>
+		<a href="/series" class="tab" aria-current={inSeries ? 'page' : undefined}>
+			<Icon name="series" size={22} />
+			<span class="tab-label">{t.series.title}</span>
+		</a>
+		<a href="/recherche" class="tab" aria-current={inSearch ? 'page' : undefined}>
+			<Icon name="search" size={22} />
+			<span class="tab-label">{t.nav.search}</span>
+		</a>
+		{#if !remote.isRemote}
+			<a href="/reglages" class="tab" aria-current={inSettings ? 'page' : undefined}>
+				<Icon name="settings" size={22} />
+				<span class="tab-label">{t.nav.settings}</span>
+			</a>
+		{/if}
+	</nav>
+{/if}
+
 <!--
 	TMDB's terms require this to be visible in the application. Keeping it in the
 	layout means it survives every page added from here on without anyone having
 	to remember it.
 -->
-<footer class="mt-16 border-t border-line py-10">
+<footer class="site-footer border-t border-line py-10">
 	<div class="page-shell">
 		<p class="micro max-w-prose leading-relaxed text-muted">
 			{t.tmdbAttribution}

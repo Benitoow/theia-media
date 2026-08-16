@@ -242,7 +242,7 @@ export const strings = {
 		noFfmpeg:
 			"Ce fichier doit être réencapsulé, mais aucune version de ffmpeg n'est disponible pour cette plateforme.",
 		failed:
-			"Ce fichier n'a pas pu être lu. Son format n'est probablement pas pris en charge par la v1.",
+			"Ce fichier n'a pas pu être lu. Son format n'est probablement pas pris en charge.",
 
 		// Le serveur envoie un code, jamais une phrase (décision 25). Cette table
 		// est le seul endroit où un code de M1 devient du français.
@@ -651,7 +651,7 @@ export const strings = {
 		keyHint:
 			'Facultatif. Laissez vide pour utiliser la clé fournie avec Theia. Une clé saisie ici est prioritaire.',
 		keyPlaceholder: 'Laisser vide pour utiliser la clé intégrée',
-		milestone: 'Theia v1'
+		milestone: (version) => `Theia ${version}`
 	},
 
 	search: {
@@ -663,6 +663,9 @@ export const strings = {
 		films: 'Films',
 		series: 'Séries',
 		empty: (query) => `Rien ne correspond à « ${query} ».`,
+		recent: 'Recherches récentes',
+		forget: 'Oublier',
+		forgetAll: 'Tout oublier',
 		truncated: 'Seuls les premiers résultats sont affichés. Précisez la recherche.',
 		failed: 'La recherche n’a pas abouti.',
 		results: (n) => (n === 1 ? '1 résultat' : `${n} résultats`)

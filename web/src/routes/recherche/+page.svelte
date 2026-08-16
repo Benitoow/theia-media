@@ -27,6 +27,17 @@
 	// actually searched rather than what has since been typed over it.
 	let answered = $state('');
 
+	// What was looked for before.
+	//
+	// This screen used to be a field alone in an empty page: on a 1512px window
+	// its content stopped 340px down and everything below was nothing at all. A
+	// search screen with nothing yet to search is the one place a little memory
+	// earns its keep, and the answer is already local -- this is the browser's
+	// own storage, not a server-side record of what the household looks for.
+	const recentKey = 'theia.recent-searches';
+	const recentMax = 8;
+	let recent = $state([]);
+
 	// Every keystroke is not a question. A quarter of a second is long enough
 	// that typing a title is one request and short enough that nobody waits.
 	const debounceMs = 250;
@@ -36,8 +47,12 @@
 
 	const total = $derived(results.movies.length + results.series.length);
 	const nothing = $derived(state === 'ready' && total === 0 && answered !== '');
+	// The recents stand in for results, so they show only when there is no
+	// result set on screen to replace them.
+	const showRecent = $derived(state === 'idle' && recent.length > 0);
 
 	onMount(async () => {
+		recent = readRecent();
 		await profiles.ready();
 		// Arriving with ?q= — from a link, a bookmark, or the browser's back
 		// button — searches straight away rather than showing an empty box.
@@ -48,6 +63,43 @@
 		}
 	});
 
+	function readRecent() {
+		try {
+			const stored = JSON.parse(localStorage.getItem(recentKey) ?? '[]');
+			return Array.isArray(stored)
+				? stored.filter((v) => typeof v === 'string').slice(0, recentMax)
+				: [];
+		} catch {
+			// Private modes deny storage, and a corrupted value is not worth a
+			// broken page. No memory is a perfectly good state for this screen.
+			return [];
+		}
+	}
+
+	function remember(value) {
+		const trimmed = value.trim();
+		if (!trimmed) return;
+		// Case-insensitive dedup, newest first: searching the same title twice
+		// should move it up the list rather than sit in it twice.
+		const without = recent.filter((entry) => entry.toLowerCase() !== trimmed.toLowerCase());
+		recent = [trimmed, ...without].slice(0, recentMax);
+		persist();
+	}
+
+	function forget(value) {
+		recent = recent.filter((entry) => entry !== value);
+		persist();
+	}
+
+	function persist() {
+		try {
+			localStorage.setItem(recentKey, JSON.stringify(recent));
+		} catch {
+			// Nothing to do and nothing to say: the list simply does not survive
+			// this browser, which is the same as never having had one.
+		}
+	}
+
 	function onInput() {
 		clearTimeout(timer);
 		const current = query;
@@ -55,7 +107,7 @@
 			state = 'idle';
 			answered = '';
 			results = { movies: [], series: [], truncated: false };
-			remember('');
+			rememberInURL('');
 			return;
 		}
 		timer = setTimeout(() => run(current), debounceMs);
@@ -64,7 +116,7 @@
 	// The query lives in the URL so that a result can be shared, reloaded and
 	// come back to. replaceState rather than a navigation: typing should not
 	// bury the page the user came from under thirty history entries.
-	function remember(value) {
+	function rememberInURL(value) {
 		const url = new URL($page.url);
 		if (value) url.searchParams.set('q', value);
 		else url.searchParams.delete('q');
@@ -74,7 +126,7 @@
 	async function run(value) {
 		const mine = ++sequence;
 		state = 'searching';
-		remember(value);
+		rememberInURL(value);
 		try {
 			const body = await getJSON(
 				profiles.url(`/api/library/search?q=${encodeURIComponent(value)}`)
@@ -83,6 +135,9 @@
 			results = body;
 			answered = value;
 			state = 'ready';
+			// Only a search that found something is worth keeping: a list of
+			// things this library does not contain helps nobody.
+			if (body.movies.length + body.series.length > 0) remember(value);
 		} catch {
 			if (mine !== sequence) return;
 			state = 'failed';
@@ -94,20 +149,31 @@
 		clearTimeout(timer);
 		if (query.trim()) run(query);
 	}
+
+	function repeat(value) {
+		query = value;
+		clearTimeout(timer);
+		run(value);
+	}
+
+	function clear() {
+		query = '';
+		onInput();
+	}
 </script>
 
 <svelte:head>
 	<title>{t.search.title} — {t.appName}</title>
 </svelte:head>
 
-<main class="page-shell py-16 md:py-24">
-	<header class="mb-10">
-		<h1 class="page-title">{t.search.title}</h1>
-		<p class="tv-copy mt-4 max-w-prose">{t.search.prompt}</p>
-	</header>
+<main class="page-shell page-body">
+	<h1 class="page-title">{t.search.title}</h1>
 
+	<!-- The field is the page, so it carries the page's weight: full measure up
+	     to a readable maximum, and the same pill the library toolbar uses rather
+	     than a second kind of box invented for this screen. -->
 	<form class="search-field" onsubmit={onSubmit} role="search">
-		<Icon name="search" size={20} class="shrink-0 text-muted" />
+		<Icon name="search" size={22} class="shrink-0 text-muted" />
 		<input
 			type="search"
 			bind:value={query}
@@ -118,21 +184,15 @@
 			data-remote-default
 		/>
 		{#if query}
-			<button
-				type="button"
-				onclick={() => {
-					query = '';
-					onInput();
-				}}
-				class="player-icon-button !min-h-10 !min-w-10"
-			>
+			<button type="button" onclick={clear} class="player-icon-button player-icon-button--compact">
 				<Icon name="close" size={16} label={t.library.clear} />
 			</button>
 		{/if}
 	</form>
 
-	<div class="mt-6" aria-live="polite">
-		{#if state === 'searching'}
+	<p class="search-hint text-small text-muted">{t.search.prompt}</p>
+
+	<div class="search-status" aria-live="polite">{#if state === 'searching'}
 			<p class="text-small text-muted">{t.search.searching}</p>
 		{:else if state === 'failed'}
 			<p class="text-small text-error" role="alert">{t.search.failed}</p>
@@ -142,12 +202,34 @@
 			<p class="text-small text-muted">
 				{t.search.results(total)}{results.truncated ? ` · ${t.search.truncated}` : ''}
 			</p>
-		{/if}
-	</div>
+		{/if}</div>
+
+	{#if showRecent}
+		<section class="search-recent">
+			<h2 class="label">{t.search.recent}</h2>
+			<ul class="search-chips">
+				{#each recent as entry (entry)}
+					<li class="search-chip">
+						<button type="button" class="search-chip-go" onclick={() => repeat(entry)}>
+							{entry}
+						</button>
+						<button
+							type="button"
+							class="search-chip-forget"
+							onclick={() => forget(entry)}
+							aria-label="{t.search.forget} — {entry}"
+						>
+							<Icon name="close" size={12} />
+						</button>
+					</li>
+				{/each}
+			</ul>
+		</section>
+	{/if}
 
 	{#if results.movies.length}
-		<section class="mt-10">
-			<h2 class="label mb-5">{t.search.films}</h2>
+		<section class="search-results">
+			<h2 class="label">{t.search.films}</h2>
 			<div class="library-grid">
 				{#each results.movies as movie (movie.id)}
 					<PosterCard {movie} fluid />
@@ -157,55 +239,19 @@
 	{/if}
 
 	{#if results.series.length}
-		<section class="mt-12">
-			<h2 class="label mb-5">{t.search.series}</h2>
+		<section class="search-results">
+			<h2 class="label">{t.search.series}</h2>
 			<div class="library-grid">
 				{#each results.series as item (item.id)}
 					<PosterCard
 						movie={item}
 						href="/serie/{item.id}"
 						fluid
-						legend={item.metadata?.first_air_date?.slice(0, 4) ?? '—'}
+						playable={false}
+						legend={item.metadata?.first_air_date?.slice(0, 4) ?? ''}
 					/>
 				{/each}
 			</div>
 		</section>
 	{/if}
 </main>
-
-<style>
-	/* The same shape as the library toolbar's field, standing on its own: this
-	   page is the search, so the box is the page's first object rather than one
-	   control in a row of them. */
-	.search-field {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		max-width: 42rem;
-		border: 1px solid var(--color-line);
-		background: var(--color-surface);
-		padding: 0.35rem 0.9rem;
-	}
-
-	.search-field:focus-within {
-		border-color: var(--color-muted);
-	}
-
-	.search-input {
-		flex: 1 1 auto;
-		min-width: 0;
-		border: 0;
-		background: transparent;
-		padding: 0.65rem 0;
-		color: var(--color-bone);
-		font-size: 1rem;
-	}
-
-	.search-input:focus {
-		outline: none;
-	}
-
-	.search-input::placeholder {
-		color: var(--color-faint);
-	}
-</style>

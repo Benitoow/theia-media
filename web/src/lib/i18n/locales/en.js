@@ -241,7 +241,7 @@ export const strings = {
 		noFfmpeg:
 			'This file needs to be remuxed, but ffmpeg is not available for this platform.',
 		failed:
-			'This file could not be played. Its format is probably not supported by v1.',
+			'This file could not be played. Its format is probably not supported.',
 
 		// The server sends a code, never a sentence (decision 25). This table is
 		// the only place where an M1 code becomes English.
@@ -647,7 +647,7 @@ export const strings = {
 		keyHint:
 			'Optional. Leave this blank to use the key provided with Theia. A key entered here takes priority.',
 		keyPlaceholder: 'Leave blank to use the built-in key',
-		milestone: 'Theia v1'
+		milestone: (version) => `Theia ${version}`
 	},
 
 	search: {
@@ -659,6 +659,9 @@ export const strings = {
 		films: 'Films',
 		series: 'Series',
 		empty: (query) => `Nothing matches “${query}”.`,
+		recent: 'Recent searches',
+		forget: 'Forget',
+		forgetAll: 'Forget all',
 		truncated: 'Only the first results are shown. Narrow the search.',
 		failed: 'The search did not complete.',
 		results: (n) => (n === 1 ? '1 result' : `${n} results`)

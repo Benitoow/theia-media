@@ -97,12 +97,7 @@
 					class="absolute inset-0 -z-20 h-full w-full scale-[1.015] object-cover opacity-[0.58]"
 				/>
 			{/if}
-			<div
-				class="absolute inset-0 -z-10"
-				style="background:
-					linear-gradient(to top, var(--color-ink) 2%, rgba(11,10,9,0.58) 48%, rgba(11,10,9,0.08) 100%),
-					linear-gradient(to right, rgba(11,10,9,0.7), transparent 70%)"
-			></div>
+			<div class="picture-veil picture-veil--detail"></div>
 		</header>
 
 		<div class="page-shell relative z-10 -mt-44 pb-20">

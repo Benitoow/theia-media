@@ -64,6 +64,25 @@
 			'M16.67 7.33l1.48-1.48M7.33 16.67l-1.48 1.48M16.67 16.67l1.48 1.48M7.33 7.33 5.85 5.85'
 		],
 
+		// The three destinations a phone's tab bar needs. Same 24-unit grid and
+		// stroke as everything above: a bar of glyphs from three sources is the
+		// thing this file exists to prevent.
+		//
+		// A house, a film strip and a television. Each is the most literal shape
+		// for its destination, because a tab bar is read at a glance from the
+		// corner of the eye and is not the place to be inventive.
+		home: ['M3.4 10.6 12 3.8l8.6 6.8', 'M5.9 9.4v9.8a1 1 0 0 0 1 1h10.2a1 1 0 0 0 1-1V9.4'],
+
+		film: [
+			'M3.6 5.2h16.8a1 1 0 0 1 1 1v11.6a1 1 0 0 1-1 1H3.6a1 1 0 0 1-1-1V6.2a1 1 0 0 1 1-1Z',
+			'M8.2 5.2v13.6M15.8 5.2v13.6'
+		],
+
+		series: [
+			'M4.2 7.8h15.6a1 1 0 0 1 1 1v9.4a1 1 0 0 1-1 1H4.2a1 1 0 0 1-1-1V8.8a1 1 0 0 1 1-1Z',
+			'M8.4 3.4 12 7.8l3.6-4.4'
+		],
+
 		// The closed-caption mark: the one glyph everybody already reads as
 		// "subtitles", which matters more here than drawing something prettier.
 		captions: [

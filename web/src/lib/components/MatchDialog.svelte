@@ -192,13 +192,13 @@
 	.match-scrim {
 		position: fixed;
 		inset: 0;
-		z-index: 60;
+		z-index: var(--layer-modal);
 		display: flex;
 		align-items: flex-start;
 		justify-content: center;
 		overflow-y: auto;
 		padding: clamp(1rem, 4vw, 3rem);
-		background: rgba(11, 10, 9, 0.86);
+		background: rgb(var(--channel-ink) / 0.86);
 	}
 
 	.match-panel {
@@ -266,7 +266,7 @@
 	}
 
 	.match-title {
-		font-size: 1rem;
+		font-size: var(--text-body);
 		line-height: 1.3;
 	}
 
