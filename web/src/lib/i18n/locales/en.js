@@ -300,7 +300,20 @@ export const strings = {
 			// ffmpeg writes "stereo" and "mono"; the rest (5.1, 7.1, 3.0) already
 			// reads as itself and needs no translation.
 			channels: { mono: 'Mono', stereo: 'Stereo' },
-			imageBased: 'image — cannot be shown'
+			imageBased: 'image — cannot be shown',
+
+			// Subtitle offset. The sign is spelled out because "+1 s" and "1 s"
+			// do not mean the same thing here, and the value doubles as the reset
+			// button: a third button in a row of three would not have fitted on a
+			// phone.
+			offset: 'Offset',
+			offsetEarlier: 'Subtitles half a second earlier',
+			offsetLater: 'Subtitles half a second later',
+			offsetReset: 'Reset the offset',
+			offsetValue: (seconds) =>
+				seconds === 0
+					? 'in sync'
+					: `${seconds > 0 ? '+' : '−'}${Math.abs(seconds).toLocaleString('en-GB', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s`
 		},
 
 		shortcuts: {

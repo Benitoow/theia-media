@@ -140,7 +140,7 @@ without a reload. Titles, synopses and artwork come from TMDB.
 | --- | --- |
 | Accounts or permissions | There is no login, password or access control on the LAN. See the warning above; it is not decorative. |
 | Editing metadata by hand | A wrong match can be *replaced* with another TMDB record (see above), but no title, synopsis, poster or cast can be typed in. Theia shows what TMDB holds, or the filename. |
-| Image subtitles | PGS and VobSub tracks cannot be shown without burning them into the picture. They are named rather than silently missing, and only when the file has no text track at all. |
+| Image subtitles | PGS and VobSub tracks cannot be shown without burning them into the picture. They are named rather than silently missing, and only when the file has no text track at all. Text tracks **can** be nudged in and out of sync, half a second a press, when a rip was muxed from a different cut. |
 | HTTPS on the LAN | Theia serves plain HTTP locally. Remote access is encrypted by WireGuard instead. |
 | PWA or native TV/mobile apps | The shipped client is a responsive web interface, built for a D-pad. |
 | Background-service installer | The binary runs in the foreground. Starting it at boot is left to the operating system. |
@@ -544,6 +544,28 @@ node scripts/contrast.mjs           # guards the documented colour ratios
 node web/scripts/check-locales.mjs  # guards French/English catalogue parity
 ```
 
+### The interface guard
+
+`npm test` in `web/` drives a real browser against the built binary at 375, 1280
+and 1920 pixels wide, and asserts the four things that are invisible to the eye:
+nothing overflows, every declared font actually loaded, every target clears
+44px, and the page has one left edge. It needs a binary — build one first — and
+runs on every push. See [decision 82](docs/DECISIONS.md) for the faults that
+earned it.
+
+### A library to look at
+
+Judging a grid needs a grid. `go run ./scripts/bench -data <dir>` fills a
+throwaway database with as many films as there is cached artwork for, fetching
+nothing:
+
+```bash
+go run ./scripts/bench -data /tmp/theia-bench -count 250
+```
+
+The rows point at paths that do not exist — this builds a library to look at,
+not one to play.
+
 ## Repository map
 
 ```text
@@ -677,12 +699,8 @@ Metadata and artwork come from [TMDB](https://www.themoviedb.org/):
 FFmpeg is downloaded on demand from its upstream GitHub release and remains under
 its own licence.
 
-**Fonts.** Two typefaces are self-hosted and embedded in the binary: **Augustus**
-for the display register and **Dalek Pinpoint Bold** (© Keith Bates / K-Type)
-for labels. Neither carries an open font licence in its file — Augustus records
-only "Converted by ALLTYPE", and K-Type publishes its terms at
-[k-type.com/licences](http://www.k-type.com/licences/). They are supplied by the
-maintainer and are not covered by this repository's GPL-3.0 grant; anyone
-redistributing a build should satisfy themselves about their terms. This
-replaced Inter and Playfair Display, which were SIL Open Font License 1.1 — see
-[decision 78](docs/DECISIONS.md) for why the change was made anyway.
+**Fonts.** Two typefaces are self-hosted and embedded in the binary: **Cinzel**
+for the display register and **Jost** for labels. Both SIL Open Font License 1.1,
+which is GPL-compatible and imposes nothing on the rest of the project. v2.2.0
+briefly shipped two faces that were not — see
+[decision 81](docs/DECISIONS.md).

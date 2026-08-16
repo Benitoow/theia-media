@@ -303,7 +303,20 @@ export const strings = {
 			// ffmpeg écrit « stereo » et « mono » ; le reste (5.1, 7.1, 3.0) se lit
 			// déjà tel quel et n'a pas à être traduit.
 			channels: { mono: 'Mono', stereo: 'Stéréo' },
-			imageBased: 'image — non affichable'
+			imageBased: 'image — non affichable',
+
+			// Décalage des sous-titres. Le signe est explicite parce que « +1 s »
+			// et « 1 s » ne veulent pas dire la même chose ici, et la valeur est
+			// aussi le bouton de remise à zéro : un troisième bouton dans une
+			// rangée de trois n'aurait pas tenu sur un téléphone.
+			offset: 'Décalage',
+			offsetEarlier: 'Sous-titres une demi-seconde plus tôt',
+			offsetLater: 'Sous-titres une demi-seconde plus tard',
+			offsetReset: 'Remettre le décalage à zéro',
+			offsetValue: (seconds) =>
+				seconds === 0
+					? 'synchro'
+					: `${seconds > 0 ? '+' : '−'}${Math.abs(seconds).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s`
 		},
 
 		shortcuts: {

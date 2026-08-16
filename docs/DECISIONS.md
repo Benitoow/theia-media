@@ -2353,6 +2353,118 @@ The player's failure message referred to "la v1" as the reason a format was
 unsupported, which stopped being true when v2 started re-encoding MPEG-2 and
 VC-1. It now says the format is unsupported without blaming a version.
 
+## 81. The type keeps its face and changes its files
+
+v2.2.0 shipped Augustus and Dalek Pinpoint and said, in section 10, that neither
+carried an open licence. Read properly afterwards, both were worse than unclear.
+
+K-Type's free fonts are "for personal use among friends and family". Webfont use
+requires a paid licence, embedding in a software product requires the Enterprise
+tier, and every tier forbids giving the file to others -- which a public
+repository does by existing. And Augustus is not orphaned at all: it is Paulo W's,
+published by Intellecta Design, a commercial foundry that sells it. The copy
+circulating on free-font sites carries no licence and an "ALLTYPE" conversion
+stamp.
+
+Neither could ship in a GPL-3.0 repository that publishes six binaries per
+release, so the identity was kept and the files were changed. **Cinzel** takes
+the display register and **Jost** the labels, both SIL Open Font License 1.1.
+
+The replacements are better on their own merits, which is the part worth
+recording. Cinzel is the same Roman inscriptional brief as Augustus and does it
+properly: `abcdef` measures 150 against `ABCDEF` at 158, so there is a real case
+distinction, where Augustus measured 169 for both and had no lowercase at all.
+Augustus also drew its question mark as a figure 9 -- found by rendering "Où
+étiez-vous ?" beside a face that could. Jost gives the label register the same
+geometric contrast Dalek gave it, with a variable weight axis instead of one
+bold.
+
+Three OFL candidates were rendered and refused: Marcellus SC and Cormorant SC
+are Roman small-caps faces too close to Cinzel for the two registers to read as
+two, and Julius Sans One is too light to hold a label at three metres.
+
+52 KB of WOFF2 where v2.2.0 had 76 KB of gzipped TrueType, and 85 KB before that.
+
+## 82. The interface has a guard, because looking at it does not work
+
+Every visual fault this project has shipped rendered a page that looked
+completely correct.
+
+Cards overlapped their neighbours by 37px because an unlayered rule beat a
+layered one, and the grid looked like a grid. A phone rule was written above the
+rule it meant to override and did nothing at all, and the phone looked fine. A
+display font was refused by every browser and the fallback behind it is Georgia,
+so the page -- and the specimen sheet the face had been chosen from -- looked
+exactly as intended.
+
+None of these were caught by reading CSS and all of them would have been caught
+by a handful of assertions in a real browser. So `web/tests/` now runs four,
+across the three widths section 4 and section 9 are written against:
+
+- **nothing overflows** the viewport, excluding elements inside a scroller built
+  to hold them, and excluding full-bleed artwork behind the content -- the hero
+  backdrop is over-scaled by 1.5% on purpose;
+- **every declared face loaded**, checked through `document.fonts` and the
+  console, and the first family of each register is one of them, so renaming a
+  token cannot quietly leave the page on a fallback;
+- **every target is at least 44px**, section 9's floor;
+- **the page has one left edge**, and on the television step that edge is inside
+  the 96px safe area.
+
+It deliberately tests no behaviour. The Go suite covers the API, and clicking
+through the player in CI would be slow and flaky for no benefit.
+
+The guard was verified by breaking something on purpose: `Cinzel Variable`
+misspelled in its token produced "Cinzel Vairable is named by a token but never
+loaded" on every page at every width. A guard nobody has watched fail is not
+known to work.
+
+Playwright is a devDependency and Chromium is the only engine installed --
+assertions about geometry do not differ between engines, and the other two would
+triple the download. The no-dependency rule this project holds is about what
+ships in the binary, and nothing here does.
+
+## 83. A library to look at, without a library
+
+The standard is to report what was verified against the real library rather than
+what was assumed, and the real library is 274 films on one machine. Everywhere
+else -- a fresh clone, a CI runner, the same machine with the drive unplugged --
+there is nothing to look at, and a grid of eight test files says nothing about a
+grid.
+
+`scripts/bench` fills a throwaway database with as many films as there is cached
+artwork for, drawing on the image cache already on disk so it fetches nothing and
+needs no network. It was written after building the same thing by hand twice in
+one afternoon.
+
+The rows point at paths that do not exist, which is deliberate: this is a library
+to look at, not one to play. It also puts every row in the current scan
+generation, because that is what makes a row visible, and forgetting it is how
+the hand-built version silently produced an empty library twice.
+
+## 84. Subtitles can be pushed against the picture
+
+A rip whose subtitle track was muxed from a different cut runs a second or two
+out, and nothing else in the interface could rescue it: the file is the file, and
+decision 3 refuses to burn anything into the image. The track panel now carries
+a sync control -- half a second a press, thirty seconds either way, and the
+readout doubles as the reset.
+
+The cue times are rewritten rather than the clock being read through an offset,
+so the browser's own `cuechange` keeps firing and everything downstream carries
+on unchanged. The original times are held aside and every shift is computed
+against those, or repeated halves walk: measured, +1.5s then -2.5s returns to
+exactly 1.000, not 0.9999.
+
+**Not persisted, on purpose.** It belongs to this viewing rather than to the
+film. A stored offset is one more piece of state to be wrong later -- against a
+different file of the same film, or after somebody remuxes the one it was
+measured on -- and the control is two presses away whenever it is wanted.
+
+It only appears when a subtitle is actually showing. A sync control under a film
+displaying none is a setting for nothing, and that panel is already three
+sections long.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

@@ -94,6 +94,24 @@
 	let trackElement = $state();
 	/** The lines currently on screen, painted by this component. */
 	let subtitleLines = $state([]);
+
+	// How far the subtitles are pushed against the picture, in seconds.
+	//
+	// A rip whose subtitle track was muxed from a different cut runs a second or
+	// two out, and nothing else in the interface can rescue it: the file is the
+	// file, and decision 3 refuses to burn anything into the image. This is the
+	// one control that makes such a file watchable.
+	//
+	// Deliberately not persisted. It belongs to this viewing, not to the film:
+	// a stored offset would be one more piece of state to be wrong later, and
+	// the setting is two presses away whenever it is wanted.
+	let subtitleOffset = $state(0);
+	const subtitleOffsetStep = 0.5;
+	const subtitleOffsetLimit = 30;
+
+	// The cue times as the file wrote them. Shifting has to be computed against
+	// these rather than against the last shift, or the rounding walks.
+	let originalCueTimes = new WeakMap();
 	/** Distance from the bottom of the video element, in pixels. */
 	let subtitleBottom = $state(0);
 	// A file nobody has inspected only reveals its tracks when playback probes
@@ -393,9 +411,51 @@
 				active.removeEventListener('cuechange', readActiveCues);
 				active.addEventListener('cuechange', readActiveCues);
 			}
+			// A newly loaded track arrives at the file's own times, so whatever
+			// the viewer had already dialled in is re-applied here rather than
+			// silently forgotten when they switch track.
+			applySubtitleOffset();
 			readActiveCues();
 			liftCues();
 		});
+	}
+
+	// Moves every cue of the active track to where the viewer says it belongs.
+	//
+	// The times are rewritten rather than the clock being read with an offset,
+	// so the browser's own cuechange keeps firing and everything downstream --
+	// active cues, the lift over the control bar -- carries on unchanged.
+	function applySubtitleOffset() {
+		const track = trackElement?.track;
+		const cues = track?.cues;
+		if (!cues) return;
+
+		for (const cue of cues) {
+			let original = originalCueTimes.get(cue);
+			if (!original) {
+				original = { start: cue.startTime, end: cue.endTime };
+				originalCueTimes.set(cue, original);
+			}
+			// A cue may not start before the film does, and may not end before it
+			// starts, which a large negative offset would otherwise ask for.
+			const start = Math.max(0, original.start + subtitleOffset);
+			cue.startTime = start;
+			cue.endTime = Math.max(start + 0.05, original.end + subtitleOffset);
+		}
+		readActiveCues();
+	}
+
+	function nudgeSubtitles(direction) {
+		const next = subtitleOffset + direction * subtitleOffsetStep;
+		subtitleOffset = Math.max(-subtitleOffsetLimit, Math.min(subtitleOffsetLimit, next));
+		// Rounded, because repeated halves in binary drift into 1.4999999.
+		subtitleOffset = Math.round(subtitleOffset * 100) / 100;
+		applySubtitleOffset();
+	}
+
+	function resetSubtitleOffset() {
+		subtitleOffset = 0;
+		applySubtitleOffset();
 	}
 
 	// One string per line, so a two-line cue stays two lines and the shadow is
@@ -1514,7 +1574,45 @@
 												)}
 											</li>
 										{/each}
-										{#each refusedSubtitles as track, index (track.id)}
+										{#if subtitleTrackId}
+										<!--
+											Only offered while a subtitle is actually on. A sync
+											control under a film showing none is a setting for
+											nothing, and the panel is already three sections long.
+										-->
+										<div class="track-offset">
+											<span class="track-offset-label">{t.player.tracks.offset}</span>
+											<div class="track-offset-controls">
+												<button
+													type="button"
+													class="track-offset-step"
+													onclick={() => nudgeSubtitles(-1)}
+													aria-label={t.player.tracks.offsetEarlier}
+												>
+													−
+												</button>
+												<button
+													type="button"
+													class="track-offset-value"
+													onclick={resetSubtitleOffset}
+													disabled={subtitleOffset === 0}
+													aria-label={t.player.tracks.offsetReset}
+												>
+													{t.player.tracks.offsetValue(subtitleOffset)}
+												</button>
+												<button
+													type="button"
+													class="track-offset-step"
+													onclick={() => nudgeSubtitles(1)}
+													aria-label={t.player.tracks.offsetLater}
+												>
+													+
+												</button>
+											</div>
+										</div>
+									{/if}
+
+									{#each refusedSubtitles as track, index (track.id)}
 											<li>
 												<!--
 													Only reached when the file has no text track at all.
