@@ -27,26 +27,66 @@
 		U+FFFD;
 }
 
+/* The tokens, and where each one comes from.
+ *
+ * This file restates the design system rather than importing it, because the
+ * site is outside the application bundle and cannot reach app.css. Decision 64
+ * is explicit that the duplication is a liability: a value here that differs
+ * from the application is a bug, not a liberty. The right-hand column is the
+ * name the same value carries in docs/design-system.md, so the two can be
+ * compared without reading both files side by side.
+ */
 :root {
-	--bg: #0b0a09;
-	--surface: #131211;
-	--fg: #ede7dc;
-	--muted: #8c857a;
-	--border: #2a2724;
-	--accent: #c8a24a;
-	--raised: #1c1a18;
-	--raised: color-mix(in oklch, var(--surface) 84%, var(--fg));
-	--accent-hover: #e3c173;
-	--accent-hover: color-mix(in oklch, var(--accent) 88%, var(--fg));
+	/* §3 Surfaces */
+	--bg: #0b0a09; /* --ink */
+	--surface: #131211; /* --surface */
+	--raised: #1c1a18; /* --raised */
+	--border: #2a2724; /* --line */
+
+	/* §3 Text. Ratios on --bg: 16.07, 12.78, 5.42, 2.64. */
+	--fg: #ede7dc; /* --bone */
+	--parchment: #d6cfc2; /* --parchment */
+	--muted: #8c857a; /* --muted */
+	--faint: #5a544c; /* --faint -- decorative and disabled only, never read */
+
+	/* §3 Accent. Five uses per screen is the budget. */
+	--accent: #c8a24a; /* --accent, 8.22 */
+	--accent-bright: #e3c173; /* --accent-bright, 11.44 -- hover and focus */
+
+	/* §4 The two registers */
 	--font-display: 'Playfair Display Variable', Didot, 'Bodoni MT', Georgia, 'Times New Roman', serif;
 	--font-body: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
 		sans-serif;
 	--font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-	--gutter: clamp(1.25rem, 4vw, 5.5rem);
-	--radius: clamp(1rem, 1.6vw, 1.375rem);
-	--ease: cubic-bezier(0.16, 1, 0.3, 1);
-	--fast: 160ms;
-	--base: 320ms;
+
+	/* §4 Scale. Large type tracks in, small type tracks out -- that opposition
+	   is the whole system in one line, and it is the half this file used to
+	   leave out: the palette was restated and the type was not, so seventeen
+	   ad-hoc sizes and eight untracked letter-spacings had grown in its place. */
+	--text-display: clamp(2.25rem, 6vw, 4rem);
+	--text-display-tracking: -0.02em;
+	--text-title: 1.5rem;
+	--text-title-tracking: -0.01em;
+	--text-body: 1rem;
+	--text-body-leading: 1.6;
+	--text-small: 0.875rem;
+	--text-small-leading: 1.5;
+	--text-hero-tracking: -0.03em;
+	--text-label: 0.6875rem;
+	--text-label-tracking: 0.18em;
+	--text-micro: 0.625rem;
+	--text-micro-tracking: 0.22em;
+
+	/* §5 The page frame. The floor was 1.25rem here and 1.5rem in the
+	   application, which is the kind of quiet disagreement decision 64 warns
+	   about. */
+	--gutter: clamp(1.5rem, 4vw, 5.5rem); /* --page-gutter */
+	--radius: clamp(1rem, 1.6vw, 1.375rem); /* --radius-card */
+
+	/* §8 Motion */
+	--ease: cubic-bezier(0.16, 1, 0.3, 1); /* --ease-cine */
+	--fast: 160ms; /* --duration-fast */
+	--base: 320ms; /* --duration-base */
 }
 
 *,
@@ -67,8 +107,8 @@ body {
 	background: var(--bg);
 	color: var(--fg);
 	font-family: var(--font-body);
-	font-size: 1rem;
-	line-height: 1.55;
+	font-size: var(--text-body);
+	line-height: var(--text-body-leading);
 	overflow-x: hidden;
 }
 
@@ -112,6 +152,8 @@ code {
 	overflow-wrap: anywhere;
 }
 
+/* The only !important outside the reduced-motion guard: the HTML attribute has
+   to beat any display rule that happens to match, which is what it is for. */
 [hidden] {
 	display: none !important;
 }
@@ -124,7 +166,7 @@ code {
 :focus-visible {
 	border-radius: 0.2rem;
 	outline: 2px solid var(--accent);
-	outline-offset: 3px;
+	outline-offset: 2px;
 }
 
 .skip-link {
@@ -151,15 +193,15 @@ code {
 .eyebrow {
 	margin: 0 0 0.8rem;
 	color: var(--muted);
-	font: 600 0.6875rem/1.2 var(--font-mono);
-	letter-spacing: 0.18em;
+	font: 600 var(--text-label) / 1.2 var(--font-body);
+	letter-spacing: var(--text-label-tracking);
 	text-transform: uppercase;
 }
 
 .section-title {
 	color: var(--fg);
-	font: 400 clamp(2.25rem, 5vw, 4.6rem) / 0.98 var(--font-display);
-	letter-spacing: -0.03em;
+	font: 400 var(--text-display) / 0.98 var(--font-display);
+	letter-spacing: var(--text-display-tracking);
 }
 
 .section-lead {
@@ -193,8 +235,8 @@ code {
 	min-width: 7.5rem;
 	min-height: 44px;
 	align-items: center;
-	font: 500 1.08rem/1 var(--font-display);
-	letter-spacing: 0.28em;
+	font: 400 1.08rem/1 var(--font-display);
+	letter-spacing: var(--text-label-tracking);
 }
 
 .brand::after {
@@ -217,7 +259,7 @@ code {
 	align-items: center;
 	padding: 0.4rem;
 	color: var(--muted);
-	font-size: 0.82rem;
+	font-size: var(--text-small);
 	font-weight: 600;
 	transition: color var(--fast) var(--ease), transform var(--fast) var(--ease);
 }
@@ -230,13 +272,13 @@ code {
 	transform: translateY(1px);
 }
 
-.language {
+.nav-links a.language {
 	min-width: 44px;
 	justify-content: center;
 	border: 1px solid var(--border);
-	border-radius: 999px !important;
-	padding: 0.35rem 0.8rem !important;
-	color: var(--fg) !important;
+	border-radius: 999px;
+	padding: 0.35rem 0.8rem;
+	color: var(--fg);
 }
 
 /* First screen ----------------------------------------------------------- */
@@ -262,7 +304,7 @@ code {
 	max-width: 10ch;
 	color: var(--fg);
 	font: 400 clamp(3.15rem, 5.4vw, 6.25rem) / 0.9 var(--font-display);
-	letter-spacing: -0.045em;
+	letter-spacing: var(--text-hero-tracking);
 }
 
 .hero-lead {
@@ -308,8 +350,8 @@ code {
 	border-radius: 999px;
 	background: var(--surface);
 	color: var(--fg);
-	font: 600 0.625rem/1.2 var(--font-mono);
-	letter-spacing: 0.1em;
+	font: 600 var(--text-micro) / 1.2 var(--font-body);
+	letter-spacing: var(--text-micro-tracking);
 	text-transform: uppercase;
 }
 
@@ -327,7 +369,7 @@ code {
 }
 
 .player-heading {
-	font-size: 0.9rem;
+	font-size: var(--text-small);
 	font-weight: 600;
 }
 
@@ -452,7 +494,8 @@ code {
 	gap: 0.55rem;
 	margin-left: 0.3rem;
 	color: var(--muted);
-	font: 500 0.7rem/1 var(--font-mono);
+	font: 500 var(--text-label) / 1 var(--font-body);
+	font-variant-numeric: tabular-nums;
 }
 
 .player-time i {
@@ -492,8 +535,8 @@ code {
 .track-heading {
 	margin: 0.7rem 0.6rem 0.35rem;
 	color: var(--muted);
-	font: 600 0.625rem/1.2 var(--font-mono);
-	letter-spacing: 0.12em;
+	font: 600 var(--text-label) / 1.2 var(--font-body);
+	letter-spacing: var(--text-label-tracking);
 	text-transform: uppercase;
 }
 
@@ -524,13 +567,13 @@ code {
 
 .track-copy strong {
 	display: block;
-	font-size: 0.82rem;
+	font-size: var(--text-small);
 }
 
 .track-copy small {
 	display: block;
 	color: var(--muted);
-	font-size: 0.7rem;
+	font-size: var(--text-label);
 }
 
 .track-tick {
@@ -552,8 +595,8 @@ code {
 	gap: 0.75rem;
 	background: var(--bg);
 	background: color-mix(in oklch, var(--bg) 84%, transparent);
-	font: 600 0.68rem/1.2 var(--font-mono);
-	letter-spacing: 0.12em;
+	font: 600 var(--text-label) / 1.2 var(--font-body);
+	letter-spacing: var(--text-label-tracking);
 	text-transform: uppercase;
 }
 
@@ -569,7 +612,7 @@ code {
 .proof-caption {
 	margin: 0.7rem 0 0;
 	color: var(--muted);
-	font-size: 0.75rem;
+	font-size: var(--text-small);
 }
 
 /* Downloads -------------------------------------------------------------- */
@@ -587,8 +630,12 @@ code {
 	gap: 1.25rem;
 }
 
+/* Sized from --text-title rather than the viewport. At 3vw this was 42px inside
+   a 264px column -- six characters a line, five lines deep, and sitting in the
+   middle register §1 reserves for nothing at all. */
 .download-head h2 {
-	font: 400 clamp(1.65rem, 3vw, 2.65rem) / 1 var(--font-display);
+	font: 400 var(--text-title) / 1.1 var(--font-display);
+	letter-spacing: var(--text-title-tracking);
 }
 
 .download-head p {
@@ -640,7 +687,7 @@ code {
 	min-height: 1.4rem;
 	margin: 0.65rem 0 0;
 	color: var(--muted);
-	font-size: 0.78rem;
+	font-size: var(--text-small);
 }
 
 .download-panels {
@@ -659,13 +706,13 @@ code {
 }
 
 .download-panel h3 {
-	font-size: 0.95rem;
+	font-size: var(--text-body);
 }
 
 .platform-warning {
 	margin: 0.7rem 0 0;
 	color: var(--muted);
-	font-size: 0.76rem;
+	font-size: var(--text-small);
 }
 
 .arch-list {
@@ -698,13 +745,13 @@ code {
 
 .arch-download strong {
 	display: block;
-	font-size: 0.84rem;
+	font-size: var(--text-small);
 }
 
 .arch-download small {
 	display: block;
 	color: var(--muted);
-	font-size: 0.68rem;
+	font-size: var(--text-label);
 }
 
 .download-meta-row {
@@ -737,7 +784,7 @@ details.checksums summary {
 	display: flex;
 	min-height: 44px;
 	align-items: center;
-	font-size: 0.78rem;
+	font-size: var(--text-small);
 	font-weight: 600;
 	cursor: pointer;
 }
@@ -746,7 +793,7 @@ details.checksums summary {
 	display: grid;
 	gap: 0.55rem;
 	color: var(--muted);
-	font-size: 0.66rem;
+	font-size: var(--text-label);
 }
 
 .checksum-name,
@@ -794,14 +841,14 @@ details.checksums summary {
 
 .moment-number {
 	align-self: start;
-	font: 500 0.7rem/1 var(--font-mono);
-	letter-spacing: 0.16em;
+	font: 500 var(--text-label) / 1 var(--font-body);
+	letter-spacing: var(--text-label-tracking);
 }
 
 .moment-copy b {
 	color: var(--muted);
-	font: 600 0.68rem/1.2 var(--font-mono);
-	letter-spacing: 0.15em;
+	font: 600 var(--text-label) / 1.2 var(--font-body);
+	letter-spacing: var(--text-label-tracking);
 }
 
 .moment-copy h3 {
@@ -847,11 +894,11 @@ details.checksums summary {
 
 .watch-fact span {
 	color: var(--muted);
-	font-size: 0.78rem;
+	font-size: var(--text-small);
 }
 
 .watch-fact strong {
-	font: 600 0.82rem/1.3 var(--font-mono);
+	font: 600 var(--text-small) / 1.3 var(--font-body);
 }
 
 /* Difference and limits -------------------------------------------------- */
@@ -902,12 +949,12 @@ details.checksums summary {
 
 .plain-list span {
 	color: var(--muted);
-	font-size: 0.88rem;
+	font-size: var(--text-small);
 }
 
 .limits h3 {
-	font: 600 0.7rem/1.2 var(--font-mono);
-	letter-spacing: 0.14em;
+	font: 600 var(--text-label) / 1.2 var(--font-body);
+	letter-spacing: var(--text-label-tracking);
 	text-transform: uppercase;
 }
 
@@ -950,7 +997,7 @@ details.checksums summary {
 .closing h2 {
 	max-width: 9ch;
 	font: 400 clamp(2.8rem, 7vw, 6.5rem) / 0.92 var(--font-display);
-	letter-spacing: -0.04em;
+	letter-spacing: var(--text-hero-tracking);
 }
 
 .closing p {
@@ -1032,7 +1079,7 @@ details.checksums summary {
 	padding-block: 2rem;
 	border-top: 1px solid var(--border);
 	color: var(--muted);
-	font-size: 0.75rem;
+	font-size: var(--text-small);
 }
 
 .footer-grid {
@@ -1136,7 +1183,7 @@ details.checksums summary {
 	}
 
 	.demo-chip {
-		font-size: 0.55rem;
+		font-size: var(--text-micro);
 	}
 
 	.player-top {
@@ -1202,8 +1249,14 @@ details.checksums summary {
 }
 
 @media (max-width: 24.375rem) {
-	:root {
-		--gutter: 1rem;
+	/* The gutter used to drop to 1rem here, under the 1.5rem floor §5 gives
+	   --page-gutter for "phone to television". It was doing so to buy width for
+	   a hero that did not fit: at 16vw the longest word of the title measured
+	   358px inside a 390px screen. The frame is the documented contract and the
+	   display size at the floor is composition (§12.1), so the type gives way
+	   and the margin is restored. */
+	.hero h1 {
+		font-size: clamp(3rem, 14vw, 5rem);
 	}
 
 	.player-demo {
@@ -1217,7 +1270,7 @@ details.checksums summary {
 	}
 
 	.nav-download {
-		font-size: 0.75rem !important;
+		font-size: var(--text-small);
 	}
 
 	.moment {
