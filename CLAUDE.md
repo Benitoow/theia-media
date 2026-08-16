@@ -87,6 +87,19 @@ tested path. Deleting that file has turned CI red before.
 go test ./...                       # the whole suite
 node scripts/contrast.mjs           # guards the documented colour ratios
 node web/scripts/check-locales.mjs  # guards French/English catalogue parity
+cd web && npm test                  # drives a real browser at 375, 1280 and 1920
+```
+
+The last one needs a built binary and starts one itself against a throwaway
+directory. It asserts the four things a screenshot cannot: nothing overflows,
+every declared font actually loaded, every target clears 44px, and the page has
+one left edge. Decision 82 lists the faults that earned it.
+
+To judge anything at library scale, fill a bench rather than hunting for the
+real library:
+
+```bash
+go run ./scripts/bench -data <a throwaway data dir> -count 250
 ```
 
 ## Verifying
@@ -97,6 +110,10 @@ it has been run against the real library of 274 films and the result observed.
 
 Two traps already paid for:
 
+- **A screenshot does not verify a web font.** A refused face renders as the
+  fallback behind it, which is a perfectly good font, so the page looks entirely
+  correct. `document.fonts.check()` is the only thing that answers; the guard
+  asserts it. This cost a shipped release — decision 79.
 - The in-app preview pane does **not** composite frames. `requestAnimationFrame`
   never fires there, so no CSS animation, transition or smooth scroll advances,
   and computed styles for a `position: fixed` subtree can be stale. Anything
