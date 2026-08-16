@@ -113,16 +113,41 @@ the brand rather than alarming.
 
 ## 4. Typography
 
-### The two registers
+### The three registers
 
 ```css
---font-display: Didot, "Bodoni MT", "Playfair Display", Georgia, "Times New Roman", serif;
---font-ui: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+--font-display: "Augustus", "Trajan Pro", Georgia, "Times New Roman", serif;
+--font-label:   "Dalek Pinpoint", "Copperplate Gothic", "Segoe UI", Roboto, sans-serif;
+--font-ui:      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 ```
 
-`--font-display` is for hero titles, film titles on a detail page, and empty-state
-headlines. Nothing else. `--font-ui` is for everything else without exception:
-nav, labels, body copy, buttons, metadata, the card grid.
+There were two registers until the faces changed. There are three now because
+the new display face cannot do the work the old one did in the middle.
+
+`--font-display` is the voice: hero titles, film titles on a detail page,
+empty-state headlines, the wordmark. Nothing else.
+
+`--font-label` is the chrome: `.label`, `.micro`, section headings, the
+navigation pill and the phone's tab bar. Short, deliberate strings — never
+prose.
+
+`--font-ui` is for reading, and is deliberately the platform's own interface
+face rather than anything shipped. Both shipped faces are display faces; a
+synopsis set in small caps at the three-metre rule is a legibility problem, not
+a style.
+
+**Augustus has no lowercase.** Measured, not assumed: `abcdef` and `ABCDEF` are
+the same width, because the lowercase codepoints draw capital glyphs. That is
+what a Roman inscriptional face is, and it means the display register is
+all-caps whatever the source string says. `text-transform` is therefore
+redundant there, and titles should be written in ordinary sentence case in the
+catalogues — the face does the rest. French accented capitals all draw: É È Ê
+Ï Ô Ù Ç Œ, checked one by one.
+
+**Dalek Pinpoint is small caps**, with real lowercase forms that are simply
+smaller capitals, and full Latin Extended-A. Accents are drawn rather than
+dropped, which is the reason it survived selection and two other candidates did
+not.
 
 The first family in each stack is self-hosted; the remaining system fonts are
 deliberate fallbacks. See §10 for the shipped files.
@@ -161,6 +186,21 @@ a viewing-distance layer without inventing a third type register:
 - tracked labels scale from 11px to 13px. They remain metadata, never the only
   wording on a primary action.
 
+**Above 100rem there is a second step, and it is the one written for a sofa.**
+The numbers above are the large-screen layer and were always measured on a
+desktop; a television is not a large desktop. Amazon's Fire TV guidance puts the
+floor for body text at 28px on 1080p, Android TV asks 24sp, and the standing
+advice is two and a half to three times a phone's sizes — against which 16px to
+19px is 1.19x. At 1600px and above the type tokens themselves move: labels to
+16px, secondary copy to 18px, body to 24px, titles to 30px, with card titles at
+19px and row headings at 30px. The display serif is untouched; it already fills
+a screen. The micro register moves least, because it is the footer and the legal
+line and must not start competing with the film.
+
+The step is at 100rem rather than 80rem so that a desktop window keeps the sizes
+it has. Viewport width cannot tell a 1920 television from a 1920 monitor, and
+1600px is simply above every desktop this interface has been looked at on.
+
 The test is blunt: the main action, current row and focused film must be
 identifiable from three metres away on a 1080p screen. A desktop screenshot at
 100% zoom is not evidence that this passes.
@@ -186,14 +226,49 @@ taste — every screen has to agree on them or they drift:
 --page-gutter: clamp(1.5rem, 4vw, 5.5rem);  /* phone to television */
 --content-wide: 96rem;                      /* content max width */
 --nav-height: 4rem;                         /* 4.5rem at TV width */
---nav-offset: calc(var(--nav-height) + 2rem);
+--nav-inset: 1rem;                           /* the bar's distance from the top edge */
+--nav-offset: calc(var(--nav-height) + var(--nav-inset) * 2);
 ```
+
+**Above 100rem all three change, for the safe area.** Every television guideline
+agrees on the outer five per cent — roughly 96px horizontally and 54px
+vertically on 1920×1080 — kept clear so an overscanning set cannot crop it. The
+gutter becomes `6rem`, the bar's inset becomes `3.5rem`, and the player's own
+furniture moves in to match. `--content-wide` becomes `120rem` at the same step,
+which is not about width but about alignment: at 96rem the shell stops touching
+the gutters past about 1712px and centres itself instead, so the row headings
+ended up 184px right of their own cards and the wordmark 108px right of the hero
+title. Letting the shell fill the safe area puts every left edge back on one
+line. Prose keeps its own 38rem cap and is unaffected.
 
 `--nav-offset` exists because the nav floats over the page, so every screen has
 to start below it. Four screens each guessed their own top padding — `pt-32`,
 `pt-36`, `pt-32 lg:pt-40`, `pt-36 lg:pt-44` — and no two agreed. Two classes now
 own it: `.page-body` for a normal page, `.page-body--hero` for a screen whose
 content hangs off the bottom of a full viewport. Prose max width stays `38rem`.
+
+Both were later measured and cut. `.page-body` added 3–5rem *on top of*
+`--nav-offset`, which already clears the bar with air to spare, so every utility
+page began 184px down and a library showed one row of films on a laptop; it now
+adds 2–3rem. `.page-body--hero` added 6–9rem at the top of a section whose
+content is bottom-aligned inside a `min-height` — padding nobody could see,
+which pushed the home hero to 824px on a 768px window. The hero was therefore
+cut off at the bottom and not one pixel of the first row ever showed. A row edge
+under the fold is what tells somebody there is a library beneath the film;
+without it the home screen reads as a single poster. The top value now only has
+to clear the bar, and the section is `78svh`.
+
+**Picture veils are classes, not inline styles.** The hero, the film and series
+detail headers and the welcome screen each carried their gradient stack in a
+`style` attribute with hand-typed `rgba`. Those were the last places in the
+application restating a token's channels by hand, and an inline gradient is a
+gradient no stylesheet can find. They are `.picture-veil` plus a modifier, built
+from the channel tokens in §3. The artwork under them was also held at 55–60%
+and then covered by three fades, which is what made every hero read as muted;
+the veil already does the protecting, so the picture runs at 72–78%. The
+resulting contrast was measured on the composited pixels rather than judged:
+`--muted` over the metadata row reads 5.43:1 on the home hero and 5.49:1 on the
+film page, both above the 4.5 AA floor.
 
 Headings follow the same principle. `.hero-title` is the largest register and
 stays reserved for what fills a viewport. `.page-title` is one step down, sized
@@ -232,7 +307,14 @@ it. See `DECISIONS.md` 33.
   scaled slightly down for a smaller box. The old `4px` is gone.
 - **Widths.** Row cards are `clamp(14rem, 19vw, 19rem)`, rising to
   `clamp(16rem, 17vw, 21rem)` past 80rem. The library grid is
-  `auto-fill minmax(12rem, 1fr)`, and `15rem` past 64rem. The minimum is what a
+  `auto-fill minmax(12rem, 1fr)`, and `15rem` past 64rem. **Below 36rem it is
+  two fixed columns instead**, because `auto-fill` against a 12rem minimum
+  resolves to exactly one column on a phone: at 390px the content box is 342px
+  and two cards plus their gap need 398. One card per row is a screen and a half
+  of library at a time. Two columns give a 164px card there — larger than the
+  thumbnail any phone-sized catalogue uses, still plainly readable, and four rows
+  visible instead of one. The 12rem floor below stays what it is; it was measured
+  on a desktop and it is right there. The minimum is what a
   backdrop needs to stay identifiable, not what fits the most columns: below
   about 12rem a landscape still is a smudge, and a grid of smudges scans slower
   than a grid of fewer readable ones.
@@ -268,6 +350,25 @@ Rules that override §4 and §5:
   1px `--accent` border. Keyboard or remote focus also keeps the global 2px
   focus ring around the whole link; it is navigation state, not card chrome,
   and a one-pixel border alone disappears from a sofa.
+- **The card has weight at rest and says what it does on hover.** At rest the
+  frame keeps a 1px hairline at `--bone` 6% and a soft shadow: artwork sitting
+  directly on the page with no edge reads as a picture printed on the
+  background rather than an object to pick up. The border is 1px in every
+  state, including transparent ones, so gaining the gold one never reflows the
+  card by a pixel.
+  On hover and on keyboard focus the frame lifts `0.5rem`, scales `1.015`, and
+  draws a radial scrim with a filled play mark at its centre. The mark is
+  `--bone`, not gold — the accent still means "look here" elsewhere on the
+  screen, exactly as it does for the player's one filled control (§6b) — and it
+  is `aria-hidden`, because the link around it already says where it goes.
+  Radial rather than a bottom-up gradient: the title sits *under* the card, so
+  weighting the bottom would darken artwork to protect text that is not there.
+  This is the one thing the grid gained beyond §6's density rule, and it earns
+  it: a hairline that turns gold says "this one is selected", and never says
+  "this one plays", which is the only thing any of them do. It costs the grid
+  nothing at rest, and it is suppressed entirely on touch pointers, where a
+  hover state would hide the affordance from the device most likely to be
+  holding it.
 - **One exception, added in M5: the playback progress bar.** A 3px gold rule
   across the bottom of a part-watched card. It earns its place because it is
   information rather than decoration — it is the entire reason the
@@ -498,6 +599,16 @@ a hundred cards fading up is a slideshow, not a library (§6).
 }
 ```
 
+**Never put `backdrop-filter` in a transition.** A backdrop blur is the most
+expensive thing a compositor does — it reads back everything behind the element
+and blurs it — and transitioning one asks for that work on every frame. The
+navigation bar used to go from `blur(14px)` to `blur(24px)` on scroll: the one
+element on screen the whole time, re-blurring the page behind it, triggered by
+the one gesture that already costs the most. It now holds a single `blur(20px)`
+at both states and cross-fades only background, border and shadow, which is what
+the eye was reading anyway. Blur values may change between breakpoints; they may
+not be animated between them.
+
 Two traps this guard sets, both of which have to be handled at the animation
 rather than here:
 
@@ -511,8 +622,14 @@ rather than here:
 
 ## 9. Focus and accessibility
 
-- Focus ring: `2px solid var(--accent)` with `2px` offset. Gold on near-black is
-  8.2:1 and unmistakable. Never remove the outline without replacing it.
+- Focus ring: `2px solid var(--accent)` with `2px` offset, rising to `4px` and a
+  `3px` offset above 100rem. Gold on near-black is 8.2:1 and unmistakable. Never
+  remove the outline without replacing it. The television step exists because
+  focus *is* the cursor there — no pointer, no hover — and 2px at 1920 on a
+  55-inch set subtends about one arcminute from a sofa, which is the threshold
+  of seeing a line at all before a panel's motion blur gets to it. Cards are
+  already exempt: §6.2 gave them a border, a lift, a scale and a shadow together
+  for exactly this reason.
 - Use `:focus-visible`, not `:focus`, so mouse users do not see rings.
 - Every interactive target is at least 44×44px, including in the card grid.
 - Primary actions are at least 56px high. Navigation and secondary controls are
@@ -553,28 +670,61 @@ rather than here:
 
 ## 10. Fonts, as shipped
 
-**Playfair Display Variable** for the display register, **Inter Variable** for
-everything else. Both SIL Open Font License 1.1, which is GPL-compatible and
-imposes nothing on the rest of the project.
+**Augustus** for the display register and **Dalek Pinpoint Bold** for the label
+register, both supplied by the maintainer, both self-hosted in
+`web/src/lib/fonts/`. Prose has no shipped face at all — see §4.
 
-They are self-hosted, not linked. The packages come from npm
-(`@fontsource-variable/*`), but their stylesheets are deliberately not imported:
-those ship Cyrillic, Vietnamese and Latin-Extended alongside Latin, and while a
-browser would only download the subset it needs, every subset would still be
-embedded in the binary. `web/src/app.css` declares the two `@font-face` rules by
-hand against the Latin files only. That range covers both shipped interface
-languages completely, French accents and the OE ligature included.
+### What they replaced, and what that cost
 
-Cost: two WOFF2 files, 85 KB together, hashed into `_app/immutable/` and so
-covered by the immutable cache header the Go server already sets.
+Playfair Display Variable and Inter Variable were here until v2.2.0, both SIL
+Open Font License 1.1, which is GPL-compatible and imposes nothing on the rest
+of the project. **The faces that replaced them do not carry that licence.**
+Augustus records only "Converted by ALLTYPE" and no author; Dalek Pinpoint is
+© 2018 Keith Bates / K-Type and points at a licence page rather than stating
+terms. Neither is OFL, and neither states redistribution terms in the file.
+
+This repository is public and GPL-3.0, and shipping a font inside a released
+binary is redistribution. **That is the maintainer's call to make and it has
+been made**, but it is written down here rather than left to be discovered,
+because §10 previously advertised the opposite and the claim was load-bearing.
+
+### The formats
+
+TrueType, not WOFF2. No converter is available in this toolchain and none was
+worth installing for two files. The Go server compresses `font/ttf` on the way
+out (decision 74 covers the middleware, decision 79 the type), which brings
+Augustus to 30 KB and Dalek to 45 KB — 76 KB together against the 85 KB of
+WOFF2 they replace, so the change costs nothing on the wire.
+
+WOFF and WOFF2 are deliberately *not* in the compressible list: they carry their
+own compression and gzipping them again only spends CPU.
+
+### Augustus needed repairing before a browser would take it
+
+Shipped as it arrived, every browser refused it outright — the file is a 1999
+ALLTYPE conversion carrying two defects that OpenType sanitisers reject:
+
+- `OTS parsing error: overlapping tables` — the `glyf` table declared itself 130
+  bytes longer than the glyph data actually is, and the overhang ran into
+  `cmap`. The `loca` table gives the true extent, 73,316 bytes, ending twelve
+  bytes clear of `cmap`, so the length was simply wrong and no glyph was lost by
+  correcting it.
+- `cmap: language id should be zero: 1` — both cmap subtables carried language
+  1, which the specification reserves for Macintosh-language-specific subtables.
+  The field takes no part in character lookup.
+
+The file in the repository is the repaired one: every table re-emitted in order,
+four-byte aligned, with fresh offsets, fresh per-table checksums and a fresh
+`checkSumAdjustment`. Verified afterwards at 394 glyphs with French complete,
+and confirmed loading in Chrome (`document.fonts.check('16px Augustus')`).
 
 **There is no CDN request anywhere in the application**, which is not a
-preference but the project's no-external-calls rule. Verified from the running
-binary: every request the page makes is to its own origin or a `data:` URI.
+preference but the project's no-external-calls rule.
 
-The system stacks are still listed behind them in §4 and still work — they are
-what renders during the swap, and what a browser with WOFF2 disabled falls back
-to.
+The system stacks are still listed behind both faces in §4 and still work — they
+are what renders during the swap, and what a browser that refuses a face falls
+back to. That fallback is why the failure above was nearly missed: the page
+looked fine, in Georgia.
 
 ## 11. Implementation status
 

@@ -3,40 +3,46 @@
 /* ---------------------------------------------------------------------------
    Fonts
    ---------------------------------------------------------------------------
-   Declared by hand rather than by importing @fontsource's own stylesheet,
-   which ships Cyrillic, Vietnamese and Latin-Extended alongside Latin. A
-   browser would only ever download the subset it needs, but every subset would
-   still be embedded in the Go binary, so only Latin is wired up here. That
-   range covers French completely, accents and the OE ligature included.
+   Two faces are shipped, both supplied by the maintainer, both self-hosted.
+   There is no CDN request anywhere in this application.
 
-   Both families are SIL Open Font License 1.1, self-hosted. There is no CDN
-   request anywhere in this application.
+   AUGUSTUS carries the display register -- heroes, film titles, the wordmark.
+   A classical inscriptional serif, which suits a server named after a Greek
+   Titaness better than a Didone revival did. 394 glyphs; French is complete,
+   accents and all, which is the first thing that was checked because the
+   interface defaults to French.
+
+   DALEK PINPOINT BOLD carries the label register -- the uppercase, wide-tracked
+   strings section 4 calls the signature move, plus navigation and section
+   headings. A small-caps face with Greek and Phoenician overtones; 416 glyphs,
+   full Latin Extended-A, accents drawn rather than dropped.
+
+   Prose is deliberately not either of them. Both are display faces, and a
+   synopsis set in small caps at the three-metre rule is a legibility problem,
+   not a style. --font-ui therefore falls to the platform's own interface face,
+   which is the one thing on any device already tuned for reading and which
+   ships nothing.
+
+   TrueType rather than WOFF2: no converter is available here and none is worth
+   installing for it. The Go server gzips font/ttf on the way out, which brings
+   Augustus to 27 KB and Dalek to 41 KB -- together still less than the 85 KB of
+   WOFF2 they replace.
    --------------------------------------------------------------------------- */
 
 @font-face {
-	font-family: 'Playfair Display Variable';
+	font-family: 'Augustus';
 	font-style: normal;
 	font-display: swap;
-	font-weight: 400 900;
-	src: url('@fontsource-variable/playfair-display/files/playfair-display-latin-wght-normal.woff2')
-		format('woff2-variations');
-	unicode-range:
-		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
-		U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF,
-		U+FFFD;
+	font-weight: 400;
+	src: url('$lib/fonts/augustus.ttf') format('truetype');
 }
 
 @font-face {
-	font-family: 'Inter Variable';
+	font-family: 'Dalek Pinpoint';
 	font-style: normal;
 	font-display: swap;
-	font-weight: 100 900;
-	src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2')
-		format('woff2-variations');
-	unicode-range:
-		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
-		U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF,
-		U+FFFD;
+	font-weight: 700;
+	src: url('$lib/fonts/dalek-pinpoint-bold.ttf') format('truetype');
 }
 
 /* ---------------------------------------------------------------------------
@@ -69,10 +75,15 @@
 	--color-error: #d06a5d;
 	--color-warning: #c9964a;
 
-	--font-display: 'Playfair Display Variable', Didot, 'Bodoni MT', Georgia, 'Times New Roman',
-		serif;
-	--font-ui: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-		'Helvetica Neue', Arial, sans-serif;
+	/* Three registers, where there used to be two. See section 4.
+	   --font-display is the voice: heroes, film titles, the wordmark.
+	   --font-label is the chrome: the uppercase wide-tracked strings, the
+	   navigation, section headings -- short, deliberate, never prose.
+	   --font-ui is for reading, and is the platform's own, on purpose. */
+	--font-display: 'Augustus', 'Trajan Pro', Georgia, 'Times New Roman', serif;
+	--font-label: 'Dalek Pinpoint', 'Copperplate Gothic', 'Segoe UI', Roboto, sans-serif;
+	--font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+		sans-serif;
 
 	/* Scale. Large type tracks in, small type tracks out -- that opposition is
 	   the whole system in one line. */
@@ -120,15 +131,59 @@
 	--target-min: 3.25rem;
 	--nav-height: 4rem;
 
+	/* How far the floating bar sits from the top edge. A token because a
+	   television needs it much larger than a laptop does -- see the 100rem step
+	   at the foot of this file -- and because --nav-offset is derived from it. */
+	--nav-inset: 1rem;
+
 	/* The fixed nav is --nav-height tall inside a wrapper that adds 1rem above
 	   and below it. Every page has to start below that, and until this token
 	   existed each one guessed: pt-32 here, pt-36 there, pt-32 lg:pt-40
 	   somewhere else. Derived once, so adding a page is not a measuring
 	   exercise. */
-	--nav-offset: calc(var(--nav-height) + 2rem);
+	--nav-offset: calc(var(--nav-height) + var(--nav-inset) * 2);
 
-	--glass: rgba(19, 18, 17, 0.72);
-	--glass-strong: rgba(11, 10, 9, 0.88);
+	/* The colours above, as bare channels.
+	   Section 3 promises that changing --accent in one place makes the whole
+	   application follow. It did not: sixty declarations restated a token's RGB
+	   by hand in order to put an alpha on it, and not one of them would have
+	   followed. These are not new colours. They are the ones already declared,
+	   written so a translucent use can be derived instead of retyped.
+	   rgb() with space-separated channels and a slash alpha is used rather than
+	   color-mix() or relative colour syntax: both are newer than several of the
+	   television browser engines this project still has to tolerate. */
+	--channel-ink: 11 10 9;
+	--channel-surface: 19 18 17;
+	--channel-bone: 237 231 220;
+	--channel-accent: 200 162 74;
+
+	/* Pure black, and the only place it is allowed.
+	   Section 3 forbids it as a page background -- it reads as an OLED void
+	   rather than a dark room. Behind a film it is the opposite: letterbox bars
+	   in anything but black are visible edges around the picture, which is what
+	   a cinema spends its money avoiding. Named so the exception is stated
+	   rather than left as a bare literal in the player. */
+	--player-letterbox: #000;
+
+	--glass: rgb(var(--channel-surface) / 0.72);
+	--glass-strong: rgb(var(--channel-ink) / 0.88);
+
+	/* What sits over what.
+	   These are the values the application already used, given names. Nothing is
+	   restacked by declaring them except the grain, which shared 50 with the
+	   player and therefore painted over the film: body::after is generated
+	   content and paints after body's children, so an overlay-blended noise
+	   layer was being applied to moving picture. Section 6b says the picture
+	   fills the frame and everything else floats over it; texture is chrome, so
+	   it belongs under the one screen that is not chrome.
+	   Local stacking inside a component (a scrim behind its own text, a handle
+	   over its own track) stays a small plain number: it is not a contract
+	   between screens and naming it would say otherwise. */
+	--layer-raised: 10;
+	--layer-nav: 40;
+	--layer-grain: 45;
+	--layer-player: 50;
+	--layer-modal: 60;
 
 	/* Card corners. The interface rounds two ways: pills at 999px for anything
 	   you press, and a generous panel radius starting at 1rem for anything you
@@ -136,6 +191,20 @@
 	   smaller box. It replaces the near-square 4px the poster grid used to
 	   carry -- see §6. */
 	--radius-card: clamp(1rem, 1.6vw, 1.375rem);
+
+	/* The rest of that second family, named rather than repeated.
+	   Section 6.1 states the rule -- pills for what you press, a panel radius
+	   from 1rem up for what you look at -- and gives the card its token. The
+	   two other sizes in that family were already being used consistently and
+	   had simply never been named: a panel corner on .chrome-panel and the
+	   player's help sheet, and a shallower one on the rows of a list. Naming
+	   them changes no corner; it stops the next component from guessing a
+	   ninth value. A box nested inside one of these still rounds tighter than
+	   its container, which is why .episode-still and the seek strip keep their
+	   own smaller number. */
+	--radius-panel: clamp(1rem, 2vw, 1.75rem);
+	--radius-row: clamp(0.75rem, 1.2vw, 1rem);
+	--radius-nested: 0.5rem;
 
 	/* The one texture that is wired up: .grain on <body> in app.html. Section 7
 	   of the design system keeps the vignette and glow recipes on file, but they
@@ -163,8 +232,17 @@
 		min-width: 20rem;
 		margin: 0;
 		overflow-x: hidden;
+		/* A column, so a page with little in it still reaches the bottom of the
+		   viewport and the attribution sits where a footer belongs. Before this
+		   the search screen ended at 520px of an 812px window and left its
+		   footer stranded across the middle with 290px of nothing under it.
+		   The wrapper SvelteKit renders into is display:contents, so the nav,
+		   the page and the footer are this flex container's own children. */
+		display: flex;
+		min-height: 100svh;
+		flex-direction: column;
 		background:
-			radial-gradient(circle at 88% 8%, rgba(200, 162, 74, 0.055), transparent 26rem),
+			radial-gradient(circle at 88% 8%, rgb(var(--channel-accent) / 0.055), transparent 26rem),
 			var(--color-ink);
 	}
 
@@ -205,6 +283,7 @@
 	/* The signature move of the whole system, used often enough to deserve a
 	   class: small, uppercase, tracked far apart, always secondary. */
 	.label {
+		font-family: var(--font-label);
 		font-size: clamp(var(--text-label), 0.72vw, 0.8125rem);
 		line-height: var(--text-label--line-height);
 		letter-spacing: var(--text-label--letter-spacing);
@@ -213,6 +292,7 @@
 	}
 
 	.micro {
+		font-family: var(--font-label);
 		font-size: var(--text-micro);
 		line-height: var(--text-micro--line-height);
 		letter-spacing: var(--text-micro--letter-spacing);
@@ -233,28 +313,37 @@
 	   to start, given a nav that floats over it. Pages used to each pick their
 	   own number and they did not agree. */
 	.page-body {
-		padding-block-start: calc(var(--nav-offset) + 3rem);
+		padding-block-start: calc(var(--nav-offset) + 2rem);
 		padding-block-end: 4rem;
 	}
 
 	@media (min-width: 64rem) {
 		.page-body {
-			padding-block-start: calc(var(--nav-offset) + 5rem);
+			padding-block-start: calc(var(--nav-offset) + 3rem);
 			padding-block-end: 5rem;
 		}
 	}
 
 	/* A hero fills the viewport and hangs its copy off the bottom, so it needs
 	   the offset as clearance rather than as a starting line. */
+	/* The hero's own frame.
+	   Its only consumer bottom-aligns its content inside a section already given
+	   a min-height, so this top padding was never seen -- it only added to the
+	   height. Measured on a 768px window it pushed the section to 824px: taller
+	   than the viewport, so the hero was cut off at the bottom and not one pixel
+	   of the first row ever showed. A row edge under the fold is what tells
+	   somebody there is a library below the film; without it the home screen
+	   reads as a single poster.
+	   The top value now only has to clear the bar. */
 	.page-body--hero {
-		padding-block-start: calc(var(--nav-offset) + 6rem);
-		padding-block-end: 7rem;
+		padding-block-start: var(--nav-offset);
+		padding-block-end: 5rem;
 	}
 
 	@media (min-width: 64rem) {
 		.page-body--hero {
-			padding-block-start: calc(var(--nav-offset) + 9rem);
-			padding-block-end: 9rem;
+			padding-block-start: calc(var(--nav-offset) + 2rem);
+			padding-block-end: 6rem;
 		}
 	}
 
@@ -319,10 +408,10 @@
 	}
 
 	.chrome-panel {
-		border: 1px solid rgba(237, 231, 220, 0.11);
-		border-radius: clamp(1rem, 2vw, 1.75rem);
+		border: 1px solid rgb(var(--channel-bone) / 0.11);
+		border-radius: var(--radius-panel);
 		background:
-			linear-gradient(135deg, rgba(237, 231, 220, 0.045), transparent 58%),
+			linear-gradient(135deg, rgb(var(--channel-bone) / 0.045), transparent 58%),
 			var(--glass);
 		box-shadow: 0 2rem 6rem rgba(0, 0, 0, 0.28);
 		-webkit-backdrop-filter: blur(24px);
@@ -331,9 +420,13 @@
 
 	.section-title {
 		color: var(--color-bone);
+		font-family: var(--font-label);
 		font-size: clamp(1.125rem, 1.35vw, 1.5rem);
-		font-weight: 600;
-		letter-spacing: -0.015em;
+		/* Dalek is a single bold weight, so the old 600 would have been
+		   synthesised into a smear. The tracking opens a touch because a
+		   small-caps face set tight closes its own counters. */
+		font-weight: 400;
+		letter-spacing: 0.01em;
 		line-height: 1.2;
 	}
 
@@ -347,9 +440,32 @@
 		position: fixed;
 		inset-inline: 0;
 		top: 0;
-		z-index: 40;
-		padding: 1rem var(--page-gutter);
+		z-index: var(--layer-nav);
+		padding: var(--nav-inset) var(--page-gutter);
 		pointer-events: none;
+	}
+
+	/* A floor for the bar to sit on.
+	   The pill is translucent and inset a rem from the top, so a scrolling page
+	   ran its text through the gap around it: on the film page a line of the
+	   synopsis sat above the pill, sliced by the top of the window, and more of
+	   it showed either side of the rounded corners. The bar reads as floating
+	   over the page only if the page fades before it gets there.
+	   A scrim rather than an opaque band, which is the same choice section 6b
+	   makes for the player: the picture behind it stays visible, the text on top
+	   of it gets a floor. */
+	.site-nav-wrap::before {
+		position: absolute;
+		z-index: -1;
+		content: '';
+		inset: 0 0 auto;
+		height: calc(100% + 2.5rem);
+		background: linear-gradient(
+			to bottom,
+			rgb(var(--channel-ink) / 0.92) 0%,
+			rgb(var(--channel-ink) / 0.72) 45%,
+			transparent 100%
+		);
 	}
 
 	.site-nav {
@@ -359,27 +475,35 @@
 		align-items: center;
 		justify-content: space-between;
 		margin-inline: auto;
-		border: 1px solid rgba(237, 231, 220, 0.07);
+		border: 1px solid rgb(var(--channel-bone) / 0.07);
 		border-radius: 999px;
 		padding-inline: 0.5rem;
 		pointer-events: auto;
-		background: rgba(11, 10, 9, 0.48);
+		background: rgb(var(--channel-ink) / 0.48);
 		box-shadow: 0 0.75rem 2.5rem rgba(0, 0, 0, 0.18);
-		-webkit-backdrop-filter: blur(14px);
-		backdrop-filter: blur(14px);
+		/* One blur, held at both states.
+		   This used to go from 14px to 24px, with backdrop-filter in the
+		   transition list below. A backdrop blur is the most expensive thing a
+		   compositor does -- it reads back everything behind the element and
+		   blurs it -- and animating one asks for that work on every frame, on
+		   the one element that is on screen the whole time, triggered by the one
+		   gesture that already costs the most: scrolling. A television's browser
+		   pays for that in dropped frames down the whole page.
+		   Holding it at 20px, between the two old values, keeps the glass. What
+		   the eye actually reads on scroll is the panel going darker and the
+		   shadow deepening, and both of those still cross-fade below. */
+		-webkit-backdrop-filter: blur(20px);
+		backdrop-filter: blur(20px);
 		transition:
 			background-color var(--duration-base) var(--ease-cine),
 			border-color var(--duration-base) var(--ease-cine),
-			box-shadow var(--duration-base) var(--ease-cine),
-			backdrop-filter var(--duration-base) var(--ease-cine);
+			box-shadow var(--duration-base) var(--ease-cine);
 	}
 
 	.site-nav[data-scrolled='true'] {
-		border-color: rgba(237, 231, 220, 0.1);
+		border-color: rgb(var(--channel-bone) / 0.1);
 		background: var(--glass-strong);
 		box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.28);
-		-webkit-backdrop-filter: blur(24px);
-		backdrop-filter: blur(24px);
 	}
 
 	.nav-target {
@@ -397,21 +521,110 @@
 	}
 
 	.nav-target:hover {
-		background: rgba(237, 231, 220, 0.08);
+		background: rgb(var(--channel-bone) / 0.08);
 	}
 
 	/* At the 320px floor the three nav targets need less horizontal padding to
 	   remain inside the pill's rounded edge. The 52px
 	   block size and the labels, which are what §9 actually requires, are
 	   untouched. */
-	@media (max-width: 26rem) {
+	/* The phone's tab bar, and what the pill above it becomes.
+	   Below this width the destinations live at the bottom of the screen (see
+	   .tab-bar), so the pill carries only the identity and the profile -- which
+	   fits on one line at any phone width and needs none of the wrapping the
+	   previous answer required. */
+	@media (max-width: 36rem) {
 		.site-nav {
-			padding-inline: 0.25rem;
-		}
-
-		.nav-target {
 			padding-inline: 0.5rem;
 		}
+
+		.site-nav .nav-link {
+			display: none;
+		}
+	}
+
+	/* The phone's navigation, in the half of the screen a thumb can reach.
+	   Hidden above 36rem, where the pill holds everything comfortably on one
+	   line and a bar pinned to the bottom of a desktop window would be strange.
+	   It is also hidden from a television for the same reason: the pill is the
+	   D-pad surface, and section 9's first-arrow contract is written against it. */
+	.tab-bar {
+		position: fixed;
+		z-index: var(--layer-nav);
+		display: none;
+		inset: auto 0 0;
+		align-items: stretch;
+		border-top: 1px solid var(--color-line);
+		background: var(--glass-strong);
+		-webkit-backdrop-filter: blur(18px);
+		backdrop-filter: blur(18px);
+		/* The home indicator on a modern phone sits inside the viewport; without
+		   this the last row of labels is under it. */
+		padding-bottom: env(safe-area-inset-bottom, 0px);
+	}
+
+	.tab {
+		display: flex;
+		min-block-size: 3.5rem;
+		flex: 1 1 0;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.25rem;
+		padding-block: 0.55rem 0.45rem;
+		padding-inline: 0.15rem;
+		color: var(--color-muted);
+		text-decoration: none;
+		transition: color var(--duration-fast) var(--ease-cine);
+	}
+
+	/* The micro register, tracked in rather than out.
+	   Section 4's rule is that small type tracks out, and it is right everywhere
+	   a label has room. Here it does not: five tabs across 375px give each one
+	   75px, and "Rechercher" measured 77px at 0.1em -- exactly its own slot,
+	   touching both neighbours and pushing its tab wider than the other four.
+	   The tracking is what stretches it, so the tracking is what gives. */
+	.tab-label {
+		max-width: 100%;
+		/* The bar is navigation, so it belongs to the label register with the
+		   pill it replaces on a phone -- not to the prose face. */
+		font-family: var(--font-label);
+		font-size: var(--text-micro);
+		letter-spacing: 0.03em;
+		line-height: 1;
+		text-transform: uppercase;
+	}
+
+	.tab:hover {
+		color: var(--color-parchment);
+	}
+
+	/* Where you are, keyed off aria-current exactly as the pill's links are, so
+	   the fact is stated once and serves the eye and a screen reader together.
+	   One accent, and it is the only one this bar spends. */
+	.tab[aria-current='page'] {
+		color: var(--color-accent);
+	}
+
+	@media (max-width: 36rem) {
+		.tab-bar {
+			display: flex;
+		}
+
+		/* Room for the bar, so the last line of a page is not sitting under it.
+		   On the body rather than a page class: the footer is the last thing in
+		   this column and it has to clear it too. */
+		body {
+			padding-block-end: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+		}
+	}
+
+	/* Pushed to the bottom of the column body sets up, so a short page keeps its
+	   attribution at the foot of the window rather than halfway up it. mt-16 was
+	   doing the spacing job on long pages and nothing at all on short ones. */
+	.site-footer {
+		margin-block-start: auto;
+		padding-block-start: 4rem;
 	}
 
 	/* Where you are. Keyed off aria-current rather than a class, so the fact is
@@ -431,7 +644,7 @@
 		height: 0.3rem;
 		border-radius: 50%;
 		background: var(--color-accent);
-		box-shadow: 0 0 0.5rem rgba(200, 162, 74, 0.5);
+		box-shadow: 0 0 0.5rem rgb(var(--channel-accent) / 0.5);
 	}
 
 	/* The wordmark is set, not placed.
@@ -477,7 +690,7 @@
 		content: '';
 		display: block;
 		height: 1px;
-		background: linear-gradient(to right, var(--color-accent), rgba(200, 162, 74, 0));
+		background: linear-gradient(to right, var(--color-accent), rgb(var(--channel-accent) / 0));
 	}
 
 	.nav-brand:hover .brand-word,
@@ -494,6 +707,58 @@
 
 	/* The largest register, and it stays reserved for what fills a viewport: the
 	   home hero and the full-bleed message screens. */
+	/* The two picture veils.
+	   Both were inline style attributes carrying hand-typed rgba, which is the
+	   one thing the channel tokens exist to stop -- and an inline gradient is a
+	   gradient no stylesheet can find. Three fades rather than the single
+	   blue-black wash every streaming clone uses: one lifts the floor under the
+	   copy, one protects the reading side, and one is the warm light the name
+	   argues for (§2). */
+	.picture-veil {
+		position: absolute;
+		z-index: -10;
+		inset: 0;
+	}
+
+	.picture-veil--hero {
+		background:
+			linear-gradient(
+				to top,
+				var(--color-ink) 0%,
+				rgb(var(--channel-ink) / 0.72) 34%,
+				rgb(var(--channel-ink) / 0.08) 76%
+			),
+			linear-gradient(
+				to right,
+				rgb(var(--channel-ink) / 0.94) 0%,
+				rgb(var(--channel-ink) / 0.52) 43%,
+				transparent 76%
+			),
+			radial-gradient(circle at 75% 28%, rgb(var(--channel-accent) / 0.13), transparent 28rem);
+	}
+
+	.picture-veil--detail {
+		background:
+			linear-gradient(
+				to top,
+				var(--color-ink) 2%,
+				rgb(var(--channel-ink) / 0.58) 48%,
+				rgb(var(--channel-ink) / 0.08) 100%
+			),
+			linear-gradient(to right, rgb(var(--channel-ink) / 0.7), transparent 70%);
+	}
+
+	.picture-veil--welcome {
+		background:
+			linear-gradient(
+				to right,
+				var(--color-ink) 0%,
+				rgb(var(--channel-ink) / 0.9) 48%,
+				rgb(var(--channel-ink) / 0.3) 100%
+			),
+			linear-gradient(to top, var(--color-ink) 0%, transparent 55%);
+	}
+
 	.hero-title {
 		max-width: 13ch;
 		font-family: var(--font-display);
@@ -576,7 +841,7 @@
 		height: 0.25rem;
 		overflow: hidden;
 		border-radius: 999px;
-		background: rgba(237, 231, 220, 0.18);
+		background: rgb(var(--channel-bone) / 0.18);
 	}
 
 	.hero-progress-played {
@@ -612,13 +877,31 @@
 		z-index: -1;
 		inset: 0;
 		background:
-			linear-gradient(to right, var(--color-ink) 8%, rgba(11, 10, 9, 0.86) 46%, rgba(11, 10, 9, 0.18) 100%),
+			linear-gradient(to right, var(--color-ink) 8%, rgb(var(--channel-ink) / 0.86) 46%, rgb(var(--channel-ink) / 0.18) 100%),
 			linear-gradient(to top, var(--color-ink), transparent 45%);
+	}
+
+	/* The veil turns to face the copy.
+	   It reads left-to-right because on a wide screen the copy sits in the left
+	   third, where the gradient is opaque; by the right edge it is down to 18%,
+	   which is enough to let the photograph through. On a phone the copy is full
+	   width, so its right half lands in exactly that 18% -- "Aucune série" was
+	   grey type over a lit statue and could not be read at all.
+	   Same idea, rotated: dark where the words are. */
+	@media (max-width: 36rem) {
+		.chrome-scene-veil {
+			background: linear-gradient(
+				to top,
+				var(--color-ink) 12%,
+				rgb(var(--channel-ink) / 0.86) 58%,
+				rgb(var(--channel-ink) / 0.74) 100%
+			);
+		}
 	}
 
 	.home-rows {
 		position: relative;
-		z-index: 10;
+		z-index: var(--layer-raised);
 		margin-top: clamp(-5rem, -7vw, -2.5rem);
 		padding-top: 1rem;
 		background: linear-gradient(to bottom, transparent, var(--color-ink) 8rem);
@@ -636,7 +919,7 @@
 		position: relative;
 		display: block;
 		overflow: hidden;
-		border: 1px solid rgba(237, 231, 220, 0.04);
+		border: 1px solid rgb(var(--channel-bone) / 0.04);
 		border-radius: 0.35rem;
 		background: var(--color-surface);
 	}
@@ -649,9 +932,9 @@
 		background: linear-gradient(
 			105deg,
 			transparent 20%,
-			rgba(237, 231, 220, 0.055) 42%,
-			rgba(237, 231, 220, 0.09) 50%,
-			rgba(237, 231, 220, 0.055) 58%,
+			rgb(var(--channel-bone) / 0.055) 42%,
+			rgb(var(--channel-bone) / 0.09) 50%,
+			rgb(var(--channel-bone) / 0.055) 58%,
 			transparent 80%
 		);
 		transform: translateX(-100%);
@@ -788,6 +1071,17 @@
 		gap: clamp(0.9rem, 1.6vw, 1.5rem);
 	}
 
+	/* The phone's two columns, mirrored here too. Section 6.3 requires the
+	   silhouette to match what replaces it, or the page jumps at the moment it
+	   finishes loading -- and a one-column skeleton resolving into a two-column
+	   grid is exactly that jump. */
+	@media (max-width: 36rem) {
+		.skeleton-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 0.75rem 0.7rem;
+		}
+	}
+
 	@media (min-width: 64rem) {
 		.skeleton-grid {
 			grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
@@ -892,24 +1186,89 @@
 		text-decoration: none;
 	}
 
+	/* The frame keeps its 1px border at every state so that gaining the gold one
+	   never reflows the card by a pixel. At rest that border is a hairline
+	   rather than nothing at all: artwork sitting directly on the page with no
+	   edge and no weight reads as a picture printed on the background instead of
+	   an object you can pick up. */
 	.poster-frame {
 		position: relative;
 		aspect-ratio: 16 / 9;
 		overflow: hidden;
-		border: 1px solid transparent;
+		border: 1px solid rgb(var(--channel-bone) / 0.06);
 		border-radius: var(--radius-card);
 		background: var(--color-surface);
+		box-shadow: 0 0.4rem 1.25rem rgba(0, 0, 0, 0.3);
 		transition:
 			border-color var(--duration-fast) var(--ease-cine),
 			transform var(--duration-base) var(--ease-cine),
 			box-shadow var(--duration-base) var(--ease-cine);
 	}
 
+	/* The play affordance, and the scrim that makes it readable over any frame
+	   of any film. Both are drawn only while the card is hovered or focused, so
+	   nothing is added to the grid at rest -- section 6 asks the grid to be
+	   dense and fast, and this costs it nothing until somebody points at a card.
+	   Bone rather than gold: the accent still means "look here" elsewhere on the
+	   screen, exactly as it does for the player's one filled control. */
+	.poster-hover {
+		position: absolute;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		opacity: 0;
+		/* Radial rather than a bottom-up gradient. The title sits under the card,
+		   not inside it, so weighting the bottom darkened artwork to protect
+		   text that is not there. This puts the shade where the mark actually
+		   is and lets the corners of the frame keep their picture. */
+		background: radial-gradient(
+			circle at 50% 50%,
+			rgb(var(--channel-ink) / 0.62) 0%,
+			rgb(var(--channel-ink) / 0.38) 45%,
+			rgb(var(--channel-ink) / 0.12) 100%
+		);
+		inset: 0;
+		transition: opacity var(--duration-base) var(--ease-cine);
+	}
+
+	.poster-play {
+		display: grid;
+		min-block-size: 3rem;
+		min-inline-size: 3rem;
+		border-radius: 999px;
+		background: rgb(var(--channel-bone) / 0.94);
+		color: var(--color-ink);
+		place-items: center;
+		transform: scale(0.82);
+		transition: transform var(--duration-base) var(--ease-cine);
+	}
+
+	/* A touchscreen has no hover, and a card that reveals its affordance only to
+	   a pointer would hide it from the device most likely to be holding it. */
+	@media (any-hover: hover) and (any-pointer: fine) {
+		.poster-card:hover .poster-hover {
+			opacity: 1;
+		}
+
+		.poster-card:hover .poster-play {
+			transform: scale(1);
+		}
+	}
+
+	.poster-card:focus-visible .poster-hover {
+		opacity: 1;
+	}
+
+	.poster-card:focus-visible .poster-play {
+		transform: scale(1);
+	}
+
 	.poster-card:hover .poster-frame,
 	.poster-card:focus-visible .poster-frame {
 		border-color: var(--color-accent);
-		transform: translateY(-0.35rem);
-		box-shadow: 0 1.2rem 2.8rem rgba(0, 0, 0, 0.38);
+		transform: translateY(-0.5rem) scale(1.015);
+		box-shadow: 0 1.5rem 3.2rem rgba(0, 0, 0, 0.5);
 	}
 
 	.poster-art {
@@ -924,20 +1283,41 @@
 		object-fit: contain;
 	}
 
+	/* The stand-in for artwork that does not exist.
+	   A flat surface with the title repeated in it read as an empty box, which
+	   in a grid of real backdrops reads as a broken one. It is composed instead:
+	   a light raked across the frame from the top left, exactly as the chrome
+	   does elsewhere, and the film's initial set in the display serif at a size
+	   that is clearly a graphic rather than a heading. Section 6.2 keeps the
+	   serif away from card *titles*; this is not a title -- the title is printed
+	   under the frame, and this is hidden from assistive technology. */
 	.poster-fallback {
 		display: flex;
 		height: 100%;
 		align-items: center;
 		justify-content: center;
 		padding: 0.75rem;
+		background:
+			linear-gradient(150deg, rgb(var(--channel-bone) / 0.08), transparent 58%),
+			var(--color-surface);
+	}
+
+	.poster-fallback-initial {
+		color: rgb(var(--channel-bone) / 0.16);
+		font-family: var(--font-display);
+		font-size: clamp(2.75rem, 6vw, 4.5rem);
+		font-weight: 400;
+		line-height: 1;
+		user-select: none;
 	}
 
 	.poster-progress {
 		position: absolute;
+		z-index: 2;
 		inset-inline: 0;
 		bottom: 0;
 		height: 3px;
-		background: rgba(11, 10, 9, 0.7);
+		background: rgb(var(--channel-ink) / 0.7);
 	}
 
 	.poster-progress-played {
@@ -945,6 +1325,8 @@
 		background: var(--color-accent);
 	}
 
+	/* A card in a grid fills its cell. Repeated in the 80rem block at the foot
+	   of this file, which is unlayered and would otherwise override this. */
 	.poster-card--fluid {
 		width: 100%;
 	}
@@ -957,6 +1339,148 @@
 	   this is the screen where that matters most -- it exists to find one film
 	   among hundreds.
 	   ----------------------------------------------------------------------- */
+	/* The search screen.
+	   Its field is not one control in a toolbar, it is the whole point of the
+	   page, so it takes the page's weight: wider, taller, and set in a size you
+	   would read rather than a size you would skim. The pill, the hairline and
+	   the surface tint are the library toolbar's, deliberately -- this is the
+	   same object doing the same job with more room, not a second design. */
+	.search-field {
+		display: flex;
+		max-width: 48rem;
+		min-block-size: 4.25rem;
+		align-items: center;
+		gap: 1rem;
+		margin-block-start: clamp(1.75rem, 3vw, 2.5rem);
+		border: 1px solid var(--color-line);
+		border-radius: 999px;
+		padding-inline: clamp(1.25rem, 2vw, 1.75rem) 0.5rem;
+		background: rgb(var(--channel-surface) / 0.6);
+		transition:
+			border-color var(--duration-fast) var(--ease-cine),
+			background-color var(--duration-fast) var(--ease-cine);
+	}
+
+	.search-field:hover {
+		border-color: var(--color-muted);
+	}
+
+	/* The input's own ring is suppressed because the frame is what a person
+	   sees; section 9 allows that only if the ring is replaced, so it is put
+	   back here on the frame at full strength. */
+	.search-field:focus-within {
+		border-color: var(--color-muted);
+		background: rgb(var(--channel-surface) / 0.9);
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+
+	.search-input {
+		min-width: 0;
+		flex: 1 1 auto;
+		border: 0;
+		background: transparent;
+		color: var(--color-bone);
+		font-size: clamp(1rem, 1.3vw, 1.1875rem);
+		outline: none;
+	}
+
+	.search-input::placeholder {
+		color: var(--color-faint);
+	}
+
+	.search-input::-webkit-search-cancel-button {
+		appearance: none;
+	}
+
+	.search-hint {
+		max-width: 38rem;
+		margin-block-start: 1rem;
+	}
+
+	/* Reserved only while it has something to say. Held open at all times it was
+	   a 90px hole between the field and the recent searches on an idle screen,
+	   which is the emptiness this page was rebuilt to remove; the line it
+	   reserves against is one line of secondary copy, and the block under it
+	   changes wholesale anyway when a search resolves. */
+	.search-status:not(:empty) {
+		min-block-size: 1.75rem;
+		margin-block-start: clamp(1.25rem, 2.5vw, 1.75rem);
+	}
+
+	/* What was looked for before, when there is nothing else to show. The screen
+	   without this was a field and six hundred pixels of nothing. */
+	.search-recent {
+		margin-block-start: clamp(2rem, 4vw, 3rem);
+	}
+
+	.search-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.6rem;
+		margin: 1rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.search-chip {
+		display: inline-flex;
+		align-items: stretch;
+		overflow: hidden;
+		border: 1px solid var(--color-line);
+		border-radius: 999px;
+		background: var(--color-surface);
+		transition:
+			border-color var(--duration-fast) var(--ease-cine),
+			background-color var(--duration-fast) var(--ease-cine);
+	}
+
+	.search-chip:hover {
+		border-color: var(--color-muted);
+		background: var(--color-raised);
+	}
+
+	/* Both halves clear the 44px floor on their own, because either one of them
+	   is what a thumb lands on. */
+	.search-chip-go,
+	.search-chip-forget {
+		display: inline-flex;
+		min-block-size: 2.75rem;
+		align-items: center;
+		border: 0;
+		background: transparent;
+		cursor: pointer;
+	}
+
+	.search-chip-go {
+		padding-inline: 1.1rem 0.6rem;
+		color: var(--color-parchment);
+		font-size: var(--text-small);
+	}
+
+	.search-chip-go:hover {
+		color: var(--color-bone);
+	}
+
+	.search-chip-forget {
+		min-inline-size: 2.75rem;
+		justify-content: center;
+		padding-inline-end: 0.35rem;
+		color: var(--color-faint);
+	}
+
+	.search-chip-forget:hover {
+		color: var(--color-bone);
+	}
+
+	.search-results {
+		margin-block-start: clamp(2rem, 4vw, 3rem);
+	}
+
+	.search-results .label {
+		margin-block-end: 1.25rem;
+	}
+
 	.library-toolbar {
 		display: flex;
 		flex-wrap: wrap;
@@ -966,7 +1490,7 @@
 		border: 1px solid var(--color-line);
 		border-radius: 999px;
 		padding: 0.4rem 0.5rem 0.4rem 1.1rem;
-		background: rgba(19, 18, 17, 0.6);
+		background: rgb(var(--channel-surface) / 0.6);
 	}
 
 	.library-search {
@@ -1017,14 +1541,36 @@
 		gap: 0.5rem;
 		border-radius: 999px;
 		padding-inline: 0.9rem;
-		background: rgba(237, 231, 220, 0.05);
+		background: rgb(var(--channel-bone) / 0.05);
 		cursor: pointer;
 		transition: background-color var(--duration-fast) var(--ease-cine);
 	}
 
-	.library-select:hover,
+	.library-select:hover {
+		background: rgb(var(--channel-bone) / 0.1);
+	}
+
+	/* The select inside carries outline: none, and section 9 allows that only
+	   when the ring is replaced. It was replaced by a five-per-cent lift in
+	   background alpha -- which is the same thing hover does, so arriving by
+	   keyboard and arriving by mouse looked identical, and neither read as
+	   focus from a sofa. The documented ring is put back here on the frame,
+	   where it fits the control somebody can actually see, rather than on the
+	   18px-tall native box inside it. */
 	.library-select:focus-within {
-		background: rgba(237, 231, 220, 0.1);
+		background: rgb(var(--channel-bone) / 0.1);
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+
+	/* The native box is 18px tall on its own; the label around it is the
+	   control. Filling the frame makes the pointer target and the element that
+	   takes focus the same 52px object section 9 asks for, rather than a strip
+	   through the middle of it. */
+	.library-select select {
+		align-self: stretch;
+		min-block-size: 100%;
+		flex: 1 1 auto;
 	}
 
 	/* Native selects, deliberately: they are the one control every platform
@@ -1045,6 +1591,72 @@
 		color: var(--color-bone);
 	}
 
+	/* The library toolbar, on a phone.
+	   It is one pill on a wide screen: search on the left, three menus on the
+	   right, all on one line. At 390px the menus stack inside it and the 999px
+	   radius, applied to a box that is now 280px tall, turns the ends into two
+	   enormous arcs with the controls floating between them. It stops reading as
+	   a bar at all.
+	   So the container gives up being an object at this width and becomes what
+	   it actually is -- a stack. The field keeps a pill of its own, and the
+	   filters become one horizontal row that scrolls, which is where every
+	   library on a phone has ended up: the filters stay one gesture away instead
+	   of pushing the first row of films off the bottom of the screen. */
+	@media (max-width: 36rem) {
+		.library-toolbar {
+			display: flex;
+			flex-direction: column;
+			align-items: stretch;
+			gap: 0.7rem;
+			border: 0;
+			border-radius: 0;
+			padding: 0;
+			background: none;
+		}
+
+		/* Widths stated rather than left to align-items: stretch.
+		   Measured in place: both children came out at 705px and 753px inside a
+		   327px column container -- the base rules size them for a row (a
+		   flex-basis, a percentage min-width) and those did not stop meaning
+		   something when the direction changed. An explicit width is one line
+		   and cannot be argued with. */
+		.library-search {
+			width: 100%;
+			min-block-size: 3.25rem;
+			flex: 0 0 auto;
+			min-width: 0;
+			border: 1px solid var(--color-line);
+			border-radius: 999px;
+			padding-inline: 1.1rem;
+			background: rgb(var(--channel-surface) / 0.6);
+		}
+
+		/* One line that scrolls rather than three lines that stack. The row hides
+		   its scrollbar for the same reason the home rows do (§6.3): on Windows
+		   the native one is a grey slab that would cut the pills in half. */
+		.library-selects {
+			/* The row runs to the screen edges, so the last filter is not cut by
+			   a margin that has nothing to do with it -- which is also what tells
+			   the eye there is more of it to the right. */
+			width: calc(100% + var(--page-gutter) * 2);
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			gap: 0.5rem;
+			scrollbar-width: none;
+			-ms-overflow-style: none;
+			margin-inline: calc(var(--page-gutter) * -1);
+			padding-inline: var(--page-gutter);
+		}
+
+		.library-selects::-webkit-scrollbar {
+			display: none;
+		}
+
+		.library-select {
+			flex: 0 0 auto;
+		}
+	}
+
 	/* Sized for 16/9 cards. The minimum is what a backdrop needs to stay
 	   identifiable rather than what would fit the most columns: below about
 	   12rem a landscape still is a smudge, and a grid of smudges is slower to
@@ -1058,6 +1670,23 @@
 	@media (min-width: 64rem) {
 		.library-grid {
 			grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+		}
+	}
+
+	/* Two columns on a phone, stated rather than derived.
+	   auto-fill against a 12rem minimum gives exactly one column at 390px: the
+	   content box is 342px and two cards plus their gap need 398. One card per
+	   row means a screen and a half of library at a time, which is not a grid,
+	   it is a list of very large thumbnails.
+	   The 12rem floor was set so a landscape still stays identifiable, and that
+	   reasoning was measured on a desktop. At 390px two columns give a 164px
+	   card -- larger than the thumbnails every phone-sized catalogue uses, still
+	   plainly readable, and four rows visible instead of one. Section 6.1 is
+	   amended alongside this rather than quietly contradicted. */
+	@media (max-width: 36rem) {
+		.library-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 0.75rem 0.7rem;
 		}
 	}
 
@@ -1169,7 +1798,7 @@
 		justify-content: center;
 		gap: 0.3rem;
 		border: 1px solid var(--color-line);
-		border-radius: clamp(0.75rem, 1.2vw, 1rem);
+		border-radius: var(--radius-row);
 		padding: 0.85rem clamp(0.9rem, 1.4vw, 1.25rem);
 		background: var(--color-surface);
 		color: var(--color-bone);
@@ -1632,7 +2261,7 @@
 		align-items: center;
 		gap: clamp(0.9rem, 1.6vw, 1.4rem);
 		border: 1px solid var(--color-line);
-		border-radius: clamp(0.75rem, 1.2vw, 1rem);
+		border-radius: var(--radius-row);
 		padding: 0.75rem clamp(0.9rem, 1.4vw, 1.25rem);
 		background: var(--color-surface);
 		color: var(--color-bone);
@@ -1654,7 +2283,7 @@
 		flex: none;
 		aspect-ratio: 16 / 9;
 		overflow: hidden;
-		border-radius: 0.5rem;
+		border-radius: var(--radius-nested);
 		background: var(--color-raised);
 	}
 
@@ -1670,7 +2299,7 @@
 		bottom: 0;
 		display: block;
 		height: 3px;
-		background: rgba(11, 10, 9, 0.55);
+		background: rgb(var(--channel-ink) / 0.55);
 	}
 
 	.episode-progress > span {
@@ -1894,7 +2523,7 @@
 		align-items: center;
 		gap: 1rem;
 		border: 1px solid var(--color-line);
-		border-radius: clamp(0.75rem, 1.2vw, 1rem);
+		border-radius: var(--radius-row);
 		padding: 0.9rem clamp(0.9rem, 1.4vw, 1.25rem);
 		background: var(--color-surface);
 	}
@@ -1936,12 +2565,12 @@
 	/* The provisioning dialog. The key it shows exists nowhere else. */
 	.provision-backdrop {
 		position: fixed;
-		z-index: 60;
+		z-index: var(--layer-modal);
 		display: grid;
 		overflow-y: auto;
 		padding: clamp(1rem, 4vw, 3rem);
 		place-items: center;
-		background: rgba(11, 10, 9, 0.88);
+		background: rgb(var(--channel-ink) / 0.88);
 		inset: 0;
 		-webkit-backdrop-filter: blur(10px);
 		backdrop-filter: blur(10px);
@@ -2036,9 +2665,9 @@
 			height: var(--target-min);
 			align-items: center;
 			justify-content: center;
-			border: 1px solid rgba(237, 231, 220, 0.18);
+			border: 1px solid rgb(var(--channel-bone) / 0.18);
 			border-radius: 999px;
-			background: rgba(11, 10, 9, 0.84);
+			background: rgb(var(--channel-ink) / 0.84);
 			color: var(--color-bone);
 			box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.35);
 			opacity: 0;
@@ -2080,7 +2709,7 @@
 		margin-bottom: clamp(1rem, 2.5vw, 2rem);
 		border: 1px solid var(--color-line);
 		border-radius: clamp(1rem, 1.8vw, 1.5rem);
-		background: rgba(19, 18, 17, 0.56);
+		background: rgb(var(--channel-surface) / 0.56);
 		padding: clamp(1.5rem, 3vw, 2.5rem);
 	}
 
@@ -2110,11 +2739,11 @@
 	.player {
 		position: fixed;
 		inset: 0;
-		z-index: 50;
+		z-index: var(--layer-player);
 		display: grid;
 		place-items: center;
 		overflow: hidden;
-		background: #000;
+		background: var(--player-letterbox);
 	}
 
 	.player-video {
@@ -2199,7 +2828,7 @@
 
 	.player-badge {
 		flex: none;
-		border: 1px solid rgba(237, 231, 220, 0.22);
+		border: 1px solid rgb(var(--channel-bone) / 0.22);
 		border-radius: 999px;
 		padding: 0.2rem 0.6rem;
 		color: var(--color-muted);
@@ -2248,7 +2877,18 @@
 	}
 
 	.player-icon-button:hover {
-		background: rgba(237, 231, 220, 0.12);
+		background: rgb(var(--channel-bone) / 0.12);
+	}
+
+	/* A smaller icon button, for the one inside a field rather than beside it:
+	   a 52px control inside a 52px search box has no frame left around it.
+	   2.75rem is the section 9 floor exactly, not a value chosen for looks.
+	   It exists as a class because the two places that needed it were reaching
+	   for !important Tailwind overrides to force 40px, which was both below
+	   that floor and the kind of override this stylesheet is meant to remove. */
+	.player-icon-button--compact {
+		min-block-size: 2.75rem;
+		min-inline-size: 2.75rem;
 	}
 
 	.player-icon-button:active {
@@ -2266,7 +2906,7 @@
 	}
 
 	.player-icon-button--primary:hover {
-		background: #fff;
+		background: var(--color-parchment);
 	}
 
 	/* The clock. Tabular figures so the bar does not twitch every second, and the
@@ -2338,14 +2978,14 @@
 	.volume-slider::-webkit-slider-runnable-track {
 		height: 0.25rem;
 		border-radius: 999px;
-		background: rgba(237, 231, 220, 0.3);
-		box-shadow: inset 0 0 0 1px rgba(11, 10, 9, 0.35);
+		background: rgb(var(--channel-bone) / 0.3);
+		box-shadow: inset 0 0 0 1px rgb(var(--channel-ink) / 0.35);
 	}
 
 	.volume-slider::-moz-range-track {
 		height: 0.25rem;
 		border-radius: 999px;
-		background: rgba(237, 231, 220, 0.3);
+		background: rgb(var(--channel-bone) / 0.3);
 	}
 
 	.volume-slider::-moz-range-progress {
@@ -2363,7 +3003,7 @@
 		border-radius: 50%;
 		margin-top: -0.225rem;
 		background: var(--color-bone);
-		box-shadow: 0 1px 3px rgba(11, 10, 9, 0.6);
+		box-shadow: 0 1px 3px rgb(var(--channel-ink) / 0.6);
 		appearance: none;
 	}
 
@@ -2373,7 +3013,7 @@
 		border: 0;
 		border-radius: 50%;
 		background: var(--color-bone);
-		box-shadow: 0 1px 3px rgba(11, 10, 9, 0.6);
+		box-shadow: 0 1px 3px rgb(var(--channel-ink) / 0.6);
 	}
 
 	.player-volume:hover .volume-slider,
@@ -2435,10 +3075,10 @@
 		height: 0.25rem;
 		overflow: hidden;
 		border-radius: 999px;
-		background: rgba(237, 231, 220, 0.3);
+		background: rgb(var(--channel-bone) / 0.3);
 		box-shadow:
-			inset 0 0 0 1px rgba(11, 10, 9, 0.35),
-			0 1px 3px rgba(11, 10, 9, 0.5);
+			inset 0 0 0 1px rgb(var(--channel-ink) / 0.35),
+			0 1px 3px rgb(var(--channel-ink) / 0.5);
 		transition: height var(--duration-fast) var(--ease-cine);
 	}
 
@@ -2453,7 +3093,7 @@
 		position: absolute;
 		inset-block: 0;
 		left: 0;
-		background: rgba(237, 231, 220, 0.45);
+		background: rgb(var(--channel-bone) / 0.45);
 		transition: width var(--duration-base) linear;
 	}
 
@@ -2471,7 +3111,7 @@
 		height: 0.9rem;
 		border-radius: 50%;
 		background: var(--color-accent);
-		box-shadow: 0 0 0 0.35rem rgba(200, 162, 74, 0.18);
+		box-shadow: 0 0 0 0.35rem rgb(var(--channel-accent) / 0.18);
 		opacity: 0;
 		pointer-events: none;
 		transform: translate(-50%, -50%) scale(0.6);
@@ -2507,7 +3147,7 @@
 		display: block;
 		margin: 0 auto 0.4rem;
 		border: 1px solid var(--color-line);
-		border-radius: 0.25rem;
+		border-radius: var(--radius-nested);
 		background-color: var(--color-ink);
 		background-repeat: no-repeat;
 	}
@@ -2534,18 +3174,18 @@
 	   would compete with the play button, which §6b keeps as the only one. */
 	.player-icon-button--lit {
 		box-shadow: inset 0 0 0 1.5px var(--color-accent-dim);
-		background: rgba(200, 162, 74, 0.14);
+		background: rgb(var(--channel-accent) / 0.14);
 		color: var(--color-accent);
 	}
 
 	.player-icon-button--lit:hover {
-		background: rgba(200, 162, 74, 0.22);
+		background: rgb(var(--channel-accent) / 0.22);
 	}
 
 	/* An open popover keeps its button looking pressed, so the pair reads as one
 	   object rather than a panel hovering near an idle icon. */
 	.player-icon-button[aria-expanded='true'] {
-		background: rgba(237, 231, 220, 0.16);
+		background: rgb(var(--channel-bone) / 0.16);
 	}
 
 	/* -----------------------------------------------------------------------
@@ -2573,14 +3213,14 @@
 		overflow-y: auto;
 		overscroll-behavior: contain;
 		/* Firefox and the standard property. Two values: thumb, then track. */
-		scrollbar-color: rgba(237, 231, 220, 0.28) transparent;
+		scrollbar-color: rgb(var(--channel-bone) / 0.28) transparent;
 		scrollbar-width: thin;
-		border: 1px solid rgba(237, 231, 220, 0.14);
+		border: 1px solid rgb(var(--channel-bone) / 0.14);
 		border-radius: 1rem;
 		padding: 0.85rem;
 		background:
-			linear-gradient(150deg, rgba(237, 231, 220, 0.05), transparent 60%),
-			rgba(15, 14, 13, 0.94);
+			linear-gradient(150deg, rgb(var(--channel-bone) / 0.05), transparent 60%),
+			rgb(var(--channel-surface) / 0.94);
 		box-shadow:
 			0 0.25rem 0.75rem rgba(0, 0, 0, 0.4),
 			0 1.75rem 3.5rem rgba(0, 0, 0, 0.6);
@@ -2617,12 +3257,12 @@
 	.player-tracks::-webkit-scrollbar-thumb {
 		border: 0.25rem solid transparent;
 		border-radius: 999px;
-		background: rgba(237, 231, 220, 0.28);
+		background: rgb(var(--channel-bone) / 0.28);
 		background-clip: content-box;
 	}
 
 	.player-tracks::-webkit-scrollbar-thumb:hover {
-		background: rgba(237, 231, 220, 0.45);
+		background: rgb(var(--channel-bone) / 0.45);
 		background-clip: content-box;
 	}
 
@@ -2693,7 +3333,7 @@
 		align-items: center;
 		gap: 0.75rem;
 		border: 0;
-		border-radius: 0.6rem;
+		border-radius: var(--radius-row);
 		padding: 0.5rem 0.75rem;
 		background: transparent;
 		color: var(--color-bone);
@@ -2703,11 +3343,11 @@
 	}
 
 	.track-option:hover {
-		background: rgba(237, 231, 220, 0.07);
+		background: rgb(var(--channel-bone) / 0.07);
 	}
 
 	.track-option--chosen {
-		background: rgba(237, 231, 220, 0.05);
+		background: rgb(var(--channel-bone) / 0.05);
 	}
 
 	.track-lines {
@@ -2818,11 +3458,11 @@
 		font-weight: 500;
 		line-height: 1.3;
 		text-shadow:
-			0 0 0.09em rgba(11, 10, 9, 0.95),
-			0.045em 0.045em 0.06em rgba(11, 10, 9, 0.9),
-			-0.045em 0.045em 0.06em rgba(11, 10, 9, 0.9),
-			0.045em -0.045em 0.06em rgba(11, 10, 9, 0.9),
-			-0.045em -0.045em 0.06em rgba(11, 10, 9, 0.9),
+			0 0 0.09em rgb(var(--channel-ink) / 0.95),
+			0.045em 0.045em 0.06em rgb(var(--channel-ink) / 0.9),
+			-0.045em 0.045em 0.06em rgb(var(--channel-ink) / 0.9),
+			0.045em -0.045em 0.06em rgb(var(--channel-ink) / 0.9),
+			-0.045em -0.045em 0.06em rgb(var(--channel-ink) / 0.9),
 			0 0.06em 0.35em rgba(0, 0, 0, 0.7);
 	}
 
@@ -2925,12 +3565,12 @@
 		width: min(48rem, calc(100vw - 2rem));
 		max-height: calc(100svh - 2rem);
 		overflow-y: auto;
-		border: 1px solid rgba(237, 231, 220, 0.16);
-		border-radius: clamp(1rem, 2vw, 1.75rem);
+		border: 1px solid rgb(var(--channel-bone) / 0.16);
+		border-radius: var(--radius-panel);
 		padding: clamp(1.35rem, 3vw, 2.5rem);
 		background:
-			linear-gradient(135deg, rgba(237, 231, 220, 0.04), transparent 56%),
-			rgba(19, 18, 17, 0.96);
+			linear-gradient(135deg, rgb(var(--channel-bone) / 0.04), transparent 56%),
+			rgb(var(--channel-surface) / 0.96);
 		box-shadow:
 			0 0 0 100vmax rgba(0, 0, 0, 0.64),
 			0 2rem 6rem rgba(0, 0, 0, 0.58);
@@ -2947,8 +3587,8 @@
 		justify-content: space-between;
 		gap: 1.5rem;
 		padding-bottom: 0.75rem;
-		background: rgba(22, 21, 20, 0.98);
-		box-shadow: 0 -2rem 0 2rem rgba(22, 21, 20, 0.98);
+		background: rgb(var(--channel-surface) / 0.98);
+		box-shadow: 0 -2rem 0 2rem rgb(var(--channel-surface) / 0.98);
 	}
 
 	.player-shortcuts-header h2 {
@@ -2992,10 +3632,10 @@
 		min-height: 2.25rem;
 		align-items: center;
 		justify-content: center;
-		border: 1px solid rgba(237, 231, 220, 0.18);
+		border: 1px solid rgb(var(--channel-bone) / 0.18);
 		border-radius: 0.45rem;
 		padding-inline: 0.7rem;
-		background: rgba(237, 231, 220, 0.08);
+		background: rgb(var(--channel-bone) / 0.08);
 		color: var(--color-bone);
 		font-family: var(--font-ui);
 		font-size: clamp(0.75rem, 0.9vw, 0.9rem);
@@ -3070,7 +3710,7 @@
 	.player-spinner {
 		width: 2.25rem;
 		height: 2.25rem;
-		border: 2px solid rgba(237, 231, 220, 0.2);
+		border: 2px solid rgb(var(--channel-bone) / 0.2);
 		border-top-color: var(--color-accent);
 		border-radius: 50%;
 		animation: theia-spin 900ms linear infinite;
@@ -3105,7 +3745,143 @@
 		background-image: var(--texture-grain);
 		mix-blend-mode: overlay;
 		pointer-events: none;
-		z-index: 50;
+		z-index: var(--layer-grain);
+	}
+}
+
+/* The television step.
+ *
+ * 1600px, deliberately above the widest desktop window this interface has been
+ * looked at on and below the 1920 a television renders at. The 80rem step below
+ * is the "large screen" layer and always was; this is the one that assumes a
+ * sofa, and separating them is what lets it be assertive without inflating a
+ * desktop.
+ *
+ * Two things it fixes, both measured on a 1905px viewport:
+ *
+ * The safe area. Every television guideline agrees on the outer five per cent:
+ * roughly 96px horizontally and 54px vertically on 1920x1080, kept clear so an
+ * overscanning set cannot crop it. The bar sat 16px from the top edge and the
+ * gutter was 77px, so both were inside it.
+ *
+ * One left edge. .page-shell is min(100%, --content-wide), and 96rem is 1536px:
+ * past about 1712px the shell stops touching the gutters and centres itself
+ * instead, while anything positioned from the gutter does not. The row headings
+ * ended up 184px to the right of their own cards, and the wordmark 108px right
+ * of the hero title underneath it. Letting the shell fill the safe area at this
+ * width puts every left edge back on one line. Prose is capped separately at
+ * 38rem and is unaffected.
+ */
+@media (min-width: 100rem) {
+	:root {
+		--page-gutter: 6rem;
+		--nav-inset: 3.5rem;
+		--content-wide: 120rem;
+	}
+
+	/* Type, at three metres.
+	 *
+	 * Section 4's three-metre rule tops the interface out at 19px body, 24px row
+	 * headings, 16px card titles and 13px labels. Measured on a 1905px viewport
+	 * those are exactly what renders, so the rule is implemented faithfully --
+	 * it is the rule itself that is short. Amazon's Fire TV guidance puts the
+	 * floor for body text at 28px on 1080p, Android TV asks 24sp, and the common
+	 * advice is two and a half to three times a phone's sizes. Theia went from
+	 * 16px to 19px, which is 1.19x.
+	 *
+	 * It shows in the one place a television is read: the metadata under a hero
+	 * -- year, runtime, director -- is the label register, and at a sofa it is a
+	 * grey smudge.
+	 *
+	 * The tokens move rather than the classes. Sixty-one places in the markup
+	 * reach for text-small, text-label and their siblings as utilities rather
+	 * than through .label or .tv-copy; overriding the classes alone left those
+	 * at their desktop size, which is how the rating beside a director stayed
+	 * 13px while the director next to it became 16px. Raising the token moves
+	 * every consumer at once, utilities included.
+	 *
+	 * Not everywhere, and not further. The display serif already fills a screen
+	 * and is untouched. The micro register moves least: it is the footer and the
+	 * legal line, which nobody reads from a sofa and which must not start
+	 * competing with the film. And this is a separate step from 80rem on
+	 * purpose -- a 1440px desktop window keeps exactly the sizes it has.
+	 */
+	:root {
+		--text-micro: 0.8125rem;
+		--text-label: 1rem;
+		--text-small: 1.125rem;
+		--text-body: 1.5rem;
+		--text-title: 1.875rem;
+	}
+
+	/* The classes that hardcode a clamp of their own rather than reading a
+	   token, so the step above cannot reach them. */
+	.section-title {
+		font-size: 1.875rem;
+	}
+
+	.poster-title {
+		font-size: 1.1875rem;
+	}
+
+	.poster-legend {
+		margin-top: 0.35rem;
+	}
+
+	.tv-copy {
+		font-size: 1.5rem;
+	}
+
+	.tv-action {
+		font-size: 1rem;
+	}
+
+	/* The player's furniture keeps clear of the safe area too.
+	   It sat 32px from the sides and 28px from the bottom, which is well inside
+	   the outer five per cent an overscanning set can crop -- the play button
+	   and both ends of the scrub bar were in the part of the picture a
+	   television is allowed to eat. The bar gets shorter and the controls move
+	   in; nothing else about section 6b changes. */
+	.player-top {
+		padding: 3.5rem 6rem;
+	}
+
+	.player-controls {
+		padding: 0 6rem 3.5rem;
+	}
+
+	/* One left edge, including the settings column.
+	   Everything else on a television now starts at the safe-area gutter: the
+	   bar, the hero, the grids, the rows. The settings page is capped at 72rem
+	   and centred, so on a 1920 screen it began 500px in and lined up with
+	   nothing -- a readable measure floating in the middle of the picture. It
+	   keeps the measure and gives up the centring, so the column hangs off the
+	   same edge as the rest of the interface. */
+	.settings-page {
+		margin-inline: 0;
+	}
+
+	/* The focus ring, at three metres.
+	 *
+	 * On a television focus is the cursor: there is no pointer and no hover, and
+	 * the ring is the only thing saying where a press will land. Section 9 sets
+	 * it at 2px, which is right on a desk. At 1920 on a 55-inch set that is
+	 * about 1.3mm, subtending roughly one arcminute from a sofa -- the threshold
+	 * of seeing a line at all, before a panel's motion blur and a stream's
+	 * compression get to it. Every television guideline says the same thing in
+	 * plainer words: thin strokes disappear.
+	 *
+	 * Cards are already fine and are left alone: section 6.2 gave them a gold
+	 * border, a lift, a scale and a shadow together, precisely because one thin
+	 * line was not enough from a sofa. This is for everything that is not a card
+	 * -- buttons, links, the navigation, the settings menus -- which had the one
+	 * line and nothing else.
+	 */
+	:focus-visible,
+	.search-field:focus-within,
+	.library-select:focus-within {
+		outline-width: 4px;
+		outline-offset: 3px;
 	}
 }
 
@@ -3115,8 +3891,20 @@
 		--nav-height: 4.5rem;
 	}
 
+	/* A row card carries its own width; a grid card fills its cell.
+	   Both declarations have to live here. This block sits outside @layer
+	   components, and an unlayered rule beats a layered one whatever the
+	   specificity says -- so the fluid modifier declared up in the layer lost to
+	   this one, and every card in every grid came out 21rem wide inside a much
+	   narrower column. Measured at 1920: 326px cards in 265px cells, overlapping
+	   their neighbours by 37px with the 24px gap swallowed whole. A 1440px
+	   desktop had the same fault at 10px. */
 	.poster-card {
 		width: clamp(16rem, 17vw, 21rem);
+	}
+
+	.poster-card--fluid {
+		width: 100%;
 	}
 }
 

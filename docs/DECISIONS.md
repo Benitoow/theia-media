@@ -2041,6 +2041,318 @@ tile 50 — with the timestamp reading 2:00. The hover itself was not seen: the
 in-app preview pane does not composite frames, so the appearance of the strip
 under a moving cursor remains unverified.
 
+## 72. A phone navigates from the bottom, and the bar above keeps only the mark
+
+The navigation was one object at every width: a floating pill holding the
+wordmark, four tracked uppercase labels and the profile mark. On a television
+and a laptop it is the right object and it stays. On a phone it never was.
+
+**Measured before anything was changed.** At 375px the pill is 327px wide and
+its contents need 459px. Decision-free tightening of the padding had already
+been applied and was not enough; "Réglages" was cut in half and the profile mark
+sat 113px past the right edge — in the document, painted nowhere, reachable by
+nothing. `overflow-x: hidden` on the body was the only reason the page did not
+also scroll sideways, which is to say the clipping was hiding the symptom.
+
+The first answer was to let the row wrap. It worked, in the sense that every
+control was on screen and every target kept its size. Looking at it on a phone
+for the first time settled it: two rows of chrome, 140px, seventeen per cent of
+the viewport, permanently, with the wordmark alone and centred on a line of its
+own. It was a fix, not a design.
+
+**So the destinations move to where the thumb already is.** Five tabs —
+accueil, films, séries, rechercher, réglages — pinned to the bottom, icons over
+a micro label, the current one in gold. The pill stays above carrying the two
+things that are not destinations: the mark, and whose history is being written.
+
+This is what every streaming application on a phone converged on, and the reason
+is reach rather than fashion: the top of a six-inch screen is the one place a
+hand holding the phone cannot go. It is also the only part of this interface
+where that argument applies, which is why the bar is hidden above 36rem and on
+the television. Section 9's contract — the first D-pad arrow enters at the
+primary action, the pill is the surface it enters — is written against the pill
+and is untouched.
+
+Three glyphs were drawn for it, on the 24-unit grid and 1.7 stroke the icon file
+opens by insisting on: a house, a film strip, a television. The tab label tracks
+*in* at 0.03em rather than out, against §4's rule, because five tabs across
+375px give each one 75px and "Rechercher" measured 77px at the label register's
+normal tracking — its own slot exactly, touching both neighbours. The tracking
+is what stretched it, so the tracking is what gave.
+
+**Two things followed from having a phone layout at all.** The library toolbar
+is one pill on a wide screen and stacked at 390px, where a 999px radius on a
+280px-tall box turns the ends into two enormous arcs; it becomes a plain stack
+there, with the field in a pill of its own and the filters in one horizontal row
+that scrolls. And `ChromeScene`'s veil is a left-to-right gradient, opaque where
+a wide screen puts its copy and down to 18% at the right edge — on a phone the
+copy is full width and lands in that 18%, so "Aucune série" was grey type over a
+lit statue. Same veil, rotated to face the copy.
+
+Seen rather than measured, finally: Chrome will not resize below 1430px on this
+machine, so the phone was verified through an iframe of the running application
+at 390px inside a full-size tab. One caution for anyone repeating it — a CSS
+animation inside that iframe does not advance (`theia-enter` reports
+`running` with `currentTime: 0`), so every `.enter` element reads as
+`opacity: 0` and looks like a contrast bug that is not there. The rig disables
+`.enter` before judging anything.
+
+## 73. A television gets its own step, at 100rem, and it starts with the safe area
+
+The interface had one large-screen layer, at 80rem, and it was written on a
+desktop. A television is not a large desktop: it is the same pixels at four
+times the distance, cropped at the edges by a set nobody has calibrated, driven
+by a remote that cannot hover. Measured on a 1905px viewport, every one of those
+four things was unaccounted for.
+
+**The safe area, first, because it is the one that loses content.** Every
+television guideline agrees on the outer five per cent — about 96px horizontally
+and 54px vertically on 1920×1080. The bar sat 16px from the top edge, the gutter
+was 77px, and the player's own furniture was 32px from the sides and 28px from
+the bottom: the play button and both ends of the scrub bar were inside the part
+of the picture a set is allowed to eat. All three move out to 96 and 56.
+
+**Then one left edge.** `.page-shell` is `min(100%, --content-wide)` and 96rem
+is 1536px, so past about 1712px the shell stops touching the gutters and centres
+itself while anything positioned from the gutter does not. The result at 1920
+was four different left edges: the wordmark at 185, the hero title at 77, the
+row headings at 261 — 184px to the right of their own cards — and the settings
+column at 384, floating in the middle of the picture with nothing to line up
+against. `--content-wide` becomes 120rem at this step, the settings column gives
+up its centring, and everything starts at 96.
+
+**Then the type, which is the part that argues.** Section 4's three-metre rule
+tops out at 19px body, 24px row headings, 16px card titles and 13px labels, and
+the code implements it exactly — so it is the rule that is short, not the
+implementation. Fire TV puts the floor for body text at 28px on 1080p, Android
+TV asks 24sp, and the common advice is two and a half to three times a phone's
+sizes; 16px to 19px is 1.19x. It shows in the one place a television is actually
+read: the metadata under a hero — year, runtime, director — is the label
+register, and from a sofa it is a grey smudge.
+
+The tokens move rather than the classes. Sixty-one places in the markup reach
+for `text-small` and `text-label` as utilities rather than through `.label` or
+`.tv-copy`; overriding the classes alone left those behind, which is how a
+film's rating stayed 13px while the director beside it became 16px.
+
+**And the focus ring, because on a television focus is the cursor.** 2px at 1920
+on a 55-inch set is about 1.3mm, subtending roughly one arcminute from three
+metres — the threshold of seeing a line at all, before a panel's motion blur and
+a stream's compression get to it. It becomes 4px with a 3px offset. Cards were
+already exempt: decision 33's §6.2 gave them a border, a lift, a scale and a
+shadow together, for exactly this reason.
+
+**Why 100rem and not 80rem.** Viewport width cannot tell a 1920 television from
+a 1920 monitor. 1600px is simply above every desktop window this interface has
+been looked at on and below what a television reports, so the sofa layer can be
+assertive without a 1440px desktop inheriting any of it. Verified: at 1425px the
+labels are still 11px and the card titles still 14px.
+
+**One bug fell out of looking.** `.poster-card--fluid` is declared inside
+`@layer components`; the 80rem step that gives a row card its fixed width sits
+at the foot of the file, outside every layer. An unlayered rule beats a layered
+one whatever the specificity says, so every card in every grid took the row
+width: 326px cards in 265px columns at 1920, overlapping their neighbours by
+37px with the 24px gap swallowed whole. A 1440px desktop had the same fault at
+10px, which is why nobody had seen it. The fluid rule is now declared in the
+same unlayered block.
+
+The remote was checked rather than assumed, and needs no work: the first arrow
+lands on the primary action, down enters the first row, right walks it card by
+card, up leaves for the navigation and stops there without trapping. That is
+section 9's contract, and it holds.
+
+## 74. Text answers travel compressed, and nothing else does
+
+The frontend bundle was 394 KB of JavaScript and CSS going over the wire
+verbatim, and the film catalogue is a JSON array that grows with the library.
+Measured on a 192-film bench, on the request the frontend actually makes
+(`limit=500`): `/api/library/movies` was 148,142 bytes and the stylesheet alone
+74,613. On the machine serving them that is free. Over house
+Wi-Fi to a television, or down the WireGuard tunnel to a phone on mobile data,
+it is the difference between a page that appears and a page that arrives.
+
+Both listeners share one handler, so the same middleware covers LAN and remote —
+which is the right way round, because remote is where it matters most.
+
+Measured after: the catalogue 148,142 → 20,860 bytes (−86%), the stylesheet
+74,613 → 19,942 (−73%), the home screen 29,488 → 4,422 (−85%).
+
+**The exclusions are the load-bearing part.** A film is already compressed, so
+gzipping it burns CPU to make it bigger. Worse, a range request answered with a
+compressed body no longer means what the player asked for, because the offsets
+it seeked to are offsets into the file, not into a gzip stream. So: never a
+request carrying `Range`, and only a named list of text types — never video,
+never JPEG, never the sprite sheets. There is a test for each of those, and the
+range one is the one that would be a bug rather than a missed optimisation.
+
+Below 1400 bytes nothing is compressed either: gzip's own header is longer than
+`/api/health`'s whole body.
+
+## 75. A card asks for the picture it can show, and the first screen does not wait
+
+Every card was served the 780px backdrop and every card was `loading="lazy"`,
+including the ones already on screen.
+
+Neither was right. A card is between 158 and 336 CSS pixels wide depending on
+the screen. On the real cache, one backdrop is 80,499 bytes at w780, 44,247 at
+w500 and 22,552 at w342 — so a television was downloading nearly four times the
+picture it could display. And a lazy image on the first screen is a page that
+paints its artwork late for no reason at all.
+
+So the card offers three widths and lets the browser choose, which is better
+than choosing here because the answer depends on the device pixel ratio as well
+as the layout. Verified, cold-cache, in Chrome:
+
+	television 1920, 1 dpr, 336px card   → w342   −72%
+	phone 375, 2 dpr, 158px card         → w500   −45%
+	HiDPI laptop, 2 dpr, 266px card      → w780   unchanged, and correct
+
+The last row is the point: a screen that can use the pixels still gets them.
+
+The first six cards of a grid, and the first four of the home page's first row,
+are `eager` with `fetchpriority="high"`. Six covers one row on a television and
+three on a phone. Only the first row opts in — eager-loading every row would
+fetch the whole page at once, which is the same fault in the other direction.
+
+## 76. The decoder is benchmarked, not probed, because the answer is a property of the machine
+
+Decision 58's note ended by saying that if the chosen hardware decoder ever
+turned out slower in real use, the liveness probe should be replaced by a short
+benchmark against software decoding — more honest, more expensive, and not worth
+paying for until it was needed.
+
+It was needed. The same `-hwaccel d3d11va` that won by 22% on the maintainer's
+AMD desktop loses by 30% on a laptop whose Radeon 890M shares memory with the
+CPU. Transcoding one minute of 1080p HEVC Main 10 to 720p:
+
+	                     desktop        laptop
+	software decode      8.1x           5.85x
+	d3d11va              9.86x          4.07x
+
+`-hwaccel` without a GPU filter chain decodes on the GPU and then copies every
+frame back for the scaler. Whether that copy is worth making depends on the bus
+between them, and no ordering of a candidate list can answer it.
+
+Worse, the old probe could not have known: it fed the accelerator a `lavfi`
+pattern, which is generated as raw frames, so the decoder under test had nothing
+to decode and every hwaccel "passed".
+
+So the candidate list now says only which methods are worth *trying*, and a
+benchmark decides: build two seconds of 1080p H.264, time software decoding,
+then time each candidate in the shape a transcode uses it — including the scale
+filter, because timing a bare decode would hide exactly the readback being
+looked for. Sequentially, because two accelerators timed at once contend for the
+same silicon and both come out looking slow.
+
+A hardware path has to be **10% faster** to be taken. Anything inside the noise
+keeps software decoding: it is the one path correct on every machine and the one
+it costs nothing to be wrong about. Observed in the log on the laptop:
+
+	software=104ms  d3d11va=252ms  dxva2=316ms  chosen=""
+
+The whole benchmark cost 849ms, once, lazily, on the first transcode — cheaper
+than the probe's worst case, which was a 15-second timeout.
+
+## 77. libx264 is not tuned for a video call
+
+The software encoder carried `-tune zerolatency`. That setting exists so a frame
+comes out the instant it goes in: it turns off b-frames and lookahead and
+switches x264 to slice-based threading. Theia is not a video call. It writes a
+fragmented MP4 into a pipe that a player buffers, and it was paying for an
+encoder delay nobody can perceive.
+
+Measured on a Ryzen AI 9 HX 370, one minute of 1080p HEVC Main 10:
+
+	                            720p    1080p   first 192 KB
+	veryfast -tune zerolatency  4.52x   3.60x   1108 ms
+	veryfast, threads unbound   5.26x   4.08x   1400 ms
+	veryfast -threads 8         5.35x      -    1250 ms
+
+Eighteen per cent more throughput, with b-frames and lookahead back at the same
+bitrate, for 142ms more before the first fragment. On this machine that margin
+is spare; on the machine in decision 58, which managed 1.04x real time, it is
+the difference between a margin and a coin toss against a stall.
+
+The thread cap is what keeps the 142ms small: x264 holds roughly one frame in
+flight per thread before it emits anything, so an unbounded twenty-four-thread
+encode starts noticeably later and finishes no sooner. Capped at
+`min(NumCPU, 8)`, so a small machine is never asked for threads it has not got.
+
+Hardware encoders keep their own defaults. Their `-usage` and `-quality` knobs
+were measured and changed nothing — 10,679ms against 10,786ms and 10,768ms —
+because on this hardware the transcode is decode-bound, not encode-bound, which
+is the same finding as decision 76 seen from the other end.
+
+## 78. The type changed faces, and gained a register doing it
+
+The maintainer supplied five faces and asked for the shipped two to go. Two were
+taken, and the reasons the other three were not are the useful part.
+
+**Capitalis TypOasis** maps 65 glyphs. Every French accent is missing, and four
+of the ten digits are absent — "1 h 45" rendered as a row of architectural
+dingbats. **Greek Freak** looked complete in the character map but draws its
+accented codepoints without accents, so "Réalisé" came out "REALISE": a defect
+the cmap could not show and only rendering did. **Poseidon AOE** is a brush
+face, legible at hero size and a smudge anywhere below it.
+
+**Augustus** takes the display register and **Dalek Pinpoint Bold** the labels.
+
+That is two faces where there were two, but the registers went from two to
+three, because Augustus cannot do what Playfair did in the middle: it has no
+lowercase at all — `abcdef` and `ABCDEF` measure identically — and Dalek is
+small caps. Neither can carry a synopsis. So prose falls to the platform's own
+interface face, which ships nothing and is the one font on any device already
+tuned for reading.
+
+The wire cost went down: 76 KB of gzipped TrueType against 85 KB of WOFF2.
+
+**The licence did not survive the change, and that is recorded rather than
+glossed.** Section 10 used to say both faces were SIL Open Font License 1.1,
+GPL-compatible, imposing nothing. Augustus records only "Converted by ALLTYPE";
+Dalek Pinpoint is © Keith Bates / K-Type and points at a licence page rather
+than stating terms. This repository is public and GPL-3.0, and a font inside a
+released binary is redistributed. The maintainer supplied them and the call is
+theirs; the previous claim was load-bearing, so its removal is written down.
+
+## 79. A font that fails to load looks exactly like a font that loaded
+
+Augustus was refused by every browser and the page looked completely fine,
+because the fallback in the stack is Georgia and Georgia is a perfectly good
+serif. The screenshot that was supposed to prove the new face was working was
+in fact proof of the old fallback doing its job — including the specimen sheet
+the face was *chosen* from, which means the choice was very nearly made on the
+strength of a font nobody had actually seen.
+
+What caught it was `document.fonts`, which reported `Augustus: error` next to
+`Dalek Pinpoint: loaded`, and the console behind it:
+
+	OTS parsing error: overlapping tables
+	OTS parsing error: cmap: language id should be zero: 1
+
+Two defects of a 1999 ALLTYPE conversion, both described in §10 of the design
+system along with the repair. Both are recorded because the general lesson is
+cheap and the specific one was nearly expensive: **a rendered screenshot does
+not verify a web font.** `document.fonts.check()` does, and it is one line.
+
+`font/ttf` joined the compressible types in the same change (decision 74's
+middleware). WOFF and WOFF2 are deliberately excluded — they carry their own
+compression, and a test pins that.
+
+## 80. The version tells itself
+
+The settings page ended with "Theia v1", written into both catalogues by hand,
+four screens below the running version the same page had already fetched from
+the server. It had been wrong since v2.0.0.
+
+It is now a function of the running version, `milestone(version)`, fed from
+`settings.version`, so the footer cannot disagree with the binary again. Decision
+25 in miniature: the server sends the fact, the interface writes the sentence.
+
+The player's failure message referred to "la v1" as the reason a format was
+unsupported, which stopped being true when v2 started re-encoding MPEG-2 and
+VC-1. It now says the format is unsupported without blaming a version.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

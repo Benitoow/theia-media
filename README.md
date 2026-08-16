@@ -127,6 +127,12 @@ without a reload. Titles, synopses and artwork come from TMDB.
   ffmpeg state, the encoders that actually answered and whether each runs on the
   graphics card or the processor, the hardware decoder, the size of the artwork
   cache and what the last scan did. Nothing is downloaded in order to answer.
+- **Sends less down the wire.** Text answers — the catalogue, the interface, the
+  subtitles — travel compressed, on the LAN and through the tunnel alike; films,
+  artwork and anything asked for by byte range never are. Card artwork is offered
+  at three widths and the browser takes the one it can actually show, so a 1080p
+  television downloads a quarter of the picture a high-density phone does. See
+  [decisions 74 and 75](docs/DECISIONS.md).
 
 ## What Theia deliberately does not do
 
@@ -262,14 +268,29 @@ Theia does not pretend every codec is cheap to support.
 | HEVC / H.265 | Remux attempted first, because copying is lossless and free. If the browser cannot keep up, Theia re-encodes **at the source resolution** and remembers that verdict for next time |
 | MPEG-2, VC-1 or another codec no browser decodes | Re-encoded to H.264, if this machine has an encoder that runs |
 
-**Encoders and decoders are probed, never assumed.** The pinned FFmpeg build
-lists every accelerator on every platform because they are all compiled in;
-whether one *starts* depends on the card and the driver. Each candidate is asked
-to encode or decode one frame, once, on the first playback that needs it. On the
-developer's AMD desktop three of seven encoders start, and `d3d11va` is chosen
-for decoding — measured faster than software, while two other options were
-measured *slower* than no acceleration at all. See
-[decisions 58 to 60](docs/DECISIONS.md).
+**Encoders are probed and decoders are timed, never assumed.** The pinned FFmpeg
+build lists every accelerator on every platform because they are all compiled
+in; whether one *starts* depends on the card and the driver. Each encoder
+candidate is asked to encode one frame, once, on the first playback that needs
+it — on the developer's AMD machines three of seven start.
+
+Decoding gets more than a probe, because starting is not the same as being
+faster. The same `-hwaccel d3d11va` was measured **22% faster** than software on
+an AMD desktop with a card of its own and **30% slower** on a laptop whose GPU
+shares memory with the CPU: without a GPU filter chain, hardware decoding copies
+every frame back for the scaler, and whether that copy is worth making is a
+property of the machine. So Theia builds two seconds of test video, times
+software decoding and each candidate against it, and takes a hardware path only
+if it is at least 10% faster. Software decoding keeps every tie — it is correct
+everywhere and costs nothing to be wrong about. The whole measurement takes
+under a second, once, on the first transcode.
+
+Software encoding is tuned for a buffered stream rather than a video call, which
+is what it is: dropping `-tune zerolatency` and capping x264 at
+`min(NumCPU, 8)` threads measured **18% more throughput**, with B-frames and
+lookahead back at the same bitrate, for 142 ms more before the first fragment.
+See [decisions 58 to 60](docs/DECISIONS.md) and
+[76 to 77](docs/DECISIONS.md).
 
 One software transcode runs at a time. Two concurrent ones do not run at half
 speed; they both stall, and nobody watching either can tell why.
@@ -364,7 +385,7 @@ them with `Get-Process theia` and `Get-ChildItem` on the data directory.
 
 | Measurement | Value |
 | --- | --- |
-| Binary on disk | **16.9 MB** |
+| Binary on disk | **17.1 MB** |
 | Resident memory, just started | **18.0 MB** |
 | Resident memory, after serving the home screen and the library | **19.1 MB** |
 | Resident memory, during a sustained remux | **21.6 MB** |
@@ -377,6 +398,20 @@ Serving a film costs essentially nothing: the process does not grow and the CPU
 barely registers, because it is a file being read and written to a socket.
 Re-encoding is different and does spend a GPU or a core, on FFmpeg rather than on
 Theia.
+
+What crosses the network, on the same 192-film bench, is the part that matters
+for a television on Wi-Fi or a phone down the tunnel:
+
+| Response | Sent | Compressed |
+| --- | --- | --- |
+| Film catalogue, whole library | 148,142 B | **20,860 B** |
+| Home screen | 29,488 B | **4,422 B** |
+| Stylesheet | 74,613 B | **19,942 B** |
+| One card's artwork on a 1080p television | 80,499 B at `w780` | **22,552 B at `w342`** |
+
+Video, images and any request carrying a `Range` header are deliberately left
+alone: a film is already compressed, and a compressed body would make the byte
+offsets a player seeks to mean nothing.
 
 ## System requirements
 
@@ -474,6 +509,12 @@ make build
 ```
 
 ### Windows
+
+`build.ps1` uses `go` from `PATH` when there is one, and otherwise looks for
+an unpacked toolchain under `%USERPROFILE%\go-toolchain\go`,
+`%LOCALAPPDATA%\go` and `C:\Program Files\Go`. If it finds none it says so
+before touching anything, rather than rebuilding the frontend and then failing
+on the binary.
 
 ```powershell
 git clone https://github.com/Benitoow/theia-media.git
@@ -634,5 +675,14 @@ Metadata and artwork come from [TMDB](https://www.themoviedb.org/):
 > This product uses the TMDB API but is not endorsed or certified by TMDB.
 
 FFmpeg is downloaded on demand from its upstream GitHub release and remains under
-its own licence. Inter and Playfair Display are self-hosted under the SIL Open
-Font License 1.1.
+its own licence.
+
+**Fonts.** Two typefaces are self-hosted and embedded in the binary: **Augustus**
+for the display register and **Dalek Pinpoint Bold** (© Keith Bates / K-Type)
+for labels. Neither carries an open font licence in its file — Augustus records
+only "Converted by ALLTYPE", and K-Type publishes its terms at
+[k-type.com/licences](http://www.k-type.com/licences/). They are supplied by the
+maintainer and are not covered by this repository's GPL-3.0 grant; anyone
+redistributing a build should satisfy themselves about their terms. This
+replaced Inter and Playfair Display, which were SIL Open Font License 1.1 — see
+[decision 78](docs/DECISIONS.md) for why the change was made anyway.
