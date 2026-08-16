@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { getJSON, imageURL } from '$lib/api.js';
+	import { getJSON } from '$lib/api.js';
 	import { profiles } from '$lib/profiles.svelte.js';
 	import { remote } from '$lib/remote.svelte.js';
 	import { strings as t } from '$lib/strings.js';
@@ -28,7 +28,9 @@
 				cards: resuming.map((item) => ({
 					movie: item,
 					href: `/episode/${item.id}`,
-					art: imageURL(item.episode_metadata?.[0]?.metadata?.still_path, 'w780'),
+					// A path, not a URL: the card offers it at three widths and lets
+					// the browser take the one it can actually use.
+					art: item.episode_metadata?.[0]?.metadata?.still_path,
 					title: item.series_title,
 					legend: episodeLegend(item)
 				}))
@@ -38,10 +40,13 @@
 		if (recent.length) {
 			rows.push({
 				kind: 'series_recent',
+				// A series opens a list of seasons; nothing plays until an episode
+				// is chosen, so this card does not claim otherwise.
 				cards: recent.map((item) => ({
 					movie: item,
 					href: `/serie/${item.id}`,
-					legend: item.metadata?.first_air_date?.slice(0, 4) ?? '—'
+					playable: false,
+					legend: item.metadata?.first_air_date?.slice(0, 4) ?? ''
 				}))
 			});
 		}
@@ -126,8 +131,8 @@
 	<!-- Pulled up under the hero's fade, so the first row starts inside the
 	     gradient rather than after a visible seam. -->
 	<div class:home-rows={home.hero} class:page-body={!home.hero}>
-		{#each home.rows as row (row.kind)}
-			<Row {row} />
+		{#each home.rows as row, index (row.kind)}
+			<Row {row} priority={index === 0} />
 		{/each}
 
 		{#each seriesRows as row (row.kind)}

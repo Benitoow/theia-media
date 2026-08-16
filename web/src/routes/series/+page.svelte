@@ -9,6 +9,7 @@
 	import { strings as t } from '$lib/strings.js';
 	import PosterCard from '$lib/components/PosterCard.svelte';
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
+	import ChromeScene from '$lib/components/ChromeScene.svelte';
 
 	/** @type {'loading' | 'ready' | 'failed'} */
 	let state = $state('loading');
@@ -30,37 +31,62 @@
 	<title>{t.series.title} — {t.appName}</title>
 </svelte:head>
 
+<!--
+	The two message states are full-bleed, so they sit outside the page shell.
+	They were a pair of hand-built panels here while /films and the home screen
+	used ChromeScene for the identical states -- the same drift the library page
+	records having already fixed on its own side. A panel floating half-width in
+	a 1512px window, with a display title inside a box too small to carry one,
+	was the visible cost of it.
+-->
 {#if state === 'loading'}
 	<LoadingSkeleton variant="grid" label={t.series.loading} />
+{:else if state === 'failed'}
+	<ChromeScene
+		image="/chrome/theia-offline.webp"
+		eyebrow={t.appName}
+		title={t.home.unreachableTitle}
+		body={t.home.unreachable}
+		tone="error"
+	>
+		<button
+			type="button"
+			onclick={() => location.reload()}
+			class="tv-action cursor-pointer"
+			data-remote-default
+		>
+			{t.home.retry}
+		</button>
+	</ChromeScene>
+{:else if series.length === 0}
+	<ChromeScene
+		image="/chrome/theia-empty.webp"
+		eyebrow={t.series.title}
+		title={t.series.emptyTitle}
+		body={t.series.emptyBody}
+	>
+		<a href="/reglages" class="tv-action cursor-pointer" data-remote-default>
+			{t.nav.settings}
+		</a>
+	</ChromeScene>
 {:else}
 	<div class="page-shell page-body">
 		<header class="mb-10">
 			<h1 class="page-title">{t.series.title}</h1>
-			{#if state === 'ready' && series.length}
-				<p class="label mt-3">{t.series.countAll(series.length)}</p>
-			{/if}
+			<p class="label mt-3">{t.series.countAll(series.length)}</p>
 		</header>
 
-		{#if state === 'failed'}
-			<div class="chrome-panel max-w-xl p-8">
-				<p class="tv-copy border-l border-error py-2 pl-6">{t.home.unreachable}</p>
-			</div>
-		{:else if series.length === 0}
-			<div class="chrome-panel max-w-2xl p-8 sm:p-12">
-				<h2 class="font-display text-display font-normal">{t.series.emptyTitle}</h2>
-				<p class="tv-copy mt-5">{t.series.emptyBody}</p>
-			</div>
-		{:else}
-			<div class="library-grid">
-				{#each series as item (item.id)}
-					<PosterCard
-						movie={item}
-						href="/serie/{item.id}"
-						fluid
-						legend={item.metadata?.first_air_date?.slice(0, 4) ?? '—'}
-					/>
-				{/each}
-			</div>
-		{/if}
+		<div class="library-grid">
+			{#each series as item, index (item.id)}
+				<PosterCard
+					movie={item}
+					href="/serie/{item.id}"
+					fluid
+					playable={false}
+					legend={item.metadata?.first_air_date?.slice(0, 4) ?? ''}
+					priority={index < 6}
+				/>
+			{/each}
+		</div>
 	</div>
 {/if}

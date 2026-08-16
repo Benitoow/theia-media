@@ -151,20 +151,24 @@
 		})
 	);
 
+	// An em dash for every value the library does not have read as a placeholder
+	// somebody had forgotten to fill in -- and on a library of unmatched files it
+	// was most of the grid. The card keeps the line's height either way, so
+	// saying nothing is both quieter and more honest than saying "—".
 	function cardLegend(movie) {
 		switch (sort) {
 			case 'rating':
 				return movie.metadata?.vote_average
 					? t.library.ratingLegend(movie.metadata.vote_average)
-					: '—';
+					: '';
 			case 'added': {
 				const date = new Date(movie.added_at);
-				return Number.isNaN(date.getTime()) ? '—' : addedDate.format(date);
+				return Number.isNaN(date.getTime()) ? '' : addedDate.format(date);
 			}
 			case 'runtime':
-				return formatRuntime(movie.metadata?.runtime_minutes) ?? '—';
+				return formatRuntime(movie.metadata?.runtime_minutes) ?? '';
 			default:
-				return displayYear(movie) ?? '—';
+				return displayYear(movie) ?? '';
 		}
 	}
 </script>
@@ -218,7 +222,7 @@
 						class="library-search-input"
 					/>
 					{#if query}
-						<button type="button" onclick={() => (query = '')} class="player-icon-button !min-h-10 !min-w-10">
+						<button type="button" onclick={() => (query = '')} class="player-icon-button player-icon-button--compact">
 							<Icon name="close" size={16} label={t.library.clear} />
 						</button>
 					{/if}
@@ -270,8 +274,11 @@
 					have to drag through is the wrong shape for that.
 				-->
 				<div class="library-grid">
-					{#each filtered as movie (movie.id)}
-						<PosterCard {movie} fluid legend={cardLegend(movie)} />
+					<!-- Six covers the first row on a television and the first three
+					     on a phone: the artwork that is already on screen when the
+					     page arrives. -->
+					{#each filtered as movie, index (movie.id)}
+						<PosterCard {movie} fluid legend={cardLegend(movie)} priority={index < 6} />
 					{/each}
 				</div>
 			{/if}

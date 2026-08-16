@@ -14,6 +14,7 @@ package stream
 
 import (
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -273,7 +274,7 @@ func TranscodeArgs(path string, d Decision, startSeconds float64, encoder, hwacc
 		// veryfast is the honest setting for something that has to keep up with
 		// playback. Measured at 1.04x real time on a 1080p HEVC source; a
 		// slower preset would look better and stall.
-		args = append(args, "-preset", "veryfast", "-tune", "zerolatency")
+		args = append(args, "-preset", "veryfast", "-threads", strconv.Itoa(x264Threads()))
 	}
 
 	if d.Audio == AudioTranscode {
@@ -359,4 +360,39 @@ func PreferredAudio[T any](tracks []T, codecOf func(T) string) (T, bool) {
 		}
 	}
 	return tracks[0], true
+}
+
+// x264Threads caps how many threads libx264 spreads a frame across.
+//
+// This replaced `-tune zerolatency`, which was the wrong instrument for the
+// job. zerolatency exists for a video call: it turns off b-frames and lookahead
+// and switches x264 to slice-based threading so that a frame comes out the
+// instant it goes in. Theia is not a video call. It writes a fragmented MP4
+// into a pipe that a player buffers, and paying for an encoder delay it cannot
+// perceive cost both speed and picture.
+//
+// Measured on a Ryzen AI 9 HX 370, transcoding one minute of 1080p HEVC Main 10
+// to 720p, and again with no scale at 1080p:
+//
+//	                            720p     1080p    first 192 KB
+//	veryfast -tune zerolatency  4.52x    3.60x    1108 ms
+//	veryfast (threads unbound)  5.26x    4.08x    1400 ms
+//	veryfast -threads 8         5.35x       -     1250 ms
+//
+// Eighteen per cent more throughput, and b-frames and lookahead back, for 142ms
+// more before the first fragment. The margin matters where it is thin: the
+// machine in decision 58 managed 1.04x real time, which is a coin toss against a
+// stall rather than a margin, and this is what it buys there.
+//
+// The cap is what keeps that 142ms small. x264 holds roughly one frame in flight
+// per thread before it emits anything, so an unbounded twenty-four-thread encode
+// starts noticeably later than an eight-thread one and finishes no sooner.
+// Below eight cores there is nothing to cap, and asking for more threads than
+// the machine has only adds context switching.
+func x264Threads() int {
+	const cap = 8
+	if n := runtime.NumCPU(); n < cap {
+		return n
+	}
+	return cap
 }

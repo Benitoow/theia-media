@@ -4,7 +4,12 @@
 	import Icon from './Icon.svelte';
 	import { strings as t } from '$lib/strings.js';
 
-	let { row } = $props();
+	// priority marks the row that is on screen before anything is scrolled.
+	// Only the home page's first row sets it, and only its leading cards act on
+	// it: eager-loading every row would fetch the whole page at once, which is
+	// the fault this is meant to fix, in the other direction.
+	let { row, priority = false } = $props();
+	const eagerCards = 4;
 
 	// The server says what a row is; this is where it gets its name and its way
 	// through to the library. An unknown kind falls back to the code itself
@@ -69,7 +74,12 @@
 </script>
 
 <section class="mb-10 lg:mb-14" aria-label={copy.title}>
-	<div class="page-shell mb-3 flex items-end justify-between gap-6">
+	<!-- Baselines, not box edges. "Tout voir" is a .tv-link, which carries the
+	     52px hit target section 9 requires and centres its text inside it; lining
+	     the boxes up by their bottoms therefore left the link's text sitting 19px
+	     above the row heading it belongs to. Aligning baselines puts the two
+	     pieces of text on one line, which is what the eye reads. -->
+	<div class="page-shell mb-3 flex items-baseline justify-between gap-6">
 		<div class="min-w-0">
 			<h2 class="section-title">{copy.title}</h2>
 			{#if copy.hint}
@@ -120,7 +130,7 @@
 			<!-- A row carries either films or prepared cards. Episodes need their
 			     own artwork and heading; everything else about the card is the
 			     same, so this stays one component rather than two. -->
-			{#each row.cards ?? row.movies.map((movie) => ({ movie })) as card (card.movie.id)}
+			{#each row.cards ?? row.movies.map((movie) => ({ movie })) as card, index (card.movie.id)}
 				<div class="snap-start">
 					<PosterCard
 						movie={card.movie}
@@ -128,6 +138,8 @@
 						art={card.art ?? null}
 						title={card.title ?? null}
 						legend={card.legend ?? null}
+						playable={card.playable ?? true}
+						priority={priority && index < eagerCards}
 					/>
 				</div>
 			{/each}

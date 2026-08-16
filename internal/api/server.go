@@ -182,7 +182,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/library/episodes/{id}/files/{file_id}/stream/remux", s.handleEpisodeFileStreamRemux)
 	mux.HandleFunc("GET /api/library/episodes/{id}/files/{file_id}/stream", s.handleEpisodeFileStreamDirect)
 	mux.Handle("/", s.staticHandler())
-	return s.logRequests(mux)
+	// Compression sits inside the log, so a logged status is the one the
+	// client actually received.
+	return s.logRequests(compress(mux))
 }
 
 type healthResponse struct {

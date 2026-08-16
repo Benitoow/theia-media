@@ -40,6 +40,31 @@ export function imageURL(path, size = 'w342') {
 }
 
 /**
+ * The widths a card's artwork is offered in, narrowest first.
+ *
+ * A card is between 165 and 336 CSS pixels wide depending on the screen, and
+ * every one of them was being served the 780px picture: measured on the real
+ * library, 184 cached backdrops averaging 68 KB each. On a television at one
+ * device pixel per CSS pixel that is nearly three times more image than the
+ * card can show.
+ *
+ * Offering the three sizes and letting the browser choose is better than
+ * picking one here, because the right answer depends on the device pixel ratio
+ * as well as the layout: a phone at 3x wants the large one for a small card,
+ * and a 1080p television wants the small one for a large card.
+ */
+const cardWidths = [342, 500, 780];
+
+/**
+ * Builds a srcset for a TMDB image across the card sizes.
+ * @param {string | null | undefined} path a TMDB image path such as "/abc.jpg"
+ */
+export function imageSrcSet(path) {
+	if (!path) return null;
+	return cardWidths.map((width) => `${imageURL(path, `w${width}`)} ${width}w`).join(', ');
+}
+
+/**
  * The title to show: TMDB's when it recognised the item, the filename's
  * otherwise. Films carry `tmdb_title`, series `tmdb_name` -- one helper rather
  * than two so a card component does not need to know which it is holding.

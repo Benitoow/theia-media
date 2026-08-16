@@ -1,7 +1,9 @@
 package stream
 
 import (
+	"runtime"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -186,5 +188,50 @@ func TestRemuxArgsForAudioMapsOnlyTheSelectedAbsoluteStream(t *testing.T) {
 	}
 	if got := args[indices[1]+1]; got != "0:4" {
 		t.Errorf("audio map = %q, want selected absolute stream 0:4", got)
+	}
+}
+
+// The CPU-only encoding path. Hardware encoders carry their own defaults; the
+// software one is where the arguments actually decide whether a modest machine
+// keeps up with playback.
+func TestTheSoftwareEncoderIsNotTunedForAVideoCall(t *testing.T) {
+	args := TranscodeArgs("/films/heat.mkv", Decision{Audio: AudioTranscode}, 0, "libx264", "", 720, nil)
+
+	joined := strings.Join(args, " ")
+	if strings.Contains(joined, "zerolatency") {
+		t.Error("libx264 is still tuned zerolatency: it costs 18% throughput, b-frames and lookahead " +
+			"to save an encoder delay a buffered player cannot perceive")
+	}
+	if !strings.Contains(joined, "-preset veryfast") {
+		t.Error("libx264 lost its veryfast preset, which is what keeps it ahead of playback")
+	}
+	if !strings.Contains(joined, "-threads ") {
+		t.Error("libx264 has no thread cap, which is what keeps the first fragment quick")
+	}
+}
+
+func TestTheThreadCapNeverAsksForMoreThanTheMachineHas(t *testing.T) {
+	got := x264Threads()
+	if got < 1 {
+		t.Fatalf("x264Threads() = %d, want at least one", got)
+	}
+	if got > 8 {
+		t.Errorf("x264Threads() = %d, want no more than 8: past that x264 buys latency, not speed", got)
+	}
+	if cpus := runtime.NumCPU(); got > cpus {
+		t.Errorf("x264Threads() = %d on a %d-cpu machine", got, cpus)
+	}
+}
+
+// A hardware encoder must not pick up the software encoder's arguments: its own
+// defaults are what the vendor tuned, and -preset means something different or
+// nothing at all to each of them.
+func TestAHardwareEncoderKeepsItsOwnSettings(t *testing.T) {
+	for _, encoder := range []string{"h264_amf", "h264_nvenc", "h264_qsv", "h264_mf"} {
+		joined := strings.Join(
+			TranscodeArgs("/films/heat.mkv", Decision{}, 0, encoder, "", 720, nil), " ")
+		if strings.Contains(joined, "-preset") || strings.Contains(joined, "-threads") {
+			t.Errorf("%s was given libx264's arguments: %s", encoder, joined)
+		}
 	}
 }

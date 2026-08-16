@@ -30,11 +30,32 @@ if (-not (Test-Path $keep)) {
     if (-not (Test-Path $keep)) { New-Item -ItemType File -Path $keep | Out-Null }
 }
 
-Write-Host '==> Building the binary' -ForegroundColor Cyan
+# Find the Go toolchain.
+#
+# This script used to assume `go` was on PATH and died with a bare
+# CommandNotFoundException when it was not -- after the frontend had already
+# been rebuilt, so the tree was left half-built and the cause was three screens
+# up. A toolchain unpacked beside the profile rather than installed is the
+# normal case on this machine, so look there before giving up, and say something
+# useful if nothing is found.
+$go = (Get-Command go -ErrorAction SilentlyContinue).Source
+if (-not $go) {
+    $candidates = @(
+        (Join-Path $env:USERPROFILE 'go-toolchain/go/bin/go.exe'),
+        (Join-Path $env:LOCALAPPDATA 'go/bin/go.exe'),
+        'C:/Program Files/Go/bin/go.exe'
+    )
+    $go = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+}
+if (-not $go) {
+    throw "Go was not found. Install it, put it on PATH, or unpack it at $env:USERPROFILE/go-toolchain/go."
+}
+Write-Host "==> Building the binary (using $go)" -ForegroundColor Cyan
+
 Push-Location $root
 try {
     $env:CGO_ENABLED = '0'
-    go build -trimpath -ldflags "-s -w -X main.version=$Version" -o theia.exe ./cmd/theia
+    & $go build -trimpath -ldflags "-s -w -X main.version=$Version" -o theia.exe ./cmd/theia
     if ($LASTEXITCODE -ne 0) { throw 'go build failed' }
 }
 finally {
