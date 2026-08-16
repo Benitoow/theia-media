@@ -25,12 +25,20 @@
 		this process discovered itself. Nothing user-supplied reaches it, which
 		is what makes rendering it as markup acceptable here.
 	-->
+	<!--
+		The code is capped by the screen, not only by the size asked for. It used
+		to be a flat w-80 with shrink-0, which on the first-launch screen came to
+		320px of code plus 32px of padding inside a 312px content box on a 360px
+		phone: the address and the code -- the only two things that screen exists
+		to show -- were cut off on the right. min() keeps the intended size
+		wherever there is room for it and yields where there is not.
+	-->
 	<div
 		class="shrink-0 rounded-xl bg-bone p-4 shadow-[0_1.5rem_4rem_rgba(0,0,0,0.32)]"
-		class:w-56={size === 'normal'}
-		class:w-80={size === 'large'}
+		class:w-[min(14rem,100%)]={size === 'normal'}
+		class:w-[min(20rem,100%)]={size === 'large'}
 	>
-		{@html info.qr_code_svg}
+		<div class="[&>svg]:h-auto [&>svg]:w-full">{@html info.qr_code_svg}</div>
 	</div>
 
 	<div class="min-w-0 flex-1 text-center lg:text-left">
