@@ -19,19 +19,31 @@ var (
 )
 
 type SeriesMetadata struct {
-	TMDBID       int       `json:"tmdb_id,omitempty"`
-	Name         string    `json:"tmdb_name,omitempty"`
-	OriginalName string    `json:"original_name,omitempty"`
-	Overview     string    `json:"overview,omitempty"`
-	FirstAirDate string    `json:"first_air_date,omitempty"`
-	PosterPath   string    `json:"poster_path,omitempty"`
-	BackdropPath string    `json:"backdrop_path,omitempty"`
-	VoteAverage  float64   `json:"vote_average,omitempty"`
-	Genres       []string  `json:"genres,omitempty"`
-	Cast         []Credit  `json:"cast,omitempty"`
-	Creators     []string  `json:"creators,omitempty"`
-	Status       string    `json:"status"`
-	FetchedAt    time.Time `json:"fetched_at,omitempty"`
+	TMDBID       int      `json:"tmdb_id,omitempty"`
+	Name         string   `json:"tmdb_name,omitempty"`
+	OriginalName string   `json:"original_name,omitempty"`
+	Tagline      string   `json:"tagline,omitempty"`
+	Overview     string   `json:"overview,omitempty"`
+	FirstAirDate string   `json:"first_air_date,omitempty"`
+	LastAirDate  string   `json:"last_air_date,omitempty"`
+	PosterPath   string   `json:"poster_path,omitempty"`
+	BackdropPath string   `json:"backdrop_path,omitempty"`
+	VoteAverage  float64  `json:"vote_average,omitempty"`
+	Genres       []string `json:"genres,omitempty"`
+	Cast         []Credit `json:"cast,omitempty"`
+	Creators     []string `json:"creators,omitempty"`
+	Networks     []string `json:"networks,omitempty"`
+
+	// AirStatus is whether the series has ended, as a code. Status, below, is
+	// the state of our own metadata lookup -- two different questions that both
+	// wanted the word "status", so this one is named for what it describes.
+	AirStatus string `json:"air_status,omitempty"`
+
+	Certification        string `json:"certification,omitempty"`
+	CertificationCountry string `json:"certification_country,omitempty"`
+
+	Status    string    `json:"status"`
+	FetchedAt time.Time `json:"fetched_at,omitempty"`
 }
 
 type Series struct {
@@ -124,49 +136,63 @@ type SeriesHome struct {
 
 const seriesColumns = `
 	id, title, year,
-	tmdb_id, tmdb_name, original_name, overview, first_air_date,
+	tmdb_id, tmdb_name, original_name, tagline, overview,
+	first_air_date, last_air_date, status,
 	poster_path, backdrop_path, vote_average, genres_json, cast_json, creators_json,
+	networks_json, certification, certification_country,
 	metadata_status, metadata_fetched_at, added_at, updated_at`
 
 const seriesColumnsAliased = `
 	se.id, se.title, se.year,
-	se.tmdb_id, se.tmdb_name, se.original_name, se.overview, se.first_air_date,
+	se.tmdb_id, se.tmdb_name, se.original_name, se.tagline, se.overview,
+	se.first_air_date, se.last_air_date, se.status,
 	se.poster_path, se.backdrop_path, se.vote_average, se.genres_json, se.cast_json, se.creators_json,
+	se.networks_json, se.certification, se.certification_country,
 	se.metadata_status, se.metadata_fetched_at, se.added_at, se.updated_at`
 
 func scanSeries(row interface{ Scan(...any) error }) (Series, error) {
 	var (
 		series                                 Series
 		year, tmdbID                           sql.NullInt64
-		name, original, overview, firstAir     sql.NullString
+		name, original, tagline, overview      sql.NullString
+		firstAir, lastAir, airStatus           sql.NullString
 		poster, backdrop, genresJSON, castJSON sql.NullString
-		creatorsJSON                           sql.NullString
+		creatorsJSON, networksJSON             sql.NullString
+		certification, certCountry             sql.NullString
 		vote                                   sql.NullFloat64
 		fetchedAt, addedAt, updatedAt          int64
 		status                                 string
 	)
 	if err := row.Scan(&series.ID, &series.Title, &year,
-		&tmdbID, &name, &original, &overview, &firstAir,
+		&tmdbID, &name, &original, &tagline, &overview,
+		&firstAir, &lastAir, &airStatus,
 		&poster, &backdrop, &vote, &genresJSON, &castJSON, &creatorsJSON,
+		&networksJSON, &certification, &certCountry,
 		&status, &fetchedAt, &addedAt, &updatedAt); err != nil {
 		return Series{}, err
 	}
 	series.Kind = "series"
 	series.Year = int(year.Int64)
 	series.Metadata = SeriesMetadata{
-		TMDBID:       int(tmdbID.Int64),
-		Name:         name.String,
-		OriginalName: original.String,
-		Overview:     overview.String,
-		FirstAirDate: firstAir.String,
-		PosterPath:   poster.String,
-		BackdropPath: backdrop.String,
-		VoteAverage:  vote.Float64,
-		Status:       status,
+		TMDBID:               int(tmdbID.Int64),
+		Name:                 name.String,
+		OriginalName:         original.String,
+		Tagline:              tagline.String,
+		Overview:             overview.String,
+		FirstAirDate:         firstAir.String,
+		LastAirDate:          lastAir.String,
+		AirStatus:            airStatus.String,
+		PosterPath:           poster.String,
+		BackdropPath:         backdrop.String,
+		VoteAverage:          vote.Float64,
+		Certification:        certification.String,
+		CertificationCountry: certCountry.String,
+		Status:               status,
 	}
 	_ = json.Unmarshal([]byte(genresJSON.String), &series.Metadata.Genres)
 	_ = json.Unmarshal([]byte(castJSON.String), &series.Metadata.Cast)
 	_ = json.Unmarshal([]byte(creatorsJSON.String), &series.Metadata.Creators)
+	_ = json.Unmarshal([]byte(networksJSON.String), &series.Metadata.Networks)
 	if fetchedAt > 0 {
 		series.Metadata.FetchedAt = unix(fetchedAt)
 	}

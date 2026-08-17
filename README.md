@@ -78,8 +78,17 @@ without a reload. Titles, synopses and artwork come from TMDB.
 - Groups several files under one film — a remux and a 1080p encode are one card,
   not two — and lets you pick the file on the detail page.
 - Handles **TV series**: shows, seasons, episodes and per-episode resume.
-- Fetches titles, synopses, dates, posters, backdrops, runtime, rating, director,
-  genres and cast from TMDB. Images are cached locally.
+- Fetches the whole TMDB record, not a corner of it: titles and original titles,
+  taglines, synopses, dates, posters, backdrops, runtime, rating, age certificate
+  with the country that issued it, genres, the director, the writing, music and
+  photography credits, and the cast **with their portraits**. A series also
+  carries its network, whether it has ended, and the year it stopped. Images are
+  cached locally, and all of it arrives in the single request the poster already
+  cost.
+- Shows **the other parts of a saga you own**. A film TMDB files under a
+  collection carries a row of the rest of that collection — only the parts
+  actually in the library, because a card for a film you cannot play is an
+  advertisement.
 
 **Watching**
 
@@ -131,8 +140,10 @@ without a reload. Titles, synopses and artwork come from TMDB.
   subtitles — travel compressed, on the LAN and through the tunnel alike; films,
   artwork and anything asked for by byte range never are. Card artwork is offered
   at three widths and the browser takes the one it can actually show, so a 1080p
-  television downloads a quarter of the picture a high-density phone does. See
-  [decisions 74 and 75](docs/DECISIONS.md).
+  television downloads a quarter of the picture a high-density phone does. A list
+  carries what a card reads and no more: the cast, the credits and the certificate
+  travel when you open a film, not when you scroll past it. See
+  [decisions 74, 75 and 85](docs/DECISIONS.md).
 
 ## What Theia deliberately does not do
 

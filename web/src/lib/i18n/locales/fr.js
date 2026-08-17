@@ -338,6 +338,34 @@ export const strings = {
 		}
 	},
 
+	// The record behind a film or a series: what TMDB holds beyond a synopsis.
+	//
+	// The role names are words for codes the server sends -- the API says
+	// "writing", never "Screenplay" -- so a new job title added upstream is a
+	// missing translation here rather than English in the middle of this page.
+	credits: {
+		heading: 'Générique',
+		originalTitle: 'Titre original',
+		direction: 'Réalisation',
+		writing: 'Scénario',
+		music: 'Musique',
+		cinematography: 'Image',
+		creators: 'Création',
+		network: 'Diffusion',
+		certification: 'Classification',
+		certificationFull: (value, country) => `Classification ${value}, ${country}`,
+		collection: (name) => `Fait partie de « ${name} »`,
+		collectionCount: (n) => (n === 1 ? '1 autre film' : `${n} autres films`),
+		airStatus: {
+			ended: 'Terminée',
+			returning: 'En cours',
+			canceled: 'Arrêtée',
+			in_production: 'En production',
+			planned: 'Annoncée',
+			pilot: 'Pilote'
+		}
+	},
+
 	film: {
 		notFound: 'Ce film est introuvable.',
 		overview: 'Synopsis',

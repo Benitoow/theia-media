@@ -95,24 +95,78 @@ func New(token string, opts ...Option) *Client {
 
 // Film is everything Theia keeps from TMDB about one film.
 type Film struct {
-	TMDBID       int      `json:"tmdb_id"`
-	Title        string   `json:"title"`
-	Overview     string   `json:"overview"`
-	ReleaseDate  string   `json:"release_date"`
-	PosterPath   string   `json:"poster_path"`
-	BackdropPath string   `json:"backdrop_path"`
-	Runtime      int      `json:"runtime"`
-	VoteAverage  float64  `json:"vote_average"`
-	Genres       []string `json:"genres"`
-	Cast         []Person `json:"cast"`
-	Director     string   `json:"director"`
+	TMDBID           int      `json:"tmdb_id"`
+	Title            string   `json:"title"`
+	OriginalTitle    string   `json:"original_title"`
+	OriginalLanguage string   `json:"original_language"`
+	Tagline          string   `json:"tagline"`
+	Overview         string   `json:"overview"`
+	ReleaseDate      string   `json:"release_date"`
+	PosterPath       string   `json:"poster_path"`
+	BackdropPath     string   `json:"backdrop_path"`
+	Runtime          int      `json:"runtime"`
+	VoteAverage      float64  `json:"vote_average"`
+	Genres           []string `json:"genres"`
+	Cast             []Person `json:"cast"`
+	Director         string   `json:"director"`
+
+	// Crew beyond the director, carrying a role code rather than TMDB's job
+	// title: the interface writes the sentence, so it cannot be handed
+	// "Original Music Composer" to print.
+	Crew []Person `json:"crew"`
+
+	// Certification is the age rating as an authority wrote it -- "12", "R",
+	// "TP" -- with the country it was issued in, because "16" means different
+	// things in different places and the interface says which.
+	Certification        string `json:"certification"`
+	CertificationCountry string `json:"certification_country"`
+
+	// Collection is the TMDB grouping a film belongs to, when it belongs to
+	// one. Theia uses it to find the other parts the user already owns; it
+	// never lists parts they do not have.
+	Collection *Collection `json:"collection,omitempty"`
 }
 
-// Person is one credited name.
-type Person struct {
-	Name      string `json:"name"`
-	Character string `json:"character,omitempty"`
+// Collection is a TMDB film grouping: a trilogy, a saga, a pair of sequels.
+type Collection struct {
+	TMDBID     int    `json:"tmdb_id"`
+	Name       string `json:"name"`
+	PosterPath string `json:"poster_path,omitempty"`
 }
+
+// Person is one credited name. Role is empty for the cast, whose part is in
+// Character, and one of the role codes below for the crew.
+type Person struct {
+	Name        string `json:"name"`
+	Character   string `json:"character,omitempty"`
+	Role        string `json:"role,omitempty"`
+	ProfilePath string `json:"profile_path,omitempty"`
+}
+
+// Crew role codes. These cross the API to the interface, which owns the words
+// (decision 25), so they are stable identifiers and not job titles.
+const (
+	RoleWriting        = "writing"
+	RoleMusic          = "music"
+	RoleCinematography = "cinematography"
+)
+
+// creditedJobs maps the TMDB job titles worth keeping onto role codes. It is a
+// whitelist: a film has upwards of a hundred crew entries and this page is not
+// a call sheet.
+var creditedJobs = map[string]string{
+	"Screenplay":              RoleWriting,
+	"Writer":                  RoleWriting,
+	"Story":                   RoleWriting,
+	"Novel":                   RoleWriting,
+	"Original Music Composer": RoleMusic,
+	"Music":                   RoleMusic,
+	"Director of Photography": RoleCinematography,
+}
+
+// maxCrewPerRole keeps a role from filling the line on a film with four
+// credited writers.
+const maxCrewPerRole = 2
 
 // Search finds the film best matching a title and, when known, a year.
 //
@@ -205,63 +259,182 @@ func pick(results []searchResult, title string) int {
 }
 
 type detailsResponse struct {
-	ID           int     `json:"id"`
-	Title        string  `json:"title"`
-	Overview     string  `json:"overview"`
-	ReleaseDate  string  `json:"release_date"`
-	PosterPath   string  `json:"poster_path"`
-	BackdropPath string  `json:"backdrop_path"`
-	Runtime      int     `json:"runtime"`
-	VoteAverage  float64 `json:"vote_average"`
-	Genres       []struct {
+	ID               int     `json:"id"`
+	Title            string  `json:"title"`
+	OriginalTitle    string  `json:"original_title"`
+	OriginalLanguage string  `json:"original_language"`
+	Tagline          string  `json:"tagline"`
+	Overview         string  `json:"overview"`
+	ReleaseDate      string  `json:"release_date"`
+	PosterPath       string  `json:"poster_path"`
+	BackdropPath     string  `json:"backdrop_path"`
+	Runtime          int     `json:"runtime"`
+	VoteAverage      float64 `json:"vote_average"`
+	Genres           []struct {
 		Name string `json:"name"`
 	} `json:"genres"`
+	BelongsToCollection *struct {
+		ID         int    `json:"id"`
+		Name       string `json:"name"`
+		PosterPath string `json:"poster_path"`
+	} `json:"belongs_to_collection"`
 	Credits struct {
 		Cast []struct {
-			Name      string `json:"name"`
-			Character string `json:"character"`
+			Name        string `json:"name"`
+			Character   string `json:"character"`
+			ProfilePath string `json:"profile_path"`
 		} `json:"cast"`
 		Crew []struct {
-			Name string `json:"name"`
-			Job  string `json:"job"`
+			Name        string `json:"name"`
+			Job         string `json:"job"`
+			ProfilePath string `json:"profile_path"`
 		} `json:"crew"`
 	} `json:"credits"`
+	ReleaseDates struct {
+		Results []releaseDateCountry `json:"results"`
+	} `json:"release_dates"`
 }
 
-// Details fetches one film, with its credits in the same round trip.
+// releaseDateCountry is one country block of TMDB release_dates: several dated
+// releases, each of which may carry the certificate in force for it.
+type releaseDateCountry struct {
+	Country string             `json:"iso_3166_1"`
+	Dates   []releaseDateEntry `json:"release_dates"`
+}
+
+type releaseDateEntry struct {
+	Certification string `json:"certification"`
+	Type          int    `json:"type"`
+}
+
+// Details fetches one film, with its credits and its certificates, in the same
+// round trip.
+//
+// append_to_response is the whole point: credits and release_dates cost a
+// larger body, where two further requests would each pay the latency and the
+// rate limit again. Everything the film page shows comes from this one call.
 func (c *Client) Details(ctx context.Context, id int) (*Film, error) {
 	var body detailsResponse
-	path := fmt.Sprintf("/movie/%d?language=%s&append_to_response=credits", id, language)
+	path := fmt.Sprintf("/movie/%d?language=%s&append_to_response=credits,release_dates", id, language)
 	if err := c.get(ctx, path, &body); err != nil {
 		return nil, err
 	}
 
 	film := &Film{
-		TMDBID:       body.ID,
-		Title:        body.Title,
-		Overview:     body.Overview,
-		ReleaseDate:  body.ReleaseDate,
-		PosterPath:   body.PosterPath,
-		BackdropPath: body.BackdropPath,
-		Runtime:      body.Runtime,
-		VoteAverage:  body.VoteAverage,
+		TMDBID:           body.ID,
+		Title:            body.Title,
+		OriginalTitle:    strings.TrimSpace(body.OriginalTitle),
+		OriginalLanguage: body.OriginalLanguage,
+		Tagline:          strings.TrimSpace(body.Tagline),
+		Overview:         body.Overview,
+		ReleaseDate:      body.ReleaseDate,
+		PosterPath:       body.PosterPath,
+		BackdropPath:     body.BackdropPath,
+		Runtime:          body.Runtime,
+		VoteAverage:      body.VoteAverage,
 	}
 	for _, g := range body.Genres {
 		film.Genres = append(film.Genres, g.Name)
+	}
+	if group := body.BelongsToCollection; group != nil && group.ID > 0 {
+		film.Collection = &Collection{
+			TMDBID:     group.ID,
+			Name:       strings.TrimSpace(group.Name),
+			PosterPath: group.PosterPath,
+		}
 	}
 	for i, person := range body.Credits.Cast {
 		if i >= maxCast {
 			break
 		}
-		film.Cast = append(film.Cast, Person{Name: person.Name, Character: person.Character})
+		film.Cast = append(film.Cast, Person{
+			Name:        person.Name,
+			Character:   person.Character,
+			ProfilePath: person.ProfilePath,
+		})
 	}
+
+	perRole := map[string]int{}
 	for _, person := range body.Credits.Crew {
 		if person.Job == "Director" {
-			film.Director = person.Name
-			break
+			if film.Director == "" {
+				film.Director = person.Name
+			}
+			continue
+		}
+		role, wanted := creditedJobs[person.Job]
+		if !wanted || person.Name == "" {
+			continue
+		}
+		// TMDB credits somebody once per job, so a writer-director appears in
+		// both lists and an adapted screenplay lists the novelist twice. A name
+		// is kept once per role, and never as the writer of the film it already
+		// says they directed.
+		if person.Name == film.Director || hasCredit(film.Crew, role, person.Name) {
+			continue
+		}
+		if perRole[role] >= maxCrewPerRole {
+			continue
+		}
+		perRole[role]++
+		film.Crew = append(film.Crew, Person{
+			Name:        person.Name,
+			Role:        role,
+			ProfilePath: person.ProfilePath,
+		})
+	}
+
+	film.Certification, film.CertificationCountry = pickCertification(body.ReleaseDates.Results)
+	return film, nil
+}
+
+// hasCredit reports whether a name already holds a role.
+func hasCredit(crew []Person, role, name string) bool {
+	for _, person := range crew {
+		if person.Role == role && person.Name == name {
+			return true
 		}
 	}
-	return film, nil
+	return false
+}
+
+// certificationCountries is the order of preference. The interface defaults to
+// French, so a French certificate is the one this household recognises; the
+// others are fallbacks, in the order of how often TMDB actually holds them.
+var certificationCountries = []string{"FR", "US", "GB", "CA"}
+
+// releaseTypeTheatrical is TMDB's code for a cinema release. Where a country
+// lists several, the cinema certificate is the one that was argued over.
+const releaseTypeTheatrical = 3
+
+// pickCertification chooses one age rating out of TMDB's per-country lists and
+// returns it with the country that issued it. Empty is an ordinary answer:
+// plenty of films carry no certificate in any country we ask about.
+func pickCertification(results []releaseDateCountry) (string, string) {
+	for _, wanted := range certificationCountries {
+		for _, result := range results {
+			if result.Country != wanted {
+				continue
+			}
+			var fallback string
+			for _, date := range result.Dates {
+				value := strings.TrimSpace(date.Certification)
+				if value == "" {
+					continue
+				}
+				if date.Type == releaseTypeTheatrical {
+					return value, result.Country
+				}
+				if fallback == "" {
+					fallback = value
+				}
+			}
+			if fallback != "" {
+				return fallback, result.Country
+			}
+		}
+	}
+	return "", ""
 }
 
 // Lookup is Search followed by Details, which is what callers actually want.

@@ -1739,6 +1739,155 @@
 		color: var(--color-bone);
 	}
 
+	/* ---------------------------------------------------------------------
+	   The record behind a film: tagline, certificate, credits, cast.
+	   Everything here is TMDB data that was being fetched and thrown away.
+	   --------------------------------------------------------------------- */
+
+	/* The tagline.
+	   Section 4 reserves the display serif for titles, so a marketing line takes
+	   the reading face instead -- italic, one step above body, and quieter than
+	   the title above it. It gets a measure of its own: at 1920 the detail column
+	   is wide enough to set forty words on one line, which nobody reads. */
+	.film-tagline {
+		max-width: 42rem;
+		color: var(--color-parchment);
+		font-size: calc(var(--text-body) * 1.15);
+		font-style: italic;
+		line-height: 1.4;
+	}
+
+	/* The certificate.
+	   A box, because that is how a certificate is printed everywhere it appears,
+	   and it needs no word in front of it. Drawn with the line and parchment
+	   rather than the accent: the accent budget on this page is already spent on
+	   the rating beside it. Tracking is tighter than a .label because this is a
+	   two-character code, not a word -- "12" at 0.18em reads as "1 2". */
+	.certificate {
+		display: inline-flex;
+		min-width: 2.5em;
+		min-height: 1.9em;
+		align-items: center;
+		justify-content: center;
+		padding: 0.1em 0.45em;
+		border: 1px solid var(--color-muted);
+		border-radius: var(--radius-nested);
+		color: var(--color-parchment);
+		font-family: var(--font-label);
+		font-size: var(--text-label);
+		letter-spacing: 0.08em;
+		line-height: 1.2;
+		text-transform: uppercase;
+	}
+
+	/* Credits.
+	   Roles in the label register, names in the reading face, in two columns
+	   where there is room for two. The role column is max-content so that every
+	   name starts at the same place without a magic width -- "CINEMATOGRAPHY" at
+	   the television step is 190px, and any number I picked here would have been
+	   wrong in one language or the other. */
+	.credits {
+		margin-bottom: 2.5rem;
+	}
+
+	.credits-list {
+		display: grid;
+		gap: 0.9rem;
+	}
+
+	.credits-row {
+		display: grid;
+		gap: 0.1rem;
+	}
+
+	@media (min-width: 40rem) {
+		.credits-row {
+			grid-template-columns: max-content minmax(0, 1fr);
+			align-items: baseline;
+			gap: 0.1rem 2rem;
+		}
+	}
+
+	.credits-value {
+		color: var(--color-bone);
+		font-size: var(--text-small);
+		line-height: 1.5;
+	}
+
+	/* The cast.
+	   Two columns of name and part, as before, with the portrait TMDB was
+	   already sending in the same credits call. Not a scrolling strip: a row
+	   scrolls on the home screen because it is a catalogue to skim, and this is a
+	   fact about one film that should be readable without moving anything. */
+	.cast-list {
+		display: grid;
+		gap: 1.25rem 2.5rem;
+	}
+
+	@media (min-width: 40rem) {
+		.cast-list {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	.cast-member {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	/* 2:3 like a poster, small like a thumbnail, and framed like every other
+	   picture in the interface. */
+	.cast-portrait {
+		display: flex;
+		width: 3.25rem;
+		flex: none;
+		align-items: center;
+		justify-content: center;
+		overflow: hidden;
+		aspect-ratio: 2 / 3;
+		border: 1px solid var(--color-line);
+		border-radius: var(--radius-nested);
+		background:
+			linear-gradient(150deg, rgb(var(--channel-bone) / 0.08), transparent 58%),
+			var(--color-surface);
+	}
+
+	/* The stand-in, composed exactly as the card's is: a raked light and the
+	   initial in the display serif, hidden from assistive technology because the
+	   name is printed beside it. TMDB has no portrait for a good number of
+	   people, and an empty frame among nine photographs reads as a fault. */
+	.cast-portrait-initial {
+		color: rgb(var(--channel-bone) / 0.18);
+		font-family: var(--font-display);
+		font-size: 1.25rem;
+		font-weight: 400;
+		line-height: 1;
+		user-select: none;
+	}
+
+	.cast-name {
+		display: block;
+		overflow: hidden;
+		color: var(--color-bone);
+		font-size: var(--text-small);
+		line-height: 1.35;
+		text-overflow: ellipsis;
+	}
+
+	.cast-character {
+		display: block;
+		margin-top: 0.15rem;
+	}
+
+	/* The saga row sits outside the detail column, so it supplies the separation
+	   the column's own bottom padding no longer provides. */
+	.film-collection {
+		border-top: 1px solid var(--color-line);
+		padding-top: 2.5rem;
+		padding-bottom: 1rem;
+	}
+
 	/* The file and audio chooser. This is chrome, not grid, so it takes the
 	   label register and generous targets -- but it stays a list of facts rather
 	   than a showpiece: what matters is reading four filenames from a sofa and
@@ -3911,6 +4060,21 @@
 
 	.tv-action {
 		font-size: 1rem;
+	}
+
+	/* A 52px portrait beside 18px names looked like a stamp. It grows with the
+	   type, and the extra column exists because at 1920 two columns of cast left
+	   half the width empty. */
+	.cast-portrait {
+		width: 5rem;
+	}
+
+	.cast-portrait-initial {
+		font-size: 1.75rem;
+	}
+
+	.cast-list {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
 
 	/* The player's furniture keeps clear of the safe area too.

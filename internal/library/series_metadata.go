@@ -28,6 +28,7 @@ func (s *Store) StaleSeriesMetadata(ctx context.Context, now time.Time, limit in
 		WHERE se.metadata_status = ?
 		   OR (se.metadata_status = ? AND se.metadata_fetched_at < ?)
 		   OR (se.metadata_status IN (?, ?) AND se.metadata_fetched_at < ?)
+		   OR (se.metadata_status = ? AND se.metadata_version < ?)
 		   OR EXISTS (
 			SELECT 1 FROM seasons s
 			WHERE s.series_id = se.id AND (
@@ -50,6 +51,7 @@ func (s *Store) StaleSeriesMetadata(ctx context.Context, now time.Time, limit in
 		statusPending,
 		statusOK, now.Add(-metadataLifetime).Unix(),
 		statusNotFound, statusError, now.Add(-notFoundLifetime).Unix(),
+		statusOK, currentMetadataVersion,
 		statusPending,
 		statusOK, now.Add(-metadataLifetime).Unix(),
 		statusNotFound, statusError, now.Add(-notFoundLifetime).Unix(),
@@ -81,11 +83,7 @@ func (s *Store) SaveSeriesMetadata(ctx context.Context, id int64, series *tmdb.T
 	if err != nil {
 		return fmt.Errorf("encoding series genres: %w", err)
 	}
-	credits := make([]Credit, 0, len(series.Cast))
-	for _, person := range series.Cast {
-		credits = append(credits, Credit{Name: person.Name, Character: person.Character})
-	}
-	castJSON, err := json.Marshal(credits)
+	castJSON, err := json.Marshal(creditsFrom(series.Cast))
 	if err != nil {
 		return fmt.Errorf("encoding series cast: %w", err)
 	}
@@ -93,17 +91,25 @@ func (s *Store) SaveSeriesMetadata(ctx context.Context, id int64, series *tmdb.T
 	if err != nil {
 		return fmt.Errorf("encoding series creators: %w", err)
 	}
+	networksJSON, err := json.Marshal(series.Networks)
+	if err != nil {
+		return fmt.Errorf("encoding series networks: %w", err)
+	}
 	res, err := s.db.ExecContext(ctx, `
 		UPDATE series SET
-			tmdb_id = ?, tmdb_name = ?, original_name = ?, overview = ?,
-			first_air_date = ?, poster_path = ?, backdrop_path = ?, vote_average = ?,
-			genres_json = ?, cast_json = ?, creators_json = ?,
-			metadata_status = ?, metadata_fetched_at = ?, updated_at = ?
+			tmdb_id = ?, tmdb_name = ?, original_name = ?, tagline = ?, overview = ?,
+			first_air_date = ?, last_air_date = ?, status = ?,
+			poster_path = ?, backdrop_path = ?, vote_average = ?,
+			genres_json = ?, cast_json = ?, creators_json = ?, networks_json = ?,
+			certification = ?, certification_country = ?,
+			metadata_status = ?, metadata_fetched_at = ?, metadata_version = ?, updated_at = ?
 		WHERE id = ?`,
-		series.TMDBID, series.Name, series.OriginalName, series.Overview,
-		series.FirstAirDate, series.PosterPath, series.BackdropPath, series.VoteAverage,
-		string(genres), string(castJSON), string(creatorsJSON),
-		statusOK, now.Unix(), now.Unix(), id)
+		series.TMDBID, series.Name, series.OriginalName, series.Tagline, series.Overview,
+		series.FirstAirDate, series.LastAirDate, series.Status,
+		series.PosterPath, series.BackdropPath, series.VoteAverage,
+		string(genres), string(castJSON), string(creatorsJSON), string(networksJSON),
+		series.Certification, series.CertificationCountry,
+		statusOK, now.Unix(), currentMetadataVersion, now.Unix(), id)
 	if err != nil {
 		return fmt.Errorf("saving metadata for series %d: %w", id, err)
 	}

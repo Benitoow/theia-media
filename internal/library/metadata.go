@@ -41,26 +41,66 @@ const (
 
 // Metadata is what TMDB told us about a film, as stored.
 type Metadata struct {
-	TMDBID       int       `json:"tmdb_id,omitempty"`
-	Title        string    `json:"tmdb_title,omitempty"`
-	Overview     string    `json:"overview,omitempty"`
-	ReleaseDate  string    `json:"release_date,omitempty"`
-	PosterPath   string    `json:"poster_path,omitempty"`
-	BackdropPath string    `json:"backdrop_path,omitempty"`
-	Runtime      int       `json:"runtime_minutes,omitempty"`
-	VoteAverage  float64   `json:"vote_average,omitempty"`
-	Director     string    `json:"director,omitempty"`
-	Genres       []string  `json:"genres,omitempty"`
-	Cast         []Credit  `json:"cast,omitempty"`
-	Status       string    `json:"status"`
-	FetchedAt    time.Time `json:"fetched_at,omitempty"`
+	TMDBID           int      `json:"tmdb_id,omitempty"`
+	Title            string   `json:"tmdb_title,omitempty"`
+	OriginalTitle    string   `json:"original_title,omitempty"`
+	OriginalLanguage string   `json:"original_language,omitempty"`
+	Tagline          string   `json:"tagline,omitempty"`
+	Overview         string   `json:"overview,omitempty"`
+	ReleaseDate      string   `json:"release_date,omitempty"`
+	PosterPath       string   `json:"poster_path,omitempty"`
+	BackdropPath     string   `json:"backdrop_path,omitempty"`
+	Runtime          int      `json:"runtime_minutes,omitempty"`
+	VoteAverage      float64  `json:"vote_average,omitempty"`
+	Director         string   `json:"director,omitempty"`
+	Genres           []string `json:"genres,omitempty"`
+	Cast             []Credit `json:"cast,omitempty"`
+
+	// Crew is the named crew beyond the director. Each entry carries a role
+	// code; the interface owns the word for it (decision 25).
+	Crew []Credit `json:"crew,omitempty"`
+
+	// Certification is an age rating as its board wrote it, and the country
+	// that board sits in. Both or neither.
+	Certification        string `json:"certification,omitempty"`
+	CertificationCountry string `json:"certification_country,omitempty"`
+
+	// Collection is the saga this film is one part of, when TMDB says it is
+	// part of one. Which other parts the household owns is a library question,
+	// answered separately.
+	Collection *Collection `json:"collection,omitempty"`
+
+	Status    string    `json:"status"`
+	FetchedAt time.Time `json:"fetched_at,omitempty"`
 }
 
-// Credit is one name in the cast list.
-type Credit struct {
-	Name      string `json:"name"`
-	Character string `json:"character,omitempty"`
+// Collection is the TMDB grouping a film belongs to.
+type Collection struct {
+	TMDBID     int    `json:"tmdb_id"`
+	Name       string `json:"name"`
+	PosterPath string `json:"poster_path,omitempty"`
 }
+
+// Credit is one credited name. Character is set for the cast, Role for the
+// crew, and ProfilePath is the portrait when TMDB holds one.
+type Credit struct {
+	Name        string `json:"name"`
+	Character   string `json:"character,omitempty"`
+	Role        string `json:"role,omitempty"`
+	ProfilePath string `json:"profile_path,omitempty"`
+}
+
+// currentMetadataVersion is the field set the code writes today.
+//
+// A row stamped with less than this has columns the code now reads and TMDB
+// already answered with -- so it is stale regardless of its age, and the next
+// scan refetches it in the ordinary batches. Bumping this is how a new TMDB
+// field reaches a library that was scanned before the field existed.
+//
+//	1  the original 0002 columns
+//	2  tagline, original title and language, certificate, collection, crew,
+//	   cast portraits (migration 0013)
+const currentMetadataVersion = 2
 
 // staleCandidate is a film whose metadata needs looking up.
 type staleCandidate struct {
@@ -86,11 +126,13 @@ func (s *Store) StaleMetadata(ctx context.Context, now time.Time, limit int) ([]
 		WHERE metadata_status = ?
 		   OR (metadata_status = ? AND metadata_fetched_at < ?)
 		   OR (metadata_status IN (?, ?) AND metadata_fetched_at < ?)
+		   OR (metadata_status = ? AND metadata_version < ?)
 		ORDER BY metadata_fetched_at, id
 		LIMIT ?`,
 		statusPending,
 		statusOK, now.Add(-metadataLifetime).Unix(),
 		statusNotFound, statusError, now.Add(-notFoundLifetime).Unix(),
+		statusOK, currentMetadataVersion,
 		limit,
 	)
 	if err != nil {
@@ -127,41 +169,78 @@ func (s *Store) SaveMetadata(ctx context.Context, id int64, film *tmdb.Film, now
 		return fmt.Errorf("encoding genres: %w", err)
 	}
 
-	credits := make([]Credit, 0, len(film.Cast))
-	for _, p := range film.Cast {
-		credits = append(credits, Credit{Name: p.Name, Character: p.Character})
-	}
-	castJSON, err := json.Marshal(credits)
+	castJSON, err := json.Marshal(creditsFrom(film.Cast))
 	if err != nil {
 		return fmt.Errorf("encoding cast: %w", err)
+	}
+	crewJSON, err := json.Marshal(creditsFrom(film.Crew))
+	if err != nil {
+		return fmt.Errorf("encoding crew: %w", err)
+	}
+
+	var collectionID sql.NullInt64
+	var collectionName, collectionPoster string
+	if film.Collection != nil {
+		collectionID = sql.NullInt64{Int64: int64(film.Collection.TMDBID), Valid: true}
+		collectionName = film.Collection.Name
+		collectionPoster = film.Collection.PosterPath
 	}
 
 	_, err = s.db.ExecContext(ctx, `
 		UPDATE movies SET
-			tmdb_id             = ?,
-			tmdb_title          = ?,
-			overview            = ?,
-			release_date        = ?,
-			poster_path         = ?,
-			backdrop_path       = ?,
-			runtime_minutes     = ?,
-			vote_average        = ?,
-			director            = ?,
-			genres_json         = ?,
-			cast_json           = ?,
-			metadata_status     = ?,
-			metadata_fetched_at = ?,
-			updated_at          = ?
+			tmdb_id                = ?,
+			tmdb_title             = ?,
+			original_title         = ?,
+			original_language      = ?,
+			tagline                = ?,
+			overview               = ?,
+			release_date           = ?,
+			poster_path            = ?,
+			backdrop_path          = ?,
+			runtime_minutes        = ?,
+			vote_average           = ?,
+			director               = ?,
+			genres_json            = ?,
+			cast_json              = ?,
+			crew_json              = ?,
+			certification          = ?,
+			certification_country  = ?,
+			collection_id          = ?,
+			collection_name        = ?,
+			collection_poster_path = ?,
+			metadata_status        = ?,
+			metadata_fetched_at    = ?,
+			metadata_version       = ?,
+			updated_at             = ?
 		WHERE id = ?`,
-		film.TMDBID, film.Title, film.Overview, film.ReleaseDate,
+		film.TMDBID, film.Title, film.OriginalTitle, film.OriginalLanguage,
+		film.Tagline, film.Overview, film.ReleaseDate,
 		film.PosterPath, film.BackdropPath, film.Runtime, film.VoteAverage,
-		film.Director, string(genres), string(castJSON),
-		statusOK, now.Unix(), now.Unix(), id,
+		film.Director, string(genres), string(castJSON), string(crewJSON),
+		film.Certification, film.CertificationCountry,
+		collectionID, collectionName, collectionPoster,
+		statusOK, now.Unix(), currentMetadataVersion, now.Unix(), id,
 	)
 	if err != nil {
 		return fmt.Errorf("saving metadata for film %d: %w", id, err)
 	}
 	return nil
+}
+
+// creditsFrom converts TMDB people into stored credits. It is shared by the
+// film and series paths so that a portrait cannot be kept in one and dropped in
+// the other.
+func creditsFrom(people []tmdb.Person) []Credit {
+	credits := make([]Credit, 0, len(people))
+	for _, person := range people {
+		credits = append(credits, Credit{
+			Name:        person.Name,
+			Character:   person.Character,
+			Role:        person.Role,
+			ProfilePath: person.ProfilePath,
+		})
+	}
+	return credits
 }
 
 // MarkMetadataOutcome records a lookup that produced no film, so that it is not
@@ -256,34 +335,96 @@ func (s *Service) enrich(ctx context.Context, report *ScanReport) {
 	}
 }
 
-// scanMetadata reads the metadata columns off a row being scanned.
-func scanMetadata(m *Movie, tmdbID sql.NullInt64, tmdbTitle, overview, releaseDate,
-	posterPath, backdropPath, director, genresJSON, castJSON sql.NullString,
-	runtime sql.NullInt64, vote sql.NullFloat64, status string, fetchedAt int64,
-) {
-	m.Metadata.Status = status
-	if fetchedAt > 0 {
-		m.Metadata.FetchedAt = time.Unix(fetchedAt, 0).UTC()
+// metadataRow holds the metadata columns of one film row as SQLite returns
+// them, before the NULLs have been decided.
+//
+// It exists so that adding a TMDB field is two edits -- the column list and the
+// two methods below -- rather than another parameter threaded through a
+// positional function that already took fourteen.
+type metadataRow struct {
+	tmdbID       sql.NullInt64
+	tmdbTitle    sql.NullString
+	originalName sql.NullString
+	originalLang sql.NullString
+	tagline      sql.NullString
+	overview     sql.NullString
+	releaseDate  sql.NullString
+	posterPath   sql.NullString
+	backdropPath sql.NullString
+	director     sql.NullString
+	genresJSON   sql.NullString
+	castJSON     sql.NullString
+	crewJSON     sql.NullString
+
+	certification        sql.NullString
+	certificationCountry sql.NullString
+
+	collectionID     sql.NullInt64
+	collectionName   sql.NullString
+	collectionPoster sql.NullString
+
+	runtime   sql.NullInt64
+	vote      sql.NullFloat64
+	status    string
+	fetchedAt int64
+}
+
+// targets returns the scan destinations, in the order metadataColumns lists
+// them. The two must be read side by side; a mismatch shifts every field by one
+// and produces rows that look plausible.
+func (r *metadataRow) targets() []any {
+	return []any{
+		&r.tmdbID, &r.tmdbTitle, &r.originalName, &r.originalLang, &r.tagline,
+		&r.overview, &r.releaseDate, &r.posterPath, &r.backdropPath,
+		&r.director, &r.genresJSON, &r.castJSON, &r.crewJSON,
+		&r.certification, &r.certificationCountry,
+		&r.collectionID, &r.collectionName, &r.collectionPoster,
+		&r.runtime, &r.vote, &r.status, &r.fetchedAt,
 	}
-	if tmdbID.Valid {
-		m.Metadata.TMDBID = int(tmdbID.Int64)
+}
+
+// fill copies the row onto a film.
+func (r *metadataRow) fill(m *Movie) {
+	m.Metadata.Status = r.status
+	if r.fetchedAt > 0 {
+		m.Metadata.FetchedAt = time.Unix(r.fetchedAt, 0).UTC()
 	}
-	m.Metadata.Title = tmdbTitle.String
-	m.Metadata.Overview = overview.String
-	m.Metadata.ReleaseDate = releaseDate.String
-	m.Metadata.PosterPath = posterPath.String
-	m.Metadata.BackdropPath = backdropPath.String
-	m.Metadata.Director = director.String
-	if runtime.Valid {
-		m.Metadata.Runtime = int(runtime.Int64)
+	if r.tmdbID.Valid {
+		m.Metadata.TMDBID = int(r.tmdbID.Int64)
 	}
-	if vote.Valid {
-		m.Metadata.VoteAverage = vote.Float64
+	m.Metadata.Title = r.tmdbTitle.String
+	m.Metadata.OriginalTitle = r.originalName.String
+	m.Metadata.OriginalLanguage = r.originalLang.String
+	m.Metadata.Tagline = r.tagline.String
+	m.Metadata.Overview = r.overview.String
+	m.Metadata.ReleaseDate = r.releaseDate.String
+	m.Metadata.PosterPath = r.posterPath.String
+	m.Metadata.BackdropPath = r.backdropPath.String
+	m.Metadata.Director = r.director.String
+	m.Metadata.Certification = r.certification.String
+	m.Metadata.CertificationCountry = r.certificationCountry.String
+	if r.runtime.Valid {
+		m.Metadata.Runtime = int(r.runtime.Int64)
 	}
-	if genresJSON.Valid && genresJSON.String != "" {
-		_ = json.Unmarshal([]byte(genresJSON.String), &m.Metadata.Genres)
+	if r.vote.Valid {
+		m.Metadata.VoteAverage = r.vote.Float64
 	}
-	if castJSON.Valid && castJSON.String != "" {
-		_ = json.Unmarshal([]byte(castJSON.String), &m.Metadata.Cast)
+	if r.genresJSON.Valid && r.genresJSON.String != "" {
+		_ = json.Unmarshal([]byte(r.genresJSON.String), &m.Metadata.Genres)
+	}
+	if r.castJSON.Valid && r.castJSON.String != "" {
+		_ = json.Unmarshal([]byte(r.castJSON.String), &m.Metadata.Cast)
+	}
+	if r.crewJSON.Valid && r.crewJSON.String != "" {
+		_ = json.Unmarshal([]byte(r.crewJSON.String), &m.Metadata.Crew)
+	}
+	// A collection with no id is not a collection. The name alone could not be
+	// used to find anything anyway.
+	if r.collectionID.Valid && r.collectionID.Int64 > 0 {
+		m.Metadata.Collection = &Collection{
+			TMDBID:     int(r.collectionID.Int64),
+			Name:       r.collectionName.String,
+			PosterPath: r.collectionPoster.String,
+		}
 	}
 }

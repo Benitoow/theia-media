@@ -31,6 +31,12 @@ type Movie struct {
 	Progress Progress    `json:"progress"`
 	Files    []MovieFile `json:"files,omitempty"`
 
+	// CollectionParts is the other films of the same TMDB collection that this
+	// library holds. Filled by Get alone, like Files: a list of a hundred films
+	// has no business carrying each one's siblings, and the nested rows would be
+	// the same rows again.
+	CollectionParts []Movie `json:"collection_parts,omitempty"`
+
 	AddedAt   time.Time `json:"added_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

@@ -20,12 +20,19 @@ var ErrNoSuchMovie = errors.New("no such film")
 // hence the COALESCE rather than a NULL-scanning dance in Go.
 const movieColumns = `
 	m.id, m.path, m.file_name, m.size_bytes, m.modified_at, m.title, m.year,
-	m.added_at, m.updated_at,
-	m.tmdb_id, m.tmdb_title, m.overview, m.release_date, m.poster_path,
-	m.backdrop_path, m.director, m.genres_json, m.cast_json,
-	m.runtime_minutes, m.vote_average, m.metadata_status, m.metadata_fetched_at,
+	m.added_at, m.updated_at,` + metadataColumns + `,
 	m.duration_seconds,
 	COALESCE(p.position_seconds, 0), COALESCE(p.watched_at, 0), COALESCE(p.finished, 0)`
+
+// metadataColumns is the TMDB half of that projection, in the order
+// metadataRow.targets() scans it. Change one and change the other.
+const metadataColumns = `
+	m.tmdb_id, m.tmdb_title, m.original_title, m.original_language, m.tagline,
+	m.overview, m.release_date, m.poster_path, m.backdrop_path,
+	m.director, m.genres_json, m.cast_json, m.crew_json,
+	m.certification, m.certification_country,
+	m.collection_id, m.collection_name, m.collection_poster_path,
+	m.runtime_minutes, m.vote_average, m.metadata_status, m.metadata_fetched_at`
 
 // movieSource carries the join to one profile's history. Every query built on
 // it takes the profile id as its first argument -- get that order wrong and the
@@ -38,25 +45,22 @@ const movieSource = `
 func scanMovie(row interface{ Scan(...any) error }) (Movie, error) {
 	var (
 		m                              Movie
+		meta                           metadataRow
 		modifiedAt, addedAt, updatedAt int64
-		year, tmdbID, runtime          sql.NullInt64
-		vote                           sql.NullFloat64
-		status                         string
-		fetchedAt                      int64
-		tmdbTitle, overview, release   sql.NullString
-		poster, backdrop, director     sql.NullString
-		genresJSON, castJSON           sql.NullString
+		year                           sql.NullInt64
 		duration                       sql.NullFloat64
 		position                       float64
 		watchedAt                      int64
 		finished                       int
 	)
-	if err := row.Scan(&m.ID, &m.Path, &m.FileName, &m.SizeBytes, &modifiedAt,
-		&m.Title, &year, &addedAt, &updatedAt,
-		&tmdbID, &tmdbTitle, &overview, &release, &poster,
-		&backdrop, &director, &genresJSON, &castJSON,
-		&runtime, &vote, &status, &fetchedAt,
-		&duration, &position, &watchedAt, &finished); err != nil {
+	// Built in three parts because the middle one is shared: the metadata block
+	// is the same in every projection and knows its own order.
+	targets := []any{&m.ID, &m.Path, &m.FileName, &m.SizeBytes, &modifiedAt,
+		&m.Title, &year, &addedAt, &updatedAt}
+	targets = append(targets, meta.targets()...)
+	targets = append(targets, &duration, &position, &watchedAt, &finished)
+
+	if err := row.Scan(targets...); err != nil {
 		return Movie{}, err
 	}
 	m.ModifiedAt = unix(modifiedAt)
@@ -65,8 +69,7 @@ func scanMovie(row interface{ Scan(...any) error }) (Movie, error) {
 	if year.Valid {
 		m.Year = int(year.Int64)
 	}
-	scanMetadata(&m, tmdbID, tmdbTitle, overview, release, poster, backdrop,
-		director, genresJSON, castJSON, runtime, vote, status, fetchedAt)
+	meta.fill(&m)
 
 	m.Progress = Progress{
 		PositionSeconds: position,
@@ -88,9 +91,39 @@ func collectMovies(rows *sql.Rows, capacity int) ([]Movie, error) {
 		if err != nil {
 			return nil, err
 		}
+		forList(&m.Metadata)
 		out = append(out, m)
 	}
 	return out, rows.Err()
+}
+
+// forList drops what only a detail page shows.
+//
+// Every list read comes through collectMovies and every single-film read does
+// not, which makes this the one place the distinction can be made without a
+// second projection -- and a second projection is exactly what must be avoided
+// here: the column list and the scan order are already paired by hand, and a
+// third pairing is a shifted field waiting to happen.
+//
+// It is about the wire, not the query. Reading a few more columns out of a local
+// SQLite file costs nothing; sending the cast, the crew, the tagline and the
+// certificate of two hundred and fifty films to draw cards that show a title and
+// a year is 31% of that response, measured, for data no list view reads. Decision
+// 74 is the standard: text answers travel compressed, and the ones that travel
+// are the ones somebody asked for.
+//
+// What stays is what a card, a filter or a sort actually uses: the artwork, the
+// title, the year, the runtime, the rating, the genres, the director and the
+// synopsis the hero prints.
+func forList(m *Metadata) {
+	m.Cast = nil
+	m.Crew = nil
+	m.Tagline = ""
+	m.OriginalTitle = ""
+	m.OriginalLanguage = ""
+	m.Certification = ""
+	m.CertificationCountry = ""
+	m.Collection = nil
 }
 
 // Get returns one film by id, with the progress belonging to profileID.
@@ -108,6 +141,12 @@ func (s *Store) Get(ctx context.Context, profileID, id int64) (Movie, error) {
 	m.Files, err = s.MovieFiles(ctx, id)
 	if err != nil {
 		return Movie{}, err
+	}
+	if group := m.Metadata.Collection; group != nil {
+		m.CollectionParts, err = s.CollectionParts(ctx, profileID, id, group.TMDBID)
+		if err != nil {
+			return Movie{}, err
+		}
 	}
 	return m, nil
 }
@@ -152,6 +191,9 @@ func (s *Store) Hero(ctx context.Context, profileID int64) (Movie, error) {
 	if err != nil {
 		return Movie{}, fmt.Errorf("choosing a hero film: %w", err)
 	}
+	// The hero is one film but it is not a detail page: it shows artwork, a
+	// title, the genres, the director and the synopsis. Same rule as a list.
+	forList(&m.Metadata)
 	return m, nil
 }
 
@@ -314,5 +356,6 @@ func (s *Store) ResumeHero(ctx context.Context, profileID int64) (Movie, error) 
 	if err != nil {
 		return Movie{}, fmt.Errorf("choosing a resume hero: %w", err)
 	}
+	forList(&m.Metadata)
 	return m, nil
 }

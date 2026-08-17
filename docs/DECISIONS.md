@@ -2465,6 +2465,96 @@ It only appears when a subtitle is actually showing. A sync control under a film
 displaying none is a setting for nothing, and that panel is already three
 sections long.
 
+## 85. The whole TMDB record, because it had already been paid for
+
+**Decided post-v2, from reading the client rather than the interface.** Theia
+asked TMDB for a film and kept eleven fields out of the answer. The tagline, the
+original title, the age certificate, the collection the film belongs to, every
+crew credit except the director, and the portrait of every actor named on the
+page were all in the payload, already downloaded, and thrown away — the film page
+was showing roughly a tenth of the record its own request had returned.
+
+**Nothing here costs a request.** `append_to_response=credits,release_dates` on
+the film call and `credits,content_ratings` on the series call turn what would be
+four round trips into one larger body; the tagline, the original title and
+`belongs_to_collection` are plain fields on a details response that was already
+being parsed. A scan of the real library makes exactly as many TMDB calls after
+this change as before it.
+
+**The interface still owns every word.** A crew credit crosses the API as a role
+code — `writing`, `music`, `cinematography` — never as TMDB's English job title,
+and a series carries `ended` or `returning` rather than "Returning Series".
+Decision 25 exists because a Windows syscall name once appeared in the middle of
+a French page; "Original Music Composer" would have been the same fault with a
+nicer accent. A job title this whitelist does not know is dropped rather than
+passed through. The one exception is deliberate: a certificate is *data* — "12",
+"TP", "R" is what the board wrote — and the country beside it is named by
+`Intl.DisplayNames` in the active locale, so no catalogue carries a list of two
+hundred countries to print one of them.
+
+**A collection lists what can be played, and nothing else.** TMDB knows all six
+parts of a saga and would happily name them. A household that owns parts one and
+three sees two films, not one film and two absences: the home screen is a
+personal surface rather than a second catalogue (decision 29), and that rule does
+not stop being true one page down. The row is the ordinary `Row` component with
+its heading overridden, so it scrolls, snaps and answers a D-pad exactly like
+every other row in the interface — measured at 1920, its cards start on the same
+96px rule as the home screen's.
+
+**The backfill is a column, not a migration that guesses.** Every film already in
+a library carries `metadata_status = 'ok'` and a recent fetch timestamp, so
+decision 9's ninety-day lifetime would have left the new columns empty until
+November on a library scanned in August — for data sitting in an answer TMDB had
+already given. `metadata_version` records the field set a row was written with,
+and a row behind the current one is stale regardless of its age. It refetches in
+the ordinary scan batches at the ordinary rate limit, and the next new TMDB field
+is a constant bump rather than a hand-written UPDATE. Rows TMDB never matched are
+untouched: there are no new fields to fetch for a film it does not know.
+
+**Where the type went.** The tagline is a sentence, so it is set in the reading
+face and not in the display serif — section 4 keeps Cinzel for titles, and a
+marketing line in small capitals reads as a second heading arguing with the
+first. The certificate is a box drawn with the line colour rather than the accent,
+whose five-per-screen budget was already spent on the rating beside it, and its
+tracking is tighter than a `.label` because "12" at 0.18em reads as "1 2". Cast
+portraits are 2:3 at w185 — the smallest size the image cache whitelists, still
+twice what the frame draws at — and they keep `loading="lazy"`, because the cast
+is below the fold on every screen this runs on.
+
+**The catalogue got lighter, not heavier.** Sending the record with every film in
+a list would have been the obvious cost of this change, and it was: measured on
+250 films, the cast, crew, taglines and certificates were 31% of the `/films`
+response, for fields no list view reads — the library page draws cards showing a
+title and a year, filters on genre and sorts on rating. So `collectMovies`, which
+every list read goes through and no single-film read does, drops what only a
+detail page shows; the two heroes do the same, being one film each but not a
+detail page either. That seam was chosen over a second SQL projection on purpose:
+the column list and the scan order are already paired by hand, and a third
+pairing is a shifted field waiting to happen. Reading a few extra columns out of a
+local SQLite file costs nothing; the wire is what decision 74 is about.
+
+Measured on the bench, same server, before and after the slimming: `/films` at
+250 films went from 450 KB to 194 KB uncompressed and 45.3 KB to 23.9 KB gzipped,
+and the home screen from 8.0 KB to 4.3 KB gzipped. Against what the response
+carried *before this whole change* — cast names, no portraits — it is roughly 36%
+smaller uncompressed. The film page gained its whole record and the library page
+pays less than it used to.
+
+**Verified, and what was not.** Against a real film with live TMDB data: the
+tagline, `TP (France)`, the Star Wars collection, John Williams under *Musique*,
+ten portraits fetched at 185px. Against a 250-film bench for the rest — sagas,
+missing certificates, a cast member with no portrait, an odd cast count — at 375,
+1280 and 1920: nothing overflows, the page never scrolls sideways, both faces
+load, no target is under 44px, and the type moves with the 100rem step (tagline
+27.6px, cast names 18px, credits 16/18px). Language switching was driven through
+the settings screen and back: `Classification R, États-Unis` becomes `Rated R,
+United States` without a reload.
+
+The interface guard still does not reach either detail page — its harness starts
+against an empty throwaway library, and there is no API that creates a film — so
+everything above was measured by hand in a browser. That gap is the reason this
+paragraph exists rather than a passing test.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

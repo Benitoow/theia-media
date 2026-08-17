@@ -8,6 +8,10 @@
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
 	import FileChoice from '$lib/components/FileChoice.svelte';
 	import MatchDialog from '$lib/components/MatchDialog.svelte';
+	import Certificate from '$lib/components/Certificate.svelte';
+	import CastList from '$lib/components/CastList.svelte';
+	import Credits from '$lib/components/Credits.svelte';
+	import Row from '$lib/components/Row.svelte';
 	import { profiles } from '$lib/profiles.svelte.js';
 	import { remote } from '$lib/remote.svelte.js';
 
@@ -35,6 +39,33 @@
 			? Math.min(100, (movie.progress.position_seconds / movie.progress.duration_seconds) * 100)
 			: 0
 	);
+
+	// The record behind the film, beyond the synopsis. All of it came from the
+	// same TMDB call the poster did; none of it costs a request.
+	//
+	// The original title is shown only when it differs from what the page is
+	// already calling the film. "Heat" under a heading reading Heat is noise.
+	const originalTitle = $derived(
+		meta.original_title && meta.original_title !== displayTitle(movie) ? meta.original_title : ''
+	);
+
+	// One line per role, names joined. Roles arrive as codes -- writing, music,
+	// cinematography -- and the words for them live in the catalogues.
+	const creditRows = $derived([
+		{ label: t.credits.originalTitle, value: originalTitle },
+		...['writing', 'music', 'cinematography'].map((role) => ({
+			label: t.credits[role],
+			value: (meta.crew ?? [])
+				.filter((person) => person.role === role)
+				.map((person) => person.name)
+				.join(' · ')
+		}))
+	]);
+
+	// The other parts of the saga that are actually in the library. The server
+	// only sends what can be played, so an empty list means a one-off film or a
+	// household that owns a single part -- either way, no row.
+	const collectionParts = $derived(movie?.collection_parts ?? []);
 
 	const files = $derived(movie?.files ?? []);
 	const selectedFile = $derived(files.find((file) => file.id === fileId) ?? null);
@@ -218,15 +249,27 @@
 						<span class="label enter">{meta.genres.join(' · ')}</span>
 					{/if}
 
-					<h1 class="page-title page-title--feature enter mt-4 mb-7">
+					<h1
+						class="page-title page-title--feature enter mt-4 {meta.tagline ? 'mb-4' : 'mb-7'}"
+					>
 						{displayTitle(movie)}
 					</h1>
+
+					{#if meta.tagline}
+						<!-- The tagline is a sentence, so it is set in the reading face and
+						     not in the display serif: section 4 keeps that register for
+						     titles, and a marketing line in small capitals reads as a second
+						     heading arguing with the first. Italic and quiet is what makes it
+						     legible as a caption. -->
+						<p class="film-tagline enter enter-2 mb-7">{meta.tagline}</p>
+					{/if}
 
 					<div class="enter enter-2 mb-8 flex flex-wrap items-center gap-x-6 gap-y-3">
 						{#if displayYear(movie)}<span class="label">{displayYear(movie)}</span>{/if}
 						{#if formatRuntime(meta.runtime_minutes)}
 							<span class="label">{formatRuntime(meta.runtime_minutes)}</span>
 						{/if}
+						<Certificate value={meta.certification} country={meta.certification_country} />
 						{#if meta.director}
 							<a
 								href="/films?q={encodeURIComponent(meta.director)}"
@@ -308,21 +351,9 @@
 						{meta.overview || t.film.noOverview}
 					</p>
 
-					{#if meta.cast?.length}
-						<section class="mb-10">
-							<h2 class="label mb-4">{t.film.cast}</h2>
-							<ul class="grid gap-x-8 gap-y-3 sm:grid-cols-2">
-								{#each meta.cast as person (person.name + person.character)}
-									<li class="flex flex-col">
-										<span class="text-base">{person.name}</span>
-										{#if person.character}
-											<span class="label mt-0.5">{person.character}</span>
-										{/if}
-									</li>
-								{/each}
-							</ul>
-						</section>
-					{/if}
+					<Credits rows={creditRows} heading={t.credits.heading} />
+
+					<CastList cast={meta.cast ?? []} heading={t.film.cast} />
 
 					<a href="/" class="tv-link label mt-10">
 						← {t.nav.back}
@@ -330,6 +361,19 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- The saga, if the library holds more of it. Outside the page shell
+		     because Row carries its own gutter and heading alignment: nested in the
+		     detail column it would be padded twice and would not line up with any
+		     other row in the interface. -->
+		{#if collectionParts.length}
+			<div class="film-collection">
+				<Row
+					row={{ kind: 'collection', movies: collectionParts }}
+					title={t.credits.collection(meta.collection?.name ?? '')}
+				/>
+			</div>
+		{/if}
 	</article>
 
 	{#if playing}

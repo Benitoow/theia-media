@@ -788,6 +788,25 @@ is a frontend build check. TMDB titles, synopses, genres and credits already
 cached as `fr-FR` do not change and are not fetched again: they are film data,
 not interface chrome.
 
+**The record on a detail page, added post-v2.** A film and a series now show the
+whole TMDB record rather than a synopsis and a cast list of names — see decision
+85 for why none of it costs a request. Four things it settles about this document:
+
+- A **tagline** is prose, so it takes `--font-ui` italic at `calc(var(--text-body)
+  * 1.15)` and not the display serif. §4 reserves Cinzel for titles; a marketing
+  line in small capitals reads as a second heading arguing with the first.
+- A **certificate** (`.certificate`) is a box on `--color-muted` with
+  `--color-parchment` type, never the accent: the five-use accent budget on a film
+  page is already spent on the rating beside it. Its tracking is `0.08em` rather
+  than a `.label`'s `0.18em`, because "12" tracked out reads as "1 2".
+- **Cast portraits** (`.cast-list`, `.cast-portrait`) are 2:3 at 3.25rem, two
+  columns, three at the 100rem step where they grow to 5rem. Missing portraits get
+  the same composed stand-in a card uses for missing artwork, so an empty frame
+  among nine photographs cannot read as a fault.
+- A **saga row** is the existing row component with its heading overridden, not a
+  second kind of strip. It sits outside the detail column so its cards land on the
+  same page gutter as every other row: measured at 96px on both at 1920.
+
 ## 12. Public presentation site
 
 The application helps somebody choose a film they already own. The public site

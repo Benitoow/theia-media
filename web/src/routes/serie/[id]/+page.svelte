@@ -13,6 +13,9 @@
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
 	import EpisodeRow from '$lib/components/EpisodeRow.svelte';
 	import MatchDialog from '$lib/components/MatchDialog.svelte';
+	import Certificate from '$lib/components/Certificate.svelte';
+	import CastList from '$lib/components/CastList.svelte';
+	import Credits from '$lib/components/Credits.svelte';
 	import { remote } from '$lib/remote.svelte.js';
 
 	/** @type {'loading' | 'ready' | 'missing'} */
@@ -23,6 +26,31 @@
 	let loadingSeason = $state(false);
 
 	const meta = $derived(series?.metadata ?? {});
+
+	// A series has two dates, and the pair is more informative than either: the
+	// year it started, and the year it stopped when it has stopped. TMDB knows
+	// both; the page used to show only the first.
+	const firstYear = $derived(meta.first_air_date?.slice(0, 4) ?? '');
+	const lastYear = $derived(meta.last_air_date?.slice(0, 4) ?? '');
+	const years = $derived(
+		firstYear && lastYear && lastYear !== firstYear && meta.air_status === 'ended'
+			? `${firstYear} – ${lastYear}`
+			: firstYear
+	);
+
+	// Whether it is still running, as a word. The server sends a code precisely
+	// so this line can be French or English without a second request.
+	const airStatus = $derived(meta.air_status ? (t.credits.airStatus[meta.air_status] ?? '') : '');
+
+	const originalName = $derived(
+		meta.original_name && meta.original_name !== displayTitle(series) ? meta.original_name : ''
+	);
+
+	const creditRows = $derived([
+		{ label: t.credits.originalTitle, value: originalName },
+		{ label: t.credits.creators, value: (meta.creators ?? []).join(' · ') },
+		{ label: t.credits.network, value: (meta.networks ?? []).join(' · ') }
+	]);
 	const backdrop = $derived(imageURL(meta.backdrop_path, 'w1280'));
 	const poster = $derived(imageURL(meta.poster_path, 'w342'));
 	// Season 0 is specials. It is a visible season and never part of the
@@ -118,11 +146,21 @@
 						<span class="label enter">{meta.genres.join(' · ')}</span>
 					{/if}
 
-					<h1 class="page-title page-title--feature enter mt-4 mb-6">{displayTitle(series)}</h1>
+					<h1 class="page-title page-title--feature enter mt-4 {meta.tagline ? 'mb-4' : 'mb-6'}">
+						{displayTitle(series)}
+					</h1>
+
+					{#if meta.tagline}
+						<p class="film-tagline enter enter-2 mb-6">{meta.tagline}</p>
+					{/if}
 
 					<div class="enter enter-2 mb-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-						{#if meta.first_air_date}
-							<span class="label">{meta.first_air_date.slice(0, 4)}</span>
+						{#if years}
+							<span class="label">{years}</span>
+						{/if}
+						<Certificate value={meta.certification} country={meta.certification_country} />
+						{#if airStatus}
+							<span class="label">{airStatus}</span>
 						{/if}
 						{#if meta.vote_average}
 							<span class="text-label tracking-[0.18em] text-accent uppercase">
@@ -138,6 +176,13 @@
 					{/if}
 
 					<p class="tv-copy mb-8 max-w-[46rem]">{meta.overview || t.series.noOverview}</p>
+
+					<Credits rows={creditRows} heading={t.credits.heading} />
+
+					<!-- The series page showed no cast at all, while the film page showed
+					     names with no faces. Both now show the same thing, from the same
+					     credits call. -->
+					<CastList cast={meta.cast ?? []} heading={t.film.cast} />
 
 					{#if !remote.isRemote}
 						<button

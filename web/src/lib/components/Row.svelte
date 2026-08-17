@@ -8,14 +8,19 @@
 	// Only the home page's first row sets it, and only its leading cards act on
 	// it: eager-loading every row would fetch the whole page at once, which is
 	// the fault this is meant to fix, in the other direction.
-	let { row, priority = false } = $props();
+	// title names a row the catalogue does not: a film's own saga, whose heading
+	// is the collection's name and which leads nowhere -- every part of it is
+	// already on screen.
+	let { row, priority = false, title = null } = $props();
 	const eagerCards = 4;
 
 	// The server says what a row is; this is where it gets its name and its way
 	// through to the library. An unknown kind falls back to the code itself
 	// rather than rendering an empty heading -- a new row kind should look
 	// unfinished, not invisible.
-	const copy = $derived(t.rows[row.kind] ?? { title: row.kind, href: null });
+	const copy = $derived(
+		title ? { title, href: null } : (t.rows[row.kind] ?? { title: row.kind, href: null })
+	);
 
 	let scroller = $state();
 	let canScrollLeft = $state(false);
