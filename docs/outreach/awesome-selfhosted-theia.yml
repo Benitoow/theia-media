@@ -1,0 +1,35 @@
+# Ready-to-submit entry for awesome-selfhosted.
+#
+# It goes in the DATA repository, not the list itself: the Markdown list is
+# generated and is described upstream as legacy.
+#
+#   https://github.com/awesome-selfhosted/awesome-selfhosted-data
+#   → new file at  software/theia.yml
+#   → commit message: "add Theia"
+#   → tick "Create a new branch for this commit and start a pull request"
+#
+# NOT YET SUBMITTABLE. Their checklist requires that the project "was first
+# released more than 4 months ago". Theia's first release was v1.0.0 on
+# 2026-07-28, which makes it eligible from roughly 2026-11-28. Submitting
+# earlier gets the pull request closed, and a refusal on the canonical list of
+# the category is a worse outcome than waiting.
+#
+# Everything below is checked against their schema as it stood on 2026-08-16:
+# the licence identifier exists in licenses.yml, the platform exists at
+# platforms/go.yml, and both tags exist. In single-page mode only the FIRST tag
+# decides where the entry appears, hence the ordering.
+#
+# stargazers_count, updated_at, current_release, archived and commit_history are
+# filled in by their own bot. Do not write them by hand.
+
+name: Theia
+website_url: https://benitoow.github.io/theia-media/
+source_code_url: https://github.com/Benitoow/theia-media
+description: Personal media server for films and series in a single binary, with TMDB metadata, on-demand remuxing, household profiles and WireGuard remote access. No configuration file, no account and no container are required to run it.
+licenses:
+  - GPL-3.0
+platforms:
+  - Go
+tags:
+  - Media Streaming - Video Streaming
+  - Media Streaming - Multimedia Streaming
