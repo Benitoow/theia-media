@@ -66,3 +66,8 @@ Thumbs.db
 # something fails, and those belong to the run that produced them.
 web/test-results/
 web/playwright-report/
+
+# Launch drafts -- r/selfhosted post, awesome-selfhosted entry. They carry
+# posting strategy the maintainer decided should stay off a public repository,
+# not just unpublished content within it.
+/docs/outreach/
