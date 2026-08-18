@@ -34,9 +34,9 @@ jobs:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
@@ -65,9 +65,13 @@ jobs:
       - name: Check the generated site
         run: node site/check.mjs
 
-      - uses: actions/upload-pages-artifact@v3
+      # include-hidden-files is not optional here: the action stopped shipping
+      # dotfiles at v4, and site/build.mjs writes a .nojekyll that keeps Pages
+      # from running the output through Jekyll.
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site/dist
+          include-hidden-files: true
 
   deploy:
     needs: build
@@ -77,4 +81,4 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

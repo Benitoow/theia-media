@@ -22,9 +22,9 @@ jobs:
           - { goos: darwin, goarch: amd64, ext: '' }
           - { goos: darwin, goarch: arm64, ext: '' }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
@@ -34,7 +34,7 @@ jobs:
       - run: npm run build
         working-directory: web
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.26'
 
@@ -69,7 +69,7 @@ jobs:
             *) echo "::error::binary reports '$reported', expected ${GITHUB_REF_NAME}" ; exit 1 ;;
           esac
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: theia-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/
@@ -80,9 +80,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: staging
           merge-multiple: true
