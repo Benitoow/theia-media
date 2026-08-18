@@ -51,6 +51,10 @@ are to TMDB for metadata and to GitHub Releases for its own updates.
 | --- | --- |
 | ![The film library with search, five sorts and genre filters, in a 16/9 card grid](docs/screenshots/library.webp) | ![The series library in the same grid](docs/screenshots/series.webp) |
 
+| A film, with its record | Who made it, and who is in it |
+| --- | --- |
+| ![A film page: the poster over its own backdrop, the title, the tagline under it, and the year, runtime, certificate, director and rating on one line](docs/screenshots/film.webp) | ![The same page further down: original title, writing, music and photography, then the cast with their portraits](docs/screenshots/film-credits.webp) |
+
 | A series, season by season | Remote access |
 | --- | --- |
 | ![A series page listing seasons and episodes, one of them offering to resume](docs/screenshots/serie.webp) | ![The remote access panel, off until it is turned on](docs/screenshots/settings.webp) |

@@ -1701,6 +1701,15 @@ The frames avoid the panels that expose the rig — the watched folder, the data
 directory, `VERSION dev` — not to flatter the product but because a reader
 should not have to work out which parts of a screenshot are real.
 
+**Two more traps, found taking the v2.4.0 film-page shots.** Navigating straight
+to a deep link right after seeding `localStorage` lands on the *home screen*: the
+application has not finished booting when the URL changes, and the capture comes
+back looking plausible and wrong. Navigate, then read `location.pathname` back and
+retry until it matches. And cast portraits are `loading="lazy"`, so a frame that
+scrolls to them still photographs empty frames unless the images in view are
+flipped to eager and given a moment — the screenshot is taken from a page that was
+never scrolled by a human, and nothing else triggers the load.
+
 **This is also how the profile bug in decision 63 was found.** A screenshot of a
 feature is a test of it: the home screen refused to show the resume hero, and
 that refusal was correct.
