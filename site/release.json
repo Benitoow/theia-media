@@ -1,49 +1,49 @@
 {
-  "version": "v2.5.0",
-  "publishedAt": "2026-08-24T21:23:57Z",
-  "url": "https://github.com/Benitoow/theia-media/releases/tag/v2.5.0",
+  "version": "v2.5.1",
+  "publishedAt": "2026-08-24T22:33:28Z",
+  "url": "https://github.com/Benitoow/theia-media/releases/tag/v2.5.1",
   "assets": [
     {
       "file": "theia-windows-amd64.exe",
       "platform": "windows",
       "architecture": "x64",
-      "size": 17980416,
-      "sha256": "9c4c03599fbc057dec11ebe3df2798d445b68ac474292927a790435890caa6b5"
+      "size": 17980928,
+      "sha256": "ea3531cea19b5030d5b610a922adbb6a9d5164d53d161e00fb7b853d89cdf6df"
     },
     {
       "file": "theia-windows-arm64.exe",
       "platform": "windows",
       "architecture": "ARM64",
-      "size": 16791552,
-      "sha256": "fb4fa668640834e4a81b51974b0bd2a6f46d9f7419b3c072748d2206d7066f32"
+      "size": 16792064,
+      "sha256": "17c7dee692b7ae8e89b6ddad81cfdba162a1a26ca99379f00ffe5f8bc0c29d08"
     },
     {
       "file": "theia-darwin-arm64",
       "platform": "macos",
       "architecture": "Apple Silicon",
       "size": 16961730,
-      "sha256": "bc4f4c06535a9ee95c4c5c0252b08be677bb01af1094e2c4739ca502e150b132"
+      "sha256": "c2286bbb1fa1358dc0ffe2fb542a781d17567f02c5701c91e4999035ba736b3b"
     },
     {
       "file": "theia-darwin-amd64",
       "platform": "macos",
       "architecture": "Intel",
       "size": 17788896,
-      "sha256": "4e20414c2aaa395fa4ac0a9e023ac84268931e14a760e6e8e5a20fea58abfe42"
+      "sha256": "632b6bb3a6329c7ae03fa830ddcc40f703767cc1d54449ac13dc16fe35c3b3c1"
     },
     {
       "file": "theia-linux-amd64",
       "platform": "linux",
       "architecture": "x64",
       "size": 17555618,
-      "sha256": "fd749070c9cf9e8b5c9cb20a022f345ddf3ecae60c8730427342b3f96fa29b30"
+      "sha256": "b909fcc5ef9db0de5ebf58005fb1070aa5463f9404fa0ad4bcad1eea48c6df16"
     },
     {
       "file": "theia-linux-arm64",
       "platform": "linux",
       "architecture": "ARM64",
       "size": 16646306,
-      "sha256": "03fafa3e62b11ed097f807fc9a44c6d54fdd4a633ce077b690b93b2d336e9de9"
+      "sha256": "8ecd7ca088cb009d140e2465406d1ee76a550326a107083de7c31b6820d41c15"
     }
   ]
 }
