@@ -13,7 +13,7 @@ import (
 const episodeFileColumns = `
 	id, episode_item_id, path, file_name, size_bytes, modified_at, is_primary,
 	media_status, media_container, media_duration_seconds,
-	video_stream_index, video_codec, video_width, video_height,
+	video_stream_index, video_codec, video_width, video_height, video_frame_rate,
 	media_inspected_at, subtitles_scanned`
 
 func scanEpisodeFile(row interface{ Scan(...any) error }) (EpisodeFile, error) {
@@ -24,13 +24,14 @@ func scanEpisodeFile(row interface{ Scan(...any) error }) (EpisodeFile, error) {
 		container, videoCodec               sql.NullString
 		duration                            sql.NullFloat64
 		videoIndex, videoWidth, videoHeight sql.NullInt64
+		videoFrameRate                      sql.NullFloat64
 		subtitlesScanned                    int
 	)
 	if err := row.Scan(
 		&file.ID, &file.EpisodeItemID, &file.Path, &file.FileName,
 		&file.SizeBytes, &modifiedAt, &primary,
 		&file.Media.Status, &container, &duration,
-		&videoIndex, &videoCodec, &videoWidth, &videoHeight,
+		&videoIndex, &videoCodec, &videoWidth, &videoHeight, &videoFrameRate,
 		&inspectedAt, &subtitlesScanned,
 	); err != nil {
 		return EpisodeFile{}, err
@@ -50,6 +51,7 @@ func scanEpisodeFile(row interface{ Scan(...any) error }) (EpisodeFile, error) {
 			Codec:       videoCodec.String,
 			Width:       int(videoWidth.Int64),
 			Height:      int(videoHeight.Int64),
+			FrameRate:   videoFrameRate.Float64,
 		}
 	}
 	if inspectedAt > 0 {
@@ -189,11 +191,13 @@ func (s *Store) SaveEpisodeFileMedia(ctx context.Context, itemID, fileID int64, 
 		UPDATE episode_files SET
 			media_status = ?, media_container = ?, media_duration_seconds = ?,
 			video_stream_index = ?, video_codec = ?, video_width = ?, video_height = ?,
+			video_frame_rate = ?,
 			media_inspected_at = ?, subtitles_scanned = 1
 		WHERE id = ? AND episode_item_id = ?`,
 		MediaOK, nullString(media.Container), nullPositiveFloat(media.DurationSeconds),
 		media.Video.StreamIndex, media.Video.Codec,
 		nullPositiveInt(media.Video.Width), nullPositiveInt(media.Video.Height),
+		nullPositiveFloat(media.Video.FrameRate),
 		now, fileID, itemID)
 	if err != nil {
 		return EpisodeFile{}, fmt.Errorf("saving media for episode file %d: %w", fileID, err)
@@ -283,7 +287,7 @@ func (s *Store) MarkEpisodeFileMediaError(ctx context.Context, itemID, fileID in
 			media_status = ?, media_container = NULL,
 			media_duration_seconds = NULL,
 			video_stream_index = NULL, video_codec = NULL,
-			video_width = NULL, video_height = NULL,
+			video_width = NULL, video_height = NULL, video_frame_rate = NULL,
 			media_inspected_at = ?, subtitles_scanned = 1
 		WHERE id = ? AND episode_item_id = ?`, MediaError, time.Now().Unix(), fileID, itemID)
 	if err != nil {

@@ -62,6 +62,11 @@ type VideoStream struct {
 	Codec       string `json:"codec"`
 	Width       int    `json:"width,omitempty"`
 	Height      int    `json:"height,omitempty"`
+
+	// FrameRate is the file's own cadence, as ffmpeg printed it. Zero means the
+	// stream line did not say, which is a real answer and not a slow film: the
+	// player falls back to a fixed floor when it is absent.
+	FrameRate float64 `json:"frame_rate,omitempty"`
 }
 
 type AudioTrack struct {
@@ -77,7 +82,7 @@ type AudioTrack struct {
 const movieFileColumns = `
 	id, movie_id, path, file_name, size_bytes, modified_at, is_primary,
 	media_status, media_container, media_duration_seconds,
-	video_stream_index, video_codec, video_width, video_height,
+	video_stream_index, video_codec, video_width, video_height, video_frame_rate,
 	media_inspected_at, subtitles_scanned`
 
 func scanMovieFile(row interface{ Scan(...any) error }) (MovieFile, error) {
@@ -88,13 +93,14 @@ func scanMovieFile(row interface{ Scan(...any) error }) (MovieFile, error) {
 		container, videoCodec               sql.NullString
 		duration                            sql.NullFloat64
 		videoIndex, videoWidth, videoHeight sql.NullInt64
+		videoFrameRate                      sql.NullFloat64
 		subtitlesScanned                    int
 	)
 	if err := row.Scan(
 		&file.ID, &file.MovieID, &file.Path, &file.FileName,
 		&file.SizeBytes, &modifiedAt, &primary,
 		&file.Media.Status, &container, &duration,
-		&videoIndex, &videoCodec, &videoWidth, &videoHeight,
+		&videoIndex, &videoCodec, &videoWidth, &videoHeight, &videoFrameRate,
 		&inspectedAt, &subtitlesScanned,
 	); err != nil {
 		return MovieFile{}, err
@@ -114,6 +120,7 @@ func scanMovieFile(row interface{ Scan(...any) error }) (MovieFile, error) {
 			Codec:       videoCodec.String,
 			Width:       int(videoWidth.Int64),
 			Height:      int(videoHeight.Int64),
+			FrameRate:   videoFrameRate.Float64,
 		}
 	}
 	if inspectedAt > 0 {
@@ -255,11 +262,13 @@ func (s *Store) SaveFileMedia(ctx context.Context, movieID, fileID int64, media 
 		UPDATE movie_files SET
 			media_status = ?, media_container = ?, media_duration_seconds = ?,
 			video_stream_index = ?, video_codec = ?, video_width = ?, video_height = ?,
+			video_frame_rate = ?,
 			media_inspected_at = ?, subtitles_scanned = 1
 		WHERE id = ? AND movie_id = ?`,
 		MediaOK, nullString(media.Container), nullPositiveFloat(media.DurationSeconds),
 		media.Video.StreamIndex, media.Video.Codec,
 		nullPositiveInt(media.Video.Width), nullPositiveInt(media.Video.Height),
+		nullPositiveFloat(media.Video.FrameRate),
 		now, fileID, movieID)
 	if err != nil {
 		return MovieFile{}, fmt.Errorf("saving media for file %d: %w", fileID, err)
@@ -355,7 +364,7 @@ func (s *Store) MarkFileMediaError(ctx context.Context, movieID, fileID int64) e
 			media_status = ?, media_container = NULL,
 			media_duration_seconds = NULL,
 			video_stream_index = NULL, video_codec = NULL,
-			video_width = NULL, video_height = NULL,
+			video_width = NULL, video_height = NULL, video_frame_rate = NULL,
 			media_inspected_at = ?, subtitles_scanned = 1
 		WHERE id = ? AND movie_id = ?`, MediaError, time.Now().Unix(), fileID, movieID)
 	if err != nil {

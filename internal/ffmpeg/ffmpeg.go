@@ -259,6 +259,13 @@ type VideoStream struct {
 	Codec       string `json:"codec"`
 	Width       int    `json:"width,omitempty"`
 	Height      int    `json:"height,omitempty"`
+
+	// FrameRate is what the file runs at, as ffmpeg reports it on the stream
+	// line. It exists so that "is the browser keeping up" can be asked as a
+	// ratio against the truth rather than against a constant: decision 59 chose
+	// a fixed floor of ten precisely because this was not stored, and a fixed
+	// floor cannot tell a 4K decoder running at half speed from a healthy one.
+	FrameRate float64 `json:"frame_rate,omitempty"`
 }
 
 type AudioStream struct {
@@ -287,8 +294,11 @@ var (
 	streamPattern     = regexp.MustCompile(`^\s*Stream #\d+:(\d+)(?:\[[^\]]*\])?(?:\(([^)]*)\))?: (Video|Audio|Subtitle|Data|Attachment): ([A-Za-z0-9_]+)(.*)$`)
 	inputPattern      = regexp.MustCompile(`^Input #\d+,\s*(.+?),\s+from\s`)
 	resolutionPattern = regexp.MustCompile(`(?:^|,\s)(\d{2,5})x(\d{2,5})(?:\s|\[|,|$)`)
-	channelsPattern   = regexp.MustCompile(`\d+\s*Hz,\s*(mono|stereo|\d+(?:\.\d+)?(?:\([^)]*\))?)`)
-	metadataPattern   = regexp.MustCompile(`^\s*(title|language)\s*:\s*(.*?)\s*$`)
+	// "…, 3840x1604, SAR 1:1 DAR 960:401, 23.98 fps, 23.98 tbr, 1k tbn". Anchored
+	// on the unit, because tbr and tbn carry lookalike numbers on the same line.
+	frameRatePattern = regexp.MustCompile(`(?:^|,\s)(\d+(?:\.\d+)?)\s+fps(?:\s|,|$)`)
+	channelsPattern  = regexp.MustCompile(`\d+\s*Hz,\s*(mono|stereo|\d+(?:\.\d+)?(?:\([^)]*\))?)`)
+	metadataPattern  = regexp.MustCompile(`^\s*(title|language)\s*:\s*(.*?)\s*$`)
 	// "  Duration: 00:01:30.05, start: 0.000000, bitrate: 1234 kb/s"
 	durationPattern = regexp.MustCompile(`Duration: (\d+):(\d\d):(\d\d)\.(\d+)`)
 )
@@ -398,6 +408,12 @@ func parseProbeOutput(output string) MediaInfo {
 					if size := resolutionPattern.FindStringSubmatch(rest); size != nil {
 						info.Video.Width, _ = strconv.Atoi(size[1])
 						info.Video.Height, _ = strconv.Atoi(size[2])
+					}
+					// Not inside the resolution block: a stream can report a
+					// rate without a size ffmpeg chose to print, and the two
+					// are independent facts.
+					if rate := frameRatePattern.FindStringSubmatch(rest); rate != nil {
+						info.Video.FrameRate, _ = strconv.ParseFloat(rate[1], 64)
 					}
 				}
 			case "Audio":

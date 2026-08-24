@@ -482,7 +482,7 @@ func invalidateEpisodeFileMediaTx(ctx context.Context, tx *sql.Tx, fileID int64)
 			media_status = 'pending', media_container = NULL,
 			media_duration_seconds = NULL,
 			video_stream_index = NULL, video_codec = NULL,
-			video_width = NULL, video_height = NULL,
+			video_width = NULL, video_height = NULL, video_frame_rate = NULL,
 			media_inspected_at = 0
 		WHERE id = ?`, fileID); err != nil {
 		return err

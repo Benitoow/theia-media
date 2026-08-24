@@ -54,7 +54,13 @@ type streamInfoResponse struct {
 
 	// V2-M6. Qualities lists only what this machine can actually produce for
 	// this file, and Transcode says what producing it would cost.
-	Height    int            `json:"height,omitempty"`
+	Height int `json:"height,omitempty"`
+
+	// FrameRate is the file's own cadence, and it travels for one reason: the
+	// player compares the frames it manages to present against it. Absent means
+	// the file has not been inspected, or ffmpeg did not print one -- the player
+	// then falls back to the fixed floor decision 59 shipped with.
+	FrameRate float64        `json:"frame_rate,omitempty"`
 	Qualities []videoQuality `json:"qualities,omitempty"`
 	Transcode *transcodeInfo `json:"transcode,omitempty"`
 }

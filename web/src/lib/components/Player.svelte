@@ -631,19 +631,52 @@
 	//
 	// No API will say so in advance. canPlayType answers "probably" for HEVC and
 	// mediaCapabilities.decodingInfo answers smooth and power-efficient, both on
-	// the machine where it does not work. So it is measured: presented frames per
+	// the machine where it does not work. So it is measured: frames decoded per
 	// second *of film*, which a stall in the network cannot flatter because both
 	// halves of the ratio stop together.
 	//
-	// Ten is chosen to sit nowhere near either answer. Every real film runs at
-	// 23.976 or more and a healthy decoder matches it; the broken case measures
-	// close to zero. Deliberately not the source frame rate, which the server
-	// does not store: a fixed floor needs no schema change to be right.
+	// What changed here, and why. This shipped as one sample against a fixed
+	// floor of ten, and both halves of that were too small a net.
+	//
+	// The floor was fixed because the server did not store what the file runs
+	// at, and it was calibrated on a 1080p file that measured near zero. A 4K
+	// HEVC source decoded at fourteen frames of a 23.98 fps film is failing by
+	// any measure a viewer would recognise -- the picture loses two fifths of a
+	// second every second, a minute of drift every two and a half -- and
+	// fourteen sits comfortably above ten, so nothing fired. The server now
+	// sends frame_rate, so the question is asked as a ratio against the truth.
+	// The constant stays for a file that never said what it runs at.
+	//
+	// And it sampled once, 2.5 s after playback began, then never again. Three
+	// of its own guards -- paused, seeking, too little film elapsed -- returned
+	// without rearming, so a film started paused, or scrubbed in its first
+	// seconds, spent the rest of its running time unwatched.
 	const decodeFloorFPS = 10;
+
+	// Six tenths of the film's own cadence. A decoder keeping up sits at the
+	// source rate; one below this loses two fifths of a second of picture every
+	// second and never catches up. The gap between the two is wide enough that
+	// a heavy scene cannot fall through it.
+	const decodeFloorRatio = 0.6;
+
+	// Two windows in a row, because the answer to a slow one is to restart
+	// ffmpeg under somebody who is watching. One bad sample can be a buffer
+	// emptying; five seconds of them is the decoder.
+	const slowWindowsBeforeSwitching = 2;
+
+	const paceInterval = 2500;
+
 	let paceTimer;
+	let slowWindows = 0;
+
+	function paceFloor() {
+		const source = info?.frame_rate ?? 0;
+		return source > 0 ? source * decodeFloorRatio : decodeFloorFPS;
+	}
 
 	function watchDecodePace() {
 		clearTimeout(paceTimer);
+		slowWindows = 0;
 		// Only a risky remux is worth measuring. H.264 that already plays does not
 		// need watching, and a transcode is this check's own answer.
 		if (!isRemux || !info?.video_risky || forceTranscode) return;
@@ -654,24 +687,48 @@
 			at: video.currentTime
 		});
 
-		const first = sample();
-		paceTimer = setTimeout(() => {
-			if (!video || paused || seeking || forceTranscode) return;
-			const second = sample();
-			const played = second.at - first.at;
-			// Too little film went by to judge: buffering, or a pause the flags
-			// above did not catch. Say nothing rather than guess.
-			if (played < 1.5) return;
+		let previous = sample();
 
-			const fps = (second.frames - first.frames) / played;
-			if (fps >= decodeFloorFPS) return;
+		// Rearmed at the end of every branch rather than once at the top, so the
+		// one thing this must not do -- stop watching a film that is still
+		// playing -- cannot happen by falling out of a guard.
+		const step = () => {
+			if (!video || forceTranscode) return;
+
+			if (paused || seeking) {
+				previous = sample();
+				paceTimer = setTimeout(step, paceInterval);
+				return;
+			}
+
+			const now = sample();
+			const played = now.at - previous.at;
+			const fps = played > 0 ? (now.frames - previous.frames) / played : 0;
+			previous = now;
+
+			// Too little film went by to judge: buffering, or a pause the flags
+			// above did not catch. Say nothing, and look again.
+			if (played < 1.5) {
+				paceTimer = setTimeout(step, paceInterval);
+				return;
+			}
+
+			slowWindows = fps < paceFloor() ? slowWindows + 1 : 0;
+			if (slowWindows < slowWindowsBeforeSwitching) {
+				paceTimer = setTimeout(step, paceInterval);
+				return;
+			}
 
 			codecPlayback.recordStruggle(info?.video_codec);
 			if (info?.transcode?.available) {
 				forceTranscode = true;
 				start(position);
 			}
-		}, 2500);
+			// Deliberately not rearmed: the verdict is in. Either a transcode is
+			// starting, which brings its own watch, or this machine has no
+			// encoder and there is nothing further to decide.
+		};
+		paceTimer = setTimeout(step, paceInterval);
 	}
 
 	// Deliberately silent, unlike loadInfo: the film is playing. A refresh that

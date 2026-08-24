@@ -100,9 +100,10 @@ func (s *Server) handleMovieFileStreamInfo(w http.ResponseWriter, r *http.Reques
 		decision.Mode = stream.ModeTranscode
 		reasonCode = "video_transcode"
 	}
-	height := 0
+	height, frameRate := 0, 0.0
 	if file.Media.Video != nil {
 		height = file.Media.Video.Height
+		frameRate = file.Media.Video.FrameRate
 	}
 
 	progress := movie.Progress
@@ -124,6 +125,7 @@ func (s *Server) handleMovieFileStreamInfo(w http.ResponseWriter, r *http.Reques
 		AudioTracks:     file.Media.AudioTracks,
 		SubtitleTracks:  file.Media.SubtitleTracks,
 		Height:          height,
+		FrameRate:       frameRate,
 		Qualities:       ladder,
 		Transcode:       &capabilities,
 	})

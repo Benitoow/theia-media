@@ -62,6 +62,7 @@ func measuredFileMedia(info ffmpeg.MediaInfo) library.FileMedia {
 			Codec:       info.Video.Codec,
 			Width:       info.Video.Width,
 			Height:      info.Video.Height,
+			FrameRate:   info.Video.FrameRate,
 		},
 		AudioTracks:    make([]library.AudioTrack, 0, len(info.AudioStreams)),
 		SubtitleTracks: make([]library.SubtitleTrack, 0, len(info.SubtitleStreams)),

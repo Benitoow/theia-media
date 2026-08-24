@@ -160,3 +160,39 @@ func TestAvailableDoesNotDownload(t *testing.T) {
 		t.Error("Available() = true for an empty directory")
 	}
 }
+
+// The frame rate, taken verbatim from the maintainer's own 4K file.
+//
+// The line is copied unchanged out of a real probe rather than written by hand,
+// because what makes this parse hard is the company the number keeps: tbr and
+// tbn print lookalike values on the same line, and one of them is 1k.
+func TestParseProbeOutputReadsTheFrameRate(t *testing.T) {
+	const output = `Input #0, matroska,webm, from 'Dune.mkv':
+  Duration: 02:35:26.61, start: 0.000000, bitrate: 11924 kb/s
+  Stream #0:0: Video: hevc (Main 10), yuv420p10le(tv, bt2020nc/bt2020/smpte2084), 3840x1604, SAR 1:1 DAR 960:401, 23.98 fps, 23.98 tbr, 1k tbn (default)
+  Stream #0:1(fre): Audio: truehd (Dolby TrueHD + Dolby Atmos), 48000 Hz, 7.1, s32 (24 bit) (default)`
+
+	info := parseProbeOutput(output)
+	if info.Video.FrameRate != 23.98 {
+		t.Errorf("frame rate = %v, want 23.98", info.Video.FrameRate)
+	}
+	if info.Video.Width != 3840 || info.Video.Height != 1604 {
+		t.Errorf("dimensions = %dx%d, want 3840x1604", info.Video.Width, info.Video.Height)
+	}
+}
+
+// A whole number, and a stream that never says. Both are ordinary.
+func TestParseProbeOutputFrameRateEdges(t *testing.T) {
+	whole := parseProbeOutput(
+		"  Stream #0:0: Video: h264, yuv420p, 1920x1080, 24 fps, 24 tbr, 90k tbn\n")
+	if whole.Video.FrameRate != 24 {
+		t.Errorf("whole frame rate = %v, want 24", whole.Video.FrameRate)
+	}
+
+	// Zero is the honest answer, and the caller has to treat it as "unknown"
+	// rather than as a slow film.
+	silent := parseProbeOutput("  Stream #0:0: Video: mpeg2video, yuv420p, 720x576\n")
+	if silent.Video.FrameRate != 0 {
+		t.Errorf("frame rate = %v, want 0 when the line does not say", silent.Video.FrameRate)
+	}
+}

@@ -36,8 +36,13 @@ func TestEnrichmentMigrationLeavesExistingRowsBehindTheCurrentFieldSet(t *testin
 		}
 		applied = append(applied, name)
 	}
-	if len(applied) != len(names)-1 {
-		t.Fatalf("0013_tmdb_enrichment.sql is not the last migration; this test needs updating")
+	// This used to assert that 0013 was the last migration, which stopped being
+	// true the moment another was added and turned a guard into a chore. What it
+	// is really protecting is that the enrichment is still in the list: the
+	// applied slice above stops at it, and Migrate below then runs 0013 and
+	// everything after it -- which is exactly the upgrade a user goes through.
+	if len(applied) == len(names) {
+		t.Fatal("0013_tmdb_enrichment.sql is no longer among the migrations")
 	}
 	for _, name := range applied {
 		statements, err := migrations.ReadFile("migrations/" + name)

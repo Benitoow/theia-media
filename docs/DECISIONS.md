@@ -1614,6 +1614,13 @@ which is the opposite of the machine the bug was reported from. The threshold is
 reasoned and the plumbing around it is verified end to end; the threshold itself
 is not.
 
+**Superseded in part by decision 86.** The fixed floor of ten and the single
+sample both survived only as long as the files were 1080p. The reasoning above
+still holds — no API answers this, and the playback itself is the only honest
+signal — but the threshold is now six tenths of the file's own frame rate, which
+the server stores since migration 0014, and the measurement repeats for as long
+as the film plays.
+
 ## 60. Hardware decoding is probed, and `auto` is not a candidate
 
 `TranscodeArgs` encoded on the GPU and decoded on the CPU. `internal/ffmpeg/decoders.go`
@@ -2563,6 +2570,70 @@ The interface guard still does not reach either detail page — its harness star
 against an empty throwaway library, and there is no API that creates a film — so
 everything above was measured by hand in a browser. That gap is the reason this
 paragraph exists rather than a passing test.
+
+## 86. The floor under "is the browser keeping up" is the film's own cadence
+
+**Decided post-v2, from a 13.9 GB file and four measurements.** Reported as big
+sound-against-picture desync, on a 2160p HEVC Main 10 Dolby Vision remux with two
+TrueHD Atmos 7.1 tracks — 2 h 35, `bt2020nc/bt2020/smpte2084`, 23.98 fps.
+
+**Three suspects were measured and cleared before anything was changed**, which
+is most of what this entry is worth:
+
+| Asked of the real file | Answer |
+|---|---|
+| Remux drift over 20 minutes, Theia's exact arguments | video 1200.114 s, audio 1200.083 s — 83 ms of offset, **constant** |
+| The same at `-ss 3600`, `3605`, `3607.5` | the same 83 ms; input seek does not desynchronise the two streams |
+| Transcoding 4K with `h264_amf`, Theia's exact arguments | **2.36×** real time — the pipe does not starve |
+
+So neither the remux, nor seeking, nor the encoder was the cause, and the honest
+place to look next was the guard that was supposed to catch this and did not.
+
+**Decision 59's floor was a constant for a reason it stated, and the reason
+expired.** It measures frames decoded per second *of film* and compares them to
+ten, "deliberately not the source frame rate, which the server does not store".
+That was calibrated on a 1080p file measuring near zero. On a 4K one, a decoder
+managing fourteen frames of a 23.98 fps film is losing two fifths of a second of
+picture every second — a minute of drift every two and a half — and fourteen sits
+comfortably above ten. The guard stays silent for the entire running time.
+
+The frame rate is now measured and stored. It was always printed on the stream
+line ffmpeg already produces, next to `tbr` and `tbn`, which carry lookalike
+numbers and are why the pattern is anchored on the unit. The floor is six tenths
+of it; the constant survives as the fallback for a file that never said, and for
+a file inspected before migration 0014, whose column is NULL until it is
+re-inspected.
+
+**And it watched once.** The check sampled 2.5 s after playback began and never
+again, with three of its own guards — paused, seeking, too little film elapsed —
+returning without rearming. A film started paused, or scrubbed in its first
+seconds, spent the rest of its length unwatched; so did one whose decoder was
+fine at the opening titles and not fine an hour later. It now rearms at the end
+of every branch, and needs **two consecutive** slow windows before acting,
+because acting means restarting ffmpeg under somebody who is watching and one bad
+sample can be a buffer emptying.
+
+**Verified end to end on the server side**, against the real file through a
+running binary on port 8395: the probe reads `frame_rate: 23.98`, migration 0014
+carries it, and `/api/stream/1/files/1/info` returns it beside `video_risky:
+true` and `reason_code: audio_transcode`. Migration 0014 was applied to a copy of
+the real database — 8 films, 8 files, 5 audio tracks, 2 inspections, all
+unchanged, source hash identical afterwards.
+
+**Not verified, and it must be checked in a real browser.** Whether Chrome on
+this machine actually decodes this file below 14.4 frames per second, and
+therefore whether the new floor fires where the old one did not, is a measurement
+only a real decode can make. The preview pane does not composite frames and
+inverted this very measurement once before, which is the whole reason decision 59
+ends the same way.
+
+Two limits left standing on purpose. The episode info route does not carry a
+frame rate, so episodes keep the constant — the reported fault is a film, and
+teaching a second handler this costs more than it returns until an episode shows
+the same thing. And `totalVideoFrames` counts frames decoded rather than
+presented, which is the right half of the pair here: dropping frames is how a
+player *stays* in sync, while decoding them late is what makes the picture fall
+behind.
 
 ## 8. Logistics
 
