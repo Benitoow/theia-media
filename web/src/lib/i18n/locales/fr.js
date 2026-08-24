@@ -92,6 +92,8 @@ export const strings = {
 		scrollPrevious: 'Faire défiler la rangée vers la gauche',
 		scrollNext: 'Faire défiler la rangée vers la droite',
 		ratingLegend: (rating) => `${formatDecimal(rating)} / 10`,
+		ratingScale: '/ 10',
+		ratingAria: (rating) => `Note : ${formatDecimal(rating)} sur 10`,
 		unwatchedBadge: 'Jamais lu',
 		finishedBadge: 'Vu'
 	},

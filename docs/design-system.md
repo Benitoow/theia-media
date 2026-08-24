@@ -822,10 +822,15 @@ whole TMDB record rather than a synopsis and a cast list of names — see decisi
 
 **File badges, added post-v2.** `.badges` / `.badge` on the film detail page:
 `4K`, `HDR`, `DOLBY VISION`, `TRUEHD`, `ATMOS`, `7.1`, in the label register on
-`--surface` inside a `--line` hairline, text in `--muted` at its documented
-5.42:1. Built entirely from tokens that already existed, and deliberately **not**
-in gold — §3 allows five uses of `--accent` per screen and the film page has
-already spent them on the rating and the play affordance. A sixth and seventh in
+`--surface` inside a `--line` hairline, text in `--muted`. That measures
+**5.12:1** here rather than the 5.42:1 the token table states, because the table
+measures against the page background and a badge sits on a panel — still clear of
+the 4.5 AA floor, and `scripts/contrast.mjs` now carries a second section for
+text set on a surface, since this was the first thing to need one.
+
+Built entirely from tokens that already existed, and deliberately **not** in
+gold — §3 allows five uses of `--accent` per screen and the film page has already
+spent them on the rating and the play affordance. A sixth and seventh in
 gold would also make the loudest thing on a film page its audio codec, which is
 the wrong answer to "what is this film".
 
@@ -839,6 +844,15 @@ does not apply to a word.
 Measured in a running build at 375px: six badges wrap to two rows with no page
 overflow. A file that has not been inspected renders no row at all, and no gap
 where one would have been.
+
+**The rating carries its scale.** `.rating` on the film page and the hero: the
+figure in `--font-display` at 1.25rem in `--accent`, the `/ 10` in the label
+register in `--muted`, baseline-aligned. It was a bare gold number at the end of
+a row of a year, a runtime and a certificate, so it read as one more duration and
+spent an accent use with nothing to justify it. The scale is what makes it a
+score, and it stays the quiet half so the gold still lands on the figure alone.
+The figure moves to the display face because §4 keeps that register for the
+page's voice, and a score is nearer a title than a caption.
 ## 12. Public presentation site
 
 The application helps somebody choose a film they already own. The public site

@@ -179,3 +179,40 @@ test.describe('the page has one left edge', () => {
 		});
 	}
 });
+
+test.describe('the page arrives at all', () => {
+	// The failure this was written for: a component used without being imported.
+	// Svelte compiled it happily, the browser threw ReferenceError while
+	// rendering, and the home page stopped at its loading skeleton. That skeleton
+	// overflows nothing, loads every font, offers no target under 44px and has
+	// exactly one left edge -- so all four assertions above passed against a page
+	// that never rendered. Nothing here looks at layout; it asks whether the page
+	// ran.
+	//
+	// Its limit, measured rather than assumed. The fault was reintroduced on
+	// purpose and this suite still passed, because serve.mjs starts the binary
+	// against an empty throwaway directory: with no films there is no hero, so
+	// the component that threw is never rendered. This catches a page that breaks
+	// on its own, and cannot catch one that only breaks once there is something
+	// to show. Closing that gap means seeding the guard's library -- scripts/bench
+	// exists and does exactly this (decision 83) -- and costs the guard a Go
+	// toolchain it does not currently need. Written down instead of pretended
+	// away.
+	for (const [name, path] of pages) {
+		test(name, async ({ page }) => {
+			const thrown = [];
+			page.on('pageerror', (error) => thrown.push(String(error)));
+
+			await page.goto(path);
+			await settled(page);
+			// A skeleton is honest while data is in flight; networkidle means it
+			// has landed, and the beat after it covers the render that follows.
+			await page.waitForTimeout(500);
+
+			expect(thrown, `uncaught error on ${path}`).toEqual([]);
+
+			const stalled = await page.locator('[class*="skeleton"]').count();
+			expect(stalled, `${path} is still showing its loading skeleton`).toBe(0);
+		});
+	}
+});

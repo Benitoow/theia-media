@@ -1781,6 +1781,44 @@
 	}
 
 
+
+	/* The film's rating.
+	   A bare gold number at the end of the metadata row had two problems. It sat
+	   among a year, a runtime and a certificate, so "7,8" read as one more
+	   duration; and it spent one of the five accent uses section 3 allows on
+	   something with no context to justify it.
+
+	   The scale is what turns a number into a score, and it is the quiet half so
+	   the gold still lands on the figure alone. The figure moves to the display
+	   face because it is a number somebody reads rather than a label they scan,
+	   and section 4 keeps that register for the page's own voice -- a score is
+	   nearer a title than a caption. Baseline alignment is what lets two sizes
+	   share one line without either looking dropped. */
+	.rating {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.35em;
+	}
+
+	.rating-value {
+		color: var(--color-accent);
+		font-family: var(--font-display);
+		font-size: 1.25rem;
+		/* The display face tracks in, not out: section 4's rule is that large
+		   type tightens. At this size that is nearly nothing, so it is zero
+		   rather than the label register's +0.18em, which would pull the comma
+		   away from its decimal. */
+		letter-spacing: 0;
+		line-height: 1;
+	}
+
+	.rating-scale {
+		color: var(--color-muted);
+		font-family: var(--font-label);
+		font-size: var(--text-label);
+		letter-spacing: var(--text-label--letter-spacing);
+		line-height: 1;
+	}
 	/* File badges.
 	   4K, HDR, DOLBY VISION, TRUEHD, ATMOS, 7.1 -- what the file is, in the
 	   label register, sitting under the metadata line rather than in it. They

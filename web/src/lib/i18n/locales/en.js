@@ -91,6 +91,8 @@ export const strings = {
 		scrollPrevious: 'Scroll the row left',
 		scrollNext: 'Scroll the row right',
 		ratingLegend: (rating) => `${formatDecimal(rating)} / 10`,
+		ratingScale: '/ 10',
+		ratingAria: (rating) => `Rating: ${formatDecimal(rating)} out of 10`,
 		unwatchedBadge: 'Not watched',
 		finishedBadge: 'Watched'
 	},

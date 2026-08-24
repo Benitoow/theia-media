@@ -2755,6 +2755,54 @@ English relabels the row's accessible name and leaves the proper nouns alone.
 Scoped to films. Episodes carry the same measurements in the same shape and would
 take the same component, and are left until somebody wants them there.
 
+## 89. The rating carries its scale, and the guard gained a fifth question
+
+**Decided post-v2, and half of it was earned by a regression this session
+shipped into the working tree.**
+
+**The rating.** It was a bare gold number at the end of the film page's metadata
+row — a year, a runtime, a certificate, then `7,8`. Nothing said it was out of
+ten, in the one row on the page where every other figure is a date or a duration,
+and it spent one of §3's five accent uses with no context to justify it. It now
+reads `7,8 / 10`: the figure in the display face at 1.25rem in `--accent`, the
+scale in the label register in `--muted`, baseline-aligned. The scale is the
+quiet half deliberately, so the gold still lands on the figure alone. The `/ 10`
+convention already existed in the catalogues for the sorted film list; this uses
+the same words.
+
+**And the fault.** The component was added to the film page and the hero at once.
+The film page got its import; the hero did not, because the line the edit anchored
+on had already changed. Svelte compiled it, the browser threw `ReferenceError:
+Rating is not defined` while rendering, and the **entire home page** stopped at
+its loading skeleton.
+
+Decision 82's guard did not notice, and the reason is worth keeping: a loading
+skeleton overflows nothing, loads every font, offers no target under 44px and has
+exactly one left edge. All four assertions passed against a page that never
+rendered. So there is a fifth now — no uncaught page error, and no skeleton left
+standing after the network is idle.
+
+**Its limit is measured, not assumed.** The fault was reintroduced on purpose and
+the new assertion still passed. `web/tests/serve.mjs` starts the binary against an
+empty throwaway directory; with no films there is no hero, so the component that
+throws is never rendered. The fifth question catches a page that breaks on its
+own and cannot catch one that only breaks once there is something to show.
+Closing that gap means seeding the guard's library — `scripts/bench` already
+builds one (decision 83) — at the cost of a Go toolchain the frontend guard does
+not currently need. Not paid yet, and written down rather than pretended away.
+
+What actually caught it was looking at a screenshot: the home page rendered as a
+grid of grey blocks. Which is decision 82's own thesis, arriving from the other
+direction — the guard exists because looking does not work, and this time only
+looking worked.
+
+**A third measurement, while the colours were open.** `scripts/contrast.mjs`
+checked every token against `--ink`, which is the right default and was wrong for
+the first thing to put a label on a panel: a file badge is `--muted` on
+`--surface`, which is **5.12:1**, not the 5.42:1 the table states. Both clear AA.
+The script now carries a second section for text set on a surface, and the design
+system says 5.12 where it used to quote the wrong number.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

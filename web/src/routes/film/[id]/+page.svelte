@@ -2,13 +2,14 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { getJSON, imageURL, displayTitle, displayYear, formatRuntime } from '$lib/api.js';
-	import { strings as t, formatDecimal } from '$lib/strings.js';
+	import { strings as t } from '$lib/strings.js';
 	import Player from '$lib/components/Player.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
 	import FileChoice from '$lib/components/FileChoice.svelte';
 	import MatchDialog from '$lib/components/MatchDialog.svelte';
 	import Certificate from '$lib/components/Certificate.svelte';
+	import Rating from '$lib/components/Rating.svelte';
 	import MediaBadges from '$lib/components/MediaBadges.svelte';
 	import CastList from '$lib/components/CastList.svelte';
 	import Credits from '$lib/components/Credits.svelte';
@@ -281,11 +282,7 @@
 								<span aria-hidden="true">→</span>
 							</a>
 						{/if}
-						{#if meta.vote_average}
-							<span class="text-label tracking-[0.18em] text-accent uppercase">
-								{formatDecimal(meta.vote_average)}
-							</span>
-						{/if}
+						<Rating value={meta.vote_average} />
 					</div>
 
 					<!-- Under the metadata line rather than in it. The year, the runtime
