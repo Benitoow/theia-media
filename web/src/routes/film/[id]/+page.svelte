@@ -9,6 +9,7 @@
 	import FileChoice from '$lib/components/FileChoice.svelte';
 	import MatchDialog from '$lib/components/MatchDialog.svelte';
 	import Certificate from '$lib/components/Certificate.svelte';
+	import MediaBadges from '$lib/components/MediaBadges.svelte';
 	import CastList from '$lib/components/CastList.svelte';
 	import Credits from '$lib/components/Credits.svelte';
 	import Row from '$lib/components/Row.svelte';
@@ -264,7 +265,7 @@
 						<p class="film-tagline enter enter-2 mb-7">{meta.tagline}</p>
 					{/if}
 
-					<div class="enter enter-2 mb-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+					<div class="enter enter-2 mb-5 flex flex-wrap items-center gap-x-6 gap-y-3">
 						{#if displayYear(movie)}<span class="label">{displayYear(movie)}</span>{/if}
 						{#if formatRuntime(meta.runtime_minutes)}
 							<span class="label">{formatRuntime(meta.runtime_minutes)}</span>
@@ -286,6 +287,13 @@
 							</span>
 						{/if}
 					</div>
+
+					<!-- Under the metadata line rather than in it. The year, the runtime
+					     and the director describe a film; 4K and TrueHD describe one encode
+					     of it, and a viewer who has two files of the same film needs to see
+					     which of the two is on screen. It follows the chosen file, so
+					     picking the other one relabels it. -->
+					<MediaBadges media={selectedFile?.media} />
 
 					<div class="film-actions mb-12">
 						<button

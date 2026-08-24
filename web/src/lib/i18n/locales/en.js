@@ -364,6 +364,35 @@ export const strings = {
 	},
 
 	film: {
+		// The file's badges. Almost all of them are proper nouns and so translate
+		// to themselves; only the channel count and "SD" differ by language. They
+		// live in the catalogues regardless, because the server sends measured
+		// facts and the interface owns every word shown (decision 25).
+		badges: {
+			title: 'File characteristics',
+			uhd: '4K',
+			qhd: '1440p',
+			fhd: '1080p',
+			hd: '720p',
+			sd: 'SD',
+			hdr: 'HDR',
+			hlg: 'HLG',
+			dolbyVision: 'Dolby Vision',
+			atmos: 'Atmos',
+			truehd: 'TrueHD',
+			dtshd: 'DTS-HD MA',
+			dts: 'DTS',
+			eac3: 'Dolby Digital+',
+			ac3: 'Dolby Digital',
+			aac: 'AAC',
+			flac: 'FLAC',
+			opus: 'Opus',
+			mp3: 'MP3',
+			vorbis: 'Vorbis',
+			stereo: 'Stereo',
+			mono: 'Mono',
+			channels: (layout) => layout
+		},
 		notFound: 'This movie could not be found.',
 		overview: 'Overview',
 		cast: 'Cast',

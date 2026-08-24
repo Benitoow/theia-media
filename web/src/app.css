@@ -1780,6 +1780,53 @@
 		text-transform: uppercase;
 	}
 
+
+	/* File badges.
+	   4K, HDR, DOLBY VISION, TRUEHD, ATMOS, 7.1 -- what the file is, in the
+	   label register, sitting under the metadata line rather than in it. They
+	   are facts about an encode; the year, the runtime and the director are
+	   facts about a film, and mixing the two makes one long undifferentiated
+	   row.
+
+	   Drawn with the line and the surface, and deliberately not with the accent.
+	   Section 3 allows five uses of --accent per screen and this page has already
+	   spent them; six gold chips would also make the loudest thing on a film page
+	   the audio codec. The same reasoning is written above .certificate, which is
+	   why these two look related.
+
+	   Tracking is the full label 0.18em, unlike .certificate, because these are
+	   words rather than two-character codes -- the argument that "12" at 0.18em
+	   reads as "1 2" does not apply to ATMOS. */
+	.badges {
+		/* The row owns its own bottom margin rather than taking one from the page,
+		   because it renders nothing at all when a file has not been inspected and a
+		   wrapper carrying mb-8 would leave two rem of nothing behind. */
+		margin: 0 0 2rem;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		padding: 0;
+		list-style: none;
+	}
+
+	.badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.3em 0.6em;
+		border: 1px solid var(--color-line);
+		border-radius: var(--radius-nested);
+		background: var(--color-surface);
+		color: var(--color-muted);
+		font-family: var(--font-label);
+		font-size: var(--text-label);
+		letter-spacing: var(--text-label--letter-spacing);
+		line-height: var(--text-label--line-height);
+		text-transform: uppercase;
+		/* The tracking adds a trailing gap inside the box that the eye reads as
+		   an off-centre label. Taking it off the right padding re-centres it. */
+		padding-right: calc(0.6em - var(--text-label--letter-spacing));
+		white-space: nowrap;
+	}
 	/* Credits.
 	   Roles in the label register, names in the reading face, in two columns
 	   where there is room for two. The role column is max-content so that every

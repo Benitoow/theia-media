@@ -367,6 +367,36 @@ export const strings = {
 	},
 
 	film: {
+		// Les badges du fichier. Presque tous sont des noms propres et se
+		// traduisent donc par eux-mêmes ; seuls le nombre de canaux et « SD »
+		// changent de langue. Ils vivent quand même dans les catalogues, parce
+		// que le serveur n'envoie que des faits mesurés et que l'interface reste
+		// propriétaire de chaque mot affiché (décision 25).
+		badges: {
+			title: 'Caractéristiques du fichier',
+			uhd: '4K',
+			qhd: '1440p',
+			fhd: '1080p',
+			hd: '720p',
+			sd: 'SD',
+			hdr: 'HDR',
+			hlg: 'HLG',
+			dolbyVision: 'Dolby Vision',
+			atmos: 'Atmos',
+			truehd: 'TrueHD',
+			dtshd: 'DTS-HD MA',
+			dts: 'DTS',
+			eac3: 'Dolby Digital+',
+			ac3: 'Dolby Digital',
+			aac: 'AAC',
+			flac: 'FLAC',
+			opus: 'Opus',
+			mp3: 'MP3',
+			vorbis: 'Vorbis',
+			stereo: 'Stéréo',
+			mono: 'Mono',
+			channels: (layout) => layout
+		},
 		notFound: 'Ce film est introuvable.',
 		overview: 'Synopsis',
 		cast: 'Distribution',

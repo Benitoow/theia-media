@@ -807,6 +807,26 @@ whole TMDB record rather than a synopsis and a cast list of names — see decisi
   second kind of strip. It sits outside the detail column so its cards land on the
   same page gutter as every other row: measured at 96px on both at 1920.
 
+
+**File badges, added post-v2.** `.badges` / `.badge` on the film detail page:
+`4K`, `HDR`, `DOLBY VISION`, `TRUEHD`, `ATMOS`, `7.1`, in the label register on
+`--surface` inside a `--line` hairline, text in `--muted` at its documented
+5.42:1. Built entirely from tokens that already existed, and deliberately **not**
+in gold — §3 allows five uses of `--accent` per screen and the film page has
+already spent them on the rating and the play affordance. A sixth and seventh in
+gold would also make the loudest thing on a film page its audio codec, which is
+the wrong answer to "what is this film".
+
+They sit under the metadata line rather than in it: the year, the runtime and the
+director describe a *film*, while these describe one *encode* of it, and a
+household holding two files of the same title needs to see which one is on
+screen. Tracking is the full `--text-label` 0.18em, unlike `.certificate`, whose
+tighter 0.08em exists because "12" at 0.18em reads as "1 2" — an argument that
+does not apply to a word.
+
+Measured in a running build at 375px: six badges wrap to two rows with no page
+overflow. A file that has not been inspected renders no row at all, and no gap
+where one would have been.
 ## 12. Public presentation site
 
 The application helps somebody choose a film they already own. The public site

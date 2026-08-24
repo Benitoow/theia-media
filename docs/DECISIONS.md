@@ -2705,6 +2705,56 @@ and a real transcode request logs `mode=transcode video_encoder=h264_amf
 height=1080 audio_action=transcode tone_map=true`. The two frames above were
 extracted and looked at.
 
+## 88. A file says what it is, from what was measured and nothing else
+
+**Decided post-v2, asked for as decoration and built under the existing rule.**
+The film page now carries a row of badges — for the 4K file that prompted it,
+`4K · HDR · DOLBY VISION · TRUEHD · ATMOS · 7.1`.
+
+**Every one of them is a measurement.** The filename of that file contains the
+words `2160p`, `DOLBY VISION`, `TrueHD` and `Atmos`, and none of them is where a
+badge comes from. The scanner already strips those tokens when it parses a title
+(`internal/library/parse.go`), and reading them back out to decorate the page
+would be the same guess wearing a different hat. A file that has not been
+inspected shows no badges at all — the rule the file chooser has followed since
+V2-M1, applied to the one place where breaking it would have been easy and
+invisible.
+
+Everything needed was already printed by the ffmpeg Theia runs and thrown away.
+Decision 87 added the transfer function and the DOVI record for the tone map; the
+audio profile — `truehd (Dolby TrueHD + Dolby Atmos)`, `dts (DTS-HD MA)` — came
+with it. So the badge row cost one migration and no new subprocess.
+
+Three judgements worth keeping:
+
+- **Resolution is keyed on width, not height.** This file is 3840x1604, because a
+  scope film is letterboxed in the file itself. Anything reading height would
+  have labelled a 4K master "1604p", and a 1920x804 one "804p". Verified on the
+  real file: it reports `4K`.
+- **The audio badges describe the track the file marks as default**, falling back
+  to the first. That is a fact about the file. Ranking tracks by channel count or
+  bitrate to find the most impressive one is the judgement decision 38 refuses,
+  and `PreferredAudio` is allowed to exist beside it only because compatibility
+  is a different question from quality.
+- **PQ and HLG are not flattened into one word.** A file knows which it is, so it
+  says so: `HDR` for `smpte2084`, `HLG` for `arib-std-b67`.
+
+The strings live in both catalogues even though most are proper nouns that
+translate to themselves, because decision 25 says the interface owns every word
+shown and because `Stéréo`/`Stereo` and `SD` do differ. Parity check: 609 values,
+40 functions, matching.
+
+**Verified in a running browser** against the real library. Dune reports the six
+badges above with computed styles matching the tokens exactly — Jost, 11px,
+1.98px of tracking, `#8C857A` on `#131211` inside `#2A2724`, no gold anywhere. A
+640x360 AC3 mono clip reports `SD · DOLBY DIGITAL · MONO`, an MPEG-2 clip with no
+audio track reports `SD` alone, and an uninspected film renders no row and leaves
+no gap. At 375px the row wraps to two lines with no page overflow. Switching to
+English relabels the row's accessible name and leaves the proper nouns alone.
+
+Scoped to films. Episodes carry the same measurements in the same shape and would
+take the same component, and are left until somebody wants them there.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
