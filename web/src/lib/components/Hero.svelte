@@ -36,11 +36,26 @@
 -->
 <section class="relative isolate flex min-h-[78svh] items-end overflow-hidden">
 	{#if backdrop}
+		<!-- Framed from the top, not the centre, and the reason is the layout
+		     rather than this particular still. A 16/9 backdrop in a 2.26/1 hero
+		     is cropped top and bottom; the navigation pill floats over the top
+		     128px and the title, metadata and buttons occupy the bottom, so the
+		     only part of the frame that is genuinely free is the headroom. Taking
+		     the crop off the bottom spends it where something is already drawn
+		     over the picture, and moves the subject down out from under the bar.
+
+		     Measured at 1920x1080: 229px of vertical overflow, so centring hides
+		     115px of headroom behind a bar 128px deep. Rendered and looked at for
+		     both backdrops in the library -- centred, Paul's whole face and
+		     Vader's helmet sit inside the bar; from the top, both clear it.
+
+		     No effect on a phone, where the box is narrower than the picture and
+		     the crop is horizontal instead. -->
 		<img
 			src={backdrop}
 			alt=""
 			fetchpriority="high"
-			class="absolute inset-0 -z-20 h-full w-full scale-[1.015] object-cover object-center opacity-[0.78]"
+			class="absolute inset-0 -z-20 h-full w-full scale-[1.015] object-cover object-top opacity-[0.78]"
 		/>
 	{/if}
 

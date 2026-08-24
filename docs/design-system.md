@@ -271,6 +271,18 @@ resulting contrast was measured on the composited pixels rather than judged:
 `--muted` over the metadata row reads 5.43:1 on the home hero and 5.49:1 on the
 film page, both above the 4.5 AA floor.
 
+
+**The hero backdrop is framed from the top, not the centre.** A 16/9 still in a
+2.26/1 hero is cropped top and bottom, and where that crop is taken is a layout
+question rather than a per-image one: the navigation pill floats over the top
+128px and the title, metadata and buttons occupy the bottom, so the headroom is
+the only part of the frame nothing else is already drawn over. `object-top`
+spends the crop on the bottom, where the veil and the copy are, and moves the
+subject down out from under the bar. Measured at 1920×1080: 229px of vertical
+overflow, so centring buried 115px of headroom behind a bar 128px deep. Rendered
+and looked at for both backdrops in the test library — centred, a face and a
+helmet sat inside the bar; from the top, both clear it. On a phone the box is
+narrower than the picture, the crop is horizontal, and this changes nothing.
 Headings follow the same principle. `.hero-title` is the largest register and
 stays reserved for what fills a viewport. `.page-title` is one step down, sized
 from `--text-display`, for a page with work to do underneath its heading;
