@@ -67,6 +67,16 @@ type VideoStream struct {
 	// stream line did not say, which is a real answer and not a slow film: the
 	// player falls back to a fixed floor when it is absent.
 	FrameRate float64 `json:"frame_rate,omitempty"`
+
+	// ColorTransfer is the raw transfer function -- "smpte2084" for PQ,
+	// "arib-std-b67" for HLG, empty for everything else. It decides whether a
+	// re-encode has to tone map, and it lets the interface say HDR without
+	// guessing from a filename.
+	ColorTransfer string `json:"color_transfer,omitempty"`
+
+	// DolbyVision is a name, not a decision: the base layer is what gets decoded
+	// either way.
+	DolbyVision bool `json:"dolby_vision,omitempty"`
 }
 
 type AudioTrack struct {
@@ -76,6 +86,7 @@ type AudioTrack struct {
 	Language    string `json:"language,omitempty"`
 	Title       string `json:"title,omitempty"`
 	Channels    string `json:"channels,omitempty"`
+	Profile     string `json:"profile,omitempty"`
 	IsDefault   bool   `json:"is_default"`
 }
 
@@ -83,6 +94,7 @@ const movieFileColumns = `
 	id, movie_id, path, file_name, size_bytes, modified_at, is_primary,
 	media_status, media_container, media_duration_seconds,
 	video_stream_index, video_codec, video_width, video_height, video_frame_rate,
+	video_color_transfer, video_dolby_vision,
 	media_inspected_at, subtitles_scanned`
 
 func scanMovieFile(row interface{ Scan(...any) error }) (MovieFile, error) {
@@ -94,6 +106,8 @@ func scanMovieFile(row interface{ Scan(...any) error }) (MovieFile, error) {
 		duration                            sql.NullFloat64
 		videoIndex, videoWidth, videoHeight sql.NullInt64
 		videoFrameRate                      sql.NullFloat64
+		videoTransfer                       sql.NullString
+		dolbyVision                         int
 		subtitlesScanned                    int
 	)
 	if err := row.Scan(
@@ -101,6 +115,7 @@ func scanMovieFile(row interface{ Scan(...any) error }) (MovieFile, error) {
 		&file.SizeBytes, &modifiedAt, &primary,
 		&file.Media.Status, &container, &duration,
 		&videoIndex, &videoCodec, &videoWidth, &videoHeight, &videoFrameRate,
+		&videoTransfer, &dolbyVision,
 		&inspectedAt, &subtitlesScanned,
 	); err != nil {
 		return MovieFile{}, err
@@ -116,11 +131,13 @@ func scanMovieFile(row interface{ Scan(...any) error }) (MovieFile, error) {
 	file.Media.SubtitlesScanned = subtitlesScanned != 0
 	if videoIndex.Valid && videoCodec.Valid {
 		file.Media.Video = &VideoStream{
-			StreamIndex: int(videoIndex.Int64),
-			Codec:       videoCodec.String,
-			Width:       int(videoWidth.Int64),
-			Height:      int(videoHeight.Int64),
-			FrameRate:   videoFrameRate.Float64,
+			StreamIndex:   int(videoIndex.Int64),
+			Codec:         videoCodec.String,
+			Width:         int(videoWidth.Int64),
+			Height:        int(videoHeight.Int64),
+			FrameRate:     videoFrameRate.Float64,
+			ColorTransfer: videoTransfer.String,
+			DolbyVision:   dolbyVision != 0,
 		}
 	}
 	if inspectedAt > 0 {
@@ -195,7 +212,7 @@ func (s *Store) loadAudioTracks(ctx context.Context, files []MovieFile) error {
 
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT id, movie_file_id, stream_index, codec,
-		       language, title, channels, is_default
+		       language, title, channels, profile, is_default
 		FROM movie_file_audio_tracks
 		WHERE movie_file_id IN (`+strings.Join(placeholders, ",")+`)
 		ORDER BY movie_file_id, stream_index`, args...)
@@ -206,18 +223,19 @@ func (s *Store) loadAudioTracks(ctx context.Context, files []MovieFile) error {
 
 	for rows.Next() {
 		var (
-			track                     AudioTrack
-			fileID                    int64
-			language, title, channels sql.NullString
-			isDefault                 int
+			track                              AudioTrack
+			fileID                             int64
+			language, title, channels, profile sql.NullString
+			isDefault                          int
 		)
 		if err := rows.Scan(&track.ID, &fileID, &track.StreamIndex, &track.Codec,
-			&language, &title, &channels, &isDefault); err != nil {
+			&language, &title, &channels, &profile, &isDefault); err != nil {
 			return fmt.Errorf("reading audio tracks: %w", err)
 		}
 		track.Language = language.String
 		track.Title = title.String
 		track.Channels = channels.String
+		track.Profile = profile.String
 		track.IsDefault = isDefault != 0
 		if file := byID[fileID]; file != nil {
 			file.Media.AudioTracks = append(file.Media.AudioTracks, track)
@@ -262,13 +280,14 @@ func (s *Store) SaveFileMedia(ctx context.Context, movieID, fileID int64, media 
 		UPDATE movie_files SET
 			media_status = ?, media_container = ?, media_duration_seconds = ?,
 			video_stream_index = ?, video_codec = ?, video_width = ?, video_height = ?,
-			video_frame_rate = ?,
+			video_frame_rate = ?, video_color_transfer = ?, video_dolby_vision = ?,
 			media_inspected_at = ?, subtitles_scanned = 1
 		WHERE id = ? AND movie_id = ?`,
 		MediaOK, nullString(media.Container), nullPositiveFloat(media.DurationSeconds),
 		media.Video.StreamIndex, media.Video.Codec,
 		nullPositiveInt(media.Video.Width), nullPositiveInt(media.Video.Height),
 		nullPositiveFloat(media.Video.FrameRate),
+		nullString(media.Video.ColorTransfer), boolInt(media.Video.DolbyVision),
 		now, fileID, movieID)
 	if err != nil {
 		return MovieFile{}, fmt.Errorf("saving media for file %d: %w", fileID, err)
@@ -282,16 +301,18 @@ func (s *Store) SaveFileMedia(ctx context.Context, movieID, fileID int64, media 
 		seen[track.StreamIndex] = true
 		_, err := tx.ExecContext(ctx, `
 			INSERT INTO movie_file_audio_tracks
-				(movie_file_id, stream_index, codec, language, title, channels, is_default)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
+				(movie_file_id, stream_index, codec, language, title, channels, profile, is_default)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT(movie_file_id, stream_index) DO UPDATE SET
 				codec = excluded.codec,
 				language = excluded.language,
 				title = excluded.title,
 				channels = excluded.channels,
+				profile = excluded.profile,
 				is_default = excluded.is_default`,
 			fileID, track.StreamIndex, track.Codec,
 			nullString(track.Language), nullString(track.Title), nullString(track.Channels),
+			nullString(track.Profile),
 			boolInt(track.IsDefault))
 		if err != nil {
 			return MovieFile{}, fmt.Errorf("saving audio tracks for file %d: %w", fileID, err)
@@ -365,6 +386,7 @@ func (s *Store) MarkFileMediaError(ctx context.Context, movieID, fileID int64) e
 			media_duration_seconds = NULL,
 			video_stream_index = NULL, video_codec = NULL,
 			video_width = NULL, video_height = NULL, video_frame_rate = NULL,
+			video_color_transfer = NULL, video_dolby_vision = 0,
 			media_inspected_at = ?, subtitles_scanned = 1
 		WHERE id = ? AND movie_id = ?`, MediaError, time.Now().Unix(), fileID, movieID)
 	if err != nil {
@@ -390,17 +412,17 @@ func (s *Store) MarkFileMediaError(ctx context.Context, movieID, fileID int64) e
 // AudioTrack resolves a stable track id inside a specific file.
 func (s *Store) AudioTrack(ctx context.Context, movieID, fileID, trackID int64) (AudioTrack, error) {
 	var (
-		track                     AudioTrack
-		language, title, channels sql.NullString
-		isDefault                 int
+		track                              AudioTrack
+		language, title, channels, profile sql.NullString
+		isDefault                          int
 	)
 	err := s.db.QueryRowContext(ctx, `
-		SELECT a.id, a.stream_index, a.codec, a.language, a.title, a.channels, a.is_default
+		SELECT a.id, a.stream_index, a.codec, a.language, a.title, a.channels, a.profile, a.is_default
 		FROM movie_file_audio_tracks a
 		JOIN movie_files f ON f.id = a.movie_file_id
 		WHERE a.id = ? AND f.id = ? AND f.movie_id = ?`, trackID, fileID, movieID,
 	).Scan(&track.ID, &track.StreamIndex, &track.Codec,
-		&language, &title, &channels, &isDefault)
+		&language, &title, &channels, &profile, &isDefault)
 	if errors.Is(err, sql.ErrNoRows) {
 		return AudioTrack{}, ErrNoSuchAudioTrack
 	}
@@ -410,6 +432,7 @@ func (s *Store) AudioTrack(ctx context.Context, movieID, fileID, trackID int64) 
 	track.Language = language.String
 	track.Title = title.String
 	track.Channels = channels.String
+	track.Profile = profile.String
 	track.IsDefault = isDefault != 0
 	return track, nil
 }

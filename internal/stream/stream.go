@@ -227,6 +227,44 @@ func formatSeconds(s float64) string {
 	return strconv.FormatFloat(s, 'f', 3, 64)
 }
 
+// hdrTransfers are the transfer functions that have to be converted before an
+// SDR H.264 encode. Everything else -- including a file whose stream line never
+// said -- is left exactly alone.
+var hdrTransfers = map[string]bool{
+	"smpte2084":    true, // PQ: HDR10, and the base layer under Dolby Vision
+	"arib-std-b67": true, // HLG
+}
+
+// ToneMap reports whether a source with this transfer function needs converting.
+//
+// The fault it exists to prevent has no error and no log line. A PQ source
+// re-encoded without it hands the encoder BT.2020 code points and tells it they
+// are BT.709: the film plays, in the right aspect, at the right speed, and looks
+// washed out and grey. Nothing reports a problem, because as far as every part
+// of the pipeline is concerned there is not one.
+func ToneMap(colorTransfer string) bool {
+	return hdrTransfers[strings.ToLower(strings.TrimSpace(colorTransfer))]
+}
+
+// ToneMapFilter converts BT.2020 PQ or HLG to BT.709 SDR. Exported because the
+// seek-preview builder needs the same conversion: a strip of frames taken off an
+// HDR source without it is grey, and a colour pipeline written twice is a colour
+// pipeline that drifts.
+//
+// Four steps, and none of them is optional. zscale linearises against a 100-nit
+// display; the float format is what the tonemap filter requires as input; hable
+// is the operator, with desat=0 because desaturating highlights on top of an
+// already conservative curve makes skies grey; and the last zscale puts the
+// result back into BT.709 primaries, matrix and limited range so the encoder is
+// told the truth about what it is being given.
+//
+// It needs zscale, which needs libzimg. The pinned build reports
+// --enable-libzimg in -buildconf and lists both filters, which is why this is
+// written as a chain rather than as a capability probe.
+const ToneMapFilter = "zscale=t=linear:npl=100,format=gbrpf32le," +
+	"zscale=p=bt709,tonemap=tonemap=hable:desat=0," +
+	"zscale=t=bt709:m=bt709:r=tv,format=yuv420p"
+
 // TranscodeArgs re-encodes the picture to H.264 at a target height.
 //
 // encoder comes from a probe, never from a list (see ffmpeg.Capabilities).
@@ -234,7 +272,7 @@ func formatSeconds(s float64) string {
 // CPU" -- see ffmpeg.HardwareDecoder for why that is often the right one.
 // Height zero keeps the source size, which is what "Original" means for a file
 // whose only problem is a codec the browser refuses.
-func TranscodeArgs(path string, d Decision, startSeconds float64, encoder, hwaccel string, height int, audioStreamIndex *int) []string {
+func TranscodeArgs(path string, d Decision, startSeconds float64, encoder, hwaccel string, height int, audioStreamIndex *int, colorTransfer string) []string {
 	args := []string{"-hide_banner", "-loglevel", "error"}
 
 	// An input option, so it has to precede -i. Before -ss as well, so the seek
@@ -259,6 +297,7 @@ func TranscodeArgs(path string, d Decision, startSeconds float64, encoder, hwacc
 		"-c:v", encoder,
 	)
 
+	var filters []string
 	if height > 0 {
 		// -2 keeps the aspect ratio and rounds the width to an even number,
 		// which every H.264 encoder requires and some crash without.
@@ -270,7 +309,28 @@ func TranscodeArgs(path string, d Decision, startSeconds float64, encoder, hwacc
 		// re-encode should too; a fractional SAR is a decoder's problem for a
 		// rounding error nobody can see. One even pixel of width is cheaper than
 		// non-square pixels.
-		args = append(args, "-vf", "scale=-2:"+strconv.Itoa(height)+",setsar=1")
+		filters = append(filters, "scale=-2:"+strconv.Itoa(height)+",setsar=1")
+	}
+	if ToneMap(colorTransfer) {
+		// After the scale rather than before it, and that order is a
+		// measurement. Tone mapping is the one thing here a GPU encoder does not
+		// help with: zscale converts to linear light in 32-bit float on the CPU,
+		// and the cost is the conversion rather than the operator -- hable and
+		// mobius came out 1.09x and 1.13x, and -filter_threads 12 changed 1.09x
+		// into 1.11x. What did matter was where it sits. Re-encoding this
+		// project's own 4K HDR source to 1080p on an AMD desktop:
+		//
+		//	no tone map (grey picture)   2.79x
+		//	scale, then tone map         1.65x
+		//	tone map, then scale         1.06x
+		//
+		// Mapping fewer pixels is 56 per cent faster and costs nothing anyone
+		// can see, since the scale happens in the source's own colour space
+		// either way.
+		filters = append(filters, ToneMapFilter)
+	}
+	if len(filters) > 0 {
+		args = append(args, "-vf", strings.Join(filters, ","))
 	}
 
 	args = append(args,

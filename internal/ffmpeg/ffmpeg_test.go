@@ -196,3 +196,55 @@ func TestParseProbeOutputFrameRateEdges(t *testing.T) {
 		t.Errorf("frame rate = %v, want 0 when the line does not say", silent.Video.FrameRate)
 	}
 }
+
+// Colour, Dolby Vision and the audio profile, from the same real probe.
+//
+// Every line here is copied out of `ffmpeg -i` run against the maintainer's own
+// 4K file, including the Side data block, because the DOVI record is the one
+// fact on this page that does not arrive on a stream line.
+func TestParseProbeOutputReadsColourAndProfiles(t *testing.T) {
+	const output = `Input #0, matroska,webm, from 'Dune.mkv':
+  Duration: 02:35:26.61, start: 0.000000, bitrate: 11924 kb/s
+  Stream #0:0: Video: hevc (Main 10), yuv420p10le(tv, bt2020nc/bt2020/smpte2084), 3840x1604, SAR 1:1 DAR 960:401, 23.98 fps, 23.98 tbr, 1k tbn (default)
+    Side data:
+      DOVI configuration record: version: 1.0, profile: 8, level: 6, rpu flag: 1, el flag: 0, bl flag: 1, compatibility id: 1
+  Stream #0:1(fre): Audio: truehd (Dolby TrueHD + Dolby Atmos), 48000 Hz, 7.1, s32 (24 bit) (default)
+    Metadata:
+      title           : FR VFF : TrueHD Atmos 7.1
+  Stream #0:2(eng): Audio: truehd (Dolby TrueHD + Dolby Atmos), 48000 Hz, 7.1, s32 (24 bit)`
+
+	info := parseProbeOutput(output)
+	if info.Video.ColorTransfer != "smpte2084" {
+		t.Errorf("colour transfer = %q, want smpte2084", info.Video.ColorTransfer)
+	}
+	if !info.Video.DolbyVision {
+		t.Error("the DOVI configuration record was not read")
+	}
+	if len(info.AudioStreams) != 2 {
+		t.Fatalf("audio streams = %d, want two", len(info.AudioStreams))
+	}
+	if got := info.AudioStreams[0].Profile; got != "Dolby TrueHD + Dolby Atmos" {
+		t.Errorf("audio profile = %q", got)
+	}
+	// The title still lands on its own track, which the profile must not disturb.
+	if got := info.AudioStreams[0].Title; got != "FR VFF : TrueHD Atmos 7.1" {
+		t.Errorf("audio title = %q", got)
+	}
+}
+
+// An ordinary SDR file says none of it, and must not be labelled as if it did.
+func TestParseProbeOutputLeavesSDRAlone(t *testing.T) {
+	const output = `  Stream #0:0(eng): Video: h264 (High), yuv420p(tv, bt709), 1920x804, 24 fps, 24 tbr, 1k tbn
+  Stream #0:1(eng): Audio: aac (LC), 48000 Hz, stereo, fltp, 128 kb/s`
+
+	info := parseProbeOutput(output)
+	if info.Video.ColorTransfer != "" {
+		t.Errorf("colour transfer = %q, want empty for bt709", info.Video.ColorTransfer)
+	}
+	if info.Video.DolbyVision {
+		t.Error("an SDR file was marked as Dolby Vision")
+	}
+	if got := info.AudioStreams[0].Profile; got != "LC" {
+		t.Errorf("audio profile = %q, want LC", got)
+	}
+}

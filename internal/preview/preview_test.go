@@ -35,7 +35,7 @@ func TestAskingForAPreviewNeverDownloadsFFmpeg(t *testing.T) {
 	binary := &absentFFmpeg{}
 	m := newTestManager(t, binary)
 
-	_, err := m.Lookup(t.Context(), Key("/films/heat.mkv", 100, 7), "/films/heat.mkv", 9000)
+	_, err := m.Lookup(t.Context(), Key("/films/heat.mkv", 100, 7), "/films/heat.mkv", 9000, "")
 	if !errors.Is(err, ErrUnavailable) {
 		t.Errorf("error = %v, want ErrUnavailable", err)
 	}
@@ -48,7 +48,7 @@ func TestAShortFileIsNotWorthAStrip(t *testing.T) {
 	m := newTestManager(t, &absentFFmpeg{})
 	key := Key("/films/short.mkv", 10, 1)
 
-	if _, err := m.Lookup(t.Context(), key, "/films/short.mkv", 30); !errors.Is(err, ErrUnavailable) {
+	if _, err := m.Lookup(t.Context(), key, "/films/short.mkv", 30, ""); !errors.Is(err, ErrUnavailable) {
 		t.Errorf("error = %v for a thirty-second file, want ErrUnavailable", err)
 	}
 }
@@ -104,7 +104,7 @@ func TestASheetIsOnlyOfferedOnceTheManifestIsWritten(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := m.Lookup(t.Context(), key, "/films/heat.mkv", 9000); !errors.Is(err, ErrUnavailable) {
+	if _, err := m.Lookup(t.Context(), key, "/films/heat.mkv", 9000, ""); !errors.Is(err, ErrUnavailable) {
 		t.Errorf("error = %v, want ErrUnavailable: a sheet with no manifest was offered", err)
 	}
 }
@@ -120,7 +120,7 @@ func TestAFileThatCannotBeBuiltIsNotRetriedForever(t *testing.T) {
 	m.failed[key] = true
 	m.mu.Unlock()
 
-	m.start(key, "/films/broken.mkv", 9000)
+	m.start(key, "/films/broken.mkv", 9000, "")
 
 	m.mu.Lock()
 	building := m.building[key]

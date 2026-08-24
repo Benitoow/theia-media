@@ -2635,6 +2635,76 @@ presented, which is the right half of the pair here: dropping frames is how a
 player *stays* in sync, while decoding them late is what makes the picture fall
 behind.
 
+## 87. HDR is tone mapped, because the failure has no error message
+
+**Decided post-v2, from the same 4K file as decision 86.** Its picture is
+`bt2020nc/bt2020/smpte2084` — PQ, under a Dolby Vision profile 8 record. Every
+re-encode Theia performed on it forced `-pix_fmt yuv420p` and nothing else, which
+hands an H.264 encoder BT.2020 code points and tells it they are BT.709.
+
+**Nothing anywhere reports this.** The film plays, at the right speed, in the
+right aspect, with sound. It simply looks wrong: flat, grey, green-cast, with the
+detail crushed out of everything bright. There is no log line to find because no
+part of the pipeline believes anything went wrong. That is the whole reason this
+entry exists — it is the second fault in a row on this file whose only symptom is
+that a person looks at the screen and something is off.
+
+Extracted from the file at 40:00, scaled to the same size, average pixel over the
+whole frame:
+
+| | avg RGB |
+|---|---|
+| what shipped | 135, 137, 136 — flat grey, moons with no surface left |
+| tone mapped, `npl=100` | 166, 180, 171 — surface detail back, the grade's blue-green returned |
+
+**The chain is `zscale`, and it is affordable only in the right order.** Four
+steps, none optional: linearise against a 100-nit display, convert to 32-bit
+float because that is what `tonemap` takes, apply `hable` with `desat=0`, then
+put the result back into BT.709 primaries, matrix and limited range so the
+encoder is told the truth. It needs libzimg; the pinned build reports
+`--enable-libzimg` and lists both filters, which is why this is written as a
+chain rather than as a capability probe.
+
+Measured on this project's own AMD desktop, 4K HDR source to 1080p:
+
+| | Speed |
+|---|---|
+| no tone map, what shipped | 2.79x |
+| **scale, then tone map** | **1.65x** |
+| tone map, then scale | 1.06x |
+
+Mapping fewer pixels is 56 per cent faster and costs nothing visible, because the
+scale happens in the source's own colour space either way. What did *not* help:
+`-filter_threads 12` moved 1.09x to 1.11x, and `mobius` against `hable` moved
+1.09x to 1.13x. The cost is the linear float conversion, not the operator, and
+zscale already threads itself.
+
+`npl` was chosen by measurement rather than by copying a recipe. At 100 a bright
+frame comes out at 166,180,171; at 200, 134,144,137; at 400, 105,112,107. The
+higher values give back the flatness this exists to remove.
+
+**The known limit, stated because it is measured.** At the source's own
+resolution the same chain runs at **1.09x** real time on this machine — the
+margin decision 58 called a coin toss rather than a margin. It survives here
+because tone mapping is CPU work that a hardware encoder does not help with, so
+an HDR transcode is CPU-bound whatever encoder runs it. The transcode limiter
+still counts hardware slots as three (`transcodeLimiter.setKind`), which is
+correct for an SDR source and optimistic for an HDR one: two concurrent 4K HDR
+transcodes would provably stall. Left alone rather than redesigned on one
+measurement, and written down here so the next person does not have to find it
+twice.
+
+The seek-preview builder runs the same chain for the same reason — a strip cut
+from an HDR source is grey — and imports it from `internal/stream` rather than
+repeating it, because a colour pipeline written twice is one that drifts. There
+it costs nothing: the frames are ninety pixels tall by the time it runs.
+
+**Verified end to end** through a running binary against the real file: the
+library resource reports `color_transfer: "smpte2084"` and `dolby_vision: true`,
+and a real transcode request logs `mode=transcode video_encoder=h264_amf
+height=1080 audio_action=transcode tone_map=true`. The two frames above were
+extracted and looked at.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

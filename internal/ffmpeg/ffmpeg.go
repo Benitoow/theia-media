@@ -266,6 +266,18 @@ type VideoStream struct {
 	// a fixed floor of ten precisely because this was not stored, and a fixed
 	// floor cannot tell a 4K decoder running at half speed from a healthy one.
 	FrameRate float64 `json:"frame_rate,omitempty"`
+
+	// ColorTransfer is the transfer function, and it is the whole question for
+	// tone mapping: "smpte2084" is PQ and "arib-std-b67" is HLG, both of which
+	// need converting before an SDR H.264 encode, and anything else -- including
+	// nothing at all -- does not. Stored raw rather than as a boolean so the
+	// interface can tell HDR10 from HLG without a second measurement.
+	ColorTransfer string `json:"color_transfer,omitempty"`
+
+	// DolbyVision is the presence of a DOVI configuration record beside the
+	// stream. It changes no decision Theia makes -- the base layer is what gets
+	// decoded either way -- and exists so the file can say what it is.
+	DolbyVision bool `json:"dolby_vision,omitempty"`
 }
 
 type AudioStream struct {
@@ -275,6 +287,12 @@ type AudioStream struct {
 	Title       string `json:"title,omitempty"`
 	Channels    string `json:"channels,omitempty"`
 	Default     bool   `json:"default"`
+
+	// Profile is what ffmpeg prints in brackets after the codec: "Dolby TrueHD +
+	// Dolby Atmos", "DTS-HD MA". It is a name, not a decision -- nothing in the
+	// playback path reads it -- and it is here so a file can be labelled with
+	// what it actually holds.
+	Profile string `json:"profile,omitempty"`
 }
 
 // SubtitleStream is one embedded subtitle track. The codec decides whether it
@@ -297,8 +315,17 @@ var (
 	// "…, 3840x1604, SAR 1:1 DAR 960:401, 23.98 fps, 23.98 tbr, 1k tbn". Anchored
 	// on the unit, because tbr and tbn carry lookalike numbers on the same line.
 	frameRatePattern = regexp.MustCompile(`(?:^|,\s)(\d+(?:\.\d+)?)\s+fps(?:\s|,|$)`)
-	channelsPattern  = regexp.MustCompile(`\d+\s*Hz,\s*(mono|stereo|\d+(?:\.\d+)?(?:\([^)]*\))?)`)
-	metadataPattern  = regexp.MustCompile(`^\s*(title|language)\s*:\s*(.*?)\s*$`)
+	// The transfer function, anchored on the two names that change what has to
+	// happen to the picture. The colour group ffmpeg prints beside the pixel
+	// format varies -- "yuv420p10le(tv, bt2020nc/bt2020/smpte2084)", or a single
+	// token, or nothing -- so matching the names is more robust than parsing the
+	// shape, and no other field on the line carries either word.
+	hdrTransferPattern = regexp.MustCompile(`\b(smpte2084|arib-std-b67)\b`)
+	// "  Stream #0:1(fre): Audio: truehd (Dolby TrueHD + Dolby Atmos), 48000 Hz"
+	// -- the bracket immediately after the codec, and only that one.
+	audioProfilePattern = regexp.MustCompile(`^\s*\(([^)]+)\)`)
+	channelsPattern     = regexp.MustCompile(`\d+\s*Hz,\s*(mono|stereo|\d+(?:\.\d+)?(?:\([^)]*\))?)`)
+	metadataPattern     = regexp.MustCompile(`^\s*(title|language)\s*:\s*(.*?)\s*$`)
 	// "  Duration: 00:01:30.05, start: 0.000000, bitrate: 1234 kb/s"
 	durationPattern = regexp.MustCompile(`Duration: (\d+):(\d\d):(\d\d)\.(\d+)`)
 )
@@ -415,6 +442,8 @@ func parseProbeOutput(output string) MediaInfo {
 					if rate := frameRatePattern.FindStringSubmatch(rest); rate != nil {
 						info.Video.FrameRate, _ = strconv.ParseFloat(rate[1], 64)
 					}
+					info.Video.ColorTransfer = strings.ToLower(
+						hdrTransferPattern.FindString(rest))
 				}
 			case "Audio":
 				track := AudioStream{
@@ -425,6 +454,9 @@ func parseProbeOutput(output string) MediaInfo {
 				}
 				if channels := channelsPattern.FindStringSubmatch(rest); channels != nil {
 					track.Channels = strings.ToLower(channels[1])
+				}
+				if profile := audioProfilePattern.FindStringSubmatch(rest); profile != nil {
+					track.Profile = strings.TrimSpace(profile[1])
 				}
 				info.AudioStreams = append(info.AudioStreams, track)
 				currentAudio = len(info.AudioStreams) - 1
@@ -442,6 +474,15 @@ func parseProbeOutput(output string) MediaInfo {
 				})
 				currentSubtitle = len(info.SubtitleStreams) - 1
 			}
+			continue
+		}
+
+		// The DOVI record sits under a "Side data:" heading below the video
+		// stream and matches neither the stream nor the metadata pattern, so it
+		// is read on its own. There is no cursor to keep: only the first video
+		// stream is retained, and the record belongs to it.
+		if info.Video.Codec != "" && strings.Contains(line, "DOVI configuration record") {
+			info.Video.DolbyVision = true
 			continue
 		}
 

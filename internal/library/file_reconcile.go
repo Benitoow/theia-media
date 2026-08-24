@@ -355,6 +355,7 @@ func invalidateFileMediaTx(ctx context.Context, tx *sql.Tx, fileID int64) error 
 			media_duration_seconds = NULL,
 			video_stream_index = NULL, video_codec = NULL,
 			video_width = NULL, video_height = NULL, video_frame_rate = NULL,
+			video_color_transfer = NULL, video_dolby_vision = 0,
 			media_inspected_at = 0
 		WHERE id = ?`, fileID); err != nil {
 		return err

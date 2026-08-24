@@ -306,7 +306,8 @@ func (s *Server) handleMovieFileStreamRemux(w http.ResponseWriter, r *http.Reque
 		// Probed on the first transcode and remembered, like the encoder. An
 		// empty answer means decode on the CPU, which is correct everywhere.
 		args = stream.TranscodeArgs(file.Path, decision, start,
-			encoder.Name, s.ffmpeg.HardwareDecoder(r.Context()), wantedHeight, audioStreamIndex)
+			encoder.Name, s.ffmpeg.HardwareDecoder(r.Context()), wantedHeight, audioStreamIndex,
+			file.Media.Video.ColorTransfer)
 	case audioStreamIndex != nil:
 		args = stream.RemuxArgsForAudio(file.Path, decision, start, *audioStreamIndex)
 	default:
@@ -324,6 +325,7 @@ func (s *Server) handleMovieFileStreamRemux(w http.ResponseWriter, r *http.Reque
 		"audio_track_id", audioID,
 		"audio_stream_index", selectedIndex,
 		"audio_action", decision.Audio,
+		"tone_map", stream.ToneMap(file.Media.Video.ColorTransfer),
 		"start", start,
 	)
 

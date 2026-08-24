@@ -22,6 +22,8 @@ import (
 	"regexp"
 	"strconv"
 	"sync"
+
+	"github.com/Benitoow/theia-media/internal/stream"
 )
 
 // ErrNotReady means the sheet does not exist yet. The caller should say so and
@@ -147,7 +149,9 @@ func Key(path string, size int64, modifiedUnix int64) string {
 // It never waits for the build. A player asks once when it opens a film and
 // again if the user starts scrubbing; by then a short film is usually ready and
 // a long one is not, which is exactly what ErrNotReady is for.
-func (m *Manager) Lookup(ctx context.Context, key, source string, duration float64) (Manifest, error) {
+func (m *Manager) Lookup(ctx context.Context, key, source string, duration float64,
+	colorTransfer string,
+) (Manifest, error) {
 	if !keyPattern.MatchString(key) {
 		return Manifest{}, ErrUnavailable
 	}
@@ -166,7 +170,7 @@ func (m *Manager) Lookup(ctx context.Context, key, source string, duration float
 		return Manifest{}, ErrUnavailable
 	}
 
-	m.start(key, source, duration)
+	m.start(key, source, duration, colorTransfer)
 	return Manifest{}, ErrNotReady
 }
 
@@ -198,7 +202,7 @@ func (m *Manager) read(key string) (Manifest, error) {
 }
 
 // start kicks off one build, unless that key is already being built.
-func (m *Manager) start(key, source string, duration float64) {
+func (m *Manager) start(key, source string, duration float64, colorTransfer string) {
 	m.mu.Lock()
 	if m.building[key] || m.failed[key] {
 		m.mu.Unlock()
@@ -226,7 +230,7 @@ func (m *Manager) start(key, source string, duration float64) {
 		m.slot <- struct{}{}
 		defer func() { <-m.slot }()
 
-		if err := m.build(ctx, key, source, duration); err != nil {
+		if err := m.build(ctx, key, source, duration, colorTransfer); err != nil {
 			m.log.Warn("a seek preview could not be built",
 				"source", source, "error", err)
 			return
@@ -235,7 +239,9 @@ func (m *Manager) start(key, source string, duration float64) {
 	}()
 }
 
-func (m *Manager) build(ctx context.Context, key, source string, duration float64) error {
+func (m *Manager) build(ctx context.Context, key, source string, duration float64,
+	colorTransfer string,
+) error {
 	binary, err := m.ffmpeg.Path(ctx)
 	if err != nil {
 		return err
@@ -262,6 +268,15 @@ func (m *Manager) build(ctx context.Context, key, source string, duration float6
 	// not evenly spaced.
 	filter := fmt.Sprintf("fps=1/%s,scale=-2:%d,tile=%dx%d",
 		strconv.FormatFloat(interval, 'f', 3, 64), tileHeight, columns, rows)
+	// The same conversion the player's re-encode does, for the same reason: a
+	// strip cut from an HDR source and written straight to JPEG is grey. It sits
+	// after the scale, where it costs almost nothing -- these frames are ninety
+	// pixels tall by the time it runs.
+	if stream.ToneMap(colorTransfer) {
+		filter = fmt.Sprintf("fps=1/%s,scale=-2:%d,%s,tile=%dx%d",
+			strconv.FormatFloat(interval, 'f', 3, 64), tileHeight,
+			stream.ToneMapFilter, columns, rows)
+	}
 
 	cmd := exec.CommandContext(ctx, binary,
 		"-hide_banner", "-loglevel", "error",

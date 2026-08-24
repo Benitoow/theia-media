@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Benitoow/theia-media/internal/library"
 	"github.com/Benitoow/theia-media/internal/preview"
 )
 
@@ -36,8 +37,8 @@ func (s *Server) handleMoviePreview(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	s.writePreview(w, r, movie.Path, movie.SizeBytes, movie.ModifiedAt,
-		s.movieDuration(r, movie.ID))
+	duration, transfer := s.moviePrimaryFacts(r, movie.ID)
+	s.writePreview(w, r, movie.Path, movie.SizeBytes, movie.ModifiedAt, duration, transfer)
 }
 
 // handleMovieFilePreview answers for one chosen file of a film.
@@ -47,7 +48,7 @@ func (s *Server) handleMovieFilePreview(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	s.writePreview(w, r, file.Path, file.SizeBytes, file.ModifiedAt,
-		file.Media.DurationSeconds)
+		file.Media.DurationSeconds, colorTransferOf(file.Media))
 }
 
 // handleEpisodeFilePreview answers for one file of an episode.
@@ -57,7 +58,7 @@ func (s *Server) handleEpisodeFilePreview(w http.ResponseWriter, r *http.Request
 		return
 	}
 	s.writePreview(w, r, file.Path, file.SizeBytes, file.ModifiedAt,
-		file.Media.DurationSeconds)
+		file.Media.DurationSeconds, colorTransferOf(file.Media))
 }
 
 // handlePreviewSheet serves a built sheet by its key.
@@ -86,7 +87,7 @@ func (s *Server) handlePreviewSheet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) writePreview(w http.ResponseWriter, r *http.Request,
-	path string, size int64, modified time.Time, duration float64,
+	path string, size int64, modified time.Time, duration float64, colorTransfer string,
 ) {
 	if s.previews == nil {
 		writeJSONError(w, http.StatusNotFound, "previews are unavailable")
@@ -94,7 +95,7 @@ func (s *Server) writePreview(w http.ResponseWriter, r *http.Request,
 	}
 
 	key := preview.Key(path, size, modified.Unix())
-	manifest, err := s.previews.Lookup(r.Context(), key, path, duration)
+	manifest, err := s.previews.Lookup(r.Context(), key, path, duration, colorTransfer)
 	switch {
 	case errors.Is(err, preview.ErrNotReady):
 		// Not an error and not a failure: something is being built, and asking
@@ -113,29 +114,52 @@ func (s *Server) writePreview(w http.ResponseWriter, r *http.Request,
 	})
 }
 
-// movieDuration is the best duration known for a film, which is what decides
-// whether a preview is worth building and how far apart its frames sit.
+// moviePrimaryFacts is what the legacy film-level preview route needs to know
+// about a film without being given a file: how long it runs, and whether its
+// picture has to be tone mapped.
 //
-// Three sources, in order of how much they are worth: a duration the player
-// measured and saved, then a duration measured off the file by an inspection,
+// The duration decides whether a preview is worth building and how far apart its
+// frames sit. Three sources, in order of how much they are worth: a duration the
+// player measured and saved, then one measured off the file by an inspection,
 // then TMDB's runtime. The last is in whole minutes and is only ever a few
 // seconds out, which moves a tile by a fraction of one interval.
-func (s *Server) movieDuration(r *http.Request, id int64) float64 {
+//
+// The transfer function has only one source, because it is a measurement: the
+// primary file, if it has been inspected. Both come out of one read.
+func (s *Server) moviePrimaryFacts(r *http.Request, id int64) (float64, string) {
 	profileID, err := s.profileID(r)
 	if err != nil {
-		return 0
+		return 0, ""
 	}
 	movie, err := s.lib.Get(r.Context(), profileID, id)
 	if err != nil {
-		return 0
+		return 0, ""
 	}
-	if movie.Progress.DurationSeconds > 0 {
-		return movie.Progress.DurationSeconds
-	}
+
+	duration, transfer := 0.0, ""
 	for _, file := range movie.Files {
-		if file.IsPrimary && file.Media.DurationSeconds > 0 {
-			return file.Media.DurationSeconds
+		if !file.IsPrimary {
+			continue
 		}
+		transfer = colorTransferOf(file.Media)
+		duration = file.Media.DurationSeconds
+		break
 	}
-	return float64(movie.Metadata.Runtime) * 60
+	switch {
+	case movie.Progress.DurationSeconds > 0:
+		duration = movie.Progress.DurationSeconds
+	case duration <= 0:
+		duration = float64(movie.Metadata.Runtime) * 60
+	}
+	return duration, transfer
+}
+
+// colorTransferOf reports a measured transfer function, and nothing else. A file
+// that has not been inspected says nothing rather than guessing from its name,
+// which is the same rule the file chooser follows.
+func colorTransferOf(media library.FileMedia) string {
+	if media.Status != library.MediaOK || media.Video == nil {
+		return ""
+	}
+	return media.Video.ColorTransfer
 }

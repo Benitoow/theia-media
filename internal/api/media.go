@@ -58,11 +58,13 @@ func measuredFileMedia(info ffmpeg.MediaInfo) library.FileMedia {
 		Container:       info.Container,
 		DurationSeconds: info.Seconds,
 		Video: &library.VideoStream{
-			StreamIndex: info.Video.StreamIndex,
-			Codec:       info.Video.Codec,
-			Width:       info.Video.Width,
-			Height:      info.Video.Height,
-			FrameRate:   info.Video.FrameRate,
+			StreamIndex:   info.Video.StreamIndex,
+			Codec:         info.Video.Codec,
+			Width:         info.Video.Width,
+			Height:        info.Video.Height,
+			FrameRate:     info.Video.FrameRate,
+			ColorTransfer: info.Video.ColorTransfer,
+			DolbyVision:   info.Video.DolbyVision,
 		},
 		AudioTracks:    make([]library.AudioTrack, 0, len(info.AudioStreams)),
 		SubtitleTracks: make([]library.SubtitleTrack, 0, len(info.SubtitleStreams)),
@@ -74,6 +76,7 @@ func measuredFileMedia(info ffmpeg.MediaInfo) library.FileMedia {
 			Language:    track.Language,
 			Title:       track.Title,
 			Channels:    track.Channels,
+			Profile:     track.Profile,
 			IsDefault:   track.Default,
 		})
 	}

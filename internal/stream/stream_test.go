@@ -206,7 +206,7 @@ func TestRemuxArgsForAudioMapsOnlyTheSelectedAbsoluteStream(t *testing.T) {
 // software one is where the arguments actually decide whether a modest machine
 // keeps up with playback.
 func TestTheSoftwareEncoderIsNotTunedForAVideoCall(t *testing.T) {
-	args := TranscodeArgs("/films/heat.mkv", Decision{Audio: AudioTranscode}, 0, "libx264", "", 720, nil)
+	args := TranscodeArgs("/films/heat.mkv", Decision{Audio: AudioTranscode}, 0, "libx264", "", 720, nil, "")
 
 	joined := strings.Join(args, " ")
 	if strings.Contains(joined, "zerolatency") {
@@ -240,7 +240,7 @@ func TestTheThreadCapNeverAsksForMoreThanTheMachineHas(t *testing.T) {
 func TestAHardwareEncoderKeepsItsOwnSettings(t *testing.T) {
 	for _, encoder := range []string{"h264_amf", "h264_nvenc", "h264_qsv", "h264_mf"} {
 		joined := strings.Join(
-			TranscodeArgs("/films/heat.mkv", Decision{}, 0, encoder, "", 720, nil), " ")
+			TranscodeArgs("/films/heat.mkv", Decision{}, 0, encoder, "", 720, nil, ""), " ")
 		if strings.Contains(joined, "-preset") || strings.Contains(joined, "-threads") {
 			t.Errorf("%s was given libx264's arguments: %s", encoder, joined)
 		}
@@ -258,7 +258,7 @@ func TestATranscodedFilmKeepsItsSound(t *testing.T) {
 	for _, video := range []string{"mpeg2video", "vc1"} {
 		decision := Decide("/films/dvd.mkv", video, "ac3")
 		joined := strings.Join(
-			TranscodeArgs("/films/dvd.mkv", decision, 0, "libx264", "", 720, nil), " ")
+			TranscodeArgs("/films/dvd.mkv", decision, 0, "libx264", "", 720, nil, ""), " ")
 		if strings.Contains(joined, "-c:a copy") {
 			t.Errorf("%s + AC3 copies its audio into MP4, which is a silent film: %s",
 				video, joined)
@@ -266,5 +266,69 @@ func TestATranscodedFilmKeepsItsSound(t *testing.T) {
 		if !strings.Contains(joined, "-c:a aac") {
 			t.Errorf("%s + AC3 does not re-encode its audio: %s", video, joined)
 		}
+	}
+}
+
+// The fault with no error message: a PQ source re-encoded as if it were BT.709.
+func TestAnHDRSourceIsToneMapped(t *testing.T) {
+	for _, transfer := range []string{"smpte2084", "arib-std-b67", "SMPTE2084", " smpte2084 "} {
+		args := strings.Join(
+			TranscodeArgs("/films/dune.mkv", Decision{Audio: AudioTranscode}, 0,
+				"h264_amf", "d3d11va", 1080, nil, transfer), " ")
+		if !strings.Contains(args, "tonemap=tonemap=hable") {
+			t.Errorf("transfer %q is not tone mapped: %s", transfer, args)
+		}
+		// Measured: mapping after the scale is 56 per cent faster than before it,
+		// so the order is part of the contract rather than an accident.
+		scale := strings.Index(args, "scale=-2:1080")
+		mapAt := strings.Index(args, "zscale=t=linear")
+		if scale < 0 || mapAt < 0 || scale > mapAt {
+			t.Errorf("transfer %q maps before it scales: %s", transfer, args)
+		}
+	}
+}
+
+// And an SDR file is not put through a conversion it does not need. This is the
+// half that costs something if it is wrong: the chain is CPU-bound and would
+// take a 2.79x re-encode down to 1.65x for no picture at all.
+func TestAnSDRSourceIsLeftAlone(t *testing.T) {
+	for _, transfer := range []string{"", "bt709", "bt470bg", "unknown"} {
+		args := strings.Join(
+			TranscodeArgs("/films/heat.mkv", Decision{Audio: AudioTranscode}, 0,
+				"h264_amf", "", 720, nil, transfer), " ")
+		if strings.Contains(args, "tonemap") || strings.Contains(args, "zscale") {
+			t.Errorf("transfer %q was tone mapped and should not have been: %s", transfer, args)
+		}
+		if !strings.Contains(args, "-vf scale=-2:720,setsar=1 ") {
+			t.Errorf("transfer %q lost its plain scale: %s", transfer, args)
+		}
+	}
+}
+
+// The rung that keeps the source size still has to map, and has nothing to
+// scale. It must not emit an empty -vf.
+func TestTheOriginalRungMapsWithoutScaling(t *testing.T) {
+	args := TranscodeArgs("/films/dune.mkv", Decision{Audio: AudioTranscode}, 0,
+		"h264_amf", "d3d11va", 0, nil, "smpte2084")
+	joined := strings.Join(args, " ")
+	if !strings.Contains(joined, "tonemap=tonemap=hable") {
+		t.Errorf("the original rung is not tone mapped: %s", joined)
+	}
+	if strings.Contains(joined, "scale=-2:") {
+		t.Errorf("the original rung scales, and must not: %s", joined)
+	}
+	for i, a := range args {
+		if a == "-vf" && (i+1 >= len(args) || args[i+1] == "") {
+			t.Errorf("an empty -vf was emitted: %s", joined)
+		}
+	}
+}
+
+// An SDR original rung asks for no filter at all.
+func TestAnSDROriginalRungHasNoFilter(t *testing.T) {
+	joined := strings.Join(TranscodeArgs("/films/heat.mkv", Decision{}, 0,
+		"libx264", "", 0, nil, ""), " ")
+	if strings.Contains(joined, "-vf") {
+		t.Errorf("a filter was added with nothing to do: %s", joined)
 	}
 }
