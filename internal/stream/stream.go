@@ -190,10 +190,33 @@ func remuxArgs(path string, d Decision, startSeconds float64, audioStreamIndex *
 
 	// -ss before -i seeks by keyframe without decoding what came before, which
 	// is what makes scrubbing through a two-hour film bearable.
+	//
+	// -noaccurate_seek is what keeps the sound with the picture, and it is not
+	// optional here. ffmpeg's accurate seek trims each stream to the exact
+	// timestamp asked for, which it can do for audio because audio is decoded,
+	// and cannot do for a video stream being copied: a copy has to start on a
+	// keyframe. So an accurate seek to 3600 on this project's own 4K file
+	// delivered a picture starting at 3595.467 and sound starting at 3599.98 --
+	// measured, by hashing the first output frame against the source and by
+	// cross-correlating the output audio against a seek-free decode of it. Four
+	// and a half seconds of the sound running ahead of the picture, and up to
+	// one keyframe interval; this file's is 10.4 s.
+	//
+	// Turning accurate seek off makes ffmpeg start every stream at the keyframe
+	// instead: measured again, picture at 3595.467 and sound at 3595.47, three
+	// milliseconds apart. The cost is that playback resumes up to a keyframe
+	// interval before the point that was clicked, and the player's clock -- which
+	// counts from what it asked for -- is optimistic by the same amount. That is
+	// decision 16's stated granularity, now paid by both streams together rather
+	// than by the picture alone.
+	//
+	// The transcode path deliberately does not do this. Its video is decoded, so
+	// an accurate seek trims it exactly like the audio: verified on the same
+	// file, where the first transcoded frame is the source frame at 3600 and not
+	// the keyframe before it.
 	if startSeconds > 0 {
-		args = append(args, "-ss", formatSeconds(startSeconds))
+		args = append(args, "-noaccurate_seek", "-ss", formatSeconds(startSeconds))
 	}
-
 	audioMap := "0:a:0?"
 	if audioStreamIndex != nil {
 		audioMap = "0:" + strconv.Itoa(*audioStreamIndex)

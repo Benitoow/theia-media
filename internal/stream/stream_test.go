@@ -332,3 +332,52 @@ func TestAnSDROriginalRungHasNoFilter(t *testing.T) {
 		t.Errorf("a filter was added with nothing to do: %s", joined)
 	}
 }
+
+// The seek that put the sound four and a half seconds ahead of the picture.
+//
+// A copied video stream can only start on a keyframe. ffmpeg's accurate seek
+// trims the audio to the exact timestamp anyway, so the two streams start at
+// different moments in the film and the browser plays them as if they did not.
+// Measured on a real 4K file: picture at 3595.467, sound at 3599.98.
+func TestASeekingRemuxDoesNotSplitSoundFromPicture(t *testing.T) {
+	args := strings.Join(RemuxArgs("/films/dune.mkv", Decision{Audio: AudioTranscode}, 3600), " ")
+	if !strings.Contains(args, "-noaccurate_seek -ss 3600.000") {
+		t.Errorf("a seeking remux must turn accurate seek off: %s", args)
+	}
+	// Before -i, or ffmpeg reads it as an output option and ignores it here.
+	if strings.Index(args, "-noaccurate_seek") > strings.Index(args, "-i ") {
+		t.Errorf("-noaccurate_seek must precede -i: %s", args)
+	}
+}
+
+// And it is only paid when there is a seek to pay it for.
+func TestARemuxFromTheStartSeeksNotAtAll(t *testing.T) {
+	args := strings.Join(RemuxArgs("/films/dune.mkv", Decision{Audio: AudioCopy}, 0), " ")
+	if strings.Contains(args, "-noaccurate_seek") || strings.Contains(args, "-ss") {
+		t.Errorf("nothing to seek, so nothing should be said about seeking: %s", args)
+	}
+}
+
+// The transcode path decodes its video, so an accurate seek trims it exactly as
+// it trims the audio. Turning that off there would move the picture backwards
+// for no reason.
+func TestATranscodeKeepsItsAccurateSeek(t *testing.T) {
+	args := strings.Join(TranscodeArgs("/films/dune.mkv", Decision{Audio: AudioTranscode}, 3600,
+		"h264_amf", "d3d11va", 1080, nil, "smpte2084"), " ")
+	if strings.Contains(args, "-noaccurate_seek") {
+		t.Errorf("a transcode must keep its accurate seek: %s", args)
+	}
+	if !strings.Contains(args, "-ss 3600.000") {
+		t.Errorf("a transcode still seeks: %s", args)
+	}
+}
+
+// The audio-mapped variant is the one a real film actually takes, and it must
+// carry the same fix.
+func TestASeekingRemuxWithAChosenTrackIsAlsoAligned(t *testing.T) {
+	args := strings.Join(
+		RemuxArgsForAudio("/films/dune.mkv", Decision{Audio: AudioTranscode}, 3600, 1), " ")
+	if !strings.Contains(args, "-noaccurate_seek") {
+		t.Errorf("a mapped-track seek must be aligned too: %s", args)
+	}
+}

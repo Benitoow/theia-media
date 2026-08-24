@@ -298,6 +298,12 @@ resume will be its first real user.
 input and no output prints the stream table and exits non-zero on purpose, so
 the exit code is ignored and the table is parsed instead.
 
+**Amended by decision 90.** The seek described here trims the audio to the exact
+timestamp while the copied video starts on the keyframe before it, which is not
+a granularity cost but a desynchronisation: measured at 4.5 s on a real file and
+bounded by the keyframe interval. The remux path now passes `-noaccurate_seek`,
+so both streams start on the keyframe together.
+
 ## 17. When a film counts as watched
 
 **Decided.** Finished when the remaining time is under **two minutes**, or under
@@ -2802,6 +2808,65 @@ the first thing to put a label on a panel: a file badge is `--muted` on
 `--surface`, which is **5.12:1**, not the 5.42:1 the table states. Both clear AA.
 The script now carries a second section for text set on a surface, and the design
 system says 5.12 where it used to quote the wrong number.
+
+## 90. A copied stream can only start on a keyframe, so both streams start there
+
+**Decided post-v2.5.0, from a report that says exactly where to look:** normal
+playback is fine, and clicking anywhere in the seek bar — forward or backward —
+puts the sound a long way ahead of the picture.
+
+That sentence rules out most of the pipeline. There is no `-ss` in a playback
+that has not been seeked, so whatever this is, it belongs to the seek.
+
+**What it is.** `-ss` before `-i` seeks the demuxer to a keyframe. ffmpeg's
+accurate seek, which is the default, then trims each stream to the exact
+timestamp asked for. It can do that for audio, because audio is decoded on the
+way through. It cannot do it for a video stream being copied: a copy starts on a
+keyframe or it starts nowhere. So the two streams begin at different moments in
+the film, the container rebases both to zero, and the browser plays them as
+though they belonged together.
+
+Measured on the maintainer's own 4K file, asking for 3600:
+
+| | starts at | against the request |
+|---|---|---|
+| picture, copied | **3595.467 s** | 4.53 s behind |
+| sound, re-encoded | **3599.98 s** | on time |
+
+Asking for 3605 lands on the same keyframe, so the gap becomes 9.53 s. This
+file's keyframe interval is 10.4 s, and that is the ceiling.
+
+**How each number was obtained**, because two earlier attempts got this wrong.
+The picture was located by hashing the first output frame and matching it against
+frames of the source carrying absolute timestamps, so the answer does not depend
+on the seek being trusted. The sound was located by cross-correlating the output
+against a decode of the source taken with an **output-side** `-ss`, which decodes
+from the beginning and never touches the seek index — the only reference in this
+exercise that is not subject to the behaviour being measured. A first attempt
+used input-side seeks to build that reference and produced numbers that
+contradicted each other; a second mislabelled 5 ms windows as 10 ms and put the
+answer ten seconds out. Both were caught by running a control whose answer was
+known, which is the only reason the third one can be believed: the control lands
+on 3600.00 with r=0.997.
+
+**The fix is `-noaccurate_seek` on the remux path.** ffmpeg then starts every
+stream at the keyframe: measured again, picture at 3595.467 and sound at 3595.47,
+three milliseconds apart.
+
+**What it costs, stated plainly.** Playback resumes up to one keyframe interval
+before the point that was clicked, and the player's clock — which counts from
+what it asked for — is optimistic by the same amount, as is a resume position
+saved from it. Decision 16 already called that granularity inherent to stream
+copy; what changes is that both streams now pay it together instead of the
+picture paying it alone. A viewer landing four seconds early with the sound
+attached is an ordinary seek. A viewer landing on time with the sound four
+seconds ahead is a broken film.
+
+**The transcode path keeps its accurate seek**, and that is deliberate. Its video
+is decoded, so ffmpeg trims it exactly as it trims the audio. Verified on the
+same file and the same timestamp: the first transcoded frame is the source frame
+at 3600, not the keyframe before it — the two are visibly different shots, which
+is how it was checked.
 
 ## 8. Logistics
 
