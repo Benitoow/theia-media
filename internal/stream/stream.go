@@ -121,6 +121,21 @@ func Decide(path, videoCodec, audioCodec string) Decision {
 	video := strings.ToLower(videoCodec)
 	audio := strings.ToLower(audioCodec)
 
+	// What the audio needs is decided before the picture, because the answer is
+	// the same whichever path the picture takes -- and because an unsupported
+	// video has to carry it too.
+	//
+	// It did not, and that cost the sound. A decision whose mode is unsupported
+	// is now the *input* to a transcode (decision 58), so leaving Audio at its
+	// zero value meant TranscodeArgs saw no AudioTranscode and emitted
+	// `-c:a copy`: an MPEG-2 + AC3 file re-encoded into a picture with no sound.
+	// That is decision 1's bug, reappearing on the path opened to fix a
+	// different one.
+	audioAction := AudioCopy
+	if audio != "" && !browserAudio[audio] {
+		audioAction = AudioTranscode
+	}
+
 	switch {
 	case browserVideo[video]:
 		// Nothing to do to the picture.
@@ -128,9 +143,10 @@ func Decide(path, videoCodec, audioCodec string) Decision {
 		// Copyable into MP4, decodable by some browsers. Worth attempting.
 	default:
 		return Decision{
-			Mode: ModeUnsupported,
+			Mode:  ModeUnsupported,
+			Audio: audioAction,
 			Reason: "the video is " + videoCodec +
-				", which no browser decodes and which v1 does not re-encode",
+				", which no browser decodes and which needs an encoder that runs here",
 		}
 	}
 
@@ -139,8 +155,8 @@ func Decide(path, videoCodec, audioCodec string) Decision {
 		return Decision{Mode: ModeDirect, Reason: "the file plays as it is"}
 	}
 
-	decision := Decision{Mode: ModeRemux, Audio: AudioCopy, VideoRisky: riskyVideo[video]}
-	if audio != "" && !browserAudio[audio] {
+	decision := Decision{Mode: ModeRemux, Audio: audioAction, VideoRisky: riskyVideo[video]}
+	if audioAction == AudioTranscode {
 		// The case decision 1 exists for: an ordinary H.264 + AC3 MKV would
 		// otherwise remux into a film with a picture and no sound. Re-encoding
 		// audio costs about one core; re-encoding video is the furnace v1

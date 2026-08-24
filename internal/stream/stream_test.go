@@ -87,20 +87,31 @@ func TestDecide(t *testing.T) {
 			wantAudio: AudioCopy,
 		},
 		{
-			// Out of scope by decision 1: re-encoding video is the expensive
-			// one, and saying so beats pinning a CPU for two hours.
-			name:     "MPEG-2 would need a full transcode",
-			path:     "f.ts",
-			video:    "mpeg2video",
-			audio:    "ac3",
-			wantMode: ModeUnsupported,
+			// The picture needs an encoder that runs here (decision 58). The
+			// sound still needs what it always needed, and this decision is
+			// what a transcode is built from.
+			name:      "MPEG-2 needs a full transcode and still names its audio",
+			path:      "f.ts",
+			video:     "mpeg2video",
+			audio:     "ac3",
+			wantMode:  ModeUnsupported,
+			wantAudio: AudioTranscode,
 		},
 		{
-			name:     "VC-1 would need a full transcode",
-			path:     "f.mkv",
-			video:    "vc1",
-			audio:    "ac3",
-			wantMode: ModeUnsupported,
+			name:      "VC-1 needs a full transcode and still names its audio",
+			path:      "f.mkv",
+			video:     "vc1",
+			audio:     "ac3",
+			wantMode:  ModeUnsupported,
+			wantAudio: AudioTranscode,
+		},
+		{
+			name:      "an unsupported picture over friendly sound copies the sound",
+			path:      "f.mkv",
+			video:     "vc1",
+			audio:     "aac",
+			wantMode:  ModeUnsupported,
+			wantAudio: AudioCopy,
 		},
 	}
 
@@ -232,6 +243,28 @@ func TestAHardwareEncoderKeepsItsOwnSettings(t *testing.T) {
 			TranscodeArgs("/films/heat.mkv", Decision{}, 0, encoder, "", 720, nil), " ")
 		if strings.Contains(joined, "-preset") || strings.Contains(joined, "-threads") {
 			t.Errorf("%s was given libx264's arguments: %s", encoder, joined)
+		}
+	}
+}
+
+// The regression that this file exists to hold down.
+//
+// A decision whose mode is unsupported is the input to a transcode, not a dead
+// end, since decision 58. It once arrived there with no audio action at all, so
+// TranscodeArgs took the copy branch and wrote AC3 into an MP4: a film with a
+// picture and no sound, which is precisely what decision 1 was written to
+// prevent on the remux path.
+func TestATranscodedFilmKeepsItsSound(t *testing.T) {
+	for _, video := range []string{"mpeg2video", "vc1"} {
+		decision := Decide("/films/dvd.mkv", video, "ac3")
+		joined := strings.Join(
+			TranscodeArgs("/films/dvd.mkv", decision, 0, "libx264", "", 720, nil), " ")
+		if strings.Contains(joined, "-c:a copy") {
+			t.Errorf("%s + AC3 copies its audio into MP4, which is a silent film: %s",
+				video, joined)
+		}
+		if !strings.Contains(joined, "-c:a aac") {
+			t.Errorf("%s + AC3 does not re-encode its audio: %s", video, joined)
 		}
 	}
 }
