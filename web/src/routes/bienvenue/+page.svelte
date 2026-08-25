@@ -34,6 +34,14 @@
 </svelte:head>
 
 <main class="relative isolate min-h-screen overflow-hidden">
+	<!-- Centred on purpose, and the exception to the rule the other backdrops
+	     follow. This asset is 1920x1080, so on a 16/9 window it fits exactly and
+	     the framing decides nothing at all; only a wider window crops it. Rendered
+	     at 21/9 both ways: centred, the winged figure is cropped above the frame,
+	     which reads as framing. Framed from the top she appears -- with her face
+	     landing inside the navigation bar, which reads as a fault. Top alignment
+	     is already the furthest the picture can move down, so there is no third
+	     option. A head out of shot beats a head cut in half by a bar. -->
 	<img
 		src="/chrome/theia-onboarding.webp"
 		alt=""

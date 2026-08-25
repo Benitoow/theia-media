@@ -2868,6 +2868,63 @@ same file and the same timestamp: the first transcoded frame is the source frame
 at 3600, not the keyframe before it — the two are visibly different shots, which
 is how it was checked.
 
+## 91. The rule was written down and broken anyway, so it is checked instead
+
+**Decided post-v2.5.1, after the same fault was reported twice.**
+
+A full-bleed backdrop with no `object-position` centres itself. In a header two
+or three times wider than it is tall, that puts the subject exactly where the
+navigation pill floats. It was fixed once, in `Hero.svelte`, and written into the
+design system at the same time — and the film detail header, which has the same
+shape and the same bar over it, shipped centred regardless. So did the series
+one. The rule was correct, documented, and not applied, which is the whole
+argument of this entry.
+
+Measured at 1920×1080, against a bar 128px deep:
+
+| Backdrop | box | vertical overflow | centring hid |
+|---|---|---|---|
+| Film detail, 68svh | 734px | 338px | **169px** of headroom |
+| Series detail, 58svh | 626px | 446px | **223px** |
+| Home hero, 78svh | 842px | 230px | 115px |
+
+The detail headers had more to lose than the hero did, not less.
+
+**`web/scripts/check-backdrops.mjs` is the answer, not another paragraph.** It
+fails the frontend build — and therefore `build.ps1` and CI — when a picture
+pinned to every edge with `object-cover` does not say where it is framed. It
+reads both idioms the application uses: Tailwind utilities on the element, and a
+class in `app.css` setting `object-fit: cover`.
+
+It does **not** require `object-top`. It requires the choice to be deliberate,
+which is why `.chrome-scene-image` at `68% center` passes and why an accidental
+default does not. Anything genuinely exempt is named in the script with its
+reason, the way `contrast.mjs` carries the role of every token.
+
+**It was proved to fail before it was trusted.** The fault was reintroduced on
+the film page: the script exits 1 naming `src/routes/film/[id]/+page.svelte:207`,
+and `npm run prebuild` exits 1 with it. That step is not ceremony — the interface
+guard's fifth assertion, added one release earlier, was tested the same way and
+turned out **not** to catch the fault it was written for.
+
+**The welcome screen is an exception, and looking at it is what decided that.**
+Its asset is exactly 1920×1080, so on a 16/9 window it fits with no crop and the
+framing decides nothing; only a wider window crops it. Rendered at 21/9 both
+ways: centred, the winged figure is cropped above the frame, which reads as
+framing; from the top she appears with her face inside the bar, which reads as a
+fault. Top alignment is already the furthest that picture can move down, so there
+is no third option, and a head out of shot beats a head cut in half. It keeps
+`object-center` — explicit, so the guard passes it — with the reasoning in the
+file beside it.
+
+**Verified.** The film page was rendered at 1920×1080 and looked at: both faces
+now sit clear of the bar, where the reported screenshot had one of them entirely
+inside it. `object-position` computes to `50% 0%`. The series header takes the
+same one-word change and is covered by the guard and by the geometry above, but
+**was not looked at** — the throwaway library the guard runs against holds no
+series, and nothing here pretends otherwise.
+
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

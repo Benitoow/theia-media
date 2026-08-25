@@ -193,11 +193,18 @@
 			class="relative isolate overflow-hidden {backdrop ? 'min-h-[68svh]' : 'min-h-[34svh]'}"
 		>
 			{#if backdrop}
+				<!-- Framed from the top for the reason the home hero is: the
+				     navigation pill floats over the first 128px of this header and the
+				     poster is pulled up over its bottom 208px, so the headroom is the
+				     only part of the frame nothing else covers. Centring it put the
+				     subject behind the bar. The rule holds for every backdrop the bar
+				     floats over -- this header, the series one and Hero.svelte -- and is
+				     written down in the design system section 5. -->
 				<img
 					src={backdrop}
 					alt=""
 					fetchpriority="high"
-					class="absolute inset-0 -z-20 h-full w-full scale-[1.015] object-cover opacity-[0.72]"
+					class="absolute inset-0 -z-20 h-full w-full scale-[1.015] object-cover object-top opacity-[0.72]"
 				/>
 			{/if}
 			<div class="picture-veil picture-veil--detail"></div>

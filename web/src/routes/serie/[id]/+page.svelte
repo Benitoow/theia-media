@@ -122,7 +122,7 @@
 					src={backdrop}
 					alt=""
 					fetchpriority="high"
-					class="absolute inset-0 -z-20 h-full w-full scale-[1.015] object-cover opacity-[0.58]"
+					class="absolute inset-0 -z-20 h-full w-full scale-[1.015] object-cover object-top opacity-[0.58]"
 				/>
 			{/if}
 			<div class="picture-veil picture-veil--detail"></div>

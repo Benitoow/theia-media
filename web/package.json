@@ -6,7 +6,8 @@
 	"scripts": {
 		"dev": "vite dev",
 		"check:i18n": "node scripts/check-locales.mjs",
-		"prebuild": "npm run check:i18n",
+		"check:backdrops": "node scripts/check-backdrops.mjs",
+		"prebuild": "npm run check:i18n && npm run check:backdrops",
 		"build": "vite build",
 		"postbuild": "node scripts/keep-webdist.mjs",
 		"preview": "vite preview",

@@ -272,17 +272,44 @@ resulting contrast was measured on the composited pixels rather than judged:
 film page, both above the 4.5 AA floor.
 
 
-**The hero backdrop is framed from the top, not the centre.** A 16/9 still in a
-2.26/1 hero is cropped top and bottom, and where that crop is taken is a layout
-question rather than a per-image one: the navigation pill floats over the top
-128px and the title, metadata and buttons occupy the bottom, so the headroom is
-the only part of the frame nothing else is already drawn over. `object-top`
-spends the crop on the bottom, where the veil and the copy are, and moves the
-subject down out from under the bar. Measured at 1920×1080: 229px of vertical
-overflow, so centring buried 115px of headroom behind a bar 128px deep. Rendered
-and looked at for both backdrops in the test library — centred, a face and a
-helmet sat inside the bar; from the top, both clear it. On a phone the box is
-narrower than the picture, the crop is horizontal, and this changes nothing.
+**Every backdrop the navigation bar floats over is framed from the top, not the
+centre.** A 16/9 still in a header two or three times as wide as it is tall is
+cropped top and bottom, and where that crop is taken is a layout question rather
+than a per-image one: the pill floats over the top 128px and the title, metadata,
+poster and buttons occupy the bottom, so the headroom is the only part of the
+frame nothing else is already drawn over. `object-top` spends the crop on the
+bottom, where the veil and the copy are, and moves the subject down out from
+under the bar.
+
+Measured at 1920×1080, per header:
+
+| | box | vertical overflow | centring hid |
+|---|---|---|---|
+| Film detail, 68svh | 734px | 338px | **169px** of headroom |
+| Series detail, 58svh | 626px | 446px | **223px** |
+| Home hero, 78svh | 842px | 230px | **115px** |
+
+All three sit under a bar 128px deep. Rendered and looked at rather than
+inferred: centred, a face and a helmet sat inside the bar; from the top, both
+clear it. On a phone the box is narrower than the picture, the crop is
+horizontal, and this changes nothing.
+
+**Two deliberate exceptions**, both explicit rather than accidental.
+`.chrome-scene-image` is framed at `68% center` because its copy sits in the left
+third and the photograph belongs on the right. The welcome screen stays centred
+because its asset is exactly 1920×1080: on a 16/9 window it fits with no crop at
+all, and on a wider one, framing it from the top brings the winged figure's face
+into the bar rather than out of it — top alignment is already the furthest that
+picture can move down, so a head out of shot beats a head cut in half.
+
+**`web/scripts/check-backdrops.mjs` enforces this**, and exists because writing it
+down did not. The rule was documented when the home hero was fixed, and the film
+and series headers shipped centred anyway; the same fault was reported twice. The
+script fails the frontend build if a full-bleed picture — pinned to every edge
+with `object-cover`, in markup or in this stylesheet — does not say where it is
+framed. It does not insist on `object-top`; it insists the choice be made on
+purpose.
+
 Headings follow the same principle. `.hero-title` is the largest register and
 stays reserved for what fills a viewport. `.page-title` is one step down, sized
 from `--text-display`, for a page with work to do underneath its heading;
