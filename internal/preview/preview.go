@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/Benitoow/theia-media/internal/stream"
 )
@@ -225,18 +226,53 @@ func (m *Manager) start(key, source string, duration float64, colorTransfer stri
 		// Deliberately not the request's context: the request that asked is
 		// long gone by the time a two-hour film has been sampled, and cancelling
 		// on it would mean the sheet is never built for anybody.
-		ctx := context.Background()
+		//
+		// It does need an end, though, and it had none. One encode runs at a
+		// time, so a file ffmpeg cannot finish held that slot for the life of the
+		// process and no other film ever got a strip -- a comfort failing quietly
+		// for the whole library because of one bad file.
+		ctx, cancel := context.WithTimeout(context.Background(), buildTimeout(duration))
+		defer cancel()
 
 		m.slot <- struct{}{}
 		defer func() { <-m.slot }()
 
 		if err := m.build(ctx, key, source, duration, colorTransfer); err != nil {
-			m.log.Warn("a seek preview could not be built",
-				"source", source, "error", err)
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				m.log.Warn("a seek preview took too long and was given up on",
+					"source", source, "allowed", buildTimeout(duration))
+			} else {
+				m.log.Warn("a seek preview could not be built",
+					"source", source, "error", err)
+			}
 			return
 		}
 		failed = false
 	}()
+}
+
+// buildTimeout is how long one strip may take.
+//
+// Measured rather than picked: the 2 h 35 4K HDR file this was sized against
+// takes 217 s, which is a keyframe-only decode of a 13.9 GB source plus a tone
+// map. That is 2.3 per cent of its own running time, so the allowance is five per
+// cent -- a little over twice what the real case needs.
+//
+// The floor exists because a short film is not proportionally cheaper: the cost
+// is dominated by reading the file, not by its length. The ceiling exists
+// because past a quarter of an hour the honest answer is that this file is not
+// going to produce a strip, and the slot is worth more to the next film.
+func buildTimeout(duration float64) time.Duration {
+	// Whole seconds, so the value is predictable and testable rather than
+	// carrying the float noise of a duration measured off a container.
+	allowed := time.Duration(math.Round(duration/20)) * time.Second
+	if allowed < 2*time.Minute {
+		return 2 * time.Minute
+	}
+	if allowed > 15*time.Minute {
+		return 15 * time.Minute
+	}
+	return allowed
 }
 
 func (m *Manager) build(ctx context.Context, key, source string, duration float64,

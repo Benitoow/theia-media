@@ -262,7 +262,7 @@ func (s *Server) handleMovieFileStreamRemux(w http.ResponseWriter, r *http.Reque
 		// The furnace is lit once at a time in software. Refusing is the honest
 		// answer: two concurrent software transcodes do not run at half speed,
 		// they both stall, and nobody watching either one can tell why.
-		release, got := s.transcodes.acquire()
+		release, got := s.transcodes.acquire(stream.ToneMap(file.Media.Video.ColorTransfer))
 		if !got {
 			writeJSONError(w, http.StatusServiceUnavailable, "transcode_busy")
 			return
@@ -305,9 +305,14 @@ func (s *Server) handleMovieFileStreamRemux(w http.ResponseWriter, r *http.Reque
 	case decision.Mode == stream.ModeTranscode:
 		// Probed on the first transcode and remembered, like the encoder. An
 		// empty answer means decode on the CPU, which is correct everywhere.
-		args = stream.TranscodeArgs(file.Path, decision, start,
-			encoder.Name, s.ffmpeg.HardwareDecoder(r.Context()), wantedHeight, audioStreamIndex,
-			file.Media.Video.ColorTransfer)
+		args = stream.TranscodeArgs(file.Path, decision, start, stream.TranscodeOptions{
+			Encoder:          encoder.Name,
+			HWAccel:          s.ffmpeg.HardwareDecoder(r.Context()),
+			Height:           wantedHeight,
+			SourceHeight:     file.Media.Video.Height,
+			AudioStreamIndex: audioStreamIndex,
+			ColorTransfer:    file.Media.Video.ColorTransfer,
+		})
 	case audioStreamIndex != nil:
 		args = stream.RemuxArgsForAudio(file.Path, decision, start, *audioStreamIndex)
 	default:

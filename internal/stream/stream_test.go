@@ -206,7 +206,7 @@ func TestRemuxArgsForAudioMapsOnlyTheSelectedAbsoluteStream(t *testing.T) {
 // software one is where the arguments actually decide whether a modest machine
 // keeps up with playback.
 func TestTheSoftwareEncoderIsNotTunedForAVideoCall(t *testing.T) {
-	args := TranscodeArgs("/films/heat.mkv", Decision{Audio: AudioTranscode}, 0, "libx264", "", 720, nil, "")
+	args := TranscodeArgs("/films/heat.mkv", Decision{Audio: AudioTranscode}, 0, TranscodeOptions{Encoder: "libx264", Height: 720})
 
 	joined := strings.Join(args, " ")
 	if strings.Contains(joined, "zerolatency") {
@@ -240,7 +240,7 @@ func TestTheThreadCapNeverAsksForMoreThanTheMachineHas(t *testing.T) {
 func TestAHardwareEncoderKeepsItsOwnSettings(t *testing.T) {
 	for _, encoder := range []string{"h264_amf", "h264_nvenc", "h264_qsv", "h264_mf"} {
 		joined := strings.Join(
-			TranscodeArgs("/films/heat.mkv", Decision{}, 0, encoder, "", 720, nil, ""), " ")
+			TranscodeArgs("/films/heat.mkv", Decision{}, 0, TranscodeOptions{Encoder: encoder, Height: 720}), " ")
 		if strings.Contains(joined, "-preset") || strings.Contains(joined, "-threads") {
 			t.Errorf("%s was given libx264's arguments: %s", encoder, joined)
 		}
@@ -258,7 +258,7 @@ func TestATranscodedFilmKeepsItsSound(t *testing.T) {
 	for _, video := range []string{"mpeg2video", "vc1"} {
 		decision := Decide("/films/dvd.mkv", video, "ac3")
 		joined := strings.Join(
-			TranscodeArgs("/films/dvd.mkv", decision, 0, "libx264", "", 720, nil, ""), " ")
+			TranscodeArgs("/films/dvd.mkv", decision, 0, TranscodeOptions{Encoder: "libx264", Height: 720}), " ")
 		if strings.Contains(joined, "-c:a copy") {
 			t.Errorf("%s + AC3 copies its audio into MP4, which is a silent film: %s",
 				video, joined)
@@ -274,7 +274,7 @@ func TestAnHDRSourceIsToneMapped(t *testing.T) {
 	for _, transfer := range []string{"smpte2084", "arib-std-b67", "SMPTE2084", " smpte2084 "} {
 		args := strings.Join(
 			TranscodeArgs("/films/dune.mkv", Decision{Audio: AudioTranscode}, 0,
-				"h264_amf", "d3d11va", 1080, nil, transfer), " ")
+				TranscodeOptions{Encoder: "h264_amf", HWAccel: "d3d11va", Height: 1080, ColorTransfer: transfer}), " ")
 		if !strings.Contains(args, "tonemap=tonemap=hable") {
 			t.Errorf("transfer %q is not tone mapped: %s", transfer, args)
 		}
@@ -295,7 +295,7 @@ func TestAnSDRSourceIsLeftAlone(t *testing.T) {
 	for _, transfer := range []string{"", "bt709", "bt470bg", "unknown"} {
 		args := strings.Join(
 			TranscodeArgs("/films/heat.mkv", Decision{Audio: AudioTranscode}, 0,
-				"h264_amf", "", 720, nil, transfer), " ")
+				TranscodeOptions{Encoder: "h264_amf", Height: 720, ColorTransfer: transfer}), " ")
 		if strings.Contains(args, "tonemap") || strings.Contains(args, "zscale") {
 			t.Errorf("transfer %q was tone mapped and should not have been: %s", transfer, args)
 		}
@@ -309,7 +309,7 @@ func TestAnSDRSourceIsLeftAlone(t *testing.T) {
 // scale. It must not emit an empty -vf.
 func TestTheOriginalRungMapsWithoutScaling(t *testing.T) {
 	args := TranscodeArgs("/films/dune.mkv", Decision{Audio: AudioTranscode}, 0,
-		"h264_amf", "d3d11va", 0, nil, "smpte2084")
+		TranscodeOptions{Encoder: "h264_amf", HWAccel: "d3d11va", ColorTransfer: "smpte2084", SourceHeight: 1604})
 	joined := strings.Join(args, " ")
 	if !strings.Contains(joined, "tonemap=tonemap=hable") {
 		t.Errorf("the original rung is not tone mapped: %s", joined)
@@ -327,7 +327,7 @@ func TestTheOriginalRungMapsWithoutScaling(t *testing.T) {
 // An SDR original rung asks for no filter at all.
 func TestAnSDROriginalRungHasNoFilter(t *testing.T) {
 	joined := strings.Join(TranscodeArgs("/films/heat.mkv", Decision{}, 0,
-		"libx264", "", 0, nil, ""), " ")
+		TranscodeOptions{Encoder: "libx264", SourceHeight: 1080}), " ")
 	if strings.Contains(joined, "-vf") {
 		t.Errorf("a filter was added with nothing to do: %s", joined)
 	}
@@ -363,7 +363,7 @@ func TestARemuxFromTheStartSeeksNotAtAll(t *testing.T) {
 // for no reason.
 func TestATranscodeKeepsItsAccurateSeek(t *testing.T) {
 	args := strings.Join(TranscodeArgs("/films/dune.mkv", Decision{Audio: AudioTranscode}, 3600,
-		"h264_amf", "d3d11va", 1080, nil, "smpte2084"), " ")
+		TranscodeOptions{Encoder: "h264_amf", HWAccel: "d3d11va", Height: 1080, ColorTransfer: "smpte2084"}), " ")
 	if strings.Contains(args, "-noaccurate_seek") {
 		t.Errorf("a transcode must keep its accurate seek: %s", args)
 	}
@@ -379,5 +379,66 @@ func TestASeekingRemuxWithAChosenTrackIsAlsoAligned(t *testing.T) {
 		RemuxArgsForAudio("/films/dune.mkv", Decision{Audio: AudioTranscode}, 3600, 1), " ")
 	if !strings.Contains(args, "-noaccurate_seek") {
 		t.Errorf("a mapped-track seek must be aligned too: %s", args)
+	}
+}
+
+// A 4K source used to be offered exactly one step down, and re-encoded at its
+// own size on a bitrate sized for a quarter of the pixels.
+func TestAFourKSourceIsOfferedMoreThanOneStepDown(t *testing.T) {
+	got := AvailableHeights(2160)
+	want := []int{1440, 1080, 720, 480, 360}
+	if len(got) != len(want) {
+		t.Fatalf("heights for 2160 = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("heights for 2160 = %v, want %v", got, want)
+		}
+	}
+	// And nothing at or above the source, which is the rule that was already
+	// there and must survive a new rung being added above 1080.
+	for _, source := range []int{1080, 1440} {
+		for _, height := range AvailableHeights(source) {
+			if height >= source {
+				t.Errorf("source %d was offered %d", source, height)
+			}
+		}
+	}
+}
+
+// The bitrate follows the picture that is actually produced, including when the
+// rung is "leave it alone" and the picture is the source's own size.
+func TestTheBitrateFollowsThePictureItIsFor(t *testing.T) {
+	cases := []struct {
+		name           string
+		height, source int
+		wantRate       string
+	}{
+		{"4K kept at its own size", 0, 2160, "-b:v 20M"},
+		{"4K asked for 1440", 1440, 2160, "-b:v 12M"},
+		{"4K asked for 1080", 1080, 2160, "-b:v 8M"},
+		{"1080p kept at its own size", 0, 1080, "-b:v 8M"},
+		{"720 rung", 720, 1080, "-b:v 5M"},
+		// A file nobody measured still has to produce something sane.
+		{"unmeasured source", 0, 0, "-b:v 8M"},
+	}
+	for _, c := range cases {
+		args := strings.Join(TranscodeArgs("/films/x.mkv", Decision{}, 0, TranscodeOptions{
+			Encoder: "h264_amf", Height: c.height, SourceHeight: c.source,
+		}), " ")
+		if !strings.Contains(args, c.wantRate) {
+			t.Errorf("%s: want %q in %s", c.name, c.wantRate, args)
+		}
+	}
+}
+
+// The scale filter still follows the rung, not the source: sizing a bitrate for
+// the source must not start upscaling the picture.
+func TestSizingTheBitrateDoesNotResizeThePicture(t *testing.T) {
+	args := strings.Join(TranscodeArgs("/films/x.mkv", Decision{}, 0, TranscodeOptions{
+		Encoder: "h264_amf", Height: 0, SourceHeight: 2160,
+	}), " ")
+	if strings.Contains(args, "scale=-2:") {
+		t.Errorf("the original rung must not scale: %s", args)
 	}
 }

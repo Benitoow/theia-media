@@ -48,7 +48,7 @@ const (
 
 // Qualities are the heights offered, largest first. Nothing above the source is
 // ever listed: upscaling spends a GPU to invent detail that is not there.
-var Qualities = []int{1080, 720, 480, 360}
+var Qualities = []int{1440, 1080, 720, 480, 360}
 
 // AudioAction is what happens to the audio track when remuxing.
 type AudioAction string
@@ -288,20 +288,48 @@ const ToneMapFilter = "zscale=t=linear:npl=100,format=gbrpf32le," +
 	"zscale=p=bt709,tonemap=tonemap=hable:desat=0," +
 	"zscale=t=bt709:m=bt709:r=tv,format=yuv420p"
 
-// TranscodeArgs re-encodes the picture to H.264 at a target height.
+// TranscodeOptions is everything the picture path needs to know beyond the file
+// and where to start.
 //
-// encoder comes from a probe, never from a list (see ffmpeg.Capabilities).
-// hwaccel likewise, and the empty string is a real answer meaning "decode on the
-// CPU" -- see ffmpeg.HardwareDecoder for why that is often the right one.
-// Height zero keeps the source size, which is what "Original" means for a file
-// whose only problem is a codec the browser refuses.
-func TranscodeArgs(path string, d Decision, startSeconds float64, encoder, hwaccel string, height int, audioStreamIndex *int, colorTransfer string) []string {
+// It is a struct rather than more parameters because the list had reached eight
+// and every one of them was a bare string or int: a call site could swap the
+// encoder and the hardware decoder without the compiler noticing.
+type TranscodeOptions struct {
+	// Encoder comes from a probe, never from a list -- see ffmpeg.Capabilities.
+	Encoder string
+
+	// HWAccel likewise, and the empty string is a real answer meaning "decode on
+	// the CPU" -- see ffmpeg.HardwareDecoder for why that is often the right one.
+	HWAccel string
+
+	// Height is the rung asked for. Zero keeps the source size, which is what
+	// "Original" means for a file whose only problem is a codec the browser
+	// refuses.
+	Height int
+
+	// SourceHeight is what the file measures. It exists so that a rung of zero
+	// can still be given a bitrate sized for the picture it will actually
+	// produce: before this, a 4K source kept at its own size was handed the
+	// 1080p figure.
+	SourceHeight int
+
+	// AudioStreamIndex maps one absolute stream. Nil means the first audio
+	// track, whatever it is.
+	AudioStreamIndex *int
+
+	// ColorTransfer decides whether the picture has to be tone mapped -- see
+	// ToneMap.
+	ColorTransfer string
+}
+
+// TranscodeArgs re-encodes the picture to H.264 at a target height.
+func TranscodeArgs(path string, d Decision, startSeconds float64, o TranscodeOptions) []string {
 	args := []string{"-hide_banner", "-loglevel", "error"}
 
 	// An input option, so it has to precede -i. Before -ss as well, so the seek
 	// is performed by the accelerated demux path rather than after it.
-	if hwaccel != "" {
-		args = append(args, "-hwaccel", hwaccel)
+	if o.HWAccel != "" {
+		args = append(args, "-hwaccel", o.HWAccel)
 	}
 
 	if startSeconds > 0 {
@@ -309,19 +337,23 @@ func TranscodeArgs(path string, d Decision, startSeconds float64, encoder, hwacc
 	}
 
 	audioMap := "0:a:0?"
-	if audioStreamIndex != nil {
-		audioMap = "0:" + strconv.Itoa(*audioStreamIndex)
+	if o.AudioStreamIndex != nil {
+		audioMap = "0:" + strconv.Itoa(*o.AudioStreamIndex)
 	}
 
 	args = append(args,
 		"-i", path,
 		"-map", "0:v:0",
 		"-map", audioMap,
-		"-c:v", encoder,
+		"-c:v", o.Encoder,
 	)
 
+	// The picture the encoder will actually produce, which is what a bitrate has
+	// to be sized for. A rung of zero means the source keeps its own size.
+	picture := resolvedHeight(o.Height, o.SourceHeight)
+
 	var filters []string
-	if height > 0 {
+	if o.Height > 0 {
 		// -2 keeps the aspect ratio and rounds the width to an even number,
 		// which every H.264 encoder requires and some crash without.
 		//
@@ -332,9 +364,9 @@ func TranscodeArgs(path string, d Decision, startSeconds float64, encoder, hwacc
 		// re-encode should too; a fractional SAR is a decoder's problem for a
 		// rounding error nobody can see. One even pixel of width is cheaper than
 		// non-square pixels.
-		filters = append(filters, "scale=-2:"+strconv.Itoa(height)+",setsar=1")
+		filters = append(filters, "scale=-2:"+strconv.Itoa(o.Height)+",setsar=1")
 	}
-	if ToneMap(colorTransfer) {
+	if ToneMap(o.ColorTransfer) {
 		// After the scale rather than before it, and that order is a
 		// measurement. Tone mapping is the one thing here a GPU encoder does not
 		// help with: zscale converts to linear light in 32-bit float on the CPU,
@@ -357,9 +389,9 @@ func TranscodeArgs(path string, d Decision, startSeconds float64, encoder, hwacc
 	}
 
 	args = append(args,
-		"-b:v", targetBitrate(height),
-		"-maxrate", targetBitrate(height),
-		"-bufsize", targetBufsize(height),
+		"-b:v", targetBitrate(picture),
+		"-maxrate", targetBitrate(picture),
+		"-bufsize", targetBufsize(picture),
 		// Two seconds between keyframes. Seeking a fragmented stream lands on
 		// one, so this is how far a seek can miss; longer is cheaper and reads
 		// as imprecision.
@@ -369,7 +401,7 @@ func TranscodeArgs(path string, d Decision, startSeconds float64, encoder, hwacc
 		"-pix_fmt", "yuv420p",
 	)
 
-	if encoder == "libx264" {
+	if o.Encoder == "libx264" {
 		// veryfast is the honest setting for something that has to keep up with
 		// playback. Measured at 1.04x real time on a 1080p HEVC source; a
 		// slower preset would look better and stall.
@@ -392,9 +424,23 @@ func TranscodeArgs(path string, d Decision, startSeconds float64, encoder, hwacc
 // targetBitrate is deliberately generous. This is a household network moving
 // bytes between two rooms, not a CDN paying for them, and a starved encoder is
 // the one thing worse than no quality choice at all.
+//
+// It used to stop at 1080p and hand every larger picture the same 8 Mb/s, which
+// is the 1080p figure applied to four times the pixels. That was not a judgement
+// anybody made; it was the top of a table nobody had needed to extend. Measured
+// on the 4K source that prompted this: the encoder produced 7734 kb/s against an
+// 8 Mb/s ceiling, which is an encoder pressed flat against its limit rather than
+// one given room.
+//
+// height is the picture being produced. Zero means the source's own size, so the
+// caller passes that instead -- see resolvedHeight.
 func targetBitrate(height int) string {
 	switch {
-	case height <= 0 || height >= 1080:
+	case height >= 2160:
+		return "20M"
+	case height >= 1440:
+		return "12M"
+	case height >= 1080:
 		return "8M"
 	case height >= 720:
 		return "5M"
@@ -405,9 +451,15 @@ func targetBitrate(height int) string {
 	}
 }
 
+// Two seconds of the bitrate above, which is what -g 48 makes a keyframe
+// interval worth.
 func targetBufsize(height int) string {
 	switch {
-	case height <= 0 || height >= 1080:
+	case height >= 2160:
+		return "40M"
+	case height >= 1440:
+		return "24M"
+	case height >= 1080:
 		return "16M"
 	case height >= 720:
 		return "10M"
@@ -416,6 +468,20 @@ func targetBufsize(height int) string {
 	default:
 		return "2400k"
 	}
+}
+
+// resolvedHeight is the picture the encoder will actually produce: the requested
+// rung, or the source's own height when the rung is "leave it alone". A source
+// whose height was never measured falls back to 1080, which is what the table
+// above did for everything before it learned about 4K.
+func resolvedHeight(requested, source int) int {
+	if requested > 0 {
+		return requested
+	}
+	if source > 0 {
+		return source
+	}
+	return 1080
 }
 
 // AvailableHeights lists what can be offered for a source of this height.

@@ -173,6 +173,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/stream/{id}/remux", s.handleStreamRemux)
 	mux.HandleFunc("GET /api/stream/{id}", s.handleStreamDirect)
 	mux.HandleFunc("GET /api/stream/{id}/files/{file_id}/info", s.handleMovieFileStreamInfo)
+	mux.HandleFunc("GET /api/stream/{id}/files/{file_id}/seek", s.handleMovieFileSeekStart)
 	mux.HandleFunc("GET /api/stream/{id}/files/{file_id}/remux", s.handleMovieFileStreamRemux)
 	mux.HandleFunc("GET /api/stream/{id}/files/{file_id}", s.handleMovieFileStreamDirect)
 	// Episode streams live below their library resource. Putting them under

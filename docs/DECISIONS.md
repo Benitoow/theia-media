@@ -2925,6 +2925,88 @@ same one-word change and is covered by the guard and by the geometry above, but
 series, and nothing here pretends otherwise.
 
 
+## 92. Four debts on the playback path, paid with the numbers that sized them
+
+**Decided in v2.6, and every figure here was measured on the 13.9 GB 4K HDR file
+rather than chosen.**
+
+### Where a seek really begins is a question with its own route
+
+Decision 90 made both streams start on the keyframe, which keeps a seeked film
+together and leaves the player counting from the moment it asked for rather than
+the one it got — up to 10.4 s later on this file, always in the same direction,
+and saved as the resume position.
+
+**The elegant fix does not exist, and that was worth finding out first.** Letting
+the browser's own clock be the film clock needs the stream to carry absolute
+timestamps. It cannot: the fragmented MP4 muxer rebases everything to zero on the
+way out, verified under `-copyts` and again under `-copyts -avoid_negative_ts
+disabled`. Both produced a container starting at 0.083/0.000 exactly like the
+plain remux. Nobody should spend an afternoon on that route again.
+
+So `GET /api/stream/{id}/files/{file_id}/seek?t=` answers it instead, from one
+short ffmpeg run: `-copyts -noaccurate_seek -c copy -frames:v 1 -f framecrc`,
+which is an index seek and a single packet read rather than a decode. Measured
+through the running server: **165–181 ms**, and correct — 3600 and 3605 both
+answer 3595.384, which is the keyframe they share.
+
+**The timebase is read, not assumed**, and that is the whole fragile part.
+Matroska reports `1/1000` on the copied video stream while the picture runs at
+`24000/1001`; assuming the frame rate turned 3595 s into 149957 s on the first
+attempt.
+
+It is deliberately **not** asked before the stream. 170 ms is small but it is
+paid in the one currency a seek cannot spare, so the player asks for both at once
+and corrects its clock when the answer lands.
+
+### A bitrate for the picture being made
+
+`targetBitrate` stopped at 1080p and handed everything larger the same 8 Mb/s —
+the 1080p figure applied to four times the pixels, which was the top of a table
+nobody had needed to extend rather than a judgement. Measured: the 4K transcode
+produced **7734 kb/s against an 8 Mb/s ceiling**, an encoder pressed flat against
+its limit.
+
+The table now runs to 2160p, and takes the source height so that "leave it at its
+own size" is sized for the picture it will actually produce. `Qualities` gains
+**1440**, because a 4K source could previously only fall to 1080 in one step.
+
+`TranscodeArgs` became `TranscodeOptions` in the same change: the list had reached
+eight positional parameters, most of them bare strings, and a call site could have
+swapped the encoder and the hardware decoder without the compiler noticing.
+
+### A tone-mapped transcode costs the whole machine
+
+Decision 87 measured it and left it: tone mapping is zscale work on the CPU that a
+GPU encoder does not relieve, so an HDR transcode runs at 1.09x real time whatever
+encoder is chosen. The limiter counted it as one of three hardware slots, so two
+concurrent HDR playbacks would have stalled together with nobody able to say why.
+
+`acquire` now takes whether the picture is being tone mapped, and an HDR transcode
+costs the entire budget. One runs; anything else is refused with a code the
+interface already explains, which is decision 58's answer rather than a queue
+nobody can see.
+
+### A preview build that could not end
+
+`internal/preview` runs one encode at a time on purpose, and gave it
+`context.Background()` — no deadline at all. A file ffmpeg could not finish held
+that slot for the life of the process, and no other film in the library ever got
+a strip.
+
+The allowance is sized from a real build: **217 s** for this 2 h 35 4K HDR file,
+which is 2.3 per cent of its own running time. The ceiling is five per cent, a
+little over twice what the real case needs, with a two-minute floor because the
+cost is dominated by reading the file rather than by its length, and a
+fifteen-minute cap because past that the honest answer is that this file is not
+going to produce a strip and the slot is worth more to the next film.
+
+**And the strip was looked at**, which had never happened: decision 87 said the
+preview runs the same tone-mapping chain and nobody had checked. A hundred tiles
+of Dune, correctly mapped — skin tones, the gold of the desert, none of the grey
+the chain exists to prevent.
+
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

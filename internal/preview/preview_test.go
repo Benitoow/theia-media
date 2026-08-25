@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 // absentFFmpeg is the ordinary state of a fresh installation: a library of
@@ -127,5 +128,41 @@ func TestAFileThatCannotBeBuiltIsNotRetriedForever(t *testing.T) {
 	m.mu.Unlock()
 	if building {
 		t.Error("a build was started for a file already known to fail")
+	}
+}
+
+// The build had no end at all, and one encode runs at a time: a file ffmpeg
+// could not finish held that slot for the life of the process and no other film
+// ever got a strip.
+func TestBuildTimeoutIsSizedFromTheFilm(t *testing.T) {
+	cases := []struct {
+		name     string
+		duration float64
+		want     time.Duration
+	}{
+		// The file this was measured against: 2 h 35, and a real build of 217 s.
+		// The allowance has to clear that with room, and does -- 466 s.
+		{"a 4K feature", 9326.61, 466 * time.Second},
+		// Short films are not proportionally cheaper: the cost is reading the
+		// file, not its length.
+		{"a short", 300, 2 * time.Minute},
+		{"the shortest thing worth a strip", 121, 2 * time.Minute},
+		// And past a quarter of an hour the slot is worth more to the next film.
+		{"something absurd", 60 * 60 * 20, 15 * time.Minute},
+	}
+	for _, c := range cases {
+		if got := buildTimeout(c.duration); got != c.want {
+			t.Errorf("%s (%.0fs): timeout = %v, want %v", c.name, c.duration, got, c.want)
+		}
+	}
+}
+
+// The measured build must sit comfortably inside its own allowance, or the
+// timeout is a way of never producing a strip for a real film.
+func TestTheMeasuredBuildFitsInsideItsAllowance(t *testing.T) {
+	const measured = 217 * time.Second // the 4K HDR file, timed
+	allowed := buildTimeout(9326.61)
+	if allowed < 2*measured {
+		t.Errorf("allowance %v leaves less than double the measured %v", allowed, measured)
 	}
 }
