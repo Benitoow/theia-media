@@ -1,49 +1,49 @@
 {
-  "version": "v2.5.1",
-  "publishedAt": "2026-08-24T22:33:28Z",
-  "url": "https://github.com/Benitoow/theia-media/releases/tag/v2.5.1",
+  "version": "v2.5.2",
+  "publishedAt": "2026-08-25T11:08:00Z",
+  "url": "https://github.com/Benitoow/theia-media/releases/tag/v2.5.2",
   "assets": [
     {
       "file": "theia-windows-amd64.exe",
       "platform": "windows",
       "architecture": "x64",
       "size": 17980928,
-      "sha256": "ea3531cea19b5030d5b610a922adbb6a9d5164d53d161e00fb7b853d89cdf6df"
+      "sha256": "7ad839f149195037dfb1d62c53d67598a293d3af98a524bb67314df9f52e1392"
     },
     {
       "file": "theia-windows-arm64.exe",
       "platform": "windows",
       "architecture": "ARM64",
       "size": 16792064,
-      "sha256": "17c7dee692b7ae8e89b6ddad81cfdba162a1a26ca99379f00ffe5f8bc0c29d08"
+      "sha256": "57d7b5aa7df3e88335e0c3341e780f244480641384d9c553e24ff7ae16fcb3bc"
     },
     {
       "file": "theia-darwin-arm64",
       "platform": "macos",
       "architecture": "Apple Silicon",
       "size": 16961730,
-      "sha256": "c2286bbb1fa1358dc0ffe2fb542a781d17567f02c5701c91e4999035ba736b3b"
+      "sha256": "29739a6a766420a8067daaf57be6b30df3e6bc015dd1fb062f8ae3bc0284661c"
     },
     {
       "file": "theia-darwin-amd64",
       "platform": "macos",
       "architecture": "Intel",
       "size": 17788896,
-      "sha256": "632b6bb3a6329c7ae03fa830ddcc40f703767cc1d54449ac13dc16fe35c3b3c1"
+      "sha256": "c97535cd588aff3f125510986a4e75205295ce71e1d9395362c44a17f1cb2e8b"
     },
     {
       "file": "theia-linux-amd64",
       "platform": "linux",
       "architecture": "x64",
       "size": 17555618,
-      "sha256": "b909fcc5ef9db0de5ebf58005fb1070aa5463f9404fa0ad4bcad1eea48c6df16"
+      "sha256": "935e11fc35d89654e0767a980e99868f2e22d08fd0783c0d584551b3b2f820e6"
     },
     {
       "file": "theia-linux-arm64",
       "platform": "linux",
       "architecture": "ARM64",
       "size": 16646306,
-      "sha256": "8ecd7ca088cb009d140e2465406d1ee76a550326a107083de7c31b6820d41c15"
+      "sha256": "d21e35c44d3d48c1da1e96997837e54f2710188c6c13759ab1d86339c4919825"
     }
   ]
 }
