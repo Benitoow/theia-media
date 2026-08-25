@@ -16,6 +16,7 @@
 	import { profiles } from '$lib/profiles.svelte.js';
 	import { codecPlayback } from '$lib/codec-playback.svelte.js';
 	import Icon from './Icon.svelte';
+	import PlayerPreviewStrip from './PlayerPreviewStrip.svelte';
 
 	// fileId and audioTrackId come from the chooser on the film page. When they
 	// are absent the player falls back to the v1 routes, which the server still
@@ -142,49 +143,6 @@
 	// for, and every failure -- no ffmpeg, a file too short, a build still
 	// running -- ends with the timestamp alone, which is what the bar showed
 	// before this existed.
-	let preview = $state(null);
-	let previewWidth = $state(0);
-
-	const previewTile = $derived.by(() => {
-		if (!preview || hoverRatio === null || duration <= 0 || !previewWidth) return null;
-		const index = Math.min(
-			preview.manifest.count - 1,
-			Math.max(0, Math.floor((hoverRatio * duration) / preview.manifest.interval_seconds))
-		);
-		const column = index % preview.manifest.columns;
-		const row = Math.floor(index / preview.manifest.columns);
-		const height = preview.manifest.tile_height;
-		return {
-			width: previewWidth,
-			height,
-			// Background offsets are negative: the sheet is moved behind a
-			// window the size of one tile, not cropped.
-			x: -column * previewWidth,
-			y: -row * height,
-			sheetWidth: previewWidth * preview.manifest.columns,
-			sheetHeight: height * preview.manifest.rows
-		};
-	});
-
-	// The tile width is measured off the loaded sheet rather than sent: the
-	// pinned ffmpeg build ships no ffprobe, so the server cannot say what the
-	// source's aspect made it without guessing one.
-	function onSheetLoaded(event) {
-		const image = event.currentTarget;
-		if (!preview || !image.naturalWidth) return;
-		previewWidth = Math.round(image.naturalWidth / preview.manifest.columns);
-	}
-
-	async function loadPreview() {
-		try {
-			const body = await getJSON(`${base}/preview`);
-			if (body.state !== 'ready' || !body.manifest) return;
-			preview = body;
-		} catch {
-			// No preview for this file, and nothing to say about it.
-		}
-	}
-
 	// Controls fade out during playback and come back on any sign of life. A
 	// player that keeps its furniture on screen over a film is a preview window,
 	// not a player.
@@ -260,10 +218,6 @@
 
 		duration = info.duration_seconds || 0;
 
-		// Asked once, never awaited. A sheet that does not exist yet is being
-		// built for the next time this film is opened; nothing here waits for it
-		// and nothing here fails without it.
-		loadPreview();
 
 		// A film finished last time starts over rather than resuming two minutes
 		// from the credits.
@@ -1469,33 +1423,7 @@
 				</div>
 				<div class="scrub-handle" style="left: {progressPercent}%"></div>
 
-				{#if hoverRatio !== null && duration > 0}
-					<span class="scrub-preview" style="left: {hoverRatio * 100}%">
-						{#if previewTile}
-							<span
-								class="scrub-frame"
-								style="width: {previewTile.width}px; height: {previewTile.height}px;
-								       background-image: url({preview.sheet_url});
-								       background-size: {previewTile.sheetWidth}px {previewTile.sheetHeight}px;
-								       background-position: {previewTile.x}px {previewTile.y}px"
-							></span>
-						{/if}
-						{formatTime(hoverRatio * duration)}
-					</span>
-				{/if}
-
-				<!-- Loaded off-screen purely to measure it. The tiles themselves are
-				     drawn as a background offset, which is one decode for the whole
-				     strip instead of one image element per frame. -->
-				{#if preview}
-					<img
-						src={preview.sheet_url}
-						alt=""
-						aria-hidden="true"
-						class="scrub-sheet-probe"
-						onload={onSheetLoaded}
-					/>
-				{/if}
+				<PlayerPreviewStrip {base} {hoverRatio} {duration} />
 			</div>
 
 			<div class="player-buttons">

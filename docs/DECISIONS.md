@@ -3100,10 +3100,17 @@ file whose keyframe is at 14 s now shows 0:14.
 run by `node --test` — no browser, no new dependency. None of this was testable
 while it lived inside the component.
 
-`Player.svelte` went from 1818 lines to 1765. That is a start and not the target;
-the remaining extractions (the preview strip, the dialog focus trap, the markup)
-are not done, and saying so is better than implying a refactor that did not
-happen.
+`PlayerPreviewStrip.svelte` is the third extraction: it fetches its own sheet,
+measures it and draws a window onto it, which is nobody else's business.
+
+`Player.svelte` went from **1818 lines to 1693**. That is a start and not the
+target the plan set, and the difference is worth being straight about: getting
+under a thousand means carving up the controls markup and the two dialogs, in a
+component the interface guard does not cover at all -- it runs against an empty
+library, so nothing player-shaped is tested by it. Carving further without that
+safety net trades a measured win for an unmeasured risk. The remaining
+extractions are deliberately not done, and the honest order is a guard that
+reaches the player first.
 
 ### A gap this session found twice
 
