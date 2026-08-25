@@ -3007,6 +3007,114 @@ of Dune, correctly mapped — skin tones, the gold of the desert, none of the gr
 the chain exists to prevent.
 
 
+## 93. The player, measured: what got faster, and the shortcut that does not exist
+
+**Decided in v2.6.** Everything below is a before-and-after taken in a real
+browser, including the one that came back negative.
+
+### Seeking inside the buffer is impossible, and that is worth writing down
+
+The obvious optimisation: a remux seek restarts ffmpeg unconditionally, even for
+a ten-second nudge backwards into bytes the browser already holds. On the 4K file
+that is tearing down a tone-mapping encode, re-seeking 13.9 GB and refilling a
+buffer, to arrive at data already delivered. It was implemented, measured, and
+removed.
+
+**`buffered` is not `seekable`, and only the second one decides.** Measured
+mid-playback on a real remux:
+
+	buffered: [[0, 54.15]]
+	seekable: [[0, 0]]
+
+The remux is served `transfer-encoding: chunked`, with no `Content-Length` and no
+`Accept-Ranges`, because its length is not known until ffmpeg has finished making
+it. Chromium therefore treats the element as unseekable whatever it has cached:
+assigning `currentTime = 12` snapped straight back to 0, and the film restarted
+from the beginning of the stream.
+
+There is no cheap fix. Making this work needs Media Source Extensions —
+appending fragments into a `SourceBuffer` the player owns, so the timeline
+belongs to us rather than to the element. That is a different player, not a
+shortcut in this one. The reasoning is left in `seekTo` so the next person does
+not spend the afternoon twice.
+
+What a restart costs, for whoever picks that up: **297–562 ms** measured through
+the real controls.
+
+### The subtitle layer stopped re-laying out the whole film
+
+`liftCues` loops over `track.cues` — every cue, not the active ones — setting
+`snapToLines` and `line` on each, and it ran on every `cuechange`. A feature film
+carries around two thousand cues.
+
+Measured on a bench with a real 2000-cue track, 25 s of playback:
+
+| | writes to `cue.line` |
+|---|---|
+| before | **822,000** (411 cue changes × 2000 cues) |
+| after | **2,000** (one pass, when the geometry was first known) |
+
+A cue's position depends on the geometry and its own line count, and on an
+ordinary change neither has moved. The geometry is now remembered and the loop
+runs when it actually changes: a resize, the controls fading, a different track.
+The bench's cue density is higher than a real film's, which is why the ratio is
+the honest figure rather than the totals: before, every line of dialogue rewrote
+every cue in the film.
+
+It also stopped measuring twice. `placeSubtitles` read the video box and the
+control bar, then `liftCues` — which called it first — read both again plus the
+root font size: four `getBoundingClientRect` calls and two `querySelector`
+lookups for one answer. There is one measurement now, and the arithmetic moved to
+`$lib/subtitle-layout.js` where it is tested.
+
+**Verified by looking**: a two-line cue, centred, sitting clear above the control
+bar with the bar up.
+
+### The control bar stopped rebuilding its timer on every pointer event
+
+`onpointermove` called `showControls`, which cleared and recreated the idle
+timeout. Measured over five seconds of continuous movement: **300 move events,
+300 timers**. Sampled at four a second it is **20**, and the bar hides three
+seconds after the last sampled movement rather than the last event — a difference
+of at most a quarter of a second.
+
+Deliberately a wrapper rather than a guard inside `showControls`: that function is
+also how opening a dialog *cancels* the timer, and a throttle there would
+occasionally skip the cancelling.
+
+### The clock after a seek, corrected without making the picture wait
+
+Decision 92 added the route. The player asks for it alongside the stream and
+adjusts when the answer lands, about 170 ms later, usually while the first
+fragments are still arriving.
+
+It fixes three things that all came from the same number. The position on the
+bar, the resume point saved from it, and — found while implementing, not before —
+**the subtitles**, whose cues are shifted by exactly this offset and were
+therefore four to ten seconds out after every seek. Verified: seeking to 15 s on a
+file whose keyframe is at 14 s now shows 0:14.
+
+### Two modules, and a test runner that costs nothing
+
+`subtitle-layout.js` and `track-labels.js` are pure and now carry **18 tests**,
+run by `node --test` — no browser, no new dependency. None of this was testable
+while it lived inside the component.
+
+`Player.svelte` went from 1818 lines to 1765. That is a start and not the target;
+the remaining extractions (the preview strip, the dialog focus trap, the markup)
+are not done, and saying so is better than implying a refactor that did not
+happen.
+
+### A gap this session found twice
+
+Both self-inflicted breakages in v2.5 and v2.6 were the same fault: an identifier
+referenced from the markup with nothing behind it — a missing import, then a
+function removed while a `svelte:window` handler still pointed at it. Neither
+fails the build. `svelte-check` would catch both, at the cost of a devDependency
+and some build time. Not added here, because adding a toolchain in the middle of
+a refactor is how a refactor goes wrong; recorded as the obvious next guard.
+
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

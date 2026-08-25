@@ -55,6 +55,11 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: web
 
+      # Node's own runner, no browser and no dependency. It covers the pure
+      # parts the player was too large to let anybody test.
+      - run: npm run test:unit
+        working-directory: web
+
       - run: npm test
         working-directory: web
 

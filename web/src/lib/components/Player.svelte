@@ -2,6 +2,17 @@
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { apiFetch, getJSON, formatTime, displayTitle } from '$lib/api.js';
 	import { strings as t } from '$lib/strings.js';
+	import {
+		audioLabel as labelAudio,
+		subtitleLabel as labelSubtitle
+	} from '$lib/track-labels.js';
+	import {
+		cueFloor,
+		cueLine,
+		cueLineHeight,
+		layerBottom,
+		pictureBox
+	} from '$lib/subtitle-layout.js';
 	import { profiles } from '$lib/profiles.svelte.js';
 	import { codecPlayback } from '$lib/codec-playback.svelte.js';
 	import Icon from './Icon.svelte';
@@ -228,7 +239,7 @@
 		subtitleTrack && subtitleBase
 			? profiles.url(
 					`${subtitleBase}/subtitles/${subtitleTrack.id}` +
-						(isRemux && offset > 0 ? `?t=${Math.floor(offset)}` : '')
+						(isRemux && offset > 0 ? `?t=${offset.toFixed(3)}` : '')
 				)
 			: null
 	);
@@ -341,6 +352,10 @@
 		startRemux(from);
 	}
 
+	// Which playback a late answer belongs to. Seeking again before the server
+	// has located the last one must not move the clock of the new stream.
+	let seekToken = 0;
+
 	function startRemux(from) {
 		triedRemux = true;
 		if (!info?.ffmpeg_supported) {
@@ -352,14 +367,49 @@
 		// also comes through this function. Setting the source without moving
 		// the offset leaves the displayed clock reading the old position while
 		// ffmpeg streams from the new one -- and saves that wrong number.
+		const asked = Math.floor(from);
 		offset = from;
 		elapsed = 0;
 
 		phase = info?.ffmpeg_ready ? 'playing' : 'preparing';
 		// `audio` has to survive every seek: dropping it would silently restart
 		// the film on the file's default track halfway through.
-		const query = [`t=${Math.floor(from)}`, audioQuery].filter(Boolean).join('&');
+		const query = [`t=${asked}`, audioQuery].filter(Boolean).join('&');
 		source = `${base}/remux?${query}`;
+		locateStart(asked);
+	}
+
+	// Where the stream really begins, asked alongside it rather than before it.
+	//
+	// A copied picture starts on a keyframe, and since decision 90 the sound
+	// starts there too -- so a seek to 3600 delivers a film from 3595.4, and this
+	// clock counted from 3600 regardless. Three things were wrong at once and all
+	// three come from `offset`: the position on the bar, the resume point saved
+	// from it, and the subtitles, whose cues are shifted by exactly this number
+	// and were therefore four to ten seconds out after every seek.
+	//
+	// The server takes about 170 ms to answer. The picture never waits for it:
+	// the stream is already loading, and the clock corrects itself when it lands,
+	// usually while the first fragments are still arriving.
+	async function locateStart(asked) {
+		// Nothing to correct at the top of a film: the stream starts where the film
+		// does, and asking would spend a subprocess to be told zero.
+		if (!base || asked <= 0) return;
+		const token = ++seekToken;
+		try {
+			const answer = await getJSON(profiles.url(`${base}/seek?t=${asked}`));
+			// Stale by the time it arrived: somebody seeked again, or the answer
+			// is for a different position than the one now playing.
+			if (token !== seekToken) return;
+			if (!Number.isFinite(answer?.start) || answer.requested !== asked) return;
+			// Only ever backwards, and never past what has already been played.
+			if (answer.start > offset) return;
+			offset = answer.start;
+		} catch {
+			// No answer is the state this shipped in for two releases: a clock
+			// that is optimistic by less than a keyframe interval. Nothing to
+			// tell anybody about.
+		}
 	}
 
 	// Changing the audio track is a new stream, not a setting: ffmpeg maps one
@@ -467,102 +517,81 @@
 			: [];
 	}
 
-	// Subtitles sit on the last line of the picture, which is exactly where the
-	// control bar appears. Measured in a real browser: the second line of a cue
-	// was behind the scrub bar for as long as the controls were up.
+	// Everything the subtitle layer needs, read from the DOM exactly once.
 	//
-	// `line` counts from the bottom when negative, so this is the standard way
-	// to say "four lines higher" without a vendor-prefixed pseudo-element. The
-	// text lifts while the controls are up and drops back when they fade, which
-	// is the behaviour every other player has trained people to expect.
-	// How far the subtitle layer sits above the bottom of the video element, in
-	// pixels. Recomputed whenever the picture, the furniture or the window moves.
-	function placeSubtitles() {
-		if (!video) return;
+	// This used to be two functions that each took their own measurements:
+	// placeSubtitles read the video box and the control bar, then liftCues --
+	// which called it first -- read both again along with the root font size.
+	// Four getBoundingClientRect calls and two querySelector lookups for one
+	// answer, on a path that runs every time a line of dialogue changes.
+	//
+	// The arithmetic lives in $lib/subtitle-layout.js, where it can be tested.
+	// Everything measured about it is written down there.
+	function measureSubtitles() {
+		if (!video) return null;
 		const box = video.getBoundingClientRect();
-		if (!box.height) return;
-
-		// object-fit: contain means the element is not the picture. A 2.39:1 film
-		// paints 1280x536 inside a 1280x720 element, so anchoring to the element
-		// would float the text a sixth of the way up the frame.
-		const ratio = video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : 0;
-		const picture = ratio ? Math.min(box.height, box.width / ratio) : box.height;
-		const letterbox = (box.height - picture) / 2;
+		const frame = pictureBox({
+			width: box.width,
+			height: box.height,
+			videoWidth: video.videoWidth,
+			videoHeight: video.videoHeight
+		});
+		if (!frame) return null;
 
 		const bar = hidden
 			? 0
 			: (shell?.querySelector('.player-controls')?.getBoundingClientRect().height ?? 0);
+		const root = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 
-		// Sit just inside the bottom of the picture, and step above the control
-		// bar when it covers that. The gap is a share of the picture so it holds
-		// at every size.
-		subtitleBottom = Math.max(letterbox + picture * 0.04, bar + picture * 0.04);
+		return {
+			area: box.height,
+			bottom: layerBottom({ letterbox: frame.letterbox, picture: frame.picture, bar }),
+			floor: cueFloor({ area: box.height, picture: frame.picture, bar }),
+			lineHeight: cueLineHeight(root, window.innerWidth),
+			gap: box.height * 0.015
+		};
 	}
 
+	// What the cue positions were last computed against.
+	//
+	// A cue's `line` depends on the geometry and on its own line count, and on an
+	// ordinary cuechange neither has moved. The loop below touches *every* cue in
+	// the track -- a two-and-a-half hour film carries a couple of thousand of them
+	// -- and it used to run on every line of dialogue, re-splitting and rewriting
+	// all of them to arrive at the numbers they already had.
+	//
+	// So the geometry is remembered, and the loop runs when it actually changes:
+	// the window resized, the controls faded, a different track was chosen.
+	let cueLayout = '';
+
 	function liftCues() {
-		placeSubtitles();
+		const geometry = measureSubtitles();
+		if (!geometry) return;
+		subtitleBottom = geometry.bottom;
+
 		const cues = trackElement?.track?.cues;
-		if (!cues || !video) return;
+		if (!cues?.length || !geometry.area) return;
 
-		// Measured rather than guessed, in three steps that each cost something
-		// to get wrong.
-		//
-		// `line` as a count of lines was the obvious answer and does not work:
-		// it snaps to a line height the browser picks, and at this type size a
-		// two-line cue still sat under the scrub bar at -4. `lineAlign: 'end'`
-		// would anchor the bottom of the cue and is the right idea, but Chrome
-		// ignores it -- verified, the box stayed anchored by its top. So the
-		// position is computed here: the top of the cue, as a share of the
-		// picture, from its own line count and the real height of the controls.
-		const area = video.getBoundingClientRect().height;
-		if (!area) return;
-		const bar = hidden
-			? 0
-			: (shell?.querySelector('.player-controls')?.getBoundingClientRect().height ?? 0);
-
-		// The height of one cue line, which no API will tell you: the cue box
-		// lives in a closed shadow root. The font size mirrors
-		// `.player-video::cue` in app.css -- changing one means changing the
-		// other -- and the multiplier is measured, not assumed, because Chrome
-		// does not honour `line-height` on ::cue.
-		//
-		// What `line` buys is worth being precise about. Measured at 1080p on a
-		// one-line cue, it goes from 79.06% with the bar up to 90.76% with it
-		// down: an 11.7-point lift, which is the bar's own height. The engine
-		// then maps that request through a safe area of its own, so the absolute
-		// resting position is Chrome's to decide and lands in the lower third,
-		// where a subtitle belongs. What this controls reliably -- and all it
-		// needs to control -- is that the text moves out of the way of the
-		// furniture and comes back when the furniture goes.
-		const root = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-		const cueFont = Math.min(Math.max(root * 1.0625, window.innerWidth * 0.026), root * 2.375);
-		const lineHeight = cueFont * 2.2;
-		const gap = area * 0.015;
-
-		// `line` is a share of the *element*, and object-fit: contain means the
-		// element is not the picture. A 2.39:1 film in a 16/9 window paints
-		// 1280x536 inside 1280x720 and puts 92px of black above and below it,
-		// measured on a real scope rip. Anchoring to the element floated the text
-		// a sixth of the way up the frame, over the actors rather than under
-		// them.
-		//
-		// So the resting place is the bottom of the picture, wherever letterboxing
-		// puts it. A film with no bars is the same calculation with a zero bar,
-		// which is why there is no special case for it.
-		const ratio = video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : 0;
-		const width = video.getBoundingClientRect().width;
-		const picture = ratio && width ? Math.min(area, width / ratio) : area;
-		const pictureBottom = area - (area - picture) / 2;
-
-		// Whichever comes first: the bottom of the picture, or the top of the
-		// control bar when it is up.
-		const floor = Math.min(pictureBottom, area - bar);
+		const key = [
+			subtitleTrackId,
+			cues.length,
+			geometry.floor,
+			geometry.area,
+			geometry.lineHeight,
+			geometry.gap
+		].join('|');
+		if (key === cueLayout) return;
+		cueLayout = key;
 
 		for (const cue of cues) {
-			const lines = cue.text.split('\n').length;
-			const top = floor - lines * lineHeight - gap;
 			cue.snapToLines = false;
-			cue.line = Math.max(0, Math.min(95, (top / area) * 100));
+			cue.line = cueLine({
+				floor: geometry.floor,
+				area: geometry.area,
+				lines: cue.text.split('\n').length,
+				lineHeight: geometry.lineHeight,
+				gap: geometry.gap
+			});
 		}
 	}
 
@@ -767,10 +796,35 @@
 		if (isRemux) {
 			// No byte ranges over a pipe, so seeking means asking ffmpeg to
 			// start again somewhere else. This is what ?t= was built for.
+			//
+			// The obvious optimisation does not work, and it was tried: seeking
+			// inside what the browser already holds, instead of restarting a
+			// 4K tone-mapping encode to fetch bytes that had already arrived.
+			// The blocker is not the buffer, it is `seekable`. Measured on this
+			// very stream, mid-playback:
+			//
+			//	buffered: [[0, 54.15]]
+			//	seekable: [[0, 0]]
+			//
+			// The remux is served chunked, with no Content-Length and no
+			// Accept-Ranges, because its length is not known until ffmpeg has
+			// finished producing it. Chromium therefore treats it as
+			// unseekable whatever it has cached: assigning currentTime = 12
+			// snapped straight back to 0. Buffered is what has arrived;
+			// seekable is what the element will let you ask for, and only the
+			// second one decides.
+			//
+			// Making this cheap needs Media Source Extensions -- appending the
+			// fragments into a SourceBuffer this player owns, so the timeline
+			// belongs to us rather than to the element. That is a different
+			// player, not a shortcut in this one.
 			seeking = true;
 			buffered = clamped;
 			startRemux(clamped);
 		} else {
+			// Direct play has the whole file behind a handler that answers byte
+			// ranges, so the element seeks by itself and none of the above
+			// applies.
 			video.currentTime = clamped;
 		}
 		save(true, clamped);
@@ -961,6 +1015,24 @@
 			default:
 				return false;
 		}
+	}
+
+	// A pointer produces dozens of move events a second, and every one of them
+	// used to clear and rebuild the idle timer. Sampling four times a second holds
+	// the bar up exactly as reliably -- the hide happens three seconds after the
+	// last sampled movement rather than the last event, which is a difference of
+	// at most a quarter of a second and one nobody can perceive.
+	//
+	// Deliberately a wrapper rather than a guard inside showControls: that
+	// function is also how opening a dialog *cancels* the timer, and a throttle
+	// there would occasionally skip the cancelling.
+	let lastPointerWake = 0;
+
+	function onPointerMove() {
+		const now = performance.now();
+		if (now - lastPointerWake < 250) return;
+		lastPointerWake = now;
+		showControls();
 	}
 
 	function showControls() {
@@ -1171,67 +1243,10 @@
 	// end of the line. So the detail is built from the measurements, and the
 	// title only joins it when it is short enough to be a name rather than a
 	// paragraph.
-	const titleIsShortEnough = (title) => !!title && title.length <= 24;
-
-	// ffmpeg's channel layout is precise and unreadable: "5.1(side)" is 5.1.
-	// The parenthetical says where the surrounds sit, which changes nothing for
-	// somebody picking a track.
-	function channelLabel(channels) {
-		if (!channels) return null;
-		const base = channels.replace(/\(.*\)/, '').trim();
-		return t.player.tracks.channels[base] ?? base;
-	}
-
-	// The commentary track is the one people most need to tell apart, and the
-	// container does not flag it in what the server sends. The title is the only
-	// signal there is, so it is read for the word -- a heuristic, deliberately,
-	// and it only changes a label.
-	const looksLikeCommentary = (title) => /commentary|commentaire/i.test(title || '');
-
-	function audioLabel(track, index) {
-		const primary = track.language
-			? languageName(track.language)
-			: track.title || t.film.audio.unnamed(index + 1);
-		const parts = looksLikeCommentary(track.title)
-			? [t.player.tracks.commentary, channelLabel(track.channels)]
-			: [
-					channelLabel(track.channels),
-					track.codec?.toUpperCase(),
-					titleIsShortEnough(track.title) ? track.title : null
-				];
-		return { primary, detail: detailOf(parts, primary) };
-	}
-
-	function subtitleLabel(track, index) {
-		const primary = track.language
-			? languageName(track.language)
-			: track.title || t.player.tracks.unnamedSubtitle(index + 1);
-		return {
-			primary,
-			detail: detailOf(
-				[
-					track.title,
-					track.is_forced ? t.player.tracks.forced : null,
-					track.is_external ? t.player.tracks.external : null
-				],
-				primary
-			)
-		};
-	}
-
-	// A detail that merely repeats the line above it is noise: a French track
-	// titled "Français" was rendering as "Français · Français".
-	function detailOf(parts, primary) {
-		const kept = parts
-			.filter(Boolean)
-			.filter((part) => part.toLowerCase() !== primary.toLowerCase());
-		return kept.join(' · ');
-	}
-
-	// The catalogue owns the names; the server only ever sends the ISO code.
-	function languageName(code) {
-		return t.languages[code] ?? code.toUpperCase();
-	}
+	// Thin wrappers: the maths and the wording rules live in $lib/track-labels.js,
+	// where they are pure and tested. Only the catalogue is bound here.
+	const audioLabel = (track, index) => labelAudio(track, index, t);
+	const subtitleLabel = (track, index) => labelSubtitle(track, index, t);
 
 	$effect(() => {
 		const currentPhase = phase;
@@ -1249,7 +1264,7 @@
 
 <!-- The layer is placed in pixels against the picture, so a resize or a rotation
      has to re-measure it; going full screen is the case that matters most. -->
-<svelte:window onkeydown={onKeydown} onresize={placeSubtitles} />
+<svelte:window onkeydown={onKeydown} onresize={liftCues} />
 
 <!--
 	One row, defined once. Audio and subtitles differ in what they list, not in
@@ -1288,7 +1303,7 @@
 	aria-label={heading}
 	tabindex="-1"
 	onkeydown={trapDialogFocus}
-	onpointermove={showControls}
+	onpointermove={onPointerMove}
 	onpointerdown={onShellPointerDown}
 >
 	{#if phase === 'failed'}
@@ -1376,7 +1391,7 @@
 			<!--
 				The subtitles, drawn here rather than by the browser. The track runs
 				in `hidden` mode so the cues still fire and nothing is painted twice;
-				placeSubtitles puts this layer against the bottom of the picture the
+				liftCues puts this layer against the bottom of the picture the
 				video element actually paints, which is not the same as the bottom of
 				the element on anything wider than 16/9.
 			-->
