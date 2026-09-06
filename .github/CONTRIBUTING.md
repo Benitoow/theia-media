@@ -20,6 +20,20 @@ the document changes first, in the same commit, with the reasoning written down.
 `DECISIONS.md` is append-only in spirit: supersede an entry, do not quietly
 rewrite it.
 
+## Current phase: field testing
+
+V3.1 is the stable feature baseline while Theia is exercised by its first ten
+real households. During this phase, changes are prioritised when they fix a
+security problem, a data-loss risk, blocked playback, a regression or concrete
+platform and codec compatibility. Documentation and test coverage that make a
+report reproducible are also welcome.
+
+Feature requests remain open and are valuable evidence, but feature pull
+requests may be deferred until the field test has produced enough repeated
+problems to set the next roadmap. If you are using Theia on a real library, the
+[field-testing guide](../docs/field-testing.md) and dedicated issue form are the
+most useful place to start.
+
 ## Constraints that are not preferences
 
 From ยง3 of the founding spec:
@@ -94,6 +108,10 @@ solvable are the **exact file** involved (container, video codec, audio codec โ€
 `ffmpeg -i` output is ideal), the **browser and device**, and whether it happens
 in direct play, remux or re-encode. Without those, most playback reports cannot
 be reproduced.
+
+If you can use Theia for a week before reporting, use the dedicated field-test
+form. A report that says what worked, on which clients and media, is useful even
+when nothing broke.
 
 ## Security
 

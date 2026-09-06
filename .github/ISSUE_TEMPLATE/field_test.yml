@@ -1,0 +1,109 @@
+name: V3.1 field-test report
+description: Tell us how Theia behaved on a real library, including when it worked
+labels: ["help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Theia V3.1 is being tested by its first ten real households before new
+        features resume. Use it for about a week if you can. A calm report where
+        everything worked is evidence too.
+
+        Do not attach copyrighted media, private paths, tokens, keys or personal
+        metadata. For a security problem, use
+        [private reporting](https://github.com/Benitoow/theia-media/security/advisories/new).
+
+  - type: input
+    id: version
+    attributes:
+      label: Theia version
+      description: From Settings, or `theia -version`.
+      placeholder: v3.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: server
+    attributes:
+      label: Server machine
+      description: Operating system, CPU, RAM and GPU if known.
+      placeholder: Windows 11 · Ryzen 7 5800X · 32 GB · RTX 5070 Ti
+    validations:
+      required: true
+
+  - type: textarea
+    id: clients
+    attributes:
+      label: Screens used
+      description: Every browser and device on which you actually watched or browsed.
+      placeholder: |
+        Chrome 141 on Windows desktop
+        Samsung TV browser
+        Safari on iPhone
+    validations:
+      required: true
+
+  - type: input
+    id: library
+    attributes:
+      label: Library shape
+      description: Approximate film, series and episode counts; do not publish private folder names.
+      placeholder: About 180 films, 24 series and 900 episodes across two folders
+    validations:
+      required: true
+
+  - type: textarea
+    id: media
+    attributes:
+      label: Media tried
+      description: Containers, video/audio codecs, subtitles and resolutions you encountered.
+      placeholder: MKV HEVC 10-bit with TrueHD; MP4 H.264 with AAC; SRT and PGS subtitles; 1080p and 4K
+
+  - type: textarea
+    id: worked
+    attributes:
+      label: What worked
+      description: Setup, scan, metadata, profiles, browsing, playback, seeking, resume and remote access are all useful evidence.
+    validations:
+      required: true
+
+  - type: textarea
+    id: failed
+    attributes:
+      label: What failed or felt unclear
+      description: Include exact steps, expected result and observed result. Write “nothing” if the week was uneventful.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: playback
+    attributes:
+      label: Playback paths exercised
+      multiple: true
+      options:
+        - Direct play
+        - Remux (original quality)
+        - Re-encode (720p, 480p or 360p)
+        - Remote playback
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant server output
+      description: Paste only the lines around a problem. Redact private paths, addresses, tokens and keys.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I did not expose Theia's TCP port 8383 directly to the internet.
+          required: true
+        - label: I removed private paths, addresses, tokens, keys and personal metadata from this public report.
+          required: true
+        - label: I did not attach or offer copyrighted media files.
+          required: true

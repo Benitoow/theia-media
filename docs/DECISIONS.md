@@ -3184,6 +3184,26 @@ than being treated as permanent facts.
 This documentation and its screenshots remain subject to decision 95: preparing
 the V3.1 release locally is not approval to publish it.
 
+## 97. V3.1 freezes features while ten real households set the next roadmap
+
+**This decision records the maintainer's explicit approval to publish V3.1 and
+supersedes the publication gate in decisions 95 and 96.** V3.1 is the stable
+feature baseline for a field-testing phase. The project now optimises for use by
+roughly ten real households rather than adding capabilities from untested
+assumptions.
+
+New product features are paused. Maintenance continues for security defects,
+data-loss risks, blocked playback, regressions and concrete compatibility
+problems. Those changes ship as SemVer patch releases: `v3.1.1`, `v3.1.2`,
+`v3.1.3` and so on. Feature requests remain open as evidence, but they do not
+create an implementation commitment during the freeze.
+
+The public README and site state the phase explicitly. A dedicated field-test
+guide and issue form ask for the server, clients, library shape, media paths,
+successes and failures without asking anyone to share copyrighted files or
+private data. Broader feature development resumes after real reports reveal the
+repeated problems that should shape the next release.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

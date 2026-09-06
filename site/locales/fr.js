@@ -18,6 +18,7 @@ export default {
 	skip: 'Aller au contenu',
 	nav: {
 		label: 'Navigation principale',
+		fieldTest: 'Test terrain',
 		moments: 'L’expérience',
 		difference: 'La différence',
 		download: 'Télécharger'
@@ -28,6 +29,22 @@ export default {
 		title: 'Votre film. Pas la plateforme.',
 		lead:
 			'Votre liste à voir. Un film selon le temps disponible. Une lecture plus fiable, des films aux séries. Theia V3 fait de vos dossiers votre cinéma personnel — sans compte ni abonnement.'
+	},
+
+	fieldTest: {
+		eyebrow: 'La phase après V3.1',
+		goal: 'Objectif · dix foyers réels',
+		title: 'Les vraies bibliothèques fixeront la suite.',
+		body:
+			'V3.1 devient la base fonctionnelle. Les nouveautés sont en pause pendant que Theia sert vraiment, sur de vrais écrans, dans ses dix premiers foyers. Elles reprendront quand ces retours auront révélé les problèmes qui méritent une solution.',
+		maintenanceTitle: 'Ce qui continue à sortir',
+		maintenance: [
+			'Correctifs de sécurité et de perte de données',
+			'Blocages de lecture et régressions',
+			'Compatibilité concrète des codecs, navigateurs et plateformes'
+		],
+		cta: 'Rejoindre le test terrain',
+		guide: 'Lire le guide d’une semaine'
 	},
 
 	playerDemo: {

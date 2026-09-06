@@ -1,6 +1,6 @@
 {
 	"name": "theia-web",
-	"version": "3.1.0-local",
+	"version": "3.1.0",
 	"private": true,
 	"type": "module",
 	"scripts": {

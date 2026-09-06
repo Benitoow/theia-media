@@ -33,6 +33,25 @@ external database or separate web app to install.
 | --- | --- | --- |
 | The Go server, SQLite database driver and Svelte interface ship in one binary. FFmpeg is downloaded only when a file needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud library. Metadata comes from TMDB; updates come from GitHub Releases. |
 
+## Project phase: field testing
+
+> [!IMPORTANT]
+> **V3.1 is the feature baseline. New product features are paused while Theia is
+> tested in roughly ten real households.** Maintenance continues for security,
+> data-loss risks, playback blockers, regressions and compatibility problems.
+> Those fixes will ship as `v3.1.1`, `v3.1.2`, `v3.1.3` and so on.
+
+This phase is about replacing guesses with evidence. Theia needs people who will
+run it against their own film and series libraries for at least a week, on the
+screens they actually use, and report both failures and uneventful success.
+[Join the field test](https://github.com/Benitoow/theia-media/issues/new?template=field_test.yml)
+or read the short [testing guide](docs/field-testing.md).
+
+Feature ideas are still welcome and will be collected. Broader development
+resumes when those real libraries have shown which problems deserve to shape the
+next release. Shipping features into an evidence vacuum is just expensive
+fan-fiction.
+
 ## See V3.1
 
 | Search the whole library | Open a film |

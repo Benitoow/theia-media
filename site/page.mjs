@@ -230,6 +230,7 @@ export function render(t, release = {}, build = {}) {
 		<nav class="shell topnav" aria-label="${escape(t.nav.label)}">
 			<a class="brand" href="#content">THEIA</a>
 			<div class="nav-links">
+				<a href="#field-test">${escape(t.nav.fieldTest)}</a>
 				<a href="#moments">${escape(t.nav.moments)}</a>
 				<a href="#difference">${escape(t.nav.difference)}</a>
 				<a class="nav-download" href="#try">${escape(t.nav.download)}</a>
@@ -284,6 +285,27 @@ export function render(t, release = {}, build = {}) {
 				<noscript><p class="os-status">${escape(t.downloads.noJs)}</p></noscript>
 				<div class="download-panels">${PLATFORMS.map((platform) => downloadPanel(t, release, platform)).join('')}</div>
 			</section>
+		</section>
+
+		<section class="field-test" id="field-test" aria-labelledby="field-test-title">
+			<div class="shell field-test-grid">
+				<header class="field-test-heading">
+					<p class="eyebrow">${escape(t.fieldTest.eyebrow)}</p>
+					<p class="field-test-goal">${escape(t.fieldTest.goal)}</p>
+				</header>
+				<div class="field-test-copy">
+					<h2 class="section-title" id="field-test-title">${escape(t.fieldTest.title)}</h2>
+					<p class="section-lead">${escape(t.fieldTest.body)}</p>
+					<div class="field-test-maintenance">
+						<h3>${escape(t.fieldTest.maintenanceTitle)}</h3>
+						<ul>${t.fieldTest.maintenance.map((item) => `<li>${escape(item)}</li>`).join('')}</ul>
+					</div>
+					<div class="field-test-actions">
+						<a class="secondary-cta" href="${REPO}/issues/new?template=field_test.yml">${escape(t.fieldTest.cta)} <span aria-hidden="true">↗</span></a>
+						<a class="text-link" href="${REPO}/blob/main/docs/field-testing.md">${escape(t.fieldTest.guide)} <span aria-hidden="true">↗</span></a>
+					</div>
+				</div>
+			</div>
 		</section>
 
 		<section class="story" id="moments">

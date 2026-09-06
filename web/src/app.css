@@ -4254,7 +4254,7 @@
 	}
 }
 
-/* V3.1 local design candidate: soft cinema chrome and app-level discovery. */
+/* V3.1 visual system: soft cinema chrome and app-level discovery. */
 @layer components {
  .cinema-feature { min-height: clamp(34rem, 72svh, 58rem); background: radial-gradient(ellipse at 75% 35%, rgb(var(--channel-accent) / 0.08), transparent 58%); }
  .cinema-feature .page-body--hero { padding-bottom: 5rem; }

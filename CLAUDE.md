@@ -15,9 +15,10 @@ anything; they answer most questions that would otherwise be asked again.
 | [`docs/design-system.md`](docs/design-system.md) | Colour, type, spacing, motion, focus. §6 — *the card grid is exempt* — is the single most important constraint in the interface. |
 
 **V3 shipped in `v3.0.0`.** Its verified product and playback boundaries are in
-[`docs/v3.md`](docs/v3.md). V3.1 is a local visual and documentation candidate
-on `codex/v3.1-design-local`; decision 95 forbids a remote branch, pull request,
-tag, release or public-site deployment until the maintainer approves it.
+[`docs/v3.md`](docs/v3.md). V3.1 is the current feature baseline and begins the
+field-testing phase described in decision 97. New features wait for evidence
+from roughly ten real household libraries; security, data-loss, playback,
+regression and concrete compatibility fixes continue as `v3.1.x` patches.
 
 The five V2 coordination documents — the roadmap, two track handoffs and two
 discovery notes — live in [`docs/archive/`](docs/archive/README.md). They retain
