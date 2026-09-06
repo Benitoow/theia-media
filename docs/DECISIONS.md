@@ -3150,6 +3150,60 @@ filter make choosing a film a concrete action; neither sends data off the server
 The release must exercise populated playback, seeks, profile isolation and the
 real Dune file on disposable data, alongside static checks and cross builds.
 
+## 95. V3.1 visual correction stays local until maintainer approval
+
+The flat V3 masthead and ruled action rows made navigation hover rectangular
+and made film discovery resemble a public editorial page. V3.1 restores the
+rounded glass navigation, replaces the duration select with direct segmented
+choices, turns home shortcuts into a compact application dock and removes the
+gold rectangular card-hover outline. The backend and V3 playback contracts do
+not change.
+
+This work lives only on `codex/v3.1-design-local`. It may be built and run on a
+disposable local data copy for visual review, but no remote branch, pull
+request, tag, release or public-site update is allowed before the maintainer
+explicitly approves the candidate.
+
+## 96. Search is a centred destination, and the README is a product front door
+
+**Decided in the V3.1 local candidate after the maintainer's visual review.**
+The search route previously placed a library-sized heading and field at the
+left edge, then left most of a desktop viewport empty. Its title, scope, prompt,
+field, state and recent queries now share a centred stage. A CSS-only projector
+halo and horizon line give that empty state depth without adding an unverified
+image; real results still use the ordinary left-aligned library grid.
+
+The home shortcut for a nightly film uses its own framed-play glyph instead of
+reusing the film-strip destination icon. The README is replaced by a shorter
+human path through the product: current V3.1 captures from the running Dune
+library, a three-step start, workload-based hardware guidance, the LAN warning,
+and a deliberately non-cheerleading comparison with Plex, Jellyfin and Emby.
+Competitor claims link to their official September 2026 documentation rather
+than being treated as permanent facts.
+
+This documentation and its screenshots remain subject to decision 95: preparing
+the V3.1 release locally is not approval to publish it.
+
+## 97. V3.1 freezes features while ten real households set the next roadmap
+
+**This decision records the maintainer's explicit approval to publish V3.1 and
+supersedes the publication gate in decisions 95 and 96.** V3.1 is the stable
+feature baseline for a field-testing phase. The project now optimises for use by
+roughly ten real households rather than adding capabilities from untested
+assumptions.
+
+New product features are paused. Maintenance continues for security defects,
+data-loss risks, blocked playback, regressions and concrete compatibility
+problems. Those changes ship as SemVer patch releases: `v3.1.1`, `v3.1.2`,
+`v3.1.3` and so on. Feature requests remain open as evidence, but they do not
+create an implementation commitment during the freeze.
+
+The public README and site state the phase explicitly. A dedicated field-test
+guide and issue form ask for the server, clients, library shape, media paths,
+successes and failures without asking anyone to share copyrighted files or
+private data. Broader feature development resumes after real reports reveal the
+repeated problems that should shape the next release.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

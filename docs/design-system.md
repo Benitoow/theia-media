@@ -5,7 +5,40 @@ component; change it here before changing it in code.
 
 ---
 
-## V3 programme (supersedes the floating-pill treatment below)
+## V3.1 visual system (supersedes V3 programme styling)
+
+V3.1 returns the navigation to the floating glass capsule. The flat V3
+masthead made every hover a rectangle and removed the depth that separated the
+application from an editorial website. Navigation targets and hover surfaces
+are fully rounded again; the current destination keeps its dot and all focus
+rings remain explicit.
+
+The home actions form one quiet floating dock beneath the feature. Each action
+has a circular glyph, a short label and a soft hover contained by the capsule.
+On phones the three actions remain visible in equal columns; none is hidden
+behind horizontal scrolling.
+
+The collection returns to the economical V2 heading. Viewing intent is an
+application control: My list, four direct duration choices and Choose for me.
+Duration is a segmented group rather than a styled native select. On phones the
+two actions share one row and the duration choices remain a horizontally
+scrollable set of 44 px targets. Selected state uses shape, surface and
+`aria-pressed`, never colour alone.
+
+Film and series cards keep their landscape artwork. Hover lifts and gently
+scales the image, adds a bottom veil and reveals the circular play affordance.
+It does not draw a gold rectangle around the card. This is the stable visual
+baseline for the V3.1 field-testing phase.
+
+Search is a destination, not a spare form control. Its title, scope, prompt,
+field, status and recent searches share one centred stage. A wide, dim projector
+halo and a single horizon line give the otherwise empty state depth; both are
+CSS-generated, contain no artwork and stay behind the content. Search results
+leave that stage and return to the ordinary left-aligned library grid. The field
+keeps the rounded glass language, an explicit focus ring and a 44 px minimum
+target at every viewport.
+
+## V3 programme (superseded by the V3.1 system above)
 
 Navigation uses a flat masthead with a fine parchment rule and an opaque enough
 floor for scrolling text. No shadow or animated blur is needed. Active

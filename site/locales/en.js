@@ -18,6 +18,7 @@ export default {
 	skip: 'Skip to content',
 	nav: {
 		label: 'Primary navigation',
+		fieldTest: 'Field test',
 		moments: 'Experience',
 		difference: 'Difference',
 		download: 'Download'
@@ -28,6 +29,22 @@ export default {
 		title: 'Your film. Not the platform.',
 		lead:
 			'Your watchlist. A film for the time you have. More dependable playback, from films to series. Theia V3 turns your folders into your private cinema — without an account or subscription.'
+	},
+
+	fieldTest: {
+		eyebrow: 'The phase after V3.1',
+		goal: 'Goal · ten real households',
+		title: 'Real libraries set the next roadmap.',
+		body:
+			'V3.1 is the feature baseline. New product features are paused while Theia is used for real viewing, on real screens, by its first ten households. Feature work resumes when those reports reveal the problems worth solving.',
+		maintenanceTitle: 'What still ships',
+		maintenance: [
+			'Security and data-loss fixes',
+			'Playback blockers and regressions',
+			'Concrete codec, browser and platform compatibility'
+		],
+		cta: 'Join the field test',
+		guide: 'Read the one-week guide'
 	},
 
 	playerDemo: {

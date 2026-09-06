@@ -755,6 +755,7 @@ export const strings = {
 
 	search: {
 		title: 'Rechercher',
+		scope: 'Films · Séries',
 		label: 'Rechercher dans la bibliothèque',
 		placeholder: 'Un titre, une année, un réalisateur…',
 		prompt: 'Une seule recherche, dans les films et les séries à la fois.',

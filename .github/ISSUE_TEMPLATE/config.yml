@@ -1,10 +1,13 @@
 blank_issues_enabled: true
 contact_links:
+  - name: Join the V3.1 field test
+    url: https://github.com/Benitoow/theia-media/issues/new?template=field_test.yml
+    about: Use Theia on a real library for a week and report what worked, what failed and on which screens.
   - name: Security vulnerability
     url: https://github.com/Benitoow/theia-media/security/advisories/new
     about: Report privately, never as a public issue. Read SECURITY.md first — no login on the LAN port is deliberate.
-  - name: What Theia deliberately does not do
-    url: https://github.com/Benitoow/theia-media/blob/main/README.md#what-theia-deliberately-does-not-do
+  - name: Product scope and limits
+    url: https://github.com/Benitoow/theia-media/blob/main/README.md#what-you-get
     about: Accounts, live TV, plugins, music and native apps are settled scope decisions rather than missing features.
   - name: The decision record
     url: https://github.com/Benitoow/theia-media/blob/main/docs/DECISIONS.md

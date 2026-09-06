@@ -805,6 +805,78 @@ details.checksums summary {
 	color: var(--fg);
 }
 
+/* Field test ------------------------------------------------------------- */
+
+.field-test {
+	padding-block: clamp(3.5rem, 7vw, 6.5rem);
+	border-block: 1px solid var(--border);
+	background: var(--surface);
+}
+
+.field-test-grid {
+	display: grid;
+	grid-template-columns: minmax(14rem, 0.7fr) minmax(22rem, 1.3fr);
+	gap: clamp(2rem, 7vw, 8rem);
+}
+
+.field-test-heading {
+	align-self: start;
+}
+
+.field-test-goal {
+	display: inline-flex;
+	min-height: 44px;
+	align-items: center;
+	margin: 0.6rem 0 0;
+	padding: 0.55rem 0.85rem;
+	border: 1px solid var(--accent);
+	border-radius: 999px;
+	color: var(--accent-bright);
+	font: 600 var(--text-label) / 1.2 var(--font-body);
+	letter-spacing: var(--text-label-tracking);
+	text-transform: uppercase;
+}
+
+.field-test-copy .section-title {
+	max-width: 12ch;
+}
+
+.field-test-maintenance {
+	margin-top: 2rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid var(--border);
+}
+
+.field-test-maintenance h3 {
+	font: 600 var(--text-label) / 1.2 var(--font-body);
+	letter-spacing: var(--text-label-tracking);
+	text-transform: uppercase;
+}
+
+.field-test-maintenance ul {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 1rem;
+	margin: 1rem 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.field-test-maintenance li {
+	padding-top: 0.85rem;
+	border-top: 1px solid var(--border);
+	color: var(--muted);
+	font-size: var(--text-small);
+}
+
+.field-test-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.75rem 1.25rem;
+	margin-top: 2rem;
+}
+
 /* Three moments ---------------------------------------------------------- */
 
 .story {
@@ -1143,6 +1215,10 @@ details.checksums summary {
 		grid-template-columns: 1fr;
 	}
 
+	.field-test-grid {
+		grid-template-columns: 1fr;
+	}
+
 	.difference-copy {
 		position: static;
 	}
@@ -1233,9 +1309,14 @@ details.checksums summary {
 		grid-template-columns: 1fr;
 	}
 
+	.field-test-maintenance ul {
+		grid-template-columns: 1fr;
+	}
+
 	.story,
 	.difference,
-	.faq {
+	.faq,
+	.field-test {
 		padding-block: 3.75rem;
 	}
 

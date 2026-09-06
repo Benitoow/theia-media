@@ -78,6 +78,14 @@
 			'M8.2 5.2v13.6M15.8 5.2v13.6'
 		],
 
+		// The nightly shortcut is an action, not a catalogue destination. A
+		// framed play mark says both "one film" and "start choosing" without
+		// borrowing the film-strip glyph already used by the library tab.
+		playSquare: [
+			'M5.2 3.7h13.6a1.5 1.5 0 0 1 1.5 1.5v13.6a1.5 1.5 0 0 1-1.5 1.5H5.2a1.5 1.5 0 0 1-1.5-1.5V5.2a1.5 1.5 0 0 1 1.5-1.5Z',
+			'M10 8.4v7.2l5.6-3.6Z'
+		],
+
 		series: [
 			'M4.2 7.8h15.6a1 1 0 0 1 1 1v9.4a1 1 0 0 1-1 1H4.2a1 1 0 0 1-1-1V8.8a1 1 0 0 1 1-1Z',
 			'M8.4 3.4 12 7.8l3.6-4.4'
