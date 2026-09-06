@@ -1,49 +1,49 @@
 {
-  "version": "v2.6.0",
-  "publishedAt": "2026-08-25T12:23:40Z",
-  "url": "https://github.com/Benitoow/theia-media/releases/tag/v2.6.0",
+  "version": "v3.0.0",
+  "publishedAt": "2026-09-06T07:17:15Z",
+  "url": "https://github.com/Benitoow/theia-media/releases/tag/v3.0.0",
   "assets": [
     {
       "file": "theia-windows-amd64.exe",
       "platform": "windows",
       "architecture": "x64",
-      "size": 17991680,
-      "sha256": "931ad574769f7618578ded4d8cebb7c31e61b007a2770277cdcf631e63db8d8e"
+      "size": 18011136,
+      "sha256": "7c4dce6fe3fc5b61f533517d2056e96bdc6c4210c68ca5f71722ea95e5612e69"
     },
     {
       "file": "theia-windows-arm64.exe",
       "platform": "windows",
       "architecture": "ARM64",
-      "size": 16800256,
-      "sha256": "78b9f90953d80a5c5fe6590e8a06c52553d0ae658e8783fc6f486c52f559e803"
+      "size": 16820224,
+      "sha256": "83bbcc1aeca54fd4e94bdf55e59a3a9820f2fe6835eeaf9109da5e14bf195810"
     },
     {
       "file": "theia-darwin-arm64",
       "platform": "macos",
       "architecture": "Apple Silicon",
-      "size": 16961890,
-      "sha256": "f230f58bccb7798cce4b1cc9f21ed4aae7535db08be79ee37083479b8342ea86"
+      "size": 16995042,
+      "sha256": "e8e0731ed7dda44fb804152224151edebd21df4b8a707b12b5593947ef5223f5"
     },
     {
       "file": "theia-darwin-amd64",
       "platform": "macos",
       "architecture": "Intel",
-      "size": 17797264,
-      "sha256": "0d3e9bcd4180323616da2fbe064b1fdb8d891745bb9d75e47ee1e5232ac2db43"
+      "size": 17817856,
+      "sha256": "446fa8a1586c78aeab7db910526ede6680cd3fe130704ddaa357b8ca70d78ecd"
     },
     {
       "file": "theia-linux-amd64",
       "platform": "linux",
       "architecture": "x64",
-      "size": 17567906,
-      "sha256": "61256a588ce2e165afc9e28f1c049db87d0861c2df26c44d26da9a4c4f8eb55f"
+      "size": 17588386,
+      "sha256": "da517a28d83c041d0abdbeb032e1a2a33f899792837fdb7ccca8473ff58d56c3"
     },
     {
       "file": "theia-linux-arm64",
       "platform": "linux",
       "architecture": "ARM64",
-      "size": 16646306,
-      "sha256": "85f68a919c375b813806aaffb9d61febc136bd6a62c72ae81950250adc768ec9"
+      "size": 16711842,
+      "sha256": "41cdd4c2a640c0118c0d25b3a5b48371b11a166314292c1d26f107b1c541f3f4"
     }
   ]
 }

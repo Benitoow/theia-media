@@ -71,7 +71,15 @@ func main() {
 	service := library.NewService(library.NewStore(database), nil, log)
 	_, err = service.Scan(ctx, []string{media})
 	check(err)
-	_, err = database.ExecContext(ctx, `UPDATE movies SET tmdb_id=id, tmdb_title=title, metadata_status='ok', runtime_minutes=CASE WHEN title LIKE '%Direct%' THEN 85 ELSE 135 END, overview='Synthetic media generated locally for the playback guard.', director='Theia Test Studio', genres_json='["Test"]'`)
+	// Stamp synthetic metadata as current (schema version 2). A published binary
+	// has a TMDB key and would otherwise replace the fixture during its first scan.
+	_, err = database.ExecContext(ctx, `UPDATE movies SET tmdb_id=id, tmdb_title=title, metadata_status='ok', metadata_fetched_at=?, metadata_version=2, runtime_minutes=CASE WHEN title LIKE '%Direct%' THEN 85 ELSE 135 END, overview='Synthetic media generated locally for the playback guard.', director='Theia Test Studio', genres_json='["Test"]'`, time.Now().Unix())
+	check(err)
+	for _, table := range []string{"series", "seasons", "episodes"} {
+		_, err = database.ExecContext(ctx, "UPDATE "+table+" SET metadata_status='ok', metadata_fetched_at=?", time.Now().Unix())
+		check(err)
+	}
+	_, err = database.ExecContext(ctx, "UPDATE series SET metadata_version=2")
 	check(err)
 	fmt.Println("Playable fixture ready")
 }
