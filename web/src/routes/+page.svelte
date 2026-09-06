@@ -7,6 +7,7 @@
 	import { strings as t } from '$lib/strings.js';
 	import Hero from '$lib/components/Hero.svelte';
 	import Row from '$lib/components/Row.svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	import ChromeScene from '$lib/components/ChromeScene.svelte';
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
 
@@ -132,11 +133,26 @@
 	     gradient rather than after a visible seam. -->
 	<div class:home-rows={home.hero} class:page-body={!home.hero}>
 		<div class="page-shell programme-bar">
-			<div class="programme-heading"><span class="label text-accent">{t.v3.homeLabel}</span><span class="text-muted">{t.library.countAll(home.total)}</span></div>
+			<div class="programme-heading">
+				<span class="label text-accent">{t.v3.homeLabel}</span>
+				<span class="programme-count">{t.library.countAll(home.total)}</span>
+			</div>
 			<nav aria-label={t.v3.homeLabel} class="programme-links">
-				<a href="/films?status=progress">{t.v3.continueWatching}<span aria-hidden="true">↗</span></a>
-				<a href="/films?list=1">{t.v3.myList}<span aria-hidden="true">↗</span></a>
-				<a href="/films?minutes=120&status=unseen">{t.v3.tonight}<span aria-hidden="true">↗</span></a>
+				<a href="/films?status=progress">
+					<span class="programme-icon"><Icon name="play" size={16} /></span>
+					<span class="programme-label">{t.v3.continueWatching}</span>
+					<Icon name="chevronRight" size={17} />
+				</a>
+				<a href="/films?list=1">
+					<span class="programme-icon"><Icon name="plus" size={18} /></span>
+					<span class="programme-label">{t.v3.myList}</span>
+					<Icon name="chevronRight" size={17} />
+				</a>
+				<a href="/films?minutes=120&status=unseen">
+					<span class="programme-icon"><Icon name="film" size={18} /></span>
+					<span class="programme-label">{t.v3.tonight}</span>
+					<Icon name="chevronRight" size={17} />
+				</a>
 			</nav>
 		</div>
 		{#each home.rows as row, index (row.kind)}

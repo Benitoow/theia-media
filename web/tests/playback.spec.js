@@ -47,7 +47,8 @@ test('watch later persists and duration selection narrows the collection',async(
  await expect(page.getByRole('button',{name:'Dans ma liste',exact:true})).toHaveAttribute('aria-pressed','true');
  await page.reload();await expect(page.getByRole('button',{name:'Dans ma liste',exact:true})).toBeVisible();
  await page.goto('/films?list=1');await expect(page.locator('.library-grid a')).toHaveCount(1);
- await page.goto('/films?minutes=90');await expect(page.locator('.library-grid a')).toHaveCount(1);
+ await page.goto('/films');await page.getByRole('button',{name:'90 minutes',exact:true}).click();
+ await expect(page.locator('.library-grid a')).toHaveCount(1);
  await page.getByRole('button',{name:'Choisir pour moi'}).click();await expect(page).toHaveURL(new RegExp(`/film/${movie.id}$`));
  await page.getByRole('button',{name:'Dans ma liste',exact:true}).click();
 });

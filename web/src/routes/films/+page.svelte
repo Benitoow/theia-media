@@ -160,6 +160,13 @@
 		{ value: 'finished', label: t.library.statusFinished }
 	]);
 
+	const durationOptions = $derived([
+		{ value: 0, label: t.v3.anyDuration },
+		{ value: 90, label: t.v3.minutes90 },
+		{ value: 120, label: t.v3.minutes120 },
+		{ value: 180, label: t.v3.minutes180 }
+	]);
+
 	const addedDate = $derived(
 		new Intl.DateTimeFormat(i18n.localeTag, {
 			day: 'numeric',
@@ -218,10 +225,8 @@
 			<LoadingSkeleton variant="library" label={t.library.loadingProgress(loaded)} />
 		{:else}
 			<header class="collection-header mb-10">
-				<p class="label text-accent mb-4">{t.v3.collection}</p>
 				<h1 class="page-title enter">{t.library.title}</h1>
-				<p class="tv-copy mt-5 text-muted">{t.v3.collectionBody}</p>
-				<p class="label enter enter-2 mt-4">
+				<p class="label enter enter-2 mt-3">
 					{filtering
 						? t.library.countFiltered(filtered.length, movies.length)
 						: t.library.countAll(movies.length)}
@@ -279,13 +284,24 @@
 			</div>
 
 			<div class="library-intent">
-				<button type="button" class="intent-button" aria-pressed={listOnly} disabled={listFailed} onclick={() => listOnly = !listOnly}>
+				<button type="button" class="intent-button intent-list" aria-pressed={listOnly} disabled={listFailed} onclick={() => listOnly = !listOnly}>
 					<Icon name={listOnly ? 'check' : 'plus'} size={18} />{t.v3.myList}<span class="intent-count">{watchlist.length}</span>
 				</button>
-				<label class="duration-choice"><span class="label">{t.v3.duration}</span><select bind:value={maxMinutes}>
-					<option value={0}>{t.v3.anyDuration}</option><option value={90}>{t.v3.minutes90}</option><option value={120}>{t.v3.minutes120}</option><option value={180}>{t.v3.minutes180}</option>
-				</select></label>
-				<button type="button" class="intent-button intent-random" disabled={!filtered.length} onclick={() => goto(`/film/${filtered[Math.floor(Math.random() * filtered.length)].id}`)}>{t.v3.surprise}<span aria-hidden="true">↗</span></button>
+				<div class="intent-duration">
+					<span class="label" id="duration-label">{t.v3.duration}</span>
+					<div class="duration-pills" role="group" aria-labelledby="duration-label">
+						{#each durationOptions as option (option.value)}
+							<button
+								type="button"
+								class="duration-pill"
+								class:duration-pill--active={maxMinutes === option.value}
+								aria-pressed={maxMinutes === option.value}
+								onclick={() => (maxMinutes = option.value)}
+							>{option.label}</button>
+						{/each}
+					</div>
+				</div>
+				<button type="button" class="intent-button intent-random" disabled={!filtered.length} onclick={() => goto(`/film/${filtered[Math.floor(Math.random() * filtered.length)].id}`)}>{t.v3.surprise}<Icon name="chevronRight" size={17} /></button>
 			</div>
 			{#if listFailed}<p class="text-error mb-5" role="alert">{t.v3.listFailed}</p>{/if}
 			{#if maxMinutes}<p class="text-muted mb-5">{t.v3.durationHint}</p>{/if}

@@ -3150,6 +3150,20 @@ filter make choosing a film a concrete action; neither sends data off the server
 The release must exercise populated playback, seeks, profile isolation and the
 real Dune file on disposable data, alongside static checks and cross builds.
 
+## 95. V3.1 visual correction stays local until maintainer approval
+
+The flat V3 masthead and ruled action rows made navigation hover rectangular
+and made film discovery resemble a public editorial page. V3.1 restores the
+rounded glass navigation, replaces the duration select with direct segmented
+choices, turns home shortcuts into a compact application dock and removes the
+gold rectangular card-hover outline. The backend and V3 playback contracts do
+not change.
+
+This work lives only on `codex/v3.1-design-local`. It may be built and run on a
+disposable local data copy for visual review, but no remote branch, pull
+request, tag, release or public-site update is allowed before the maintainer
+explicitly approves the candidate.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
