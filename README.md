@@ -44,8 +44,9 @@ external database or separate web app to install.
 This phase is about replacing guesses with evidence. Theia needs people who will
 run it against their own film and series libraries for at least a week, on the
 screens they actually use, and report both failures and uneventful success.
-[Join the field test](https://github.com/Benitoow/theia-media/issues/new?template=field_test.yml)
-or read the short [testing guide](docs/field-testing.md).
+[Join the field test](https://github.com/Benitoow/theia-media/issues/new?template=field_test.yml),
+read the short [testing guide](docs/field-testing.md), or talk to other testers
+in the [Discord server](https://discord.gg/55rwqWc2Nv).
 
 Feature ideas are still welcome and will be collected. Broader development
 resumes when those real libraries have shown which problems deserve to shape the
