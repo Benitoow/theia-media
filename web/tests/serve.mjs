@@ -6,7 +6,7 @@
 // fails with that instruction if the binary is not there.
 
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -25,9 +25,10 @@ if (!existsSync(binary)) {
 // somebody's real library.
 const dataDir = mkdtempSync(join(tmpdir(), 'theia-guard-'));
 const port = process.env.THEIA_TEST_PORT ?? '8396';
+writeFileSync(join(dataDir, 'config.json'), JSON.stringify({ hostname: 'theia-layout-guard', library_paths: [] }));
 
 const child = spawn(binary, ['--data-dir', dataDir, '--port', port], {
-	stdio: 'inherit'
+	stdio: 'inherit', cwd: dataDir
 });
 
 child.on('exit', (code) => process.exit(code ?? 0));

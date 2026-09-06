@@ -1,6 +1,7 @@
 package api
 
 import (
+	"math"
 	"net/http"
 	"strconv"
 
@@ -35,14 +36,26 @@ type seekStartResponse struct {
 }
 
 func (s *Server) handleMovieFileSeekStart(w http.ResponseWriter, r *http.Request) {
-	movie, file, ok := s.movieFileForStream(w, r)
+	_, file, ok := s.movieFileForStream(w, r)
 	if !ok {
 		return
 	}
+	s.serveSeekStart(w, r, file.Path)
+}
+
+func (s *Server) handleEpisodeFileSeekStart(w http.ResponseWriter, r *http.Request) {
+	_, file, ok := s.episodeFileForStream(w, r)
+	if !ok {
+		return
+	}
+	s.serveSeekStart(w, r, file.Path)
+}
+
+func (s *Server) serveSeekStart(w http.ResponseWriter, r *http.Request, path string) {
 
 	raw := r.URL.Query().Get("t")
 	requested, err := strconv.ParseFloat(raw, 64)
-	if err != nil || requested <= 0 {
+	if err != nil || requested <= 0 || math.IsNaN(requested) || math.IsInf(requested, 0) {
 		writeJSONError(w, http.StatusBadRequest, "invalid_position")
 		return
 	}
@@ -54,13 +67,17 @@ func (s *Server) handleMovieFileSeekStart(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	start, err := s.ffmpeg.KeyframeAt(r.Context(), file.Path, requested)
+	if forcedTranscode(r) || r.URL.Query().Has("h") {
+		writeJSON(w, 200, seekStartResponse{Requested: requested, Start: requested})
+		return
+	}
+	start, err := s.ffmpeg.KeyframeAt(r.Context(), path, requested)
 	if err != nil {
 		// Not an error the interface has to explain. The clock stays as
 		// optimistic as it was before this route existed, which is a comfort
 		// missing rather than a playback broken.
 		s.log.Debug("could not locate the keyframe for a seek",
-			"film_id", movie.ID, "file_id", file.ID, "requested", requested, "error", err)
+			"requested", requested, "error", err)
 		writeJSONError(w, http.StatusNotFound, "seek_start_unavailable")
 		return
 	}
@@ -71,4 +88,11 @@ func (s *Server) handleMovieFileSeekStart(w http.ResponseWriter, r *http.Request
 		start = requested
 	}
 	writeJSON(w, http.StatusOK, seekStartResponse{Requested: requested, Start: start})
+}
+
+func (s *Server) handleLegacySeekStart(w http.ResponseWriter, r *http.Request) {
+	if !s.selectPrimaryStreamFile(w, r) {
+		return
+	}
+	s.handleMovieFileSeekStart(w, r)
 }

@@ -66,6 +66,19 @@ are to TMDB for metadata and to GitHub Releases for its own updates.
 Shown in French, the default. English is a complete second catalogue and switches
 without a reload. Titles, synopses and artwork come from TMDB.
 
+## New in V3
+
+An editorial cinema home, a personal **watch later** list for every profile, and
+**tonight** filters for 90 minutes, two hours or three hours. Choose for me picks
+from your current results. Film and episode playback now share the conversion
+pipeline, with bounded browser buffering and instant seeks inside loaded media.
+The player offers a retry and a 1080p fallback after a failed startup.
+
+V3 also hardens browser access on the LAN, keeps updates out of active playback,
+defers unfinished file copies, and identifies settings that need a restart.
+Every release runs a populated playback guard as well as the layout and Go tests.
+See the [V3 verification record](docs/v3.md) for the measured scope and limits.
+
 ## What Theia does
 
 **Library**

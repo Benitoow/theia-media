@@ -19,7 +19,7 @@
 	import { remote } from '$lib/remote.svelte.js';
 
 	/** @type {'loading' | 'ready' | 'missing'} */
-	let state = $state('loading');
+	let loadState = $state('loading');
 	let series = $state(null);
 	let season = $state(null);
 	let seasonNumber = $state(null);
@@ -61,14 +61,14 @@
 		try {
 			await profiles.ready();
 			series = await getJSON(profiles.url(`/api/library/series/${$page.params.id}`));
-			state = 'ready';
+			loadState = 'ready';
 			// Open on the first real season rather than on the specials, which are
 			// almost never what somebody came for.
 			const seasons = series.seasons ?? [];
 			const first = seasons.find((s) => s.season_number > 0) ?? seasons[0];
 			if (first) await selectSeason(first.season_number);
 		} catch {
-			state = 'missing';
+			loadState = 'missing';
 		}
 	});
 
@@ -105,9 +105,9 @@
 	<title>{series ? displayTitle(series) : t.series.title}</title>
 </svelte:head>
 
-{#if state === 'loading'}
+{#if loadState === 'loading'}
 	<LoadingSkeleton variant="detail" label={t.series.loading} />
-{:else if state === 'missing'}
+{:else if loadState === 'missing'}
 	<div class="page-shell flex min-h-screen items-center justify-center py-32">
 		<div class="chrome-panel max-w-xl p-8 text-center sm:p-12">
 			<h1 class="font-display text-display font-normal">{t.series.notFound}</h1>

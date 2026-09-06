@@ -3122,6 +3122,34 @@ and some build time. Not added here, because adding a toolchain in the middle of
 a refactor is how a refactor goes wrong; recorded as the obvious next guard.
 
 
+## 94. V3: a programme of films and an explicit playback contract
+
+The September audit demonstrated that native Range retries on a chunked FFmpeg
+response can open a second encoder, and that an episode did not have the same
+conversion path as a film. V3 feeds fragmented MP4 through MediaSource where
+supported, bounds its buffer, cancels obsolete requests, and uses the same
+conversion handler for films and episodes. Direct files retain native Range.
+This supersedes the native-only transport assumption in decisions 90 and 93.
+
+A shared admission gate separates playback from binary installation. A playing
+browser sends a heartbeat; an update rechecks admission after download and
+verification. The previous executable survives startup for rollback.
+
+The LAN listener checks Host and browser Origin as well as the client's address.
+Remote read routes are explicit so a future administration endpoint cannot
+inherit access merely by sharing a prefix. Automatic scans defer fresh files
+without pruning their existing entries. Settings expose pending restart changes.
+Cached artwork remains available when the metadata key is absent.
+
+Visually, the programme becomes the organising idea: a framed masthead, a more
+compact cinematic feature, and a clear transition into the collection. The
+floating navigation pill is retired. Cinzel/Jost, parchment, gold, focus rings,
+phone tabs and artwork-free cards remain. Personal watchlists and a duration
+filter make choosing a film a concrete action; neither sends data off the server.
+
+The release must exercise populated playback, seeks, profile isolation and the
+real Dune file on disposable data, alongside static checks and cross builds.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

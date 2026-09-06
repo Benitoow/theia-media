@@ -157,7 +157,7 @@ func (w *Watcher) pass(ctx context.Context, force bool) {
 		return
 	}
 
-	report, err := w.svc.Scan(ctx, roots)
+	report, err := w.svc.scanStable(ctx, roots, time.Now().Add(-w.stability))
 	switch {
 	case errors.Is(err, ErrScanInProgress):
 		// Somebody pressed the button, or a previous pass is still going. Their

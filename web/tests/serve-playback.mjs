@@ -1,0 +1,13 @@
+import { spawn, spawnSync } from 'node:child_process';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+const root = resolve(import.meta.dirname, '../..');
+const data = mkdtempSync(join(tmpdir(), 'theia-playback-guard-'));
+const args = ['run', './internal/testfixture', '--data-dir', data];
+if (process.env.THEIA_TEST_FFMPEG) args.push('--ffmpeg', process.env.THEIA_TEST_FFMPEG);
+const seed = spawnSync(process.env.GO_BINARY || 'go', args, { cwd: root, stdio: 'inherit', timeout: 600_000 });
+if (seed.status !== 0) process.exit(seed.status || 1);
+const server = spawn(join(root, process.platform === 'win32' ? 'theia.exe' : 'theia'), ['--data-dir', data, '--port', '8397'], { cwd: data, stdio: 'inherit' });
+server.on('exit', code => process.exit(code || 0));
+for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.kill(signal));

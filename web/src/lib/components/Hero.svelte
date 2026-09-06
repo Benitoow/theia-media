@@ -35,7 +35,7 @@
 	The chrome, where the identity goes in full: display serif, room to breathe,
 	a single accent. Everything below this section is the dense half.
 -->
-<section class="relative isolate flex min-h-[78svh] items-end overflow-hidden">
+<section class="cinema-feature relative isolate flex items-end overflow-hidden">
 	{#if backdrop}
 		<!-- Framed from the top, not the centre, and the reason is the layout
 		     rather than this particular still. A 16/9 backdrop in a 2.26/1 hero
@@ -68,8 +68,8 @@
 		<div class="max-w-[52rem]">
 			{#if resuming}
 				<span class="label enter text-accent">{t.hero.resumeEyebrow}</span>
-			{:else if movie.metadata?.genres?.length}
-				<span class="label enter">{movie.metadata.genres.slice(0, 3).join(' · ')}</span>
+			{:else}
+				<span class="label enter text-accent">{t.v3.featured}</span>
 			{/if}
 
 			<h1 class="hero-title enter mt-4 mb-7">{title}</h1>

@@ -57,7 +57,7 @@
 		}
 		if (event.key !== 'Tab' || !panel) return;
 
-		const focusable = [...panel.querySelectorAll('a[href], button:not(:disabled)')].filter(
+		const focusable = [...panel.querySelectorAll('a[href], button:not(:disabled)')].filter((element) => element instanceof HTMLElement).filter(
 			(element) => element.offsetParent !== null
 		);
 		if (!focusable.length) return;
@@ -74,7 +74,7 @@
 
 	$effect(() => {
 		if (!panel) return;
-		tick().then(() => panel.querySelector('[data-remote-default]')?.focus());
+		tick().then(() => { const target = panel.querySelector('[data-remote-default]'); if (target instanceof HTMLElement) target.focus(); });
 	});
 
 	onDestroy(() => {

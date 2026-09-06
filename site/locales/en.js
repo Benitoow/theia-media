@@ -24,10 +24,10 @@ export default {
 	},
 
 	hero: {
-		eyebrow: 'One media server. One binary.',
+		eyebrow: 'Theia V3 · Your private cinema.',
 		title: 'Your film. Not the platform.',
 		lead:
-			'Choose your folders. Theia organises your library and plays your films on devices around the home — without an account, subscription or mandatory cloud.'
+			'Your watchlist. A film for the time you have. More dependable playback, from films to series. Theia V3 turns your folders into your private cinema — without an account or subscription.'
 	},
 
 	playerDemo: {

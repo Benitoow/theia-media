@@ -26,7 +26,7 @@
 	} = $props();
 
 	/** @type {'loading' | 'ready' | 'failed'} */
-	let state = $state('loading');
+	let loadState = $state('loading');
 	let candidates = $state([]);
 	let query = $state('');
 	let applyingId = $state(null);
@@ -44,15 +44,15 @@
 	}
 
 	async function load(search) {
-		state = 'loading';
+		loadState = 'loading';
 		errorCode = null;
 		try {
 			const body = await getJSON(`${basePath}/candidates?q=${encodeURIComponent(search)}`);
 			candidates = body.candidates ?? [];
-			state = 'ready';
+			loadState = 'ready';
 		} catch (error) {
 			errorCode = error.code ?? 'unknown';
-			state = 'failed';
+			loadState = 'failed';
 		}
 	}
 
@@ -141,11 +141,11 @@
 			<p class="match-error text-small" role="alert">{messageFor(errorCode)}</p>
 		{/if}
 
-		{#if state === 'loading'}
+		{#if loadState === 'loading'}
 			<p class="text-small text-muted">{t.match.searching}</p>
-		{:else if state === 'ready' && candidates.length === 0}
+		{:else if loadState === 'ready' && candidates.length === 0}
 			<p class="text-small text-muted">{t.match.none}</p>
-		{:else if state === 'ready'}
+		{:else if loadState === 'ready'}
 			<ul class="match-list">
 				{#each candidates as candidate (candidate.tmdb_id)}
 					<li class="match-item">

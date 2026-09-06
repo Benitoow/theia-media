@@ -141,7 +141,8 @@ class Profiles {
 }
 
 async function errorFrom(response) {
-	const error = new Error(`HTTP ${response.status}`);
+	/** @type {Error & {status?: number, code?: string}} */
+		const error = new Error(`HTTP ${response.status}`);
 	error.status = response.status;
 	try {
 		const body = await response.json();

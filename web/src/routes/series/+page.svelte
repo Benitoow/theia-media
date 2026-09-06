@@ -12,7 +12,7 @@
 	import ChromeScene from '$lib/components/ChromeScene.svelte';
 
 	/** @type {'loading' | 'ready' | 'failed'} */
-	let state = $state('loading');
+	let loadState = $state('loading');
 	let series = $state([]);
 
 	onMount(async () => {
@@ -20,9 +20,9 @@
 			await profiles.ready();
 			const payload = await getJSON(profiles.url('/api/library/series?limit=500'));
 			series = payload.series ?? [];
-			state = 'ready';
+			loadState = 'ready';
 		} catch {
-			state = 'failed';
+			loadState = 'failed';
 		}
 	});
 </script>
@@ -39,9 +39,9 @@
 	a 1512px window, with a display title inside a box too small to carry one,
 	was the visible cost of it.
 -->
-{#if state === 'loading'}
+{#if loadState === 'loading'}
 	<LoadingSkeleton variant="grid" label={t.series.loading} />
-{:else if state === 'failed'}
+{:else if loadState === 'failed'}
 	<ChromeScene
 		image="/chrome/theia-offline.webp"
 		eyebrow={t.appName}

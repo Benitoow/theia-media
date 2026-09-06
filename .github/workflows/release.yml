@@ -8,7 +8,11 @@ permissions:
   contents: write
 
 jobs:
+  validate:
+    uses: ./.github/workflows/validate.yml
+
   build:
+    needs: validate
     name: ${{ matrix.goos }}/${{ matrix.goarch }}
     runs-on: ubuntu-latest
     strategy:
@@ -99,5 +103,5 @@ jobs:
         run: |
           gh release create "${GITHUB_REF_NAME}" \
             --title "Theia ${GITHUB_REF_NAME}" \
-            --generate-notes \
+            --notes-file docs/releases/${GITHUB_REF_NAME}.md \
             staging/*

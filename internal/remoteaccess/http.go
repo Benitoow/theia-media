@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -24,9 +25,64 @@ func PeerFromRequest(r *http.Request) (Peer, bool) {
 // public clients. Forwarded headers are deliberately ignored: trusting them
 // without a configured proxy boundary would let any caller write its own LAN
 // address on a napkin and walk in.
-func LANOnly(next http.Handler) http.Handler {
-	return lanOnlyWithPrefixes(next, localInterfacePrefixes())
+func LANOnly(next http.Handler, names ...string) http.Handler {
+	return lanOnlyWithPrefixes(lanBrowserBoundary(next, names), localInterfacePrefixes())
 }
+
+func lanBrowserBoundary(next http.Handler, names []string) http.Handler {
+	hosts := map[string]bool{"localhost": true, "theia": true, "theia.local": true}
+	for _, name := range names {
+		hosts[strings.ToLower(name)] = true
+		hosts[strings.ToLower(name)+".local"] = true
+	}
+	if addresses, err := net.InterfaceAddrs(); err == nil {
+		for _, address := range addresses {
+			if p, err := netip.ParsePrefix(address.String()); err == nil {
+				hosts[p.Addr().String()] = true
+			}
+		}
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		host := req.Host
+		if h, _, err := net.SplitHostPort(host); err == nil {
+			host = h
+		}
+		host = strings.ToLower(strings.TrimSuffix(strings.Trim(host, "[]"), "."))
+		ip, _ := netip.ParseAddr(host)
+		if !hosts[host] && !ip.IsLoopback() {
+			writeRemoteError(w, 403, "invalid_host")
+			return
+		}
+		if crossSiteSubresource(req) {
+			writeRemoteError(w, 403, "cross_origin_denied")
+			return
+		}
+		if requestChangesState(req.Method) {
+			if req.Header.Get("Sec-Fetch-Site") == "cross-site" {
+				writeRemoteError(w, 403, "cross_origin_denied")
+				return
+			}
+			if origin := req.Header.Get("Origin"); origin != "" {
+				u, err := url.Parse(origin)
+				scheme := "http"
+				if req.TLS != nil {
+					scheme = "https"
+				}
+				if err != nil || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || u.Scheme != scheme || !strings.EqualFold(u.Host, req.Host) {
+					writeRemoteError(w, 403, "cross_origin_denied")
+					return
+				}
+			}
+		}
+		next.ServeHTTP(w, req)
+	})
+}
+
+// Read routes are enumerated, not inferred from a future endpoint's prefix.
+var remoteReads = regexp.MustCompile(`^/api/(health|remote-access/session|profiles(/[0-9]+(/avatar)?)?|library/(home|stats|search|watchlist|movies(/[0-9]+(/files/[0-9]+/subtitles/[0-9]+)?)?|series(/home|/[0-9]+(/seasons/[0-9]+)?)?|episodes/[0-9]+(/files/[0-9]+/(subtitles/[0-9]+|stream(/(info|remux|seek|preview))?))?)|images/[^/]+/[^/]+|previews/[^/]+|stream/[0-9]+(/files/[0-9]+)?(/(info|remux|seek|preview))?)$`)
 
 func lanOnlyWithPrefixes(next http.Handler, prefixes []netip.Prefix) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -147,43 +203,14 @@ func (r *tunnelRuntime) protect(next http.Handler, httpPort int) http.Handler {
 }
 
 func remoteRouteAllowed(method, path string) bool {
+	if method == http.MethodPost && path == "/api/playback/heartbeat" {
+		return true
+	}
 	if !strings.HasPrefix(path, "/api/") {
 		return method == http.MethodGet || method == http.MethodHead
 	}
 	if method == http.MethodGet || method == http.MethodHead {
-		switch {
-		case path == "/api/health":
-			return true
-		case path == "/api/remote-access/session":
-			return true
-		// Reading the profile list and its pictures is admitted because a remote
-		// device has to know whose history it is writing to: progress carries a
-		// profile since M2. Creating, renaming, deleting a profile and replacing
-		// a picture are not here, and must not be added -- managing the household
-		// stays on the LAN with every other administrative surface.
-		case path == "/api/profiles":
-			return true
-		case strings.HasPrefix(path, "/api/profiles/") && strings.HasSuffix(path, "/avatar"):
-			return true
-		// Choosing what a file is remains administration, so the list of
-		// possible matches is not readable from outside either -- it would
-		// otherwise let a remote device spend the household's TMDB quota.
-		case strings.HasSuffix(path, "/match/candidates"):
-			return false
-		case strings.HasPrefix(path, "/api/library/"):
-			return true
-		case strings.HasPrefix(path, "/api/images/"):
-			return true
-		// Seek previews are part of watching, like artwork. Asking for one can
-		// start a build, which is CPU this household is choosing to spend on a
-		// film one of its own devices is playing.
-		case strings.HasPrefix(path, "/api/previews/"):
-			return true
-		case strings.HasPrefix(path, "/api/stream/"):
-			return true
-		default:
-			return false
-		}
+		return remoteReads.MatchString(path)
 	}
 
 	parts := strings.Split(strings.Trim(path, "/"), "/")
@@ -194,7 +221,7 @@ func remoteRouteAllowed(method, path string) bool {
 		// the server, and it stays where it is.
 		return parts[0] == "api" && parts[1] == "library" &&
 			(parts[2] == "movies" || parts[2] == "episodes") &&
-			parts[3] != "" && (parts[4] == "progress" || parts[4] == "watched")
+			parts[3] != "" && (parts[4] == "progress" || parts[4] == "watched" || (parts[2] == "movies" && parts[4] == "watchlist"))
 	}
 	if method == http.MethodPost && len(parts) == 7 {
 		return parts[0] == "api" && parts[1] == "library" &&

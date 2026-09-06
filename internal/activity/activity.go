@@ -21,9 +21,10 @@ const idleAfter = 90 * time.Second
 
 // Tracker records stream activity.
 type Tracker struct {
-	mu       sync.Mutex
-	inFlight int
-	last     time.Time
+	mu         sync.Mutex
+	inFlight   int
+	last       time.Time
+	installing bool
 }
 
 // New returns a tracker with nothing in progress.
@@ -32,7 +33,18 @@ func New() *Tracker { return &Tracker{} }
 // Begin records the start of a stream request and returns the function to call
 // when it ends.
 func (t *Tracker) Begin() func() {
+	end, _ := t.TryBegin()
+	return end
+}
+
+// TryBegin and TryInstall share one lock: no playback can slip between the
+// installer's idle check and its replacement of the running executable.
+func (t *Tracker) TryBegin() (func(), bool) {
 	t.mu.Lock()
+	if t.installing {
+		t.mu.Unlock()
+		return func() {}, false
+	}
 	t.inFlight++
 	t.last = time.Now()
 	t.mu.Unlock()
@@ -45,7 +57,17 @@ func (t *Tracker) Begin() func() {
 			t.last = time.Now()
 			t.mu.Unlock()
 		})
+	}, true
+}
+
+func (t *Tracker) TryInstall() (func(), bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.installing || t.inFlight > 0 || (!t.last.IsZero() && time.Since(t.last) < idleAfter) {
+		return func() {}, false
 	}
+	t.installing = true
+	return func() { t.mu.Lock(); t.installing = false; t.mu.Unlock() }, true
 }
 
 // Busy reports whether something is being watched right now.

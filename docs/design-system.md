@@ -5,6 +5,25 @@ component; change it here before changing it in code.
 
 ---
 
+## V3 programme (supersedes the floating-pill treatment below)
+
+Navigation uses a flat masthead with a fine parchment rule and an opaque enough
+floor for scrolling text. No shadow or animated blur is needed. Active
+navigation keeps its obvious state and phone destinations keep their thumb bar.
+The feature occupies roughly two thirds of a desktop viewport; its small brass
+programme label precedes the serif title. A ruled programme strip connects it
+to the rows and offers Continue, My list and Tonight. It wraps on small screens.
+
+The collection pairs a strong heading with a short purpose line. Search and
+metadata filters remain together; viewing intent (personal list, available time,
+random choice within current results) occupies its own quieter row. Selected
+intent controls use an explicit pressed state, never colour alone. Unknown
+runtimes are excluded when a duration limit is active, with visible explanation.
+All controls have at least 44 px hit areas, including the playback timeline.
+On phone film details the backdrop supplies the artwork and the separate poster
+is omitted, keeping the title and play action within reach. Artwork remains
+untouched. Empty artwork uses the existing typographic fallback.
+
 ## 1. Where it came from
 
 Four references were given as direction: Luxam, Rinascimento, Lavoza and Taste

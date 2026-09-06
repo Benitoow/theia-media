@@ -15,6 +15,29 @@ export function formatDecimal(value) {
 }
 
 export const strings = {
+	v3: {
+  "collection": "Your collection, at your pace.",
+  "collectionBody": "A film in mind, or simply an evening ahead.",
+  "homeLabel": "On the programme",
+  "featured": "Now showing",
+  "myList": "My list",
+  "save": "Watch later",
+  "saved": "In my list",
+  "listFailed": "Could not update your list. Please try again.",
+  "duration": "Time available",
+  "anyDuration": "The whole evening",
+  "minutes90": "90 minutes",
+  "minutes120": "2 hours",
+  "minutes180": "3 hours",
+  "durationHint": "Only films with a known runtime are included.",
+  "surprise": "Choose for me",
+  "tonight": "A film tonight",
+  "continueWatching": "Continue watching",
+  "retry": "Try again",
+  "compatible": "Try in 1080p",
+  "transcode": "Adapted video",
+  "direct": "Direct playback"
+},
 	appName: 'Theia',
 	tagline: 'Personal media server',
 	tmdbAttribution: 'This product uses the TMDB API but is not endorsed or certified by TMDB.',
@@ -274,6 +297,8 @@ export const strings = {
 			audio_track_unavailable: 'The audio track could not be read from the database.',
 			media_file_unreadable: 'This file could not be opened on disk.',
 			media_inspection_not_saved: 'The result of the analysis could not be saved.',
+			stream_encode_failed: 'Conversion failed. Try a lower quality or choose another file.',
+			update_restarting: 'Theia is restarting after an update. Try again shortly.',
 			stream_start_failed: 'Playback could not be started.',
 			ffmpeg_unsupported: 'No ffmpeg build is available for this platform.',
 			ffmpeg_unavailable: 'ffmpeg could not be prepared. Check the connection, then try again.'
@@ -711,6 +736,7 @@ export const strings = {
 		removePath: 'Remove',
 		pathPlaceholder: 'C:\\Users\\you\\Videos',
 		portHint: 'The port change will take effect the next time Theia starts.',
+		restartRequired: 'Settings saved. Restart Theia to activate the new port or TMDB key.',
 		portChanged:
 			'The new port is saved, but Theia is still listening on the old one. Restart it to apply the change.',
 		missingPaths:

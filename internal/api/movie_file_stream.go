@@ -2,10 +2,8 @@ package api
 
 import (
 	"errors"
-	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -141,9 +139,11 @@ func (s *Server) handleMovieFileStreamDirect(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if s.activity != nil {
-		defer s.activity.Begin()()
+	endPlayback, admitted := s.beginPlayback(w)
+	if !admitted {
+		return
 	}
+	defer endPlayback()
 	opened, err := os.Open(file.Path)
 	if err != nil {
 		s.log.Warn("opening a film file for direct play failed",
@@ -172,7 +172,7 @@ func (s *Server) handleMovieFileStreamRemux(w http.ResponseWriter, r *http.Reque
 	if !ok {
 		return
 	}
-	wantedHeight, heightRequested, ok := requestedHeight(w, r)
+	_, _, ok = requestedHeight(w, r)
 	if !ok {
 		return
 	}
@@ -181,9 +181,11 @@ func (s *Server) handleMovieFileStreamRemux(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if s.activity != nil {
-		defer s.activity.Begin()()
+	endPlayback, admitted := s.beginPlayback(w)
+	if !admitted {
+		return
 	}
+	defer endPlayback()
 
 	// SubtitlesScanned is the third condition, and it only ever fires once per
 	// file: a library inspected before subtitles existed has every measurement
@@ -245,127 +247,10 @@ func (s *Server) handleMovieFileStreamRemux(w http.ResponseWriter, r *http.Reque
 	}
 	decision := stream.Decide(file.Path, file.Media.Video.Codec, audioCodec)
 
-	// V2-M6. The picture is re-encoded when the browser cannot decode it at all,
-	// or when somebody has asked for a smaller one. Both need an encoder that
-	// runs on this machine -- probed, never assumed.
-	needsTranscode := decision.Mode == stream.ModeUnsupported || heightRequested || forcedTranscode(r)
-	var encoder ffmpeg.Encoder
-	if needsTranscode {
-		best, available := s.ffmpeg.Capabilities(r.Context()).Best()
-		if !available {
-			writeJSONError(w, http.StatusUnsupportedMediaType, "video_transcode_required")
-			return
-		}
-		encoder = best
-		s.transcodes.setKind(encoder.Kind)
-
-		// The furnace is lit once at a time in software. Refusing is the honest
-		// answer: two concurrent software transcodes do not run at half speed,
-		// they both stall, and nobody watching either one can tell why.
-		release, got := s.transcodes.acquire(stream.ToneMap(file.Media.Video.ColorTransfer))
-		if !got {
-			writeJSONError(w, http.StatusServiceUnavailable, "transcode_busy")
-			return
-		}
-		defer release()
-		decision.Mode = stream.ModeTranscode
-	}
-
 	if audioRequested && decision.Mode == stream.ModeDirect {
 		decision.Mode = stream.ModeRemux
-		decision.Audio = stream.AudioCopy
 	}
-
-	binary, err := s.ffmpeg.Path(r.Context())
-	switch {
-	case errors.Is(err, ffmpeg.ErrUnsupportedPlatform):
-		writeJSONError(w, http.StatusNotImplemented, "ffmpeg_unsupported")
-		return
-	case err != nil:
-		s.log.Error("ffmpeg is unavailable", "error", err)
-		writeJSONError(w, http.StatusServiceUnavailable, "ffmpeg_unavailable")
-		return
-	}
-
-	start := 0.0
-	if raw := r.URL.Query().Get("t"); raw != "" {
-		if parsed, err := strconv.ParseFloat(raw, 64); err == nil && parsed > 0 {
-			start = parsed
-		}
-	}
-	selectedIndex := -1
-	var audioStreamIndex *int
-	if selected != nil {
-		selectedIndex = selected.StreamIndex
-		audioStreamIndex = &selected.StreamIndex
-	}
-
-	var args []string
-	switch {
-	case decision.Mode == stream.ModeTranscode:
-		// Probed on the first transcode and remembered, like the encoder. An
-		// empty answer means decode on the CPU, which is correct everywhere.
-		args = stream.TranscodeArgs(file.Path, decision, start, stream.TranscodeOptions{
-			Encoder:          encoder.Name,
-			HWAccel:          s.ffmpeg.HardwareDecoder(r.Context()),
-			Height:           wantedHeight,
-			SourceHeight:     file.Media.Video.Height,
-			AudioStreamIndex: audioStreamIndex,
-			ColorTransfer:    file.Media.Video.ColorTransfer,
-		})
-	case audioStreamIndex != nil:
-		args = stream.RemuxArgsForAudio(file.Path, decision, start, *audioStreamIndex)
-	default:
-		args = stream.RemuxArgs(file.Path, decision, start)
-	}
-
-	s.log.Info("streaming selected film file",
-		"film_id", movie.ID,
-		"file_id", file.ID,
-		"mode", decision.Mode,
-		"video", file.Media.Video.Codec,
-		"video_encoder", encoder.Name,
-		"height", wantedHeight,
-		"audio", audioCodec,
-		"audio_track_id", audioID,
-		"audio_stream_index", selectedIndex,
-		"audio_action", decision.Audio,
-		"tone_map", stream.ToneMap(file.Media.Video.ColorTransfer),
-		"start", start,
-	)
-
-	cmd := exec.CommandContext(r.Context(), binary, args...)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "stream_start_failed")
-		return
-	}
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	if err := cmd.Start(); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "stream_start_failed")
-		return
-	}
-
-	w.Header().Set("Content-Type", "video/mp4")
-	w.Header().Set("Cache-Control", "private, no-store")
-	w.WriteHeader(http.StatusOK)
-	_, copyErr := io.Copy(w, stdout)
-	waitErr := cmd.Wait()
-	if copyErr != nil {
-		s.log.Debug("the selected remux stream ended early", "error", copyErr)
-		return
-	}
-	if waitErr != nil {
-		s.log.Warn("ffmpeg ended a selected remux with an error",
-			"film_id", movie.ID, "file_id", file.ID,
-			"error", waitErr, "message", strings.TrimSpace(stderr.String()))
-		return
-	}
-	if message := strings.TrimSpace(stderr.String()); message != "" {
-		s.log.Warn("ffmpeg reported a problem for a selected film file",
-			"film_id", movie.ID, "file_id", file.ID, "message", message)
-	}
+	s.serveConvertedFile(w, r, file.Path, file.Media, decision, selected)
 }
 
 func (s *Server) movieFileForStream(w http.ResponseWriter, r *http.Request) (library.Movie, library.MovieFile, bool) {

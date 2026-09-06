@@ -108,7 +108,7 @@ export const i18n = new I18n();
 // changing every `t.foo` access at once. Each property read resolves against
 // the active catalogue and therefore participates in Svelte reactivity.
 export const strings = new Proxy(
-	{},
+	/** @type {typeof import('./locales/fr.js').strings} */ ({}),
 	{
 		get(_target, property) {
 			return i18n.t[property];

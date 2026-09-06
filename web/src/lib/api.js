@@ -13,6 +13,7 @@ export async function apiFetch(path, options) {
 export async function getJSON(path, options) {
 	const res = await apiFetch(path, options);
 	if (!res.ok) {
+		/** @type {Error & {status?: number, code?: string}} */
 		const error = new Error(`HTTP ${res.status}`);
 		error.status = res.status;
 		// The server answers a failure with {"error": "<code>"} and never with a

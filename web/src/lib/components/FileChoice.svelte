@@ -105,8 +105,8 @@
 		if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
 		if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
 
-		const options = [...(root?.querySelectorAll('.file-option') ?? [])];
-		const index = options.indexOf(document.activeElement);
+		const options = [...(root?.querySelectorAll('.file-option') ?? [])].filter((element) => element instanceof HTMLElement);
+		const index = options.findIndex((element) => element === document.activeElement);
 		if (index < 0) return;
 
 		const next = index + (event.key === 'ArrowDown' ? 1 : -1);

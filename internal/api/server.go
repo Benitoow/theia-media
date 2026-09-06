@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/Benitoow/theia-media/internal/activity"
@@ -56,22 +57,24 @@ type Options struct {
 // Server wires the configuration, the embedded frontend and the JSON API into
 // a single http.Handler.
 type Server struct {
-	cfg       *config.Config
-	lib       *library.Service
-	images    *imagecache.Cache
-	ffmpeg    *ffmpeg.Manager
-	state     *db.State
-	updater   *updater.Updater
-	activity  *activity.Tracker
-	profiles  *profiles.Store
-	remote    *remoteaccess.Service
-	watcher   *library.Watcher
-	previews  *preview.Manager
-	web       fs.FS
-	log       *slog.Logger
-	version   string
-	keySource config.KeySource
-	started   time.Time
+	settingsMu  sync.Mutex
+	savedConfig *config.Config
+	cfg         *config.Config
+	lib         *library.Service
+	images      *imagecache.Cache
+	ffmpeg      *ffmpeg.Manager
+	state       *db.State
+	updater     *updater.Updater
+	activity    *activity.Tracker
+	profiles    *profiles.Store
+	remote      *remoteaccess.Service
+	watcher     *library.Watcher
+	previews    *preview.Manager
+	web         fs.FS
+	log         *slog.Logger
+	version     string
+	keySource   config.KeySource
+	started     time.Time
 
 	// How many pictures may be re-encoded at once. See transcode.go: the
 	// ceiling comes from a measurement, not a preference.
@@ -107,6 +110,7 @@ func New(opts Options) *Server {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", s.handleHealth)
+	mux.HandleFunc("POST /api/playback/heartbeat", s.handlePlaybackHeartbeat)
 	mux.HandleFunc("GET /api/settings", s.handleSettings)
 	mux.HandleFunc("GET /api/diagnostics", s.handleDiagnostics)
 	mux.HandleFunc("PUT /api/settings", s.handleUpdateSettings)
@@ -129,6 +133,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/profiles/{id}/avatar", s.handleSetProfileAvatar)
 	mux.HandleFunc("DELETE /api/profiles/{id}/avatar", s.handleDeleteProfileAvatar)
 	mux.HandleFunc("GET /api/library/home", s.handleHome)
+	mux.HandleFunc("GET /api/library/watchlist", s.handleWatchlist)
+	mux.HandleFunc("PUT /api/library/movies/{id}/watchlist", s.handleSetWatchlist)
+	mux.HandleFunc("DELETE /api/library/movies/{id}/watchlist", s.handleSetWatchlist)
 	mux.HandleFunc("GET /api/library/movies", s.handleMovies)
 	mux.HandleFunc("GET /api/library/movies/{id}", s.handleMovie)
 	mux.HandleFunc("POST /api/library/movies/{id}/files/{file_id}/inspect", s.handleInspectMovieFile)
@@ -170,6 +177,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/stream/{id}/files/{file_id}/preview", s.handleMovieFilePreview)
 	mux.HandleFunc("GET /api/library/episodes/{id}/files/{file_id}/stream/preview", s.handleEpisodeFilePreview)
 	mux.HandleFunc("GET /api/stream/{id}/info", s.handleStreamInfo)
+	mux.HandleFunc("GET /api/stream/{id}/seek", s.handleLegacySeekStart)
 	mux.HandleFunc("GET /api/stream/{id}/remux", s.handleStreamRemux)
 	mux.HandleFunc("GET /api/stream/{id}", s.handleStreamDirect)
 	mux.HandleFunc("GET /api/stream/{id}/files/{file_id}/info", s.handleMovieFileStreamInfo)
@@ -180,6 +188,7 @@ func (s *Server) Handler() http.Handler {
 	// /api/stream/episodes would overlap the legacy film wildcard routes in Go's
 	// ServeMux (some deliberately bizarre IDs can match both patterns).
 	mux.HandleFunc("GET /api/library/episodes/{id}/files/{file_id}/stream/info", s.handleEpisodeFileStreamInfo)
+	mux.HandleFunc("GET /api/library/episodes/{id}/files/{file_id}/stream/seek", s.handleEpisodeFileSeekStart)
 	mux.HandleFunc("GET /api/library/episodes/{id}/files/{file_id}/stream/remux", s.handleEpisodeFileStreamRemux)
 	mux.HandleFunc("GET /api/library/episodes/{id}/files/{file_id}/stream", s.handleEpisodeFileStreamDirect)
 	mux.Handle("/", s.staticHandler())

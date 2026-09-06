@@ -2,17 +2,13 @@ package api
 
 import (
 	"errors"
-	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/library"
-	"github.com/Benitoow/theia-media/internal/stream"
 )
 
 type streamInfoResponse struct {
@@ -71,32 +67,10 @@ type streamInfoResponse struct {
 // and running ffmpeg means downloading it. Asking "how will this play" must not
 // cost 80 MB for a library that never needs it.
 func (s *Server) handleStreamInfo(w http.ResponseWriter, r *http.Request) {
-	movie, ok := s.movieForStream(w, r)
-	if !ok {
+	if !s.selectPrimaryStreamFile(w, r) {
 		return
 	}
-
-	decision := stream.DecideByContainer(movie.Path)
-
-	// Prefer a duration measured from the file. TMDB's runtime is rounded to
-	// the minute and describes the film rather than this copy of it, so it is
-	// only a fallback -- but it beats no seek bar at all on a first playback.
-	duration := movie.Progress.DurationSeconds
-	if duration <= 0 && movie.Metadata.Runtime > 0 {
-		duration = float64(movie.Metadata.Runtime) * 60
-	}
-
-	progress := movie.Progress
-	writeJSON(w, http.StatusOK, streamInfoResponse{
-		ID:              movie.ID,
-		Mode:            string(decision.Mode),
-		Reason:          decision.Reason,
-		Container:       strings.TrimPrefix(strings.ToLower(filepath.Ext(movie.Path)), "."),
-		FFmpegReady:     s.ffmpeg != nil && s.ffmpeg.Available(),
-		FFmpegSupported: ffmpeg.Supported(),
-		DurationSeconds: duration,
-		Progress:        &progress,
-	})
+	s.handleMovieFileStreamInfo(w, r)
 }
 
 // handleStreamDirect serves the file untouched.
@@ -113,9 +87,11 @@ func (s *Server) handleStreamDirect(w http.ResponseWriter, r *http.Request) {
 	// Recorded so the updater knows not to restart mid-film. Direct play is a
 	// burst of short range requests rather than one long one, which is why the
 	// tracker also remembers when the last one finished.
-	if s.activity != nil {
-		defer s.activity.Begin()()
+	endPlayback, admitted := s.beginPlayback(w)
+	if !admitted {
+		return
 	}
+	defer endPlayback()
 
 	file, err := os.Open(movie.Path)
 	if err != nil {
@@ -144,102 +120,26 @@ func (s *Server) handleStreamDirect(w http.ResponseWriter, r *http.Request) {
 // The response is a pipe, so there is no Content-Length and no byte-range
 // seeking; the player seeks by asking for a new stream with ?t=.
 func (s *Server) handleStreamRemux(w http.ResponseWriter, r *http.Request) {
+	if !s.selectPrimaryStreamFile(w, r) {
+		return
+	}
+	s.handleMovieFileStreamRemux(w, r)
+}
+
+// Legacy links resolve the primary file, then use the same measured pipeline.
+func (s *Server) selectPrimaryStreamFile(w http.ResponseWriter, r *http.Request) bool {
 	movie, ok := s.movieForStream(w, r)
 	if !ok {
-		return
+		return false
 	}
-
-	// One request held open for the length of the film, so this alone keeps the
-	// updater away for the whole viewing.
-	if s.activity != nil {
-		defer s.activity.Begin()()
-	}
-
-	binary, err := s.ffmpeg.Path(r.Context())
-	if errors.Is(err, ffmpeg.ErrUnsupportedPlatform) {
-		writeJSONError(w, http.StatusNotImplemented,
-			"no ffmpeg build is available for this platform, so this file cannot be rewrapped")
-		return
-	}
-	if err != nil {
-		s.log.Error("ffmpeg is unavailable", "error", err)
-		writeJSONError(w, http.StatusServiceUnavailable, "ffmpeg could not be prepared")
-		return
-	}
-
-	info, err := s.ffmpeg.Probe(r.Context(), movie.Path)
-	if err != nil {
-		s.log.Warn("probing a film failed", "path", movie.Path, "error", err)
-		writeJSONError(w, http.StatusUnsupportedMediaType, "the file could not be read as video")
-		return
-	}
-
-	decision := stream.Decide(movie.Path, info.VideoCodec, info.AudioCodec)
-	if decision.Mode == stream.ModeUnsupported {
-		writeJSONError(w, http.StatusUnsupportedMediaType, decision.Reason)
-		return
-	}
-
-	// The probe is the only place a remuxed file's real duration is ever known,
-	// so it is written down here. Every later playback gets a seek bar without
-	// paying for another probe.
-	if info.Seconds > 0 && movie.Progress.DurationSeconds <= 0 {
-		if err := s.lib.SaveDuration(r.Context(), movie.ID, info.Seconds); err != nil {
-			s.log.Warn("saving a probed duration failed", "id", movie.ID, "error", err)
+	for _, file := range movie.Files {
+		if file.IsPrimary {
+			r.SetPathValue("file_id", strconv.FormatInt(file.ID, 10))
+			return true
 		}
 	}
-
-	start := 0.0
-	if raw := r.URL.Query().Get("t"); raw != "" {
-		if parsed, err := strconv.ParseFloat(raw, 64); err == nil && parsed > 0 {
-			start = parsed
-		}
-	}
-
-	args := stream.RemuxArgs(movie.Path, decision, start)
-	s.log.Info("remuxing",
-		"film", movie.Title,
-		"video", info.VideoCodec,
-		"audio", info.AudioCodec,
-		"audio_action", decision.Audio,
-		"start", start,
-	)
-
-	cmd := exec.CommandContext(r.Context(), binary, args...)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "the stream could not be started")
-		return
-	}
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-
-	if err := cmd.Start(); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "the stream could not be started")
-		return
-	}
-
-	w.Header().Set("Content-Type", "video/mp4")
-	w.Header().Set("Cache-Control", "private, no-store")
-	w.WriteHeader(http.StatusOK)
-
-	_, copyErr := io.Copy(w, stdout)
-	waitErr := cmd.Wait()
-	if copyErr != nil {
-		// The overwhelmingly common cause is the viewer closing the tab, which
-		// cancels the request context and kills ffmpeg. Wait above reaps it before
-		// this handler returns.
-		s.log.Debug("the remux stream ended early", "error", copyErr)
-		return
-	}
-	if waitErr != nil {
-		s.log.Warn("ffmpeg ended the remux with an error",
-			"film", movie.Title, "error", waitErr, "message", strings.TrimSpace(stderr.String()))
-		return
-	}
-	if msg := strings.TrimSpace(stderr.String()); msg != "" {
-		s.log.Warn("ffmpeg reported a problem", "film", movie.Title, "message", msg)
-	}
+	writeJSONError(w, http.StatusNotFound, "media_file_unavailable")
+	return false
 }
 
 // movieForStream resolves the id and checks the file is one we are allowed to
@@ -288,7 +188,7 @@ func (s *Server) resolvedLibraryPath(path string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	for _, root := range s.cfg.LibraryPaths {
+	for _, root := range s.libraryRoots() {
 		base, err := resolvedPath(root)
 		if err != nil {
 			continue
