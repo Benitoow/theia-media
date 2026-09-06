@@ -13,7 +13,7 @@
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
 
 	/** @type {'loading' | 'ready' | 'missing'} */
-	let state = $state('loading');
+	let loadState = $state('loading');
 	let episode = $state(null);
 	let playing = $state(false);
 	let fileId = $state(null);
@@ -49,15 +49,15 @@
 	);
 
 	async function load(id) {
-		state = 'loading';
+		loadState = 'loading';
 		try {
 			await profiles.ready();
 			episode = await getJSON(profiles.url(`/api/library/episodes/${id}`));
 			fileId =
 				(episode.files?.find((file) => file.is_primary) ?? episode.files?.[0])?.id ?? null;
-			state = 'ready';
+			loadState = 'ready';
 		} catch {
-			state = 'missing';
+			loadState = 'missing';
 		}
 	}
 
@@ -111,9 +111,9 @@
 	<title>{episode ? playerTitle : t.series.title}</title>
 </svelte:head>
 
-{#if state === 'loading'}
+{#if loadState === 'loading'}
 	<LoadingSkeleton variant="detail" label={t.series.loading} />
-{:else if state === 'missing'}
+{:else if loadState === 'missing'}
 	<div class="page-shell flex min-h-screen items-center justify-center py-32">
 		<div class="chrome-panel max-w-xl p-8 text-center sm:p-12">
 			<h1 class="font-display text-display font-normal">{t.series.episodeNotFound}</h1>

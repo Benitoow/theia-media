@@ -362,6 +362,10 @@ func (s *Service) HomeScreen(ctx context.Context, profileID int64, perRow int) (
 // Only one scan runs at a time; a second caller gets ErrScanInProgress rather
 // than queueing behind the first.
 func (s *Service) Scan(ctx context.Context, roots []string) (*ScanReport, error) {
+	return s.scanStable(ctx, roots, time.Time{})
+}
+
+func (s *Service) scanStable(ctx context.Context, roots []string, cutoff time.Time) (*ScanReport, error) {
 	s.mu.Lock()
 	if s.scanning {
 		s.mu.Unlock()
@@ -408,6 +412,12 @@ func (s *Service) Scan(ctx context.Context, roots []string) (*ScanReport, error)
 			return nil, err
 		}
 
+		if !cutoff.IsZero() && file.ModifiedAt.After(cutoff) {
+			if err := s.store.preservePendingFile(ctx, file.Path, generation); err != nil {
+				return nil, err
+			}
+			continue
+		}
 		parsedEpisode := ParseEpisodePath(file.Relative)
 		if parsedEpisode.Matched {
 			if parsedEpisode.Ambiguous {

@@ -4,6 +4,7 @@
 	import { getJSON, imageURL, displayTitle, displayYear, formatRuntime } from '$lib/api.js';
 	import { strings as t } from '$lib/strings.js';
 	import Player from '$lib/components/Player.svelte';
+	import WatchlistButton from '$lib/components/WatchlistButton.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
 	import FileChoice from '$lib/components/FileChoice.svelte';
@@ -18,7 +19,7 @@
 	import { remote } from '$lib/remote.svelte.js';
 
 	/** @type {'loading' | 'ready' | 'missing'} */
-	let state = $state('loading');
+	let loadState = $state('loading');
 	let movie = $state(null);
 	let playing = $state(false);
 
@@ -85,7 +86,7 @@
 	//
 	// Unmarking is exactly forgetting the position, which is why it is a DELETE
 	// on the same resource rather than a second verb: a film nobody has watched
-	// and a film somebody un-watched are the same state.
+	// and a film somebody un-watched are the same loadState.
 	async function toggleWatched() {
 		if (!movie) return;
 		watchedBusy = true;
@@ -133,14 +134,14 @@
 			// server's existing bookkeeping, not a quality judgement, so it is a
 			// legitimate starting point for a choice the user still owns.
 			fileId = (movie.files?.find((file) => file.is_primary) ?? movie.files?.[0])?.id ?? null;
-			state = 'ready';
+			loadState = 'ready';
 			// The home hero's "Reprendre" links here with this flag rather than
 			// opening a player it does not own. The player still asks whether to
 			// resume or start over; what this skips is the detour through a page
 			// nobody wanted to read on the way back to a film already half seen.
 			if ($page.url.searchParams.has('reprendre')) playing = true;
 		} catch {
-			state = 'missing';
+			loadState = 'missing';
 		}
 	});
 
@@ -162,10 +163,7 @@
 			...movie,
 			files: movie.files.map((file) => (file.id === measured.id ? measured : file))
 		};
-		// Track ids belong to a measurement. Re-measuring the selected file can
-		// retire the chosen one, so the selection goes back to the file default
-		// rather than pointing at a track that may no longer exist.
-		if (measured.id === fileId) audioTrackId = null;
+
 	}
 </script>
 
@@ -173,9 +171,9 @@
 	<title>{movie ? displayTitle(movie) : t.appName}</title>
 </svelte:head>
 
-{#if state === 'loading'}
+{#if loadState === 'loading'}
 	<LoadingSkeleton variant="detail" label={t.home.loading} />
-{:else if state === 'missing'}
+{:else if loadState === 'missing'}
 	<div class="page-shell flex min-h-screen items-center justify-center py-32">
 		<div class="chrome-panel max-w-xl p-8 text-center sm:p-12">
 			<h1 class="font-display text-display font-normal">{t.film.notFound}</h1>
@@ -190,7 +188,7 @@
 		     between the navigation and the title. It keeps enough height for the
 		     poster to overlap something, and no more. -->
 		<header
-			class="relative isolate overflow-hidden {backdrop ? 'min-h-[68svh]' : 'min-h-[34svh]'}"
+			class="film-backdrop relative isolate overflow-hidden {backdrop ? 'min-h-[68svh]' : 'min-h-[34svh]'}"
 		>
 			{#if backdrop}
 				<!-- Framed from the top for the reason the home hero is: the
@@ -213,7 +211,7 @@
 		<!-- The pull is what makes the poster overlap the backdrop. With no
 		     backdrop there is nothing to overlap, and pulling the same 208px
 		     anyway put the title behind the navigation bar. -->
-		<div class="page-shell relative z-10 pb-20 {backdrop ? '-mt-52' : '-mt-20'}">
+		<div class="film-record page-shell relative z-10 pb-20 {backdrop ? '-mt-52' : '-mt-20'}">
 			<div class="flex flex-col gap-10 md:flex-row md:items-end md:gap-14">
 				<!-- Poster keeps the grid's locked 2:3 and its plainness. -->
 				<!-- Section 6.1 keeps a real 2:3 poster on this page because it "has
@@ -222,7 +220,7 @@
 				     the play button were all below the fold behind it. The
 				     backdrop above is already showing the artwork, so here it
 				     shrinks to a token of itself rather than competing. -->
-				<div class="w-28 shrink-0 self-start sm:w-48 lg:w-56 2xl:w-64">
+				<div class="film-poster w-28 shrink-0 self-start sm:w-48 lg:w-56 2xl:w-64">
 					<div
 						class="aspect-[2/3] overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface
 						       shadow-[0_1.75rem_4rem_rgba(0,0,0,0.42)]"
@@ -321,6 +319,7 @@
 							<span>{watchedBusy ? t.watched.marking : watched ? t.watched.unmark : t.watched.mark}</span>
 						</button>
 
+						<WatchlistButton movieId={movie.id} />
 						{#if !remote.isRemote}
 							<button
 								type="button"
@@ -420,5 +419,12 @@
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 0.75rem;
+	}
+	@media (max-width: 47.99rem) {
+		.film-backdrop { min-height: 23rem; }
+		.film-record { margin-top: -8rem; }
+		.film-poster { display: none; }
+		.film-actions { margin-bottom: 2rem; }
+		.film-actions > .tv-action--primary { width: 100%; }
 	}
 </style>

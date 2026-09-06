@@ -10,8 +10,7 @@ import { defineConfig, devices } from '@playwright/test';
 // CSS, and all of them would have been caught by a handful of assertions in a
 // real browser.
 //
-// So this suite deliberately does not test behaviour -- the Go tests cover the
-// API, and clicking through the player in CI would be slow and flaky. It asserts
+// Playback has its own populated fixture and configuration. This suite asserts
 // the four things that are invisible to the eye and expensive to get wrong:
 // nothing overflows, every shipped font actually loaded, every target is big
 // enough to hit, and the page has one left edge.
@@ -22,6 +21,7 @@ const baseURL = process.env.THEIA_TEST_URL ?? 'http://127.0.0.1:8396';
 
 export default defineConfig({
 	testDir: './tests',
+	testMatch: 'layout.spec.js',
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 1 : 0,

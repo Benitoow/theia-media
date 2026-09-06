@@ -11,7 +11,7 @@
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
 
 	/** @type {'loading' | 'ready' | 'offline'} */
-	let state = $state('loading');
+	let loadState = $state('loading');
 	let home = $state(null);
 	let seriesHome = $state(null);
 
@@ -83,13 +83,13 @@
 		}
 
 		if (library.status === 'rejected') {
-			state = 'offline';
+			loadState = 'offline';
 			return;
 		}
 		home = library.value;
 		// A server without series is not a failure: the rows simply do not appear.
 		if (series.status === 'fulfilled') seriesHome = series.value;
-		state = 'ready';
+		loadState = 'ready';
 	});
 </script>
 
@@ -97,9 +97,9 @@
 	<title>{t.appName}</title>
 </svelte:head>
 
-{#if state === 'loading'}
+{#if loadState === 'loading'}
 	<LoadingSkeleton variant="home" label={t.home.loading} />
-{:else if state === 'offline'}
+{:else if loadState === 'offline'}
 	<ChromeScene
 		image="/chrome/theia-offline.webp"
 		eyebrow={t.appName}
@@ -131,6 +131,14 @@
 	<!-- Pulled up under the hero's fade, so the first row starts inside the
 	     gradient rather than after a visible seam. -->
 	<div class:home-rows={home.hero} class:page-body={!home.hero}>
+		<div class="page-shell programme-bar">
+			<div class="programme-heading"><span class="label text-accent">{t.v3.homeLabel}</span><span class="text-muted">{t.library.countAll(home.total)}</span></div>
+			<nav aria-label={t.v3.homeLabel} class="programme-links">
+				<a href="/films?status=progress">{t.v3.continueWatching}<span aria-hidden="true">↗</span></a>
+				<a href="/films?list=1">{t.v3.myList}<span aria-hidden="true">↗</span></a>
+				<a href="/films?minutes=120&status=unseen">{t.v3.tonight}<span aria-hidden="true">↗</span></a>
+			</nav>
+		</div>
 		{#each home.rows as row, index (row.kind)}
 			<Row {row} priority={index === 0} />
 		{/each}

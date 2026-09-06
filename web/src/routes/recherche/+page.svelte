@@ -20,7 +20,7 @@
 
 	let query = $state('');
 	/** @type {'idle' | 'searching' | 'ready' | 'failed'} */
-	let state = $state('idle');
+	let loadState = $state('idle');
 	let results = $state({ movies: [], series: [], truncated: false });
 
 	// The query this result set answers, so the empty message can quote what was
@@ -46,10 +46,10 @@
 	let sequence = 0;
 
 	const total = $derived(results.movies.length + results.series.length);
-	const nothing = $derived(state === 'ready' && total === 0 && answered !== '');
+	const nothing = $derived.by(() => loadState === 'ready' && total === 0 && answered !== '');
 	// The recents stand in for results, so they show only when there is no
 	// result set on screen to replace them.
-	const showRecent = $derived(state === 'idle' && recent.length > 0);
+	const showRecent = $derived(loadState === 'idle' && recent.length > 0);
 
 	onMount(async () => {
 		recent = readRecent();
@@ -71,7 +71,7 @@
 				: [];
 		} catch {
 			// Private modes deny storage, and a corrupted value is not worth a
-			// broken page. No memory is a perfectly good state for this screen.
+			// broken page. No memory is a perfectly good loadState for this screen.
 			return [];
 		}
 	}
@@ -104,7 +104,7 @@
 		clearTimeout(timer);
 		const current = query;
 		if (!current.trim()) {
-			state = 'idle';
+			loadState = 'idle';
 			answered = '';
 			results = { movies: [], series: [], truncated: false };
 			rememberInURL('');
@@ -125,7 +125,7 @@
 
 	async function run(value) {
 		const mine = ++sequence;
-		state = 'searching';
+		loadState = 'searching';
 		rememberInURL(value);
 		try {
 			const body = await getJSON(
@@ -134,13 +134,13 @@
 			if (mine !== sequence) return;
 			results = body;
 			answered = value;
-			state = 'ready';
+			loadState = 'ready';
 			// Only a search that found something is worth keeping: a list of
 			// things this library does not contain helps nobody.
 			if (body.movies.length + body.series.length > 0) remember(value);
 		} catch {
 			if (mine !== sequence) return;
-			state = 'failed';
+			loadState = 'failed';
 		}
 	}
 
@@ -192,13 +192,13 @@
 
 	<p class="search-hint text-small text-muted">{t.search.prompt}</p>
 
-	<div class="search-status" aria-live="polite">{#if state === 'searching'}
+	<div class="search-status" aria-live="polite">{#if loadState === 'searching'}
 			<p class="text-small text-muted">{t.search.searching}</p>
-		{:else if state === 'failed'}
+		{:else if loadState === 'failed'}
 			<p class="text-small text-error" role="alert">{t.search.failed}</p>
 		{:else if nothing}
 			<p class="tv-copy">{t.search.empty(answered)}</p>
-		{:else if state === 'ready' && total > 0}
+		{:else if loadState === 'ready' && total > 0}
 			<p class="text-small text-muted">
 				{t.search.results(total)}{results.truncated ? ` · ${t.search.truncated}` : ''}
 			</p>

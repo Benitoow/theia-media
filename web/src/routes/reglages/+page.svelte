@@ -65,6 +65,7 @@
 			saveNotice = {
 				ok: true,
 				portChanged: Boolean(result.port_changed),
+				restartRequired: Boolean(result.restart_required),
 				missingPaths: result.missing_paths ?? []
 			};
 			editing = false;
@@ -81,7 +82,8 @@
 		if (!notice.ok) return t.settings[notice.code] ?? t.settings.saveFailed;
 
 		const parts = [t.settings.saved];
-		if (notice.portChanged) parts.push(t.settings.portChanged);
+		if (notice.restartRequired) parts.push(t.settings.restartRequired);
+		else if (notice.portChanged) parts.push(t.settings.portChanged);
 		if (notice.missingPaths?.length) {
 			parts.push(`${t.settings.missingPaths} ${notice.missingPaths.join(', ')}`);
 		}
@@ -159,6 +161,7 @@
 
 <main class="settings-page page-shell page-body max-w-6xl">
 	<h1 class="page-title enter mb-14">{t.settings.heading}</h1>
+	{#if settings?.restart_required}<p class="notice mb-8" role="status">{t.settings.restartRequired}</p>{/if}
 
 	{#if settings && stats}
 		<!-- A browser preference, deliberately outside the server settings PUT:

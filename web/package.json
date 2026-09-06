@@ -1,19 +1,21 @@
 {
 	"name": "theia-web",
-	"version": "0.0.0",
+	"version": "3.0.0",
 	"private": true,
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
 		"check:i18n": "node scripts/check-locales.mjs",
 		"check:backdrops": "node scripts/check-backdrops.mjs",
-		"prebuild": "npm run check:i18n && npm run check:backdrops",
+		"prebuild": "npm run check && npm run check:i18n && npm run check:backdrops",
 		"build": "vite build",
 		"postbuild": "node scripts/keep-webdist.mjs",
 		"preview": "vite preview",
 		"test": "playwright test",
 		"test:unit": "node --test \"tests/unit/*.test.js\"",
-		"test:ui": "playwright test --ui"
+		"test:ui": "playwright test --ui",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --fail-on-warnings",
+		"test:playback": "playwright test --config playwright.playback.config.js"
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.62.1",
@@ -22,7 +24,9 @@
 		"@sveltejs/vite-plugin-svelte": "^5.0.3",
 		"@tailwindcss/vite": "^4.0.0",
 		"svelte": "^5.20.0",
+		"svelte-check": "^4.7.6",
 		"tailwindcss": "^4.0.0",
+		"typescript": "^6.0.3",
 		"vite": "^6.0.0"
 	},
 	"dependencies": {
@@ -30,5 +34,8 @@
 		"@fontsource-variable/inter": "^5.3.0",
 		"@fontsource-variable/jost": "^5.3.0",
 		"@fontsource-variable/playfair-display": "^5.3.0"
+	},
+	"overrides": {
+		"cookie": "^0.7.2"
 	}
 }

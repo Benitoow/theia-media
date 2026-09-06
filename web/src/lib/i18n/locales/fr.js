@@ -15,6 +15,29 @@ export function formatDecimal(value) {
 }
 
 export const strings = {
+	v3: {
+  "collection": "Votre collection, à votre rythme.",
+  "collectionBody": "Un film en tête, ou simplement une soirée devant vous.",
+  "homeLabel": "Au programme",
+  "featured": "À l’affiche",
+  "myList": "Ma liste",
+  "save": "À voir plus tard",
+  "saved": "Dans ma liste",
+  "listFailed": "Impossible de mettre à jour votre liste. Réessayez.",
+  "duration": "Temps disponible",
+  "anyDuration": "Toute une soirée",
+  "minutes90": "90 minutes",
+  "minutes120": "2 heures",
+  "minutes180": "3 heures",
+  "durationHint": "Seuls les films dont la durée est connue sont proposés.",
+  "surprise": "Choisir pour moi",
+  "tonight": "Un film ce soir",
+  "continueWatching": "Reprendre",
+  "retry": "Réessayer",
+  "compatible": "Essayer en 1080p",
+  "transcode": "Vidéo adaptée",
+  "direct": "Lecture directe"
+},
 	appName: 'Theia',
 	tagline: 'Serveur média personnel',
 	tmdbAttribution: 'This product uses the TMDB API but is not endorsed or certified by TMDB.',
@@ -276,6 +299,8 @@ export const strings = {
 			audio_track_unavailable: 'La piste audio ne peut pas être lue depuis la base de données.',
 			media_file_unreadable: "Ce fichier n'a pas pu être ouvert sur le disque.",
 			media_inspection_not_saved: "Le résultat de l'analyse n'a pas pu être enregistré.",
+			stream_encode_failed: 'La conversion a échoué. Réessayez avec une qualité plus basse ou choisissez un autre fichier.',
+			update_restarting: 'Theia redémarre après une mise à jour. Réessayez dans un instant.',
 			stream_start_failed: "La lecture n'a pas pu démarrer.",
 			ffmpeg_unsupported: "Aucune version de ffmpeg n'est disponible pour cette plateforme.",
 			ffmpeg_unavailable:
@@ -716,6 +741,7 @@ export const strings = {
 		removePath: 'Retirer',
 		pathPlaceholder: 'C:\\Users\\vous\\Videos',
 		portHint: 'Le changement de port ne prendra effet qu’au prochain démarrage de Theia.',
+		restartRequired: 'Réglages enregistrés. Redémarrez Theia pour activer le nouveau port ou la nouvelle clé TMDB.',
 		portChanged:
 			'Le nouveau port est enregistré, mais Theia écoute toujours sur l’ancien. Redémarrez-le pour appliquer.',
 		missingPaths:

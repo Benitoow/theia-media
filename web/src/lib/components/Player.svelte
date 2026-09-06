@@ -1,5 +1,6 @@
 <script>
 	import { onMount, onDestroy, tick } from 'svelte';
+	import { attachMedia } from '$lib/media-transport.js';
 	import { apiFetch, getJSON, formatTime, displayTitle } from '$lib/api.js';
 	import { strings as t } from '$lib/strings.js';
 	import {
@@ -150,8 +151,8 @@
 	let idleTimer;
 
 	const position = $derived(scrubbing ? scrubValue : offset + elapsed);
-	const hidden = $derived(!controlsVisible && phase === 'playing');
-	const isRemux = $derived(info?.mode === 'remux');
+	const hidden = $derived.by(() => !controlsVisible && phase === 'playing');
+	const isRemux = $derived(Boolean(source?.includes('/remux?')));
 	// Three sources, one message: the player's own states (`unavailable`,
 	// `noFfmpeg`, `failed`) and the server's stable codes, which live in their
 	// own table so a code is never mistaken for a UI string.
@@ -202,6 +203,24 @@
 			: null
 	);
 
+	let transportGeneration = 0;
+	$effect(() => {
+		const element = video, url = source;
+		if (!element || !url) return;
+		const generation = ++transportGeneration;
+		const stop = attachMedia(element, url, (code) => {
+			if (generation !== transportGeneration) return;
+			if (code === 'browser_cannot_decode_video' && info?.transcode?.available && !forceTranscode) { forceTranscode = true; start(position); return; }
+			phase = 'failed'; failureCode = code;
+		});
+		return () => { transportGeneration++; stop(); };
+	});
+	$effect(() => {
+		if (phase !== 'playing' && phase !== 'preparing') return;
+		const heartbeat = () => { void apiFetch('/api/playback/heartbeat', { method:'POST' }).catch(() => {}); };
+		heartbeat(); const timer = setInterval(heartbeat, 15000);
+		return () => clearInterval(timer);
+	});
 	let saveTimer;
 	let lastSaved = 0;
 	let returnFocus;
@@ -322,7 +341,7 @@
 		// the offset leaves the displayed clock reading the old position while
 		// ffmpeg streams from the new one -- and saves that wrong number.
 		const asked = Math.floor(from);
-		offset = from;
+		offset = asked;
 		elapsed = 0;
 
 		phase = info?.ffmpeg_ready ? 'playing' : 'preparing';
@@ -348,8 +367,8 @@
 	async function locateStart(asked) {
 		// Nothing to correct at the top of a film: the stream starts where the film
 		// does, and asking would spend a subprocess to be told zero.
-		if (!base || asked <= 0) return;
 		const token = ++seekToken;
+		if (!base || asked <= 0 || forceTranscode || qualityHeight || info?.mode === 'transcode') return;
 		try {
 			const answer = await getJSON(profiles.url(`${base}/seek?t=${asked}`));
 			// Stale by the time it arrived: somebody seeked again, or the answer
@@ -467,7 +486,7 @@
 	function readActiveCues() {
 		const cues = trackElement?.track?.activeCues;
 		subtitleLines = cues?.length
-			? [...cues].flatMap((cue) => cue.text.split('\n')).filter((line) => line.trim())
+			? [...cues].filter((cue) => cue instanceof VTTCue).flatMap((cue) => cue.text.split('\n')).filter((line) => line.trim())
 			: [];
 	}
 
@@ -538,6 +557,7 @@
 		cueLayout = key;
 
 		for (const cue of cues) {
+			if (!(cue instanceof VTTCue)) continue;
 			cue.snapToLines = false;
 			cue.line = cueLine({
 				floor: geometry.floor,
@@ -748,32 +768,19 @@
 	function seekTo(target) {
 		const clamped = Math.max(0, Math.min(target, duration > 0 ? duration - 1 : target));
 		if (isRemux) {
-			// No byte ranges over a pipe, so seeking means asking ffmpeg to
-			// start again somewhere else. This is what ?t= was built for.
-			//
-			// The obvious optimisation does not work, and it was tried: seeking
-			// inside what the browser already holds, instead of restarting a
-			// 4K tone-mapping encode to fetch bytes that had already arrived.
-			// The blocker is not the buffer, it is `seekable`. Measured on this
-			// very stream, mid-playback:
-			//
-			//	buffered: [[0, 54.15]]
-			//	seekable: [[0, 0]]
-			//
-			// The remux is served chunked, with no Content-Length and no
-			// Accept-Ranges, because its length is not known until ffmpeg has
-			// finished producing it. Chromium therefore treats it as
-			// unseekable whatever it has cached: assigning currentTime = 12
-			// snapped straight back to 0. Buffered is what has arrived;
-			// seekable is what the element will let you ask for, and only the
-			// second one decides.
-			//
-			// Making this cheap needs Media Source Extensions -- appending the
-			// fragments into a SourceBuffer this player owns, so the timeline
-			// belongs to us rather than to the element. That is a different
-			// player, not a shortcut in this one.
-			seeking = true;
-			buffered = clamped;
+			// MediaSource owns a seekable buffer. A nearby seek reuses decoded
+			// media instead of starting another HDR conversion; distant seeks
+			// cancel and reopen the stream on the requested film timestamp.
+			const local = clamped - offset;
+			if (video?.currentSrc.startsWith('blob:')) {
+				for (let i = 0; i < video.buffered.length; i++) {
+					if (local >= video.buffered.start(i) && local < video.buffered.end(i) - 0.25) {
+						video.currentTime = local;
+						elapsed = local;
+						return;
+					}
+				}
+			}
 			startRemux(clamped);
 		} else {
 			// Direct play has the whole file behind a handler that answers byte
@@ -1121,7 +1128,7 @@
 		const focusable = [...scope.querySelectorAll(
 			'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), ' +
 			'textarea:not(:disabled), summary, [role="slider"], [tabindex]:not([tabindex="-1"])'
-		)].filter((element) => element instanceof HTMLElement && element.tabIndex >= 0
+		)].filter((element) => element instanceof HTMLElement).filter((element) => element.tabIndex >= 0
 			&& element.offsetParent !== null);
 		if (!focusable.length) return;
 
@@ -1168,8 +1175,8 @@
 		if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
 		if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
 
-		const options = [...(tracksPanel?.querySelectorAll('.track-option') ?? [])];
-		const index = options.indexOf(document.activeElement);
+		const options = [...(tracksPanel?.querySelectorAll('.track-option') ?? [])].filter((element) => element instanceof HTMLElement);
+		const index = options.findIndex((element) => element === document.activeElement);
 		if (index < 0) return;
 
 		const next = index + (event.key === 'ArrowDown' ? 1 : -1);
@@ -1263,7 +1270,11 @@
 	{#if phase === 'failed'}
 		<div class="player-message">
 			<p class="tv-copy max-w-prose border-l border-error py-2 pl-6">{failure}</p>
-			<button type="button" onclick={onclose} class="tv-action mt-8 cursor-pointer" data-remote-default>
+			<div class="mt-8 flex flex-wrap justify-center gap-4">
+				<button type="button" onclick={async () => { source = ''; if (await loadInfo()) start(position); }} class="tv-action tv-action--primary" data-remote-default>{t.v3.retry}</button>
+				{#if info?.transcode?.available}<button type="button" class="tv-action" onclick={() => { source = ''; qualityHeight = 1080; forceTranscode = true; start(position); }}>{t.v3.compatible}</button>{/if}
+			</div>
+			<button type="button" onclick={onclose} class="tv-action mt-8 cursor-pointer">
 				{t.player.close}
 			</button>
 		</div>
@@ -1305,7 +1316,7 @@
 			<video
 				bind:this={video}
 				inert={helpOpen}
-				src={source}
+				data-stream-source={source}
 				autoplay
 				playsinline
 				class="player-video"
@@ -1380,7 +1391,7 @@
 					     be showing. §3 reserves faint for decoration and forbids it for
 					     anything read. A bordered pill in --muted instead: it reads as
 					     chrome rather than as a caption trying to disappear. -->
-					<span class="player-badge">{t.player.remuxBadge}</span>
+					<span class="player-badge">{forceTranscode || qualityHeight || info?.mode === 'transcode' ? t.v3.transcode : t.player.remuxBadge}</span>
 				{/if}
 			</div>
 		</header>

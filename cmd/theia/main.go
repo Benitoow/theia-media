@@ -135,7 +135,7 @@ func run() error {
 		if err != nil {
 			working = "the working directory"
 		}
-		log.Warn("no TMDB API key configured, films will be listed without artwork",
+		log.Warn("no TMDB API key configured, only cached metadata and artwork are available",
 			"looked_in", "tmdb_api_key in config.json, the key compiled into this build, config.local.json",
 			"working_directory", working)
 	}
@@ -195,7 +195,8 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("locating the running binary: %w", err)
 	}
-	updater.CleanPrevious(execPath, log)
+	// Keep the previous executable for manual recovery. The next verified
+	// installation replaces it; merely starting this process proves no health.
 
 	// Declared here and assigned below, so the restart closure can reach the
 	// things it has to release before the replacement binds the port and the
@@ -271,7 +272,7 @@ func run() error {
 		Logger:    log,
 	}).Handler()
 	httpSrv = &http.Server{
-		Handler: remoteaccess.LANOnly(apiHandler),
+		Handler: remoteaccess.LANOnly(apiHandler, cfg.Hostname),
 		// Guards against a client that opens a connection and never finishes
 		// sending its request headers. There is deliberately no WriteTimeout:
 		// video streaming holds a single response open for the length of a film.

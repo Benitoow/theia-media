@@ -2,13 +2,9 @@ package api
 
 import (
 	"errors"
-	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strconv"
-	"strings"
 
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/library"
@@ -88,6 +84,17 @@ func (s *Server) handleEpisodeFileStreamInfo(w http.ResponseWriter, r *http.Requ
 		file.Media.SubtitleTracks = reloaded.Media.SubtitleTracks
 	}
 
+	capabilities := s.videoCapabilities(r.Context())
+	ladder := qualityLadder(file.Media, decision, capabilities.Available)
+	if decision.Mode == stream.ModeUnsupported && capabilities.Available {
+		decision.Mode = stream.ModeTranscode
+		reasonCode = "video_transcode"
+	}
+	height, frameRate := 0, 0.0
+	if file.Media.Video != nil {
+		height = file.Media.Video.Height
+		frameRate = file.Media.Video.FrameRate
+	}
 	progress := item.Progress
 	writeJSON(w, http.StatusOK, streamInfoResponse{
 		ID:              item.ID,
@@ -95,7 +102,6 @@ func (s *Server) handleEpisodeFileStreamInfo(w http.ResponseWriter, r *http.Requ
 		FileID:          file.ID,
 		AudioTrackID:    audioID,
 		Mode:            string(decision.Mode),
-		Reason:          decision.Reason,
 		ReasonCode:      reasonCode,
 		Container:       container,
 		MediaStatus:     file.Media.Status,
@@ -107,6 +113,10 @@ func (s *Server) handleEpisodeFileStreamInfo(w http.ResponseWriter, r *http.Requ
 		Progress:        &progress,
 		AudioTracks:     file.Media.AudioTracks,
 		SubtitleTracks:  file.Media.SubtitleTracks,
+		Height:          height,
+		FrameRate:       frameRate,
+		Qualities:       ladder,
+		Transcode:       &capabilities,
 	})
 }
 
@@ -127,9 +137,11 @@ func (s *Server) handleEpisodeFileStreamDirect(w http.ResponseWriter, r *http.Re
 		writeJSONError(w, http.StatusBadRequest, "audio_selection_requires_remux")
 		return
 	}
-	if s.activity != nil {
-		defer s.activity.Begin()()
+	endPlayback, admitted := s.beginPlayback(w)
+	if !admitted {
+		return
 	}
+	defer endPlayback()
 	opened, err := os.Open(file.Path)
 	if err != nil {
 		s.log.Warn("opening an episode file for direct play failed",
@@ -161,9 +173,11 @@ func (s *Server) handleEpisodeFileStreamRemux(w http.ResponseWriter, r *http.Req
 		writeJSONError(w, http.StatusServiceUnavailable, "ffmpeg_unavailable")
 		return
 	}
-	if s.activity != nil {
-		defer s.activity.Begin()()
+	endPlayback, admitted := s.beginPlayback(w)
+	if !admitted {
+		return
 	}
+	defer endPlayback()
 
 	// See the film route: the third condition catches a file measured before
 	// Theia knew to look for subtitles, and fires once.
@@ -215,74 +229,10 @@ func (s *Server) handleEpisodeFileStreamRemux(w http.ResponseWriter, r *http.Req
 		selected = &defaulted
 	}
 	decision := stream.Decide(file.Path, file.Media.Video.Codec, audioCodec)
-	if decision.Mode == stream.ModeUnsupported {
-		writeJSONError(w, http.StatusUnsupportedMediaType, "video_transcode_required")
-		return
-	}
 	if audioRequested && decision.Mode == stream.ModeDirect {
 		decision.Mode = stream.ModeRemux
-		decision.Audio = stream.AudioCopy
 	}
-
-	binary, err := s.ffmpeg.Path(r.Context())
-	switch {
-	case errors.Is(err, ffmpeg.ErrUnsupportedPlatform):
-		writeJSONError(w, http.StatusNotImplemented, "ffmpeg_unsupported")
-		return
-	case err != nil:
-		writeJSONError(w, http.StatusServiceUnavailable, "ffmpeg_unavailable")
-		return
-	}
-
-	start := 0.0
-	if raw := r.URL.Query().Get("t"); raw != "" {
-		if parsed, err := strconv.ParseFloat(raw, 64); err == nil && parsed > 0 {
-			start = parsed
-		}
-	}
-	args := stream.RemuxArgs(file.Path, decision, start)
-	selectedIndex := -1
-	if selected != nil {
-		selectedIndex = selected.StreamIndex
-		args = stream.RemuxArgsForAudio(file.Path, decision, start, selected.StreamIndex)
-	}
-	s.log.Info("remuxing episode file",
-		"episode_id", item.ID, "file_id", file.ID,
-		"video", file.Media.Video.Codec, "audio", audioCodec,
-		"audio_track_id", audioID, "audio_stream_index", selectedIndex,
-		"audio_action", decision.Audio, "start", start)
-
-	cmd := exec.CommandContext(r.Context(), binary, args...)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "stream_start_failed")
-		return
-	}
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	if err := cmd.Start(); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "stream_start_failed")
-		return
-	}
-	w.Header().Set("Content-Type", "video/mp4")
-	w.Header().Set("Cache-Control", "private, no-store")
-	w.WriteHeader(http.StatusOK)
-	_, copyErr := io.Copy(w, stdout)
-	waitErr := cmd.Wait()
-	if copyErr != nil {
-		s.log.Debug("the episode remux stream ended early", "error", copyErr)
-		return
-	}
-	if waitErr != nil {
-		s.log.Warn("ffmpeg ended an episode remux with an error",
-			"episode_id", item.ID, "file_id", file.ID,
-			"error", waitErr, "message", strings.TrimSpace(stderr.String()))
-		return
-	}
-	if message := strings.TrimSpace(stderr.String()); message != "" {
-		s.log.Warn("ffmpeg reported a problem for an episode file",
-			"episode_id", item.ID, "file_id", file.ID, "message", message)
-	}
+	s.serveConvertedFile(w, r, file.Path, file.Media, decision, selected)
 }
 
 func (s *Server) episodeFileForStream(w http.ResponseWriter, r *http.Request) (library.EpisodeItem, library.EpisodeFile, bool) {

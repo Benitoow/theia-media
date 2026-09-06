@@ -24,10 +24,10 @@ export default {
 	},
 
 	hero: {
-		eyebrow: 'Un serveur média. Un seul binaire.',
+		eyebrow: 'Theia V3 · Votre cinéma personnel.',
 		title: 'Votre film. Pas la plateforme.',
 		lead:
-			'Choisissez vos dossiers. Theia organise votre bibliothèque et lit vos films sur les appareils de la maison — sans compte, abonnement ni cloud obligatoire.'
+			'Votre liste à voir. Un film selon le temps disponible. Une lecture plus fiable, des films aux séries. Theia V3 fait de vos dossiers votre cinéma personnel — sans compte ni abonnement.'
 	},
 
 	playerDemo: {

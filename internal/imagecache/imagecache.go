@@ -60,7 +60,7 @@ type download struct {
 }
 
 // New prepares the cache directory. client may be nil, in which case every
-// lookup reports ErrUnavailable and nothing else breaks.
+// cache miss reports ErrUnavailable; already cached artwork remains available.
 func New(dir string, client *tmdb.Client) (*Cache, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("creating the image cache directory %s: %w", dir, err)
@@ -71,9 +71,6 @@ func New(dir string, client *tmdb.Client) (*Cache, error) {
 // Path returns the local file holding the image, downloading it first if this
 // is the first time anybody asked.
 func (c *Cache) Path(ctx context.Context, size, imagePath string) (string, error) {
-	if c.client == nil {
-		return "", ErrUnavailable
-	}
 	if !allowedSizes[size] || !tmdbImagePath.MatchString(imagePath) {
 		return "", ErrUnavailable
 	}
@@ -85,6 +82,10 @@ func (c *Cache) Path(ctx context.Context, size, imagePath string) (string, error
 
 	if _, err := os.Stat(local); err == nil {
 		return local, nil
+	}
+
+	if c.client == nil {
+		return "", ErrUnavailable
 	}
 
 	unlock := c.lockFor(local)

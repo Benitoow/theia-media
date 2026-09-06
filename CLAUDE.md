@@ -87,11 +87,15 @@ tested path. Deleting that file has turned CI red before.
 go test ./...                       # the whole suite
 node scripts/contrast.mjs           # guards the documented colour ratios
 node web/scripts/check-locales.mjs  # guards French/English catalogue parity
+cd web && npm run check             # checks JavaScript and Svelte markup
 cd web && npm test                  # drives a real browser at 375, 1280 and 1920
+cd web && npm run test:playback      # generated playable films and episodes
 ```
 
-The last one needs a built binary and starts one itself against a throwaway
-directory. It asserts the four things a screenshot cannot: nothing overflows,
+The browser suites need a built binary and start it against throwaway
+directories. The playback suite also needs Go and downloads the pinned FFmpeg
+once; THEIA_TEST_FFMPEG can point to an already downloaded copy. The layout suite
+asserts the four things a screenshot cannot: nothing overflows,
 every declared font actually loaded, every target clears 44px, and the page has
 one left edge. Decision 82 lists the faults that earned it.
 

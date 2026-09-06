@@ -8,8 +8,13 @@ const pages = [
 	['films', '/films'],
 	['series', '/series'],
 	['search', '/recherche'],
-	['settings', '/reglages']
+	['settings', '/reglages'],
+	['profiles', '/profils']
 ];
+
+test.beforeEach(async ({ page }) => {
+ await page.addInitScript(() => localStorage.setItem('theia.profile', '1'));
+});
 
 /** Waits for the interface to have finished arriving, fonts included. */
 async function settled(page) {

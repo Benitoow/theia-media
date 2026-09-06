@@ -83,7 +83,7 @@ func (s *Server) handleLibraryStats(w http.ResponseWriter, r *http.Request) {
 		Series:       series,
 		Episodes:     episodes,
 		Scanning:     s.lib.Scanning(),
-		LibraryPaths: len(s.cfg.LibraryPaths),
+		LibraryPaths: len(s.libraryRoots()),
 		LastScan:     s.lib.LastScan(),
 	})
 }

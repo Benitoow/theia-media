@@ -124,7 +124,7 @@
 			active instanceof HTMLInputElement ||
 			active instanceof HTMLSelectElement ||
 			active instanceof HTMLTextAreaElement ||
-			active?.isContentEditable ||
+			(active instanceof HTMLElement && active.isContentEditable) ||
 			active?.getAttribute?.('role') === 'slider' ||
 			active instanceof HTMLVideoElement
 		) {
@@ -266,7 +266,11 @@
 {/if}
 {/if}
 
-{@render children()}
+<!-- Detail pages load by identity; client-side navigation must remount them.
+     Search owns its query string while typing, so it keeps its local state. -->
+{#key $page.url.pathname + ($page.url.pathname === '/recherche' ? '' : $page.url.search)}
+	{@render children()}
+{/key}
 
 {#if !inProfiles}
 	<!--

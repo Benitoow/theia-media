@@ -141,9 +141,11 @@ func (s *Server) serveEmbeddedSubtitle(w http.ResponseWriter, r *http.Request, m
 		return
 	}
 
-	if s.activity != nil {
-		defer s.activity.Begin()()
+	endPlayback, admitted := s.beginPlayback(w)
+	if !admitted {
+		return
 	}
+	defer endPlayback()
 
 	args := subtitles.ExtractArgs(mediaPath, *track.StreamIndex, start)
 	cmd := exec.CommandContext(r.Context(), binary, args...)

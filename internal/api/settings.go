@@ -28,29 +28,32 @@ type tmdbSettings struct {
 }
 
 type settingsResponse struct {
-	Version      string       `json:"version"`
-	Port         int          `json:"port"`
-	Hostname     string       `json:"hostname"`
-	DataDir      string       `json:"data_dir"`
-	LibraryPaths []string     `json:"library_paths"`
-	TMDB         tmdbSettings `json:"tmdb"`
+	RestartRequired bool         `json:"restart_required"`
+	Version         string       `json:"version"`
+	Port            int          `json:"port"`
+	Hostname        string       `json:"hostname"`
+	DataDir         string       `json:"data_dir"`
+	LibraryPaths    []string     `json:"library_paths"`
+	TMDB            tmdbSettings `json:"tmdb"`
 }
 
 // handleSettings reports the running configuration. It never includes the API
 // key, only whether there is one and where it came from.
 func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
+	cfg := s.currentConfig()
 	tmdbInfo := tmdbSettings{
 		Configured:  s.keySource != config.KeyMissing,
 		Source:      s.keySource,
 		Attribution: TMDBAttribution,
 	}
 	writeJSON(w, http.StatusOK, settingsResponse{
-		Version:      s.version,
-		Port:         s.cfg.Port,
-		Hostname:     s.cfg.Hostname,
-		DataDir:      s.cfg.Dir(),
-		LibraryPaths: s.cfg.LibraryPaths,
-		TMDB:         tmdbInfo,
+		RestartRequired: cfg.Port != s.cfg.Port || cfg.TMDBAPIKey != s.cfg.TMDBAPIKey,
+		Version:         s.version,
+		Port:            cfg.Port,
+		Hostname:        s.cfg.Hostname,
+		DataDir:         s.cfg.Dir(),
+		LibraryPaths:    cfg.LibraryPaths,
+		TMDB:            tmdbInfo,
 	})
 }
 
@@ -106,5 +109,5 @@ func (s *Server) libraryRoots() []string {
 	if s.watcher != nil {
 		return s.watcher.Roots()
 	}
-	return s.cfg.LibraryPaths
+	return s.currentConfig().LibraryPaths
 }

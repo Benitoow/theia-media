@@ -88,9 +88,27 @@ func (u *Updater) Apply(ctx context.Context) error {
 		return u.fail(err, ReasonDidNotRun, "the downloaded binary did not run correctly")
 	}
 
+	// Downloads may take minutes. Acquire the shared admission gate only for
+	// installation, after verification, and keep it closed through restart.
+	var releaseInstall func()
+	if u.activity != nil {
+		var ok bool
+		releaseInstall, ok = u.activity.TryInstall()
+		if !ok {
+			u.setStatus(func(s *Status) { s.State = StateDeferred; s.Reason = ReasonPlaybackActive })
+			return ErrPlaybackInProgress
+		}
+	}
+	installed := false
+	defer func() {
+		if releaseInstall != nil && (!installed || u.restart == nil) {
+			releaseInstall()
+		}
+	}()
 	if err := u.swap(staged); err != nil {
 		return u.fail(err, ReasonReplaceFailed, "the binary could not be replaced")
 	}
+	installed = true
 
 	u.setStatus(func(s *Status) {
 		s.State = StateReady

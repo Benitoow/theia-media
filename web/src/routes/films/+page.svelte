@@ -1,6 +1,9 @@
 <script>
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
+	import { profiles } from '$lib/profiles.svelte.js';
+	import { getJSON } from '$lib/api.js';
 	import { getAllMovies, searchKey, displayTitle, displayYear, formatRuntime } from '$lib/api.js';
 	import { i18n } from '$lib/i18n/index.svelte.js';
 	import { strings as t } from '$lib/strings.js';
@@ -10,7 +13,7 @@
 	import ChromeScene from '$lib/components/ChromeScene.svelte';
 
 	/** @type {'loading' | 'ready' | 'offline'} */
-	let state = $state('loading');
+	let loadState = $state('loading');
 	let movies = $state([]);
 	let loaded = $state(0);
 
@@ -18,6 +21,10 @@
 	let sort = $state('title');
 	let genre = $state('');
 	let status = $state('all');
+	let listOnly = $state(false);
+	let maxMinutes = $state(0);
+	let watchlist = $state([]);
+	let listFailed = $state(false);
 
 	onMount(async () => {
 		// Every home row links here pre-filtered to match what it was showing, so
@@ -25,8 +32,8 @@
 		// Film detail pages use the same contract for director searches.
 		//
 		// Unknown values are dropped rather than accepted: a hand-edited
-		// ?sort=banana should leave the page in a state its own controls can
-		// describe, not a state no dropdown can show.
+		// ?sort=banana should leave the page in a loadState its own controls can
+		// describe, not a loadState no dropdown can show.
 		const params = $page.url.searchParams;
 		const pick = (name, allowed, fallback) => {
 			const raw = params.get(name);
@@ -37,11 +44,16 @@
 		query = params.get('q') ?? '';
 		sort = pick('sort', ['title', 'year', 'rating', 'added', 'runtime'], 'title');
 		status = pick('status', ['all', 'unseen', 'progress', 'finished'], 'all');
+		listOnly = params.get('list') === '1';
+		maxMinutes = Number(pick('minutes', ['90', '120', '180'], '0'));
+		await profiles.ready();
+		try { watchlist = (await getJSON(profiles.url('/api/library/watchlist'))).ids; }
+		catch { listFailed = true; }
 		try {
 			movies = await getAllMovies((n) => (loaded = n));
-			state = 'ready';
+			loadState = 'ready';
 		} catch {
-			state = 'offline';
+			loadState = 'offline';
 		}
 	});
 
@@ -94,6 +106,9 @@
 			const result = indexed
 				.filter(({ movie, haystack }) => {
 					if (needle && !haystack.includes(needle)) return false;
+					if (listOnly && !watchlist.includes(movie.id)) return false;
+					const runtime = movie.metadata?.runtime_minutes;
+					if (maxMinutes && (!(runtime > 0) || runtime > maxMinutes)) return false;
 					if (genre && !(movie.metadata?.genres ?? []).includes(genre)) return false;
 					return matchesStatus(movie);
 				})
@@ -120,12 +135,14 @@
 		})()
 	);
 
-	const filtering = $derived(Boolean(query.trim() || genre || status !== 'all'));
+	const filtering = $derived(Boolean(query.trim() || genre || status !== 'all' || listOnly || maxMinutes));
 
 	function reset() {
 		query = '';
 		genre = '';
 		status = 'all';
+		listOnly = false;
+		maxMinutes = 0;
 	}
 
 	const sortOptions = $derived([
@@ -180,10 +197,10 @@
 <!--
 	The unreachable-server screen is full-bleed, so it sits outside the page
 	shell rather than inside it. It used to be a hand-built panel here while the
-	home screen used ChromeScene for the identical state; one state, two screens,
+	home screen used ChromeScene for the identical loadState; one loadState, two screens,
 	already drifting apart.
 -->
-{#if state === 'offline'}
+{#if loadState === 'offline'}
 	<ChromeScene
 		image="/chrome/theia-offline.webp"
 		eyebrow={t.appName}
@@ -197,11 +214,13 @@
 	</ChromeScene>
 {:else}
 	<main class="page-shell page-body">
-		{#if state === 'loading'}
+		{#if loadState === 'loading'}
 			<LoadingSkeleton variant="library" label={t.library.loadingProgress(loaded)} />
 		{:else}
-			<header class="mb-10">
+			<header class="collection-header mb-10">
+				<p class="label text-accent mb-4">{t.v3.collection}</p>
 				<h1 class="page-title enter">{t.library.title}</h1>
+				<p class="tv-copy mt-5 text-muted">{t.v3.collectionBody}</p>
 				<p class="label enter enter-2 mt-4">
 					{filtering
 						? t.library.countFiltered(filtered.length, movies.length)
@@ -259,6 +278,17 @@
 				</div>
 			</div>
 
+			<div class="library-intent">
+				<button type="button" class="intent-button" aria-pressed={listOnly} disabled={listFailed} onclick={() => listOnly = !listOnly}>
+					<Icon name={listOnly ? 'check' : 'plus'} size={18} />{t.v3.myList}<span class="intent-count">{watchlist.length}</span>
+				</button>
+				<label class="duration-choice"><span class="label">{t.v3.duration}</span><select bind:value={maxMinutes}>
+					<option value={0}>{t.v3.anyDuration}</option><option value={90}>{t.v3.minutes90}</option><option value={120}>{t.v3.minutes120}</option><option value={180}>{t.v3.minutes180}</option>
+				</select></label>
+				<button type="button" class="intent-button intent-random" disabled={!filtered.length} onclick={() => goto(`/film/${filtered[Math.floor(Math.random() * filtered.length)].id}`)}>{t.v3.surprise}<span aria-hidden="true">↗</span></button>
+			</div>
+			{#if listFailed}<p class="text-error mb-5" role="alert">{t.v3.listFailed}</p>{/if}
+			{#if maxMinutes}<p class="text-muted mb-5">{t.v3.durationHint}</p>{/if}
 			{#if filtered.length === 0}
 				<div class="py-24 text-center">
 					<p class="section-title mb-3">{t.library.noResults}</p>

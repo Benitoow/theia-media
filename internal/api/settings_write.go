@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Benitoow/theia-media/internal/config"
 )
 
 // settingsUpdate is what the settings page may change.
@@ -27,7 +29,8 @@ type settingsUpdateResult struct {
 	// PortChanged means the new value is on disk but the server is still
 	// listening on the old one. Said out loud, because a settings page that
 	// silently does nothing is worse than one that refuses.
-	PortChanged bool `json:"port_changed"`
+	PortChanged     bool `json:"port_changed"`
+	RestartRequired bool `json:"restart_required"`
 
 	// MissingPaths are directories that were saved but do not currently exist.
 	// Saved anyway: an unplugged drive is a normal thing to configure ahead of
@@ -37,9 +40,15 @@ type settingsUpdateResult struct {
 
 // handleUpdateSettings writes the three configurable values.
 func (s *Server) handleUpdateSettings(w http.ResponseWriter, r *http.Request) {
+	s.settingsMu.Lock()
+	defer s.settingsMu.Unlock()
+	candidate := *s.cfg
+	if s.savedConfig != nil {
+		candidate = *s.savedConfig
+	}
 	var body settingsUpdate
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64<<10)).Decode(&body); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid settings payload")
+		writeJSONError(w, http.StatusBadRequest, "invalid_settings")
 		return
 	}
 
@@ -48,13 +57,13 @@ func (s *Server) handleUpdateSettings(w http.ResponseWriter, r *http.Request) {
 	if body.Port != nil {
 		port := *body.Port
 		if port < 1 || port > 65535 {
-			writeJSONError(w, http.StatusBadRequest, "the port must be between 1 and 65535")
+			writeJSONError(w, http.StatusBadRequest, "invalid_port")
 			return
 		}
 		if port != s.cfg.Port {
 			result.PortChanged = true
 		}
-		s.cfg.Port = port
+		candidate.Port = port
 	}
 
 	if body.LibraryPaths != nil {
@@ -79,27 +88,38 @@ func (s *Server) handleUpdateSettings(w http.ResponseWriter, r *http.Request) {
 				result.MissingPaths = append(result.MissingPaths, path)
 			}
 		}
-		s.cfg.LibraryPaths = cleaned
+		candidate.LibraryPaths = cleaned
 
 		// The watcher owns this list once it is running, and a folder added
 		// here should fill the library while the user is still on the page
 		// rather than at the top of the next minute.
-		if s.watcher != nil {
-			s.watcher.SetRoots(cleaned)
-			s.watcher.Wake()
-		}
 	}
 
 	if body.TMDBAPIKey != nil {
-		s.cfg.TMDBAPIKey = strings.TrimSpace(*body.TMDBAPIKey)
+		candidate.TMDBAPIKey = strings.TrimSpace(*body.TMDBAPIKey)
 	}
 
-	if err := s.cfg.Save(); err != nil {
+	if err := candidate.Save(); err != nil {
 		s.log.Error("saving the settings failed", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "the settings could not be saved")
+		writeJSONError(w, http.StatusInternalServerError, "settings_save_failed")
 		return
 	}
 
-	s.log.Info("settings updated", "config", s.cfg)
+	s.savedConfig = &candidate
+	if body.LibraryPaths != nil && s.watcher != nil {
+		s.watcher.SetRoots(candidate.LibraryPaths)
+		s.watcher.Wake()
+	}
+	result.RestartRequired = candidate.Port != s.cfg.Port || candidate.TMDBAPIKey != s.cfg.TMDBAPIKey
+	s.log.Info("settings updated", "config", &candidate)
 	writeJSON(w, http.StatusOK, result)
+}
+
+func (s *Server) currentConfig() config.Config {
+	s.settingsMu.Lock()
+	defer s.settingsMu.Unlock()
+	if s.savedConfig != nil {
+		return *s.savedConfig
+	}
+	return *s.cfg
 }
