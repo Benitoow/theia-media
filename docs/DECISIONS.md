@@ -3164,6 +3164,26 @@ disposable local data copy for visual review, but no remote branch, pull
 request, tag, release or public-site update is allowed before the maintainer
 explicitly approves the candidate.
 
+## 96. Search is a centred destination, and the README is a product front door
+
+**Decided in the V3.1 local candidate after the maintainer's visual review.**
+The search route previously placed a library-sized heading and field at the
+left edge, then left most of a desktop viewport empty. Its title, scope, prompt,
+field, state and recent queries now share a centred stage. A CSS-only projector
+halo and horizon line give that empty state depth without adding an unverified
+image; real results still use the ordinary left-aligned library grid.
+
+The home shortcut for a nightly film uses its own framed-play glyph instead of
+reusing the film-strip destination icon. The README is replaced by a shorter
+human path through the product: current V3.1 captures from the running Dune
+library, a three-step start, workload-based hardware guidance, the LAN warning,
+and a deliberately non-cheerleading comparison with Plex, Jellyfin and Emby.
+Competitor claims link to their official September 2026 documentation rather
+than being treated as permanent facts.
+
+This documentation and its screenshots remain subject to decision 95: preparing
+the V3.1 release locally is not approval to publish it.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

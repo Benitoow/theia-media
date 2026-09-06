@@ -14,16 +14,15 @@ anything; they answer most questions that would otherwise be asked again.
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Every decision already taken, with its reasoning and, where it matters, the bug that forced it. Check here before re-opening a question. |
 | [`docs/design-system.md`](docs/design-system.md) | Colour, type, spacing, motion, focus. §6 — *the card grid is exempt* — is the single most important constraint in the interface. |
 
-**V2 shipped in `v2.0.0`.** Its five coordination documents — the roadmap, the
-two track handoffs and the two discovery notes — now live in
-[`docs/archive/`](docs/archive/README.md). They describe a finished plan and are
-kept for their reasoning, not as a description of the current state. Do not
-consult them to learn how something works today; read the code and the three
-documents above.
+**V3 shipped in `v3.0.0`.** Its verified product and playback boundaries are in
+[`docs/v3.md`](docs/v3.md). V3.1 is a local visual and documentation candidate
+on `codex/v3.1-design-local`; decision 95 forbids a remote branch, pull request,
+tag, release or public-site deployment until the maintainer approves it.
 
-The backend-first, two-track split that built V2 is over with it. Post-v2 work is
-ordinary work: read the three documents, make the change, and record a decision
-when it settles an argument.
+The five V2 coordination documents — the roadmap, two track handoffs and two
+discovery notes — live in [`docs/archive/`](docs/archive/README.md). They retain
+useful reasoning but do not describe the current product. Read the code, the V3
+record and the three governing documents above instead.
 
 If a change contradicts one of them, the document is changed first, in the same
 commit, with the reasoning written down. `DECISIONS.md` is append-only in

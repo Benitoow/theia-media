@@ -166,92 +166,98 @@
 	<title>{t.search.title} — {t.appName}</title>
 </svelte:head>
 
-<main class="page-shell page-body">
-	<h1 class="page-title">{t.search.title}</h1>
+<main class="search-page page-body">
+	<section class="search-stage page-shell" data-has-results={loadState === 'ready' && total > 0}>
+		<header class="search-heading enter">
+			<p class="label search-scope">{t.search.scope}</p>
+			<h1 class="search-title">{t.search.title}</h1>
+			<p class="search-hint text-small text-muted">{t.search.prompt}</p>
+		</header>
 
-	<!-- The field is the page, so it carries the page's weight: full measure up
-	     to a readable maximum, and the same pill the library toolbar uses rather
-	     than a second kind of box invented for this screen. -->
-	<form class="search-field" onsubmit={onSubmit} role="search">
-		<Icon name="search" size={22} class="shrink-0 text-muted" />
-		<input
-			type="search"
-			bind:value={query}
-			oninput={onInput}
-			placeholder={t.search.placeholder}
-			aria-label={t.search.label}
-			class="search-input"
-			data-remote-default
-		/>
-		{#if query}
-			<button type="button" onclick={clear} class="player-icon-button player-icon-button--compact">
-				<Icon name="close" size={16} label={t.library.clear} />
-			</button>
+		<!-- The field is the page, so it carries the page's weight. It stays in
+		     the same rounded-glass family as navigation while the stage behind it
+		     supplies the scale and depth a destination deserves. -->
+		<form class="search-field enter enter-2" onsubmit={onSubmit} role="search">
+			<span class="search-field-icon" aria-hidden="true"><Icon name="search" size={22} /></span>
+			<input
+				type="search"
+				bind:value={query}
+				oninput={onInput}
+				placeholder={t.search.placeholder}
+				aria-label={t.search.label}
+				class="search-input"
+				data-remote-default
+			/>
+			{#if query}
+				<button type="button" onclick={clear} class="player-icon-button player-icon-button--compact">
+					<Icon name="close" size={16} label={t.library.clear} />
+				</button>
+			{/if}
+		</form>
+
+		<div class="search-status" aria-live="polite">{#if loadState === 'searching'}
+				<p class="text-small text-muted">{t.search.searching}</p>
+			{:else if loadState === 'failed'}
+				<p class="text-small text-error" role="alert">{t.search.failed}</p>
+			{:else if nothing}
+				<p class="tv-copy">{t.search.empty(answered)}</p>
+			{:else if loadState === 'ready' && total > 0}
+				<p class="text-small text-muted">
+					{t.search.results(total)}{results.truncated ? ` · ${t.search.truncated}` : ''}
+				</p>
+			{/if}</div>
+
+		{#if showRecent}
+			<section class="search-recent enter enter-2">
+				<h2 class="label">{t.search.recent}</h2>
+				<ul class="search-chips">
+					{#each recent as entry (entry)}
+						<li class="search-chip">
+							<button type="button" class="search-chip-go" onclick={() => repeat(entry)}>
+								{entry}
+							</button>
+							<button
+								type="button"
+								class="search-chip-forget"
+								onclick={() => forget(entry)}
+								aria-label="{t.search.forget} — {entry}"
+							>
+								<Icon name="close" size={12} />
+							</button>
+						</li>
+					{/each}
+				</ul>
+			</section>
 		{/if}
-	</form>
+	</section>
 
-	<p class="search-hint text-small text-muted">{t.search.prompt}</p>
+	<div class="search-results-shell page-shell">
+		{#if results.movies.length}
+			<section class="search-results">
+				<h2 class="label">{t.search.films}</h2>
+				<div class="library-grid">
+					{#each results.movies as movie (movie.id)}
+						<PosterCard {movie} fluid />
+					{/each}
+				</div>
+			</section>
+		{/if}
 
-	<div class="search-status" aria-live="polite">{#if loadState === 'searching'}
-			<p class="text-small text-muted">{t.search.searching}</p>
-		{:else if loadState === 'failed'}
-			<p class="text-small text-error" role="alert">{t.search.failed}</p>
-		{:else if nothing}
-			<p class="tv-copy">{t.search.empty(answered)}</p>
-		{:else if loadState === 'ready' && total > 0}
-			<p class="text-small text-muted">
-				{t.search.results(total)}{results.truncated ? ` · ${t.search.truncated}` : ''}
-			</p>
-		{/if}</div>
-
-	{#if showRecent}
-		<section class="search-recent">
-			<h2 class="label">{t.search.recent}</h2>
-			<ul class="search-chips">
-				{#each recent as entry (entry)}
-					<li class="search-chip">
-						<button type="button" class="search-chip-go" onclick={() => repeat(entry)}>
-							{entry}
-						</button>
-						<button
-							type="button"
-							class="search-chip-forget"
-							onclick={() => forget(entry)}
-							aria-label="{t.search.forget} — {entry}"
-						>
-							<Icon name="close" size={12} />
-						</button>
-					</li>
-				{/each}
-			</ul>
-		</section>
-	{/if}
-
-	{#if results.movies.length}
-		<section class="search-results">
-			<h2 class="label">{t.search.films}</h2>
-			<div class="library-grid">
-				{#each results.movies as movie (movie.id)}
-					<PosterCard {movie} fluid />
-				{/each}
-			</div>
-		</section>
-	{/if}
-
-	{#if results.series.length}
-		<section class="search-results">
-			<h2 class="label">{t.search.series}</h2>
-			<div class="library-grid">
-				{#each results.series as item (item.id)}
-					<PosterCard
-						movie={item}
-						href="/serie/{item.id}"
-						fluid
-						playable={false}
-						legend={item.metadata?.first_air_date?.slice(0, 4) ?? ''}
-					/>
-				{/each}
-			</div>
-		</section>
-	{/if}
+		{#if results.series.length}
+			<section class="search-results">
+				<h2 class="label">{t.search.series}</h2>
+				<div class="library-grid">
+					{#each results.series as item (item.id)}
+						<PosterCard
+							movie={item}
+							href="/serie/{item.id}"
+							fluid
+							playable={false}
+							legend={item.metadata?.first_air_date?.slice(0, 4) ?? ''}
+						/>
+					{/each}
+				</div>
+			</section>
+		{/if}
+	</div>
 </main>

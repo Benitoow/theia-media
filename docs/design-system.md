@@ -30,6 +30,14 @@ scales the image, adds a bottom veil and reveals the circular play affordance.
 It does not draw a gold rectangle around the card. This candidate remains local
 until the maintainer approves it; it must not trigger a tag or release.
 
+Search is a destination, not a spare form control. Its title, scope, prompt,
+field, status and recent searches share one centred stage. A wide, dim projector
+halo and a single horizon line give the otherwise empty state depth; both are
+CSS-generated, contain no artwork and stay behind the content. Search results
+leave that stage and return to the ordinary left-aligned library grid. The field
+keeps the rounded glass language, an explicit focus ring and a 44 px minimum
+target at every viewport.
+
 ## V3 programme (superseded by the V3.1 local candidate above)
 
 Navigation uses a flat masthead with a fine parchment rule and an opaque enough

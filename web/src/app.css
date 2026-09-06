@@ -4294,6 +4294,24 @@
  .poster-card:hover .poster-play, .poster-card:focus-visible .poster-play { transform: translateY(0) scale(1); }
  .watchlist-control { display: flex; flex-direction: column; gap: 0.5rem; }
  .watchlist-control [aria-pressed='true'] { color: var(--color-accent); border-color: var(--color-accent); }
+ .search-page { position: relative; isolation: isolate; width: 100%; overflow: clip; }
+ .search-page::before { content: ''; position: absolute; z-index: -2; inset: 0 0 auto; height: min(52rem, 82svh); background: radial-gradient(ellipse 55% 46% at 50% 24%, rgb(var(--channel-accent) / 0.12), rgb(var(--channel-accent) / 0.025) 46%, transparent 72%), linear-gradient(to bottom, rgb(var(--channel-bone) / 0.018), transparent 62%); pointer-events: none; }
+ .search-page::after { content: ''; position: absolute; z-index: -1; top: calc(var(--nav-offset) - 26rem); left: 50%; width: min(82rem, 118vw); aspect-ratio: 1.75; border: 1px solid rgb(var(--channel-bone) / 0.055); border-radius: 50%; box-shadow: inset 0 -4rem 8rem rgb(var(--channel-accent) / 0.025), 0 4rem 10rem rgb(var(--channel-accent) / 0.045); transform: translateX(-50%); pointer-events: none; }
+ .search-stage { position: relative; display: flex; min-height: clamp(29rem, 59svh, 41rem); flex-direction: column; align-items: center; justify-content: center; padding-block: clamp(3rem, 7vw, 6rem); text-align: center; }
+ .search-stage[data-has-results='true'] { min-height: clamp(25rem, 49svh, 33rem); }
+ .search-stage::after { content: ''; position: absolute; right: var(--page-gutter); bottom: 0; left: var(--page-gutter); height: 1px; background: linear-gradient(to right, transparent, rgb(var(--channel-bone) / 0.12) 28%, rgb(var(--channel-accent) / 0.32) 50%, rgb(var(--channel-bone) / 0.12) 72%, transparent); }
+ .search-heading { display: flex; flex-direction: column; align-items: center; }
+ .search-scope { margin-block-end: clamp(1rem, 2.5vw, 1.75rem); color: var(--color-accent); }
+ .search-title { max-width: 12ch; font-family: var(--font-display); font-size: clamp(3.7rem, 8.5vw, 7.8rem); font-weight: 400; letter-spacing: -0.045em; line-height: 0.9; text-wrap: balance; }
+ .search-hint { max-width: 40rem; margin-block-start: clamp(1.1rem, 2.5vw, 1.6rem); text-wrap: balance; }
+ .search-field { width: min(100%, 48rem); margin-block-start: clamp(2rem, 4vw, 3rem); padding-inline: 0.65rem 0.5rem; background: rgb(var(--channel-surface) / 0.7); box-shadow: 0 1.5rem 4.5rem rgba(0, 0, 0, 0.32), inset 0 1px rgb(var(--channel-bone) / 0.035); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+ .search-field-icon { display: grid; width: 2.9rem; height: 2.9rem; flex: 0 0 auto; border-radius: 50%; background: rgb(var(--channel-bone) / 0.065); color: var(--color-accent); place-items: center; }
+ .search-status { display: flex; min-height: 0; align-items: center; justify-content: center; text-align: center; }
+ .search-status:not(:empty) { margin-block-start: 1.35rem; }
+ .search-recent { max-width: 60rem; margin-block-start: clamp(2rem, 4vw, 3rem); }
+ .search-chips { justify-content: center; }
+ .search-results-shell { position: relative; z-index: 1; }
+ .search-results:first-child { margin-block-start: clamp(2.75rem, 5vw, 4.5rem); }
  @media (max-width: 40rem) {
   .cinema-feature { min-height: 38rem; }
   .cinema-feature .page-body--hero { padding-bottom: 3rem; }
@@ -4314,6 +4332,16 @@
   .duration-pills::-webkit-scrollbar { display: none; }
   .duration-pill { min-width: max-content; border: 1px solid rgb(var(--channel-bone) / 0.08); background: rgb(var(--channel-surface) / 0.55); }
   .duration-pill--active { border-color: rgb(var(--channel-bone) / 0.2); background: rgb(var(--channel-bone) / 0.11); }
+  .search-page::after { top: calc(var(--nav-offset) - 12rem); width: 150vw; aspect-ratio: 1; }
+  .search-stage, .search-stage[data-has-results='true'] { min-height: 30rem; justify-content: flex-start; padding-block-start: 3.5rem; padding-block-end: 4.5rem; }
+  .search-stage::after { right: var(--page-gutter); left: var(--page-gutter); }
+  .search-title { font-size: clamp(3.25rem, 16vw, 4.65rem); }
+  .search-hint { max-width: 28ch; }
+  .search-field { min-block-size: 3.75rem; gap: 0.65rem; margin-block-start: 2rem; padding-inline-start: 0.45rem; }
+  .search-field-icon { width: 2.75rem; height: 2.75rem; }
+  .search-input { font-size: 1rem; }
+  .search-recent { margin-block-start: 2rem; }
+  .search-results:first-child { margin-block-start: 2.5rem; }
  }
 }
 

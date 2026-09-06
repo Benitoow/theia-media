@@ -149,7 +149,7 @@
 					<Icon name="chevronRight" size={17} />
 				</a>
 				<a href="/films?minutes=120&status=unseen">
-					<span class="programme-icon"><Icon name="film" size={18} /></span>
+					<span class="programme-icon"><Icon name="playSquare" size={18} /></span>
 					<span class="programme-label">{t.v3.tonight}</span>
 					<Icon name="chevronRight" size={17} />
 				</a>

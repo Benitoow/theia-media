@@ -750,6 +750,7 @@ export const strings = {
 
 	search: {
 		title: 'Search',
+		scope: 'Films · Series',
 		label: 'Search the library',
 		placeholder: 'A title, a year, a director…',
 		prompt: 'One search, across films and series at once.',
