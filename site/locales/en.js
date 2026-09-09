@@ -44,6 +44,7 @@ export default {
 			'Concrete codec, browser and platform compatibility'
 		],
 		cta: 'Join the field test',
+		discord: 'Meet the testers on Discord',
 		guide: 'Read the one-week guide'
 	},
 

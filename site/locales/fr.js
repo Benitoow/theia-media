@@ -44,6 +44,7 @@ export default {
 			'Compatibilité concrète des codecs, navigateurs et plateformes'
 		],
 		cta: 'Rejoindre le test terrain',
+		discord: 'Échanger avec les testeurs sur Discord',
 		guide: 'Lire le guide d’une semaine'
 	},
 

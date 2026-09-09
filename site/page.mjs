@@ -3,6 +3,7 @@
 
 const REPO = 'https://github.com/Benitoow/theia-media';
 const SITE = 'https://benitoow.github.io/theia-media';
+const DISCORD = 'https://discord.gg/p4Rp4zHdHf';
 const LATEST = `${REPO}/releases/latest/download`;
 
 export const PLATFORMS = [
@@ -302,6 +303,7 @@ export function render(t, release = {}, build = {}) {
 					</div>
 					<div class="field-test-actions">
 						<a class="secondary-cta" href="${REPO}/issues/new?template=field_test.yml">${escape(t.fieldTest.cta)} <span aria-hidden="true">↗</span></a>
+						<a class="text-link" href="${DISCORD}">${escape(t.fieldTest.discord)} <span aria-hidden="true">↗</span></a>
 						<a class="text-link" href="${REPO}/blob/main/docs/field-testing.md">${escape(t.fieldTest.guide)} <span aria-hidden="true">↗</span></a>
 					</div>
 				</div>

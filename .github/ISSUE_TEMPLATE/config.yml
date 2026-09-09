@@ -3,6 +3,9 @@ contact_links:
   - name: Join the V3.1 field test
     url: https://github.com/Benitoow/theia-media/issues/new?template=field_test.yml
     about: Use Theia on a real library for a week and report what worked, what failed and on which screens.
+  - name: Theia Discord
+    url: https://discord.gg/p4Rp4zHdHf
+    about: Ask for setup help, compare hardware and playback results, or meet other field testers.
   - name: Security vulnerability
     url: https://github.com/Benitoow/theia-media/security/advisories/new
     about: Report privately, never as a public issue. Read SECURITY.md first — no login on the LAN port is deliberate.

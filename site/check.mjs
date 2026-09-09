@@ -33,6 +33,7 @@ for (const [lang, path] of pages) {
 	assert.doesNotMatch(html, /<(?:script|img)[^>]+(?:src)="https?:\/\//i, `${lang}: no remote runtime subresource`);
 	assert.doesNotMatch(html, /navigator\.(?:userAgent|userAgentData)/, `${lang}: no architecture guessing`);
 	assert.doesNotMatch(html, /undefined/, `${lang}: no undefined output`);
+	assert.match(html, /href="https:\/\/discord\.gg\/p4Rp4zHdHf"/, `${lang}: permanent Discord invite`);
 	for (const file of downloads) assert.ok(html.includes(`/latest/download/${file}`), `${lang}: ${file}`);
 }
 

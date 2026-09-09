@@ -19,7 +19,8 @@
   <a href="https://benitoow.github.io/theia-media/">Website</a> ·
   <a href="https://github.com/Benitoow/theia-media/releases/latest">Download</a> ·
   <a href="#three-minute-setup">Setup</a> ·
-  <a href="#theia-plex-jellyfin-or-emby">Compare</a>
+  <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
+  <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
 </p>
 
 ![Theia V3.1 home screen with Dune, the programme dock and the beginning of the collection](docs/screenshots/home.webp)
@@ -46,7 +47,7 @@ run it against their own film and series libraries for at least a week, on the
 screens they actually use, and report both failures and uneventful success.
 [Join the field test](https://github.com/Benitoow/theia-media/issues/new?template=field_test.yml),
 read the short [testing guide](docs/field-testing.md), or talk to other testers
-in the [Discord server](https://discord.gg/55rwqWc2Nv).
+in the [Discord server](https://discord.gg/p4Rp4zHdHf).
 
 Feature ideas are still welcome and will be collected. Broader development
 resumes when those real libraries have shown which problems deserve to shape the
