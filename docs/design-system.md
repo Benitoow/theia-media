@@ -939,12 +939,22 @@ has a different first job: prove what Theia is, make the cost and limits legible
 then let somebody try it. It keeps the identity above and changes the
 composition, not the brand.
 
-### 12.1 The first screen contains proof
+The site is built with Astro, React and Tailwind CSS (rebuilt 11 September
+2026, decision 108): most of the page is static build-time HTML, and the two
+interactive parts — the download station and the demonstration player chrome —
+are React islands hydrated only when they approach the viewport. The page
+performs no runtime API call, ships no analytics and loads no remote
+subresource; the publishing contract below is what the stack exists to serve.
+The page is English only: the audience now arrives cold, mostly through
+Reddit, and one language keeps the copy sharp and the checks simple.
 
-The hero places three things in one sequence: the promise, a product proof and
-the download station. A display title is still allowed, but it no longer earns a
-half-empty viewport merely by being large. The player is the one flourish on the
-page and takes the visual weight the old negative space held.
+### 12.1 The first screens contain proof, then the file
+
+The page holds four things before anything else, in one sequence: the promise,
+the three steps of running it, a product proof and the download station. A
+display title is still allowed, but it no longer earns a half-empty viewport
+merely by being large. The player is the one flourish on the page and takes
+the visual weight the old negative space held.
 
 A player proof has two valid forms:
 
@@ -953,10 +963,10 @@ A player proof has two valid forms:
 2. an interactive reconstruction of the player's chrome, explicitly labelled
    as a demonstration.
 
-The current hero combines them honestly: a real capture produced from the
-repository-authored demo media, with demonstration controls above it. A mockup
-must never be worded or framed as a capture. Replacing the media later changes
-the asset and provenance record, not this rule.
+The proof combines them honestly: a real capture produced from the
+repository-authored demo media, with demonstration controls around it. A
+mockup must never be worded or framed as a capture. Replacing the media later
+changes the asset and provenance record, not this rule.
 
 ### 12.2 Three moments are the ceiling
 
@@ -967,8 +977,11 @@ section. Detailed capability lists and the exhaustive competitor table live in
 the README, where somebody asking for detail can choose to read them.
 
 Screenshots keep their application colours and aspect ratio. No page-wide grade,
-decorative image or second flourish competes with the player. Missing imagery is
-replaced by a structured fact panel, not a stock photograph.
+decorative image or second flourish competes with the player. Imagery may go
+beyond the three moments in exactly one subordinate form: a still strip — a
+single quiet row of real captures, no motion, placed after the moments. Facts
+that describe a capture may sit as an overlay card on it; a moment without
+capture keeps the structured fact panel, not a stock photograph.
 
 ### 12.3 Download station
 
@@ -990,13 +1003,26 @@ metadata; a missing fact is omitted. Links themselves use GitHub's
 ### 12.4 Copy and emphasis
 
 - Consequence precedes jargon: « un appareil autorisé » before « WireGuard ».
-- Three differences and three limits are enough. Limits appear before the final
+- Three differences and three limits are enough, and the page shows them as a
+  ledger — what you gain, what you give up — with the limits before the final
   invitation to download.
 - No superlative claims that depend on another platform's current product.
 - Gold remains reserved for the mark's rule, focus, and playback progress. A
-  selected option uses `--raised` and `--fg`, not another gold badge.
-- The same French/English template, visible FAQ and accessible names are a
+  selected option uses `--raised` and `--fg`, not another gold badge; the one
+  gilded phrase is the display title's second line, in a bone-to-gold
+  gradient. The `$` prompt glyph in the steps band marks a command; a URL is
+  not a command and gets an arrow instead.
+- The single English template, visible FAQ and accessible names are a
   publishing contract, not optional polish.
+
+### 12.5 What the page stopped carrying
+
+The field-test section — the « ten households » narrative — was retired with
+the rebuild. It addressed people who already knew the project; the new
+audience arrives cold and wants the file, not the roadmap. The story lives in
+the repository (`docs/field-testing.md` and the field-test issue template),
+where it belongs. The public page carries instead the three steps and the
+honest ledger of §12.4.
 
 The site reflows at 1100px, 700px and the 390px floor. Controls remain at least
 44px, the range hit area remains 44px even though its painted rule is 4px, and

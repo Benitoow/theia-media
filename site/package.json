@@ -1,0 +1,29 @@
+{
+	"name": "theia-site",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "astro dev",
+		"prebuild": "node scripts/sync-assets.mjs",
+		"build": "astro build",
+		"check": "node scripts/check.mjs"
+	},
+	"dependencies": {
+		"@astrojs/react": "^6.0.5",
+		"@tailwindcss/vite": "^4.3.3",
+		"astro": "^7.3.2",
+		"react": "^19.3.0",
+		"react-dom": "^19.3.0",
+		"tailwindcss": "^4.3.3"
+	},
+	"devDependencies": {
+		"@astrojs/check": "^0.9.10",
+		"@types/node": "^22.20.2",
+		"@types/react": "^19.3.0",
+		"@types/react-dom": "^19.3.0",
+		"typescript": "^5.9.3"
+	},
+	"allowScripts": {
+		"esbuild@0.28.2": true
+	}
+}

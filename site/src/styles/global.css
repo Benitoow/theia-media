@@ -1,0 +1,427 @@
+@import 'tailwindcss';
+
+/* The Theia design system, restated as Tailwind theme tokens.
+ *
+ * docs/design-system.md remains the authority; §3 surfaces and text, §4 the
+ * two registers and the type scale, §5 the page frame, §8 motion. The right
+ * hand comments name the section each value comes from. Decision 64 applies:
+ * a value here that drifts from the application's app.css is a bug, not a
+ * liberty.
+ */
+@theme {
+	/* §3 Surfaces */
+	--color-ink: #0b0a09; /* --ink */
+	--color-surface: #131211; /* --surface */
+	--color-raised: #1c1a18; /* --raised */
+	--color-line: #2a2724; /* --line */
+
+	/* §3 Text. Ratios on ink: bone 16.07, parchment 12.78, muted 5.42, faint 2.64. */
+	--color-bone: #ede7dc; /* --bone */
+	--color-parchment: #d6cfc2; /* --parchment */
+	--color-muted: #8c857a; /* --muted */
+	--color-faint: #5a544c; /* --faint -- decorative and disabled only, never read */
+
+	/* §3 Accent. Five uses per screen is the budget. */
+	--color-accent: #c8a24a; /* --accent, 8.22 */
+	--color-accent-bright: #e3c173; /* --accent-bright, 11.44 -- hover and focus */
+
+	/* §4 The two registers and the mono assistant. */
+	--font-display: 'Playfair Display Variable', Didot, 'Bodoni MT', Georgia, 'Times New Roman', serif;
+	--font-body: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+		sans-serif;
+	--font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+	/* §4 Scale. */
+	--text-hero: clamp(3.15rem, 5.4vw, 6.25rem);
+	--text-display: clamp(2.25rem, 6vw, 4rem);
+	--tracking-hero: -0.03em;
+	--tracking-display: -0.02em;
+	--tracking-title: -0.01em;
+	--tracking-label: 0.18em;
+	--tracking-micro: 0.22em;
+
+	/* §5 The page frame. */
+	--spacing-gutter: clamp(1.5rem, 4vw, 5.5rem); /* --page-gutter */
+	--radius-card: clamp(1rem, 1.6vw, 1.375rem); /* --radius-card */
+
+	/* §8 Motion. */
+	--ease-cine: cubic-bezier(0.16, 1, 0.3, 1); /* --ease-cine */
+	--duration-fast: 160ms; /* --duration-fast */
+	--duration-base: 320ms; /* --duration-base */
+}
+
+/* The two variable fonts are declared in the page head with the base path
+   prefixed (Astro injects import.meta.env.BASE_URL there); a CSS url() cannot
+   be templated, and the site is published under a repository subpath. */
+
+/* ------------------------------------------------------------------ base */
+
+@layer base {
+	html {
+		background: var(--color-ink);
+		color: var(--color-bone);
+		scroll-behavior: smooth;
+		scroll-padding-top: 5.5rem;
+		-webkit-text-size-adjust: 100%;
+		color-scheme: dark;
+	}
+
+	body {
+		font-family: var(--font-body);
+		line-height: 1.6;
+		overflow-x: hidden;
+	}
+
+	img,
+	svg {
+		display: block;
+		max-width: 100%;
+		height: auto;
+	}
+
+	p {
+		text-wrap: pretty;
+	}
+
+	h1,
+	h2,
+	h3 {
+		margin: 0;
+		text-wrap: balance;
+	}
+
+	::selection {
+		background: var(--color-accent);
+		color: var(--color-ink);
+	}
+
+	:focus-visible {
+		border-radius: 0.2rem;
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+}
+
+/* ------------------------------------------------------------- utilities */
+
+@layer utilities {
+	/* §4 labels: small caps, wide tracking, the register nothing loud may use. */
+	.eyebrow {
+		color: var(--color-muted);
+		font: 600 0.6875rem / 1.2 var(--font-body);
+		letter-spacing: var(--tracking-label);
+		text-transform: uppercase;
+	}
+
+	/* The shell: §5 frame, gutter outside, content inside. */
+	.shell {
+		width: min(96rem, 100%);
+		margin-inline: auto;
+		padding-inline: var(--spacing-gutter);
+	}
+
+	.nav-link {
+		display: inline-flex;
+		min-height: 44px;
+		align-items: center;
+		padding: 0.4rem;
+		color: var(--color-muted);
+		font-size: 0.875rem;
+		font-weight: 600;
+		transition: color var(--duration-fast) var(--ease-cine);
+	}
+
+	.nav-link:hover {
+		color: var(--color-bone);
+	}
+
+	/* Hero word reveal. One animation, opacity and transform only (§8), and it
+	   never runs under reduced motion. */
+	@supports not (animation-timeline: view()) {
+	}
+	@keyframes rise-in {
+		from {
+			opacity: 0;
+			transform: translateY(1.1rem);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.rise {
+		opacity: 0;
+		animation: rise-in 0.7s var(--ease-cine) forwards;
+	}
+
+	/* Scroll-triggered entrance where the browser supports scroll-driven
+	   animations; the page is fully readable with the animation absent. */
+	@supports (animation-timeline: view()) {
+		@keyframes enter-up {
+			from {
+				opacity: 0;
+				transform: translateY(1.5rem);
+			}
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+
+		.enter {
+			animation: enter-up linear both;
+			animation-timeline: view();
+			animation-range: entry 0% entry 45%;
+		}
+	}
+
+	/* Gradient text for the one phrase the brand is allowed to gild. Gold is
+	   otherwise reserved (§12.4): the rule, focus and progress. */
+	.text-gild {
+		background: linear-gradient(100deg, var(--color-bone) 0%, var(--color-accent-bright) 60%, var(--color-accent) 100%);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+}
+
+/* ------------------------------------------------------------ components */
+
+@layer components {
+	/* Pill buttons. min-height 54px: §12's controls never fall under 44px and
+	   the primary action sits at the comfortable size. */
+	.btn {
+		display: inline-flex;
+		min-height: 3.375rem;
+		align-items: center;
+		justify-content: center;
+		gap: 0.55rem;
+		border-radius: 999px;
+		padding: 0.75rem 1.35rem;
+		font-weight: 600;
+		transition:
+			background var(--duration-fast) var(--ease-cine),
+			color var(--duration-fast) var(--ease-cine),
+			border-color var(--duration-fast) var(--ease-cine),
+			transform var(--duration-fast) var(--ease-cine);
+	}
+
+	.btn:active {
+		transform: translateY(1px);
+	}
+
+	.btn-primary {
+		border: 1px solid var(--color-bone);
+		background: var(--color-bone);
+		color: var(--color-ink);
+	}
+
+	.btn-primary:hover {
+		background: var(--color-parchment);
+		border-color: var(--color-parchment);
+	}
+
+	.btn-secondary {
+		border: 1px solid var(--color-line);
+		color: var(--color-bone);
+	}
+
+	.btn-secondary:hover {
+		border-color: var(--color-faint);
+		background: var(--color-raised);
+	}
+
+	/* Quiet underlined link, 44px touch target. */
+	.link-quiet {
+		display: inline-flex;
+		min-height: 2.75rem;
+		align-items: center;
+		text-decoration: underline;
+		text-decoration-color: var(--color-line);
+		text-underline-offset: 0.22em;
+		transition: text-decoration-color var(--duration-fast) var(--ease-cine);
+	}
+
+	.link-quiet:hover {
+		text-decoration-color: var(--color-bone);
+	}
+
+	/* Terminal window: the shadcn-blocks pattern, dressed in ink. */
+	.term {
+		border: 1px solid var(--color-line);
+		border-radius: var(--radius-card);
+		background: var(--color-ink);
+		overflow: hidden;
+		transition: border-color var(--duration-base) var(--ease-cine), transform var(--duration-base) var(--ease-cine);
+	}
+
+	.term:hover {
+		border-color: var(--color-faint);
+		transform: translateY(-2px);
+	}
+
+	.term-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		padding: 0.8rem 1.1rem;
+		border-bottom: 1px solid var(--color-line);
+		background: var(--color-surface);
+	}
+
+	.term-dot {
+		width: 0.55rem;
+		height: 0.55rem;
+		border-radius: 999px;
+		background: var(--color-faint);
+	}
+
+	/* Spotlight card: a radial gold wash that follows the pointer. The wash is
+	   decoration (it must survive as plain hover when the pointer never moves:
+	   touch devices), and costs one delegated listener for the whole page. */
+	.spotlight {
+		position: relative;
+		overflow: hidden;
+	}
+
+	.spotlight::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		pointer-events: none;
+		opacity: 0;
+		background: radial-gradient(
+			22rem 22rem at var(--spot-x, 50%) var(--spot-y, 50%),
+			rgb(200 162 74 / 0.13),
+			transparent 70%
+		);
+		transition: opacity var(--duration-base) var(--ease-cine);
+	}
+
+	@media (hover: hover) {
+		.spotlight:hover::before {
+			opacity: 1;
+		}
+	}
+
+	/* The demonstration player's chrome. 44px controls, the painted rule of the
+	   range stays 4px while its hit area is the documented 44px. */
+	.icon-button {
+		display: grid;
+		width: 48px;
+		height: 48px;
+		flex: 0 0 48px;
+		place-items: center;
+		border: 1px solid transparent;
+		border-radius: 999px;
+		background: transparent;
+		color: var(--color-bone);
+		cursor: pointer;
+		transition:
+			background var(--duration-fast) var(--ease-cine),
+			transform var(--duration-fast) var(--ease-cine),
+			border-color var(--duration-fast) var(--ease-cine);
+	}
+
+	.icon-button:hover {
+		border-color: var(--color-line);
+		background: var(--color-raised);
+	}
+
+	.icon-button:active {
+		transform: scale(0.96);
+	}
+
+	.icon-button svg {
+		width: 20px;
+		height: 20px;
+	}
+
+	.icon-pause {
+		display: none;
+	}
+
+	.icon-button[aria-pressed='true'] .icon-play {
+		display: none;
+	}
+
+	.icon-button[aria-pressed='true'] .icon-pause {
+		display: block;
+	}
+
+	.scrub {
+		--progress: 35%;
+	}
+
+	.scrub::-webkit-slider-runnable-track {
+		height: 4px;
+		border-radius: 2px;
+		background: linear-gradient(
+			to right,
+			var(--color-accent) 0 var(--progress),
+			var(--color-faint) var(--progress)
+		);
+	}
+
+	.scrub::-moz-range-track {
+		height: 4px;
+		border-radius: 2px;
+		background: var(--color-line);
+	}
+
+	.scrub::-moz-range-progress {
+		height: 4px;
+		border-radius: 2px;
+		background: var(--color-accent);
+	}
+
+	.scrub::-webkit-slider-thumb {
+		width: 14px;
+		height: 14px;
+		margin-top: -5px;
+		appearance: none;
+		border: 2px solid var(--color-bone);
+		border-radius: 999px;
+		background: var(--color-ink);
+	}
+
+	.scrub::-moz-range-thumb {
+		width: 12px;
+		height: 12px;
+		border: 2px solid var(--color-bone);
+		border-radius: 999px;
+		background: var(--color-ink);
+	}
+
+	.track-option .track-tick {
+		visibility: hidden;
+	}
+
+	.track-option[aria-pressed='true'] .track-tick {
+		visibility: visible;
+	}
+}
+
+/* ------------------------------------------------------------ reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+
+	.rise,
+	.enter {
+		opacity: 1;
+		animation: none;
+	}
+}

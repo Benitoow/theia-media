@@ -3204,6 +3204,281 @@ successes and failures without asking anyone to share copyrighted files or
 private data. Broader feature development resumes after real reports reveal the
 repeated problems that should shape the next release.
 
+## 98. V3.2 experiments live in an owner-only local preview
+
+**This decision records the maintainer's explicit approval for local V3.2
+experiments and supersedes decision 97 only inside that private working copy.**
+The public V3.1 line remains frozen. Preview work stays on the maintainer's
+machine: it creates no remote branch, tag or release, and the first executable
+identifies itself as `3.2.0-preview.1`.
+
+The first preview tests two concrete bets: expose the difference between media
+facts and device playback compatibility, and let the settings page render
+without waiting for slow FFmpeg diagnostics. Compatibility language must keep
+four sources of truth distinct: what file inspection detected, what Theia's
+stream plan will adapt, what the browser reports, and what real playback has
+proved. A browser, operating system, HDMI chain, receiver or speaker capability
+that Theia cannot observe remains unknown; a codec or Atmos label in a file is
+never presented as proof that the current equipment can reproduce it.
+
+This preview is an experiment, not a promise for the next public release. Its
+code may be kept, changed or discarded after local playback tests and field
+feedback. Publishing any part of it still requires a separate decision.
+
+## 99. A real buffer precedes playback, and repeated stalls lower the workload
+
+The V3.2 preview was measured against the maintainer's real 4K Dune file in
+Chromium. The automatic HEVC fallback started a 3840 × 1604 HDR transcode and
+began playback with only 2.02 seconds buffered. It then raised five `waiting`
+events in thirty seconds, including several while the reported continuous range
+still held between 4.8 and 9.9 seconds ahead. This is a player failure, not a
+useful GPU diagnosis: starting at the first fragment left no tolerance for
+encoder, decoder or append jitter.
+
+Fragmented streams now accumulate a six-second reserve before autoplay and
+append network data in larger batches so SourceBuffer spends less time cycling
+between updates. The rolling target remains bounded; this is memory used to
+protect playback, not an attempt to download the film into RAM.
+
+When a browser needs a compatibility transcode for HDR above 1080p, the
+automatic fallback starts at the highest available rung no greater than 1080p.
+The current tone-map pipeline runs on the CPU even when the H.264 encoder is a
+GPU, and existing measurements show scaling before tone mapping is materially
+faster. The original-resolution rung remains a manual choice. If three stalls
+still occur within twenty seconds, Theia steps down one available rung and says
+so in the player; it never invents a driver capability from the GPU's name.
+
+## 100. Support reports are explicit, local and safe to hand to somebody
+
+A playback problem that only exists on another household's machine cannot be
+debugged from a screenshot of "it buffers". Theia now keeps structured JSON
+Lines diagnostics under its data directory: the active file plus three backups,
+each capped at 4 MiB. Debug records are always retained there while the console
+keeps its existing concise level. Rotation bounds the raw history at roughly
+16 MiB instead of quietly filling a disk.
+
+The browser records plans, readiness, waits, errors and automatic quality
+changes with a short playback session identifier, stable library IDs, buffer
+depth and frame counters. It deliberately does not send the current URL,
+storage, account data or a media filename. These events go back to the same
+Theia server, including from an authenticated remote viewer; there is no
+telemetry endpoint and nothing is uploaded.
+
+Settings exposes one explicit export action. It creates a ZIP containing a
+human-readable `README.txt`, a structured `diagnostics.json`, and chronological
+`logs/*.jsonl`. Before the archive leaves the process, library, data and home
+paths are replaced with placeholders, the rest of any media path is removed,
+and credential-shaped fields and tokens are redacted. Stable numeric IDs remain
+so a player event can still be correlated with a server stream without naming
+the file.
+
+Creating the archive is LAN-only because it includes machine and library
+diagnostics. The resulting file stays on the owner's device until that person
+chooses where to save it and whether to send it. This is support evidence, not
+automatic reporting.
+
+## 101. V3.2 modernises the engine without changing the interface
+
+The maintainer explicitly authorised the engine modernisation plan while
+freezing every frontend source and test file. Lot 2 and the frontend parts of
+lot 1 and lot 5 therefore remain proposals; this local preview changes the Go
+engine, build tooling and CI only. The existing V3.2 interface is embedded byte
+for byte from the working tree.
+
+List reads now use a dedicated projection that produces the same JSON as the
+old `forList` pass without loading cast, crew, tagline, certificate and
+collection blobs only to discard them. This supersedes decision 85's practical
+assumption that one shared positional projection was safer: tests plus an API
+contract comparison now protect the smaller projection, and the 10,000-film
+measurement showed that the old read cost was real. Independent home rows run
+against a bounded SQLite read pool while preserving their declared order.
+
+The automatic watcher reconciles the scanner result it already used to detect
+a change. USB and SMB polling remain the source of truth, the stability cutoff
+still excludes files being copied, and any scan problem still prevents
+deletion. A changed tree no longer pays for two immediate full walks.
+
+Costly work shares one small coordinator. A converted stream preempts optional
+preview generation; explicit probes, keyframe lookup and embedded subtitle
+extraction receive the same priority. Preview cancellation is retryable rather
+than recorded as a permanent media failure. Concurrent probes of the same
+file version share one process, and subprocess diagnostic buffers are bounded.
+
+## 102. Runtime, supply chain and updates have verifiable provenance
+
+The pinned FFmpeg artifact is described by one runtime manifest containing its
+release, GitHub source, platform asset and SHA-256. The first use in each
+process now verifies both the digest and the reported FFmpeg 6.1.1 version;
+diagnostics expose the same manifest. FFmpeg remains the only external runtime
+dependency and still downloads only on first need. A newer FFmpeg was not
+selected without a six-platform media qualification, and ffprobe remains an
+unapproved option.
+
+Go 1.26.6 is the exact build version after `govulncheck` found six reachable
+standard-library vulnerabilities in the previous 1.26.5 binary. CI runs a
+pinned govulncheck version and npm's high-severity audit. Dependabot proposes
+monthly grouped Go, npm and Actions updates; it never merges or publishes them.
+The frontend is built and verified once per workflow, then the same artifact is
+embedded into all six target binaries.
+
+An update now creates a WAL-consistent SQLite snapshot with `VACUUM INTO`, a
+configuration snapshot and a durable journal containing the source, target and
+schema versions before swapping executables. The replacement must open and
+migrate the database, bind the real listener, report the expected version and
+answer a catalogue query before the recovery point and `.old` binary are
+removed. A failure before that commit restores data, configuration and the
+previous executable, then restarts it. This automatic rollback window ends at
+the successful health commit; restoring an old snapshot days later is
+deliberately not exposed because it would erase new viewing history.
+
+## 103. The delivery decision has one source, and its answers are pinned byte for byte
+
+The backend redesign (docs/plan-refonte-lecture.md) found the delivery policy
+computed four times across the film and episode handlers, and an `/info`
+answer that could drift from the stream that followed it. The planner now
+lives in `internal/playback` (`InfoDecision`, `StreamDecision`) and both the
+information route and the delivery route ask it with their own inputs, so they
+cannot disagree again. Identity resolution and persistence stay in the
+handlers: films and episodes keep separate tables and route families
+(decision 39, untouched).
+
+The observable contract is pinned, not assumed. Six golden bodies record the
+`/info` answers (recorded from the code as the extraction found it) and eight
+contract tests hold the statuses, codes, headers and the documented gaps: the
+legacy route's missing `?audio=` refusal and the container-only blind spot
+stay exactly as they were, because correcting either would be a contract
+change needing its own validation. The first golden generation failed because
+the writer created files inside a directory that did not exist; the fix is one
+`os.MkdirAll`, and the test now passes as a pure comparison across repeated
+runs.
+
+## 104. Converted streams are registered, capped, and killed on every exit
+
+The playback path used to spawn ffmpeg with no memory of it. Nothing capped
+how many remuxes could run at once, and every exit that skips deferred calls
+-- the updater's restart above all -- left a film's encoder running beside a
+dead server.
+
+`internal/playback.Sessions` now registers every converted stream before its
+process exists, so the remux ceiling (four simultaneous, far above a household
+and far below an embollement) refuses before anything is spawned, with the one
+new response the frozen contract allowed: the 503 `transcode_busy` shape with
+`Retry-After: 1` that the transport already retries. Transcodes register for
+the kill but take their budget from the transcode limiter, not this ceiling.
+
+`main.go` kills the streams on every path that ends the process: before the
+drain on the graceful path -- a killed encoder closes its pipe, its handler
+returns, and the shutdown stops waiting out the rest of a film -- and
+explicitly before each `os.Exit` of the restart, with a deferred kill as the
+net under the paths that simply return. Verified against the real binary with
+`scripts/verify-shutdown`: three live streams, three ffmpeg processes in the
+system list, one console interrupt, the server out in twenty milliseconds and
+zero orphans. The one measured caveat: a client that holds a stream open
+without reading it parks the copy loop on the write side until the drain
+times out -- the kill still lands, the encoder still dies, and the ten-second
+drain belongs to the stalled connection, not to a process.
+
+## 105. Interactive priority is deliberate, and the transcode ceiling is derived once
+
+`BeginInteractive` is held for the whole converted stream: a playing film
+cancels previews and keeps them cancelled. This is coarse, and deliberately
+so -- a refinement (a paused film no longer blocking previews) is recorded as
+future work, not smuggled in. The policy is now written down where the code
+enforces it.
+
+The transcode limiter's ceiling used to be re-derived on every request that
+looked at it. The encoder probe answers once per process, so the ceiling does
+too: derived lazily from the probe, gated on a binary already being on disk,
+so asking a question still never downloads ffmpeg (decision 101's M1 promise,
+upheld).
+
+## 106. Subtitle extraction is bounded, and the flush is a measurement not an opinion
+
+Embedded subtitle extraction used to buffer the whole WebVTT through
+`cmd.Output()` with no ceiling. It now buffers through `boundedio.Head` up to
+8 MiB -- comfortably above any real film's subtitles, far below what a broken
+ffmpeg producing forever would otherwise take. A failed extraction still
+answers 415 before anything is written, exactly as before. An output that
+outgrows the ceiling is not truncated in silence: the response commits and
+the rest streams through, because neither holding the bytes nor losing them
+is acceptable. The first-bytes-instead-of-last-bytes distinction is the
+reason `Head` exists beside `Tail`: a WebVTT truncated at the head is no
+subtitle at all.
+
+The flush after `WriteHeader` on a converted stream was adopted on an A/B
+measurement, ten runs per side on the same film and machine: about 75 ms to
+the first byte without it on a plain client and 78 ms through the compression
+wrapper, about 48 ms and 60 ms with it. The compression middleware's hold-back
+of the first 1,400 bytes was what the flush uncovers. Kept because it helps,
+not because flushing looks diligent.
+
+## 107. Hardware capacity is measured; the first measured machine confirms the runtime as it stands
+
+The tranche-6 campaign (`scripts/measure-hardware`, results in
+docs/hardware-measurements-tranche-6.md) probed every H.264, HEVC and AV1
+encoder candidate on the maintainer's Ryzen AI 9 HX 370 with Radeon 890M, and
+measured the chains a 4K HEVC source can take. Three findings carry decisions:
+
+Software decoding beat both hardware paths by 2.4x (13.95x against 5.75x for
+`d3d11va`) -- the runtime's per-machine decoder benchmark had already chosen
+software on this machine, and the 4K measurement confirms it on the real
+question, not just a 1080p clip.
+
+`h264_mf` measured 28% faster than `h264_amf` and is nevertheless retained in
+second place: fed a noisy source under a 2 Mb/s cap it produced 2.87 Mb/s,
+while `h264_amf` held 2.19 and `libx264` 1.86. The documented reason for the
+candidate order -- a bitrate that is honoured -- is now a measured one. The
+fastest chain that respects the delivery's constraints is the one the runtime
+already picks, so nothing in the engine changed; decision 58's rule stands
+without supersession, and the machines of the other hardware families await
+their own campaigns with the same script.
+
+The delivery target stays H.264 SDR and the browser keeps its escalation.
+HEVC and AV1 targets, GPU tone mapping and complete GPU chains remain
+out-of-scope options with their measurements recorded, waiting for a product
+decision rather than being adopted by a measurement that did not ask for one.
+
+## 108. The public site is rebuilt English-only on Astro, React and Tailwind
+
+11 September 2026. After a Reddit post moved a mass of cold visitors onto the
+presentation page, the maintainer chose a full rebuild of the public site
+(his explicit pick between a zero-dependency refresh and a component stack).
+The chosen stack is Astro 7 with two React islands (download station,
+demonstration player chrome) and Tailwind CSS 4 carrying the design-system
+tokens; most of the page stays build-time static HTML.
+
+What changed and why:
+
+- **English only.** The FR/EN pair, the shape-drift walker in the build and
+  the hreflang alternates are gone. The audience now arrives cold through an
+  English-language post; one language keeps the copy sharp, the checks simple
+  and the maintenance single. Decision 32's interface parity rule is untouched:
+  it governs the application's catalogues, not the presentation page.
+- **The field-test section is retired from the public page.** The « ten
+  households » narrative (decision 97) addressed a community that already knew
+  the project; the new audience wants the file, not the roadmap. The story
+  stays in `docs/field-testing.md` and the issue template. Nothing in decision
+  97 is withdrawn: feature work is still paused.
+- **Composition.** Promise → three steps → player proof → download station →
+  three moments → the honest ledger (gains and give-ups) → FAQ. §12 of the
+  design system was rewritten in the same session to describe it.
+
+What the rebuild keeps without negotiation: the no-JavaScript contract (all
+three panels and all six download links in the server-rendered markup), the
+no-architecture-guessing rule, build-time-only release facts via
+`release.json`/`fetch-release.mjs`, self-hosted fonts, no CDN, no analytics,
+the screenshot provenance rules, and the structural checks (rewritten for the
+new output). The component libraries named during the rebuild (shadcnblocks,
+React Bits and friends) informed the vocabulary — terminal cards, bento
+ledger, spotlight wash — but no proprietary block was copied; every pattern is
+authored in this repository under GPL-3.0.
+
+Same session, same build unit, after a first review found the page short on
+imagery: the WATCH moment now shows its real capture (`film.webp`) with the
+audio/subtitle/quality facts as an overlay card, and a subordinate still strip
+(five further captures of the real application) follows the moments. §12.2 was
+amended in the same session to describe both forms.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

@@ -40,13 +40,20 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: |
+            web/package-lock.json
+            site/package-lock.json
 
-      # Only the two @fontsource-variable packages, which are the site's
-      # runtime dependencies. Everything else in web/ is dev tooling the site
+      # Only the two @fontsource-variable packages, which the site's asset sync
+      # reads at build time. Everything else in web/ is dev tooling the site
       # never touches.
       - run: npm ci --omit=dev
         working-directory: web
+
+      # The site is an Astro build with two React islands; its dependencies are
+      # pinned by site/package-lock.json.
+      - run: npm ci
+        working-directory: site
 
       # Metadata is fetched at build time only. The generated page performs no
       # GitHub API request and the committed release.json remains the offline
@@ -56,18 +63,23 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: node site/fetch-release.mjs site/release.generated.json
 
-      # Fails on catalogue drift, missing downloads or malformed metadata.
-      - name: Build the French and English pages
+      # sync-assets runs first (prebuild): it copies screenshots, fonts, icons
+      # and the social card from their single sources of truth into public/.
+      - name: Build the site
         env:
           THEIA_RELEASE_JSON: site/release.generated.json
-        run: node site/build.mjs
+        run: npm run build
+        working-directory: site
 
+      # Fails on missing downloads, remote subresources, architecture guessing
+      # or malformed metadata.
       - name: Check the generated site
-        run: node site/check.mjs
+        run: npm run check
+        working-directory: site
 
       # include-hidden-files is not optional here: the action stopped shipping
-      # dotfiles at v4, and site/build.mjs writes a .nojekyll that keeps Pages
-      # from running the output through Jekyll.
+      # dotfiles at v4, and the build writes a .nojekyll that keeps Pages from
+      # running the output through Jekyll.
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site/dist
