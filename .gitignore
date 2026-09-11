@@ -41,6 +41,7 @@ secrets/
 site/dist/
 site/.astro/
 site/public/
+site/release.generated.json
 
 # OS noise
 .DS_Store

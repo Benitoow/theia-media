@@ -1,4 +1,4 @@
-package api
+package playback
 
 import (
 	"testing"
@@ -6,7 +6,12 @@ import (
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 )
 
-// Hardware has room for a few ordinary transcodes.
+// Hardware has room for a few ordinary transcodes. The ceiling that guards
+// them comes from a measurement, not a preference: on the maintainer's machine
+// a 1080p HEVC source re-encodes at 1.04x real time in software and 4.56x on
+// the GPU. One software transcode therefore consumes the whole margin, and a
+// second would leave both viewers watching a spinner -- the failure mode where
+// nobody can tell what went wrong.
 func TestHardwareRunsSeveralOrdinaryTranscodes(t *testing.T) {
 	l := newTranscodeLimiter()
 	l.setKind(ffmpeg.KindHardware)

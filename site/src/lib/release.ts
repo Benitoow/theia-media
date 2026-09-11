@@ -52,13 +52,28 @@ export function validateRelease(release: unknown): asserts release is Release {
 }
 
 export async function loadRelease(): Promise<Release> {
-	// Astro's prerender bundle rewrites import.meta.url, so the site root is
-	// taken from the working directory the build runs in (site/ for both local
-	// and Pages builds) rather than from a file URL.
-	const siteRoot = process.cwd();
+	// Astro's prerender bundle rewrites import.meta.url, so paths are resolved
+	// against the working directory the build runs in. The Pages workflow sets
+	// THEIA_RELEASE_JSON as a repository-root path (site/release.generated.json)
+	// but builds from site/, so both roots are candidates; the first file that
+	// exists wins. The default stays the committed offline snapshot.
+	const candidates = [];
 	const override = process.env.THEIA_RELEASE_JSON;
-	const path = override ? resolve(siteRoot, override) : resolve(siteRoot, 'release.json');
-	const release = JSON.parse(await readFile(path, 'utf8'));
-	validateRelease(release);
-	return release as Release;
+	if (override) {
+		candidates.push(resolve(process.cwd(), override));
+		candidates.push(resolve(process.cwd(), '..', override));
+	} else {
+		candidates.push(resolve(process.cwd(), 'release.json'));
+	}
+	const { readFile: readFileAsync } = await import('node:fs/promises');
+	for (const path of candidates) {
+		try {
+			const release = JSON.parse(await readFileAsync(path, 'utf8'));
+			validateRelease(release);
+			return release as Release;
+		} catch (error: unknown) {
+			if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+		}
+	}
+	throw new Error(`Release metadata not found in: ${candidates.join(', ')}`);
 }
