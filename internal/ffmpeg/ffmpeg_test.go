@@ -1,15 +1,29 @@
 package ffmpeg
 
 import (
+	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
+	"io"
 	"log/slog"
+	"net/http"
+	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
 
 func discardLogger() *slog.Logger { return slog.New(slog.DiscardHandler) }
+
+type ffmpegRoundTrip func(*http.Request) (*http.Response, error)
+
+func (f ffmpegRoundTrip) RoundTrip(request *http.Request) (*http.Response, error) {
+	return f(request)
+}
 
 // realOutput is what ffmpeg 6.1.1 actually printed for one of the M4 test
 // clips. Kept verbatim rather than idealised, because the parser has to survive
@@ -133,14 +147,23 @@ func TestEveryShippedPlatformHasAPinnedBuild(t *testing.T) {
 		if build.asset == "" {
 			t.Errorf("%s has no asset name", platform)
 		}
-		// A digest that is not a full SHA-256 would silently never match, and
-		// the failure would only appear on that platform.
-		if len(build.sha256) != sha256.Size*2 {
-			t.Errorf("%s: digest %q is not a 64-character SHA-256", platform, build.sha256)
-			continue
+		if build.format != archiveZip && build.format != archiveTarXZ {
+			t.Errorf("%s has unknown package format %d", platform, build.format)
 		}
-		if _, err := hex.DecodeString(build.sha256); err != nil {
-			t.Errorf("%s: digest is not hexadecimal: %v", platform, err)
+		// A digest that is not a full SHA-256 would silently never match, and
+		// the failure would only appear on that platform. Both package and
+		// executable are pinned because only the former comes from GitHub.
+		for name, digest := range map[string]string{
+			"package": build.packageSHA256,
+			"runtime": build.binarySHA256,
+		} {
+			if len(digest) != sha256.Size*2 {
+				t.Errorf("%s: %s digest %q is not a 64-character SHA-256", platform, name, digest)
+				continue
+			}
+			if _, err := hex.DecodeString(digest); err != nil {
+				t.Errorf("%s: %s digest is not hexadecimal: %v", platform, name, err)
+			}
 		}
 	}
 }
@@ -152,6 +175,19 @@ func TestSupportedReportsThisPlatform(t *testing.T) {
 	}
 }
 
+func TestRuntimeManifestMatchesPinnedBuild(t *testing.T) {
+	manifest, ok := Manifest()
+	if !ok {
+		t.Fatalf("no runtime manifest on %s/%s", runtime.GOOS, runtime.GOARCH)
+	}
+	if manifest.Release != releaseTag || manifest.Asset == "" || manifest.SHA256 == "" || manifest.DownloadSHA256 == "" {
+		t.Fatalf("incomplete manifest: %+v", manifest)
+	}
+	if manifest.Source != downloadBase+manifest.Asset {
+		t.Fatalf("source = %q", manifest.Source)
+	}
+}
+
 func TestAvailableDoesNotDownload(t *testing.T) {
 	// The promise this whole package is built around: asking whether ffmpeg is
 	// present must never fetch 80 MB.
@@ -160,6 +196,98 @@ func TestAvailableDoesNotDownload(t *testing.T) {
 		t.Error("Available() = true for an empty directory")
 	}
 }
+
+func TestInstallRuntimePreservesTheExistingExecutableUntilTheSwap(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "ffmpeg")
+	staged := filepath.Join(dir, ".staged")
+	old := []byte("previous verified runtime")
+	newRuntime := []byte("new verified runtime")
+	if err := os.WriteFile(target, old, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(staged, newRuntime, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := installRuntime(staged, target, previousRuntimeSuffix); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := os.ReadFile(target); err != nil || !bytes.Equal(got, newRuntime) {
+		t.Fatalf("installed runtime = %q, err=%v", got, err)
+	}
+	if got, err := os.ReadFile(target + previousRuntimeSuffix); err != nil || !bytes.Equal(got, old) {
+		t.Fatalf("preserved runtime = %q, err=%v", got, err)
+	}
+}
+
+func TestInstallRuntimeRestoresTheExistingExecutableWhenTheSecondRenameFails(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "ffmpeg")
+	old := []byte("still working")
+	if err := os.WriteFile(target, old, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	err := installRuntime(filepath.Join(dir, "missing-staged-runtime"), target, previousRuntimeSuffix)
+	if err == nil {
+		t.Fatal("install succeeded without a staged runtime")
+	}
+	if got, readErr := os.ReadFile(target); readErr != nil || !bytes.Equal(got, old) {
+		t.Fatalf("restored runtime = %q, err=%v", got, readErr)
+	}
+	if _, statErr := os.Stat(target + previousRuntimeSuffix); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("rollback left the runtime stranded at the backup path: %v", statErr)
+	}
+}
+
+func TestMatchingLegacyRuntimeAcceptsOnlyAKnownTheiaDigest(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ffmpeg")
+	known := []byte("known previous runtime")
+	if err := os.WriteFile(path, known, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(known)
+	candidates := []legacyRuntime{{binarySHA256: hex.EncodeToString(sum[:]), expectedVersion: "previous"}}
+
+	if got := matchingLegacyRuntime(path, candidates); got == nil || got.expectedVersion != "previous" {
+		t.Fatalf("known runtime was not recognised: %+v", got)
+	}
+	if err := os.WriteFile(path, []byte("owner replacement"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got := matchingLegacyRuntime(path, candidates); got != nil {
+		t.Fatalf("an unmanaged runtime was accepted as a fallback: %+v", got)
+	}
+}
+
+func TestDownloadRejectsAnOversizedPackageBeforeReadingIt(t *testing.T) {
+	m := New(t.TempDir(), discardLogger())
+	read := false
+	m.http.Transport = ffmpegRoundTrip(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode:    http.StatusOK,
+			ContentLength: maxPackageBytes + 1,
+			Body: io.NopCloser(readerFunc(func([]byte) (int, error) {
+				read = true
+				return 0, io.EOF
+			})),
+			Header: make(http.Header),
+		}, nil
+	})
+
+	err := m.download(context.Background(), build{asset: "oversized.zip"}, t.TempDir()+"/ffmpeg")
+	if err == nil || !strings.Contains(err.Error(), "package is too large") {
+		t.Fatalf("download error = %v, want package size refusal", err)
+	}
+	if read {
+		t.Error("the oversized response body was read")
+	}
+}
+
+type readerFunc func([]byte) (int, error)
+
+func (f readerFunc) Read(p []byte) (int, error) { return f(p) }
 
 // The frame rate, taken verbatim from the maintainer's own 4K file.
 //

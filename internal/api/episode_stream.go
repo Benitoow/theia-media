@@ -1,123 +1,81 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"os"
-	"path/filepath"
 
-	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/library"
-	"github.com/Benitoow/theia-media/internal/stream"
 	"github.com/Benitoow/theia-media/internal/subtitles"
 )
+
+// The episode side of the delivery pair. Its tables and routes stay distinct
+// from the film side (decision 39); the shared bodies are in stream_twin.go.
 
 func (s *Server) handleEpisodeFileStreamInfo(w http.ResponseWriter, r *http.Request) {
 	item, file, ok := s.episodeFileForStream(w, r)
 	if !ok {
 		return
 	}
-	audioID, audioRequested, ok := requestedAudioID(w, r)
+	s.serveStreamInfo(w, r, s.episodeTwin(item, file))
+}
+
+func (s *Server) handleEpisodeFileStreamDirect(w http.ResponseWriter, r *http.Request) {
+	item, file, ok := s.episodeFileForStream(w, r)
 	if !ok {
 		return
 	}
+	s.serveStreamDirect(w, r, s.episodeTwin(item, file))
+}
 
-	var selected *library.AudioTrack
-	if audioRequested {
-		if file.Media.Status != library.MediaOK {
-			writeJSONError(w, http.StatusConflict, "media_not_inspected")
-			return
-		}
-		track, err := s.lib.EpisodeAudioTrack(r.Context(), item.ID, file.ID, audioID)
-		switch {
-		case errors.Is(err, library.ErrNoSuchAudioTrack):
-			writeJSONError(w, http.StatusNotFound, "audio_track_not_found")
-			return
-		case err != nil:
-			s.log.Error("reading an episode audio track failed",
-				"episode_id", item.ID, "file_id", file.ID, "track_id", audioID, "error", err)
-			writeJSONError(w, http.StatusInternalServerError, "audio_track_unavailable")
-			return
-		}
-		selected = &track
+func (s *Server) handleEpisodeFileStreamRemux(w http.ResponseWriter, r *http.Request) {
+	item, file, ok := s.episodeFileForStream(w, r)
+	if !ok {
+		return
 	}
+	s.serveStreamRemux(w, r, s.episodeTwin(item, file))
+}
 
-	decision := stream.DecideByContainer(file.Path)
-	reasonCode := "container_remux"
-	if decision.Mode == stream.ModeDirect {
-		reasonCode = "container_direct"
+// episodeTwin carries the episode side's identity and the library calls that
+// differ from the film side. The episode route does not validate ?h= up
+// front; the delivery service reaches the same check later, which is the
+// asymmetry the contract tests pin.
+func (s *Server) episodeTwin(item library.EpisodeItem, file library.EpisodeFile) streamTwin {
+	return streamTwin{
+		id:        item.ID,
+		episodeID: item.ID,
+		fileID:    file.ID,
+		label:     "episode",
+		media:     file.Media,
+		extension: file.Extension,
+		progress:  item.Progress,
+		path:      file.Path,
+		audioTrack: func(ctx context.Context, audioID int64) (library.AudioTrack, error) {
+			return s.lib.EpisodeAudioTrack(ctx, item.ID, file.ID, audioID)
+		},
+		syncSubtitles: func(ctx context.Context) library.FileMedia {
+			// See the film side: sidecars are re-read once per playback.
+			s.syncSidecars(file.Path, file.ID, func(id int64, found []subtitles.Sidecar) error {
+				return s.lib.SyncEpisodeFileSubtitles(ctx, id, found)
+			})
+			if reloaded, err := s.lib.GetEpisodeFile(ctx, item.ID, file.ID); err == nil {
+				file.Media.SubtitleTracks = reloaded.Media.SubtitleTracks
+			}
+			return file.Media
+		},
+		saveMeasured: func(ctx context.Context, media library.FileMedia) (library.FileMedia, error) {
+			saved, err := s.lib.SaveEpisodeFileMedia(ctx, item.ID, file.ID, media)
+			if err != nil {
+				return library.FileMedia{}, err
+			}
+			return saved.Media, nil
+		},
+		markUnreadable: func(ctx context.Context) error {
+			return s.lib.MarkEpisodeFileMediaError(ctx, item.ID, file.ID)
+		},
+		fallbackDuration: func() float64 { return episodeRuntimeSeconds(item) },
 	}
-	if file.Media.Status == library.MediaOK && file.Media.Video != nil {
-		audioCodec := ""
-		if selected != nil {
-			audioCodec = selected.Codec
-		} else if track, ok := stream.PreferredAudio(file.Media.AudioTracks, func(t library.AudioTrack) string { return t.Codec }); ok {
-			audioCodec = track.Codec
-		}
-		decision = stream.Decide(file.Path, file.Media.Video.Codec, audioCodec)
-		reasonCode = decisionReasonCode(decision)
-	}
-	if audioRequested && decision.Mode == stream.ModeDirect {
-		decision.Mode = stream.ModeRemux
-		decision.Audio = stream.AudioCopy
-		decision.Reason = "a selected audio track must be mapped explicitly"
-		reasonCode = "audio_track_selected"
-	}
-
-	duration := file.Media.DurationSeconds
-	if duration <= 0 {
-		duration = item.Progress.DurationSeconds
-	}
-	if duration <= 0 {
-		duration = episodeRuntimeSeconds(item)
-	}
-	container := file.Media.Container
-	if container == "" {
-		container = file.Extension
-	}
-	// Asked once per playback, which is what keeps a `.srt` dropped in this
-	// afternoon offered this evening without a rescan.
-	s.syncSidecars(file.Path, file.ID, func(id int64, found []subtitles.Sidecar) error {
-		return s.lib.SyncEpisodeFileSubtitles(r.Context(), id, found)
-	})
-	if reloaded, err := s.lib.GetEpisodeFile(r.Context(), item.ID, file.ID); err == nil {
-		file.Media.SubtitleTracks = reloaded.Media.SubtitleTracks
-	}
-
-	capabilities := s.videoCapabilities(r.Context())
-	ladder := qualityLadder(file.Media, decision, capabilities.Available)
-	if decision.Mode == stream.ModeUnsupported && capabilities.Available {
-		decision.Mode = stream.ModeTranscode
-		reasonCode = "video_transcode"
-	}
-	height, frameRate := 0, 0.0
-	if file.Media.Video != nil {
-		height = file.Media.Video.Height
-		frameRate = file.Media.Video.FrameRate
-	}
-	progress := item.Progress
-	writeJSON(w, http.StatusOK, streamInfoResponse{
-		ID:              item.ID,
-		EpisodeID:       item.ID,
-		FileID:          file.ID,
-		AudioTrackID:    audioID,
-		Mode:            string(decision.Mode),
-		ReasonCode:      reasonCode,
-		Container:       container,
-		MediaStatus:     file.Media.Status,
-		VideoRisky:      decision.VideoRisky,
-		VideoCodec:      videoCodecOf(file.Media),
-		FFmpegReady:     s.ffmpeg != nil && s.ffmpeg.Available(),
-		FFmpegSupported: ffmpeg.Supported(),
-		DurationSeconds: duration,
-		Progress:        &progress,
-		AudioTracks:     file.Media.AudioTracks,
-		SubtitleTracks:  file.Media.SubtitleTracks,
-		Height:          height,
-		FrameRate:       frameRate,
-		Qualities:       ladder,
-		Transcode:       &capabilities,
-	})
 }
 
 func episodeRuntimeSeconds(item library.EpisodeItem) float64 {
@@ -126,113 +84,6 @@ func episodeRuntimeSeconds(item library.EpisodeItem) float64 {
 		minutes += episode.Metadata.RuntimeMinutes
 	}
 	return float64(minutes) * 60
-}
-
-func (s *Server) handleEpisodeFileStreamDirect(w http.ResponseWriter, r *http.Request) {
-	item, file, ok := s.episodeFileForStream(w, r)
-	if !ok {
-		return
-	}
-	if r.URL.Query().Has("audio") {
-		writeJSONError(w, http.StatusBadRequest, "audio_selection_requires_remux")
-		return
-	}
-	endPlayback, admitted := s.beginPlayback(w)
-	if !admitted {
-		return
-	}
-	defer endPlayback()
-	opened, err := os.Open(file.Path)
-	if err != nil {
-		s.log.Warn("opening an episode file for direct play failed",
-			"episode_id", item.ID, "file_id", file.ID, "path", file.Path, "error", err)
-		writeJSONError(w, http.StatusNotFound, "media_file_unavailable")
-		return
-	}
-	defer opened.Close()
-	info, err := opened.Stat()
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "media_file_unreadable")
-		return
-	}
-	w.Header().Set("Content-Type", contentTypeFor(file.Path))
-	w.Header().Set("Cache-Control", "private, max-age=0")
-	http.ServeContent(w, r, filepath.Base(file.Path), info.ModTime(), opened)
-}
-
-func (s *Server) handleEpisodeFileStreamRemux(w http.ResponseWriter, r *http.Request) {
-	item, file, ok := s.episodeFileForStream(w, r)
-	if !ok {
-		return
-	}
-	audioID, audioRequested, ok := requestedAudioID(w, r)
-	if !ok {
-		return
-	}
-	if s.ffmpeg == nil {
-		writeJSONError(w, http.StatusServiceUnavailable, "ffmpeg_unavailable")
-		return
-	}
-	endPlayback, admitted := s.beginPlayback(w)
-	if !admitted {
-		return
-	}
-	defer endPlayback()
-
-	// See the film route: the third condition catches a file measured before
-	// Theia knew to look for subtitles, and fires once.
-	if file.Media.Status != library.MediaOK || file.Media.Video == nil || !file.Media.SubtitlesScanned {
-		info, err := s.ffmpeg.Probe(r.Context(), file.Path)
-		switch {
-		case errors.Is(err, ffmpeg.ErrUnsupportedPlatform):
-			writeJSONError(w, http.StatusNotImplemented, "ffmpeg_unsupported")
-			return
-		case errors.Is(err, ffmpeg.ErrMediaUnreadable):
-			_ = s.lib.MarkEpisodeFileMediaError(r.Context(), item.ID, file.ID)
-			writeJSONError(w, http.StatusUnsupportedMediaType, "media_unreadable")
-			return
-		case err != nil:
-			s.log.Error("ffmpeg could not inspect an episode file",
-				"episode_id", item.ID, "file_id", file.ID, "error", err)
-			writeJSONError(w, http.StatusServiceUnavailable, "ffmpeg_unavailable")
-			return
-		}
-		file, err = s.lib.SaveEpisodeFileMedia(r.Context(), item.ID, file.ID, measuredFileMedia(info))
-		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "media_inspection_not_saved")
-			return
-		}
-	}
-
-	var selected *library.AudioTrack
-	if audioRequested {
-		track, err := s.lib.EpisodeAudioTrack(r.Context(), item.ID, file.ID, audioID)
-		switch {
-		case errors.Is(err, library.ErrNoSuchAudioTrack):
-			writeJSONError(w, http.StatusNotFound, "audio_track_not_found")
-			return
-		case err != nil:
-			writeJSONError(w, http.StatusInternalServerError, "audio_track_unavailable")
-			return
-		}
-		selected = &track
-	}
-
-	audioCodec := ""
-	if selected != nil {
-		audioCodec = selected.Codec
-	} else if track, ok := stream.PreferredAudio(file.Media.AudioTracks, func(t library.AudioTrack) string { return t.Codec }); ok {
-		// Same compatibility choice the film route makes: map the track the
-		// browser can decode rather than burning a core transcoding past it.
-		audioCodec = track.Codec
-		defaulted := track
-		selected = &defaulted
-	}
-	decision := stream.Decide(file.Path, file.Media.Video.Codec, audioCodec)
-	if audioRequested && decision.Mode == stream.ModeDirect {
-		decision.Mode = stream.ModeRemux
-	}
-	s.serveConvertedFile(w, r, file.Path, file.Media, decision, selected)
 }
 
 func (s *Server) episodeFileForStream(w http.ResponseWriter, r *http.Request) (library.EpisodeItem, library.EpisodeFile, bool) {

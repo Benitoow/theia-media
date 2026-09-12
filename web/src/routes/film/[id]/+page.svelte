@@ -12,6 +12,7 @@
 	import Certificate from '$lib/components/Certificate.svelte';
 	import Rating from '$lib/components/Rating.svelte';
 	import MediaBadges from '$lib/components/MediaBadges.svelte';
+	import PlaybackCompatibility from '$lib/components/PlaybackCompatibility.svelte';
 	import CastList from '$lib/components/CastList.svelte';
 	import Credits from '$lib/components/Credits.svelte';
 	import Row from '$lib/components/Row.svelte';
@@ -27,6 +28,9 @@
 	// refuses to rank quality, so the only default here is the primary file the
 	// server already flagged. Audio and subtitles are the player's business.
 	let fileId = $state(null);
+	let compatibilityPlan = $state(null);
+	let compatibilityLoading = $state(false);
+	let compatibilityRequest = 0;
 
 	const meta = $derived(movie?.metadata ?? {});
 	const backdrop = $derived(imageURL(meta.backdrop_path, 'w1280'));
@@ -135,6 +139,7 @@
 			// legitimate starting point for a choice the user still owns.
 			fileId = (movie.files?.find((file) => file.is_primary) ?? movie.files?.[0])?.id ?? null;
 			loadState = 'ready';
+			void loadCompatibility(fileId);
 			// The home hero's "Reprendre" links here with this flag rather than
 			// opening a player it does not own. The player still asks whether to
 			// resume or start over; what this skips is the detour through a page
@@ -152,6 +157,7 @@
 
 	function onFileChoice({ fileId: nextFile }) {
 		fileId = nextFile ?? fileId;
+		void loadCompatibility(fileId);
 	}
 
 	// A measurement replaces the page's copy of that one file. Keeping the single
@@ -163,7 +169,30 @@
 			...movie,
 			files: movie.files.map((file) => (file.id === measured.id ? measured : file))
 		};
+		if (measured.id === fileId) void loadCompatibility(fileId);
+	}
 
+	async function loadCompatibility(selectedId) {
+		const request = ++compatibilityRequest;
+		compatibilityPlan = null;
+		const file = movie?.files?.find((candidate) => candidate.id === selectedId);
+		if (!movie?.id || !selectedId || file?.media?.status !== 'ok') {
+			compatibilityLoading = false;
+			return;
+		}
+
+		compatibilityLoading = true;
+		try {
+			const plan = await getJSON(
+				profiles.url(`/api/stream/${movie.id}/files/${selectedId}/info`)
+			);
+			if (request === compatibilityRequest) compatibilityPlan = plan;
+		} catch {
+			// The panel keeps this explicit as "not verified". A failed preflight
+			// never blocks the play button; the player performs its own fresh check.
+		} finally {
+			if (request === compatibilityRequest) compatibilityLoading = false;
+		}
 	}
 </script>
 
@@ -350,6 +379,12 @@
 						{fileId}
 						onselect={onFileChoice}
 						onmeasure={onFileMeasured}
+					/>
+
+					<PlaybackCompatibility
+						media={selectedFile?.media}
+						plan={compatibilityPlan}
+						loading={compatibilityLoading}
 					/>
 
 					{#if meta.status === 'not_found'}

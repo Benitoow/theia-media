@@ -1,18 +1,22 @@
 package api
 
 import (
+	"context"
 	"net/http"
+	"runtime"
 	"time"
 
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/library"
+	"github.com/Benitoow/theia-media/internal/supportlog"
+	"github.com/Benitoow/theia-media/internal/updater"
 )
 
 // Everything this file reports is something Theia already knew and never said.
 //
-// Decisions 58, 59 and 60 measure what this machine can do — which encoders
+// Decisions 58, 59 and 60 measure what this machine can do - which encoders
 // answer when asked to produce a frame, whether a hardware decoder exists, what
-// the software fallback costs — and then use those measurements silently. The
+// the software fallback costs - and then use those measurements silently. The
 // project's own standard is to report what was verified rather than what was
 // assumed; that is easier to hold to when the verification is on a page.
 //
@@ -20,15 +24,36 @@ import (
 // machine can do must never be what causes it to download ffmpeg.
 
 type diagnosticsResponse struct {
-	FFmpeg  ffmpegDiagnostics  `json:"ffmpeg"`
-	Library libraryDiagnostics `json:"library"`
-	Images  imageDiagnostics   `json:"images"`
-	DataDir string             `json:"data_dir"`
+	GeneratedAt time.Time          `json:"generated_at"`
+	Version     string             `json:"version"`
+	System      systemDiagnostics  `json:"system"`
+	Process     processDiagnostics `json:"process"`
+	FFmpeg      ffmpegDiagnostics  `json:"ffmpeg"`
+	Library     libraryDiagnostics `json:"library"`
+	Images      imageDiagnostics   `json:"images"`
+	Logs        supportlog.Stats   `json:"logs"`
+	Update      *updater.Status    `json:"update,omitempty"`
+	DataDir     string             `json:"data_dir"`
+}
+
+type systemDiagnostics struct {
+	OS          string `json:"os"`
+	Arch        string `json:"arch"`
+	GoVersion   string `json:"go_version"`
+	LogicalCPUs int    `json:"logical_cpus"`
+}
+
+type processDiagnostics struct {
+	UptimeSeconds    int64  `json:"uptime_seconds"`
+	Goroutines       int    `json:"goroutines"`
+	MemoryAllocBytes uint64 `json:"memory_alloc_bytes"`
+	MemorySysBytes   uint64 `json:"memory_sys_bytes"`
 }
 
 type ffmpegDiagnostics struct {
 	// Supported is whether this OS and architecture have a pinned build at all.
-	Supported bool `json:"supported"`
+	Supported bool                    `json:"supported"`
+	Runtime   *ffmpeg.RuntimeManifest `json:"runtime,omitempty"`
 
 	// Present is whether it has been downloaded yet. False is an ordinary
 	// state, not a fault: a library of browser-friendly files never needs it.
@@ -70,28 +95,51 @@ type imageDiagnostics struct {
 
 // handleDiagnostics reports what this installation is and what it can do.
 func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
-	out := diagnosticsResponse{DataDir: s.cfg.Dir()}
+	writeJSON(w, http.StatusOK, s.collectDiagnostics(r.Context()))
+}
+
+func (s *Server) collectDiagnostics(ctx context.Context) diagnosticsResponse {
+	var memory runtime.MemStats
+	runtime.ReadMemStats(&memory)
+	out := diagnosticsResponse{
+		GeneratedAt: time.Now().UTC(),
+		Version:     s.version,
+		DataDir:     s.cfg.Dir(),
+		System: systemDiagnostics{
+			OS: runtime.GOOS, Arch: runtime.GOARCH,
+			GoVersion: runtime.Version(), LogicalCPUs: runtime.NumCPU(),
+		},
+		Process: processDiagnostics{
+			UptimeSeconds:    int64(time.Since(s.started).Seconds()),
+			Goroutines:       runtime.NumGoroutine(),
+			MemoryAllocBytes: memory.Alloc,
+			MemorySysBytes:   memory.Sys,
+		},
+	}
 
 	out.FFmpeg.Supported = ffmpeg.Supported()
+	if manifest, ok := ffmpeg.Manifest(); ok {
+		out.FFmpeg.Runtime = &manifest
+	}
 	if s.ffmpeg != nil {
 		out.FFmpeg.Present = s.ffmpeg.Available()
 	}
 	if out.FFmpeg.Supported && out.FFmpeg.Present {
 		// Already on disk, so this is subprocesses rather than a download. The
 		// result is computed once per process and remembered.
-		caps := s.ffmpeg.Capabilities(r.Context())
+		caps := s.ffmpeg.Capabilities(ctx)
 		out.FFmpeg.Probed = true
 		out.FFmpeg.Encoders = caps.Encoders
-		out.FFmpeg.HardwareDecoder = s.ffmpeg.HardwareDecoder(r.Context())
+		out.FFmpeg.HardwareDecoder = s.ffmpeg.HardwareDecoder(ctx)
 	}
 	if out.FFmpeg.Encoders == nil {
 		out.FFmpeg.Encoders = []ffmpeg.Encoder{}
 	}
 
 	if s.lib != nil {
-		out.Library.Films, _ = s.lib.Count(r.Context())
-		out.Library.Series, _ = s.lib.SeriesCount(r.Context())
-		out.Library.Episodes, _ = s.lib.EpisodeCount(r.Context())
+		out.Library.Films, _ = s.lib.Count(ctx)
+		out.Library.Series, _ = s.lib.SeriesCount(ctx)
+		out.Library.Episodes, _ = s.lib.EpisodeCount(ctx)
 		out.Library.Scanning = s.lib.Scanning()
 		out.Library.LastScan = s.lib.LastScan()
 	}
@@ -110,6 +158,12 @@ func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 		}
 		out.Images = imageDiagnostics{Files: files, Bytes: bytes}
 	}
-
-	writeJSON(w, http.StatusOK, out)
+	if s.supportLogs != nil {
+		out.Logs = s.supportLogs.Usage()
+	}
+	if s.updater != nil {
+		status := s.updater.Status()
+		out.Update = &status
+	}
+	return out
 }

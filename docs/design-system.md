@@ -82,7 +82,7 @@ The v1 television pass adds three more precise references:
   focus and information that survives three metres of distance are the real
   product constraints.
 - **Netflix contributes one structural idea only:** a strong hero followed by
-  horizontal rows. Its visual language is deliberately not copied — and neither
+  horizontal rows. Its visual language is deliberately not copied - and neither
   is its purpose. Theia's home screen is not a shop front trying to hold you: it
   is four short rows about your own library, and every one of them points at the
   page that does the real browsing. See decision 29.
@@ -114,7 +114,7 @@ nobody checks.
 
 | Token | Value | Use |
 |---|---|---|
-| `--ink` | `#0B0A09` | Page background. Near-black, faintly warm — pure black reads as an OLED void, not a cinema |
+| `--ink` | `#0B0A09` | Page background. Near-black, faintly warm - pure black reads as an OLED void, not a cinema |
 | `--surface` | `#131211` | Cards, panels, the settings sheet |
 | `--raised` | `#1C1A18` | Hover state on a surface, active row |
 | `--line` | `#2A2724` | Hairline borders. Never lighter than this, or the grid starts shouting |
@@ -147,9 +147,9 @@ Red is free precisely because the accent is gold.
 | Token | Value | Contrast | Use |
 |---|---|---|---|
 | `--error` | `#D06A5D` | 5.56:1 | Failed scans, unreachable server, destructive confirmation |
-| `--warning` | `#C9964A` | 7.48:1 | Degraded state — mDNS on IPv6 only, ffmpeg missing |
+| `--warning` | `#C9964A` | 7.48:1 | Degraded state - mDNS on IPv6 only, ffmpeg missing |
 
-The first candidate for `--error` was `#C75B4F`, which measures 4.75:1 — over the
+The first candidate for `--error` was `#C75B4F`, which measures 4.75:1 - over the
 4.5 AA threshold, but only just. Error text is the one thing a user reads while
 already annoyed, often on a TV across a room, so it was lightened until it had
 real headroom.
@@ -180,7 +180,7 @@ the new display face cannot do the work the old one did in the middle.
 empty-state headlines, the wordmark. Nothing else.
 
 `--font-label` is the chrome: `.label`, `.micro`, section headings, the
-navigation pill and the phone's tab bar. Short, deliberate strings — never
+navigation pill and the phone's tab bar. Short, deliberate strings - never
 prose.
 
 `--font-ui` is for reading, and is deliberately the platform's own interface
@@ -197,7 +197,7 @@ sentence case in the catalogues; the face does the rest.
 variable face, so a section heading can carry weight 500 rather than a
 synthesised one.
 
-Both were checked glyph by glyph for É È Ê Ï Ô Ù Ç Œ œ and for `?` `!` `·` `—`.
+Both were checked glyph by glyph for É È Ê Ï Ô Ù Ç Œ œ and for `?` `!` `·` `-`.
 Both are complete. That list is not ceremony: the face this replaced drew its
 question mark as a figure 9, and one of the candidates refused alongside it
 drew accented letters with no accent at all.
@@ -243,7 +243,7 @@ a viewing-distance layer without inventing a third type register:
 The numbers above are the large-screen layer and were always measured on a
 desktop; a television is not a large desktop. Amazon's Fire TV guidance puts the
 floor for body text at 28px on 1080p, Android TV asks 24sp, and the standing
-advice is two and a half to three times a phone's sizes — against which 16px to
+advice is two and a half to three times a phone's sizes - against which 16px to
 19px is 1.19x. At 1600px and above the type tokens themselves move: labels to
 16px, secondary copy to 18px, body to 24px, titles to 30px, with card titles at
 19px and row headings at 30px. The display serif is untouched; it already fills
@@ -273,7 +273,7 @@ work in multiples of 4rem and up. The card grid and settings rows work between
 0.5rem and 1.5rem. There is no middle ground and that is intentional.
 
 What *is* tokenised is the page frame, because those are contracts rather than
-taste — every screen has to agree on them or they drift:
+taste - every screen has to agree on them or they drift:
 
 ```css
 --page-gutter: clamp(1.5rem, 4vw, 5.5rem);  /* phone to television */
@@ -284,8 +284,8 @@ taste — every screen has to agree on them or they drift:
 ```
 
 **Above 100rem all three change, for the safe area.** Every television guideline
-agrees on the outer five per cent — roughly 96px horizontally and 54px
-vertically on 1920×1080 — kept clear so an overscanning set cannot crop it. The
+agrees on the outer five per cent - roughly 96px horizontally and 54px
+vertically on 1920×1080 - kept clear so an overscanning set cannot crop it. The
 gutter becomes `6rem`, the bar's inset becomes `3.5rem`, and the player's own
 furniture moves in to match. `--content-wide` becomes `120rem` at the same step,
 which is not about width but about alignment: at 96rem the shell stops touching
@@ -295,8 +295,8 @@ title. Letting the shell fill the safe area puts every left edge back on one
 line. Prose keeps its own 38rem cap and is unaffected.
 
 `--nav-offset` exists because the nav floats over the page, so every screen has
-to start below it. Four screens each guessed their own top padding — `pt-32`,
-`pt-36`, `pt-32 lg:pt-40`, `pt-36 lg:pt-44` — and no two agreed. Two classes now
+to start below it. Four screens each guessed their own top padding - `pt-32`,
+`pt-36`, `pt-32 lg:pt-40`, `pt-36 lg:pt-44` - and no two agreed. Two classes now
 own it: `.page-body` for a normal page, `.page-body--hero` for a screen whose
 content hangs off the bottom of a full viewport. Prose max width stays `38rem`.
 
@@ -304,7 +304,7 @@ Both were later measured and cut. `.page-body` added 3–5rem *on top of*
 `--nav-offset`, which already clears the bar with air to spare, so every utility
 page began 184px down and a library showed one row of films on a laptop; it now
 adds 2–3rem. `.page-body--hero` added 6–9rem at the top of a section whose
-content is bottom-aligned inside a `min-height` — padding nobody could see,
+content is bottom-aligned inside a `min-height` - padding nobody could see,
 which pushed the home hero to 824px on a 768px window. The hero was therefore
 cut off at the bottom and not one pixel of the first row ever showed. A row edge
 under the fold is what tells somebody there is a library beneath the film;
@@ -351,14 +351,14 @@ horizontal, and this changes nothing.
 third and the photograph belongs on the right. The welcome screen stays centred
 because its asset is exactly 1920×1080: on a 16/9 window it fits with no crop at
 all, and on a wider one, framing it from the top brings the winged figure's face
-into the bar rather than out of it — top alignment is already the furthest that
+into the bar rather than out of it - top alignment is already the furthest that
 picture can move down, so a head out of shot beats a head cut in half.
 
 **`web/scripts/check-backdrops.mjs` enforces this**, and exists because writing it
 down did not. The rule was documented when the home hero was fixed, and the film
 and series headers shipped centred anyway; the same fault was reported twice. The
-script fails the frontend build if a full-bleed picture — pinned to every edge
-with `object-cover`, in markup or in this stylesheet — does not say where it is
+script fails the frontend build if a full-bleed picture - pinned to every edge
+with `object-cover`, in markup or in this stylesheet - does not say where it is
 framed. It does not insist on `object-top`; it insists the choice be made on
 purpose.
 
@@ -376,7 +376,7 @@ shouted it back down with an `!important` arbitrary value.
 Everything above governs the *chrome*: nav, hero, empty states, the QR onboarding
 screen, settings, error states. It does **not** govern the card grid.
 
-Cover art arrives with its own typography, colour and contrast — a hundred
+Cover art arrives with its own typography, colour and contrast - a hundred
 competing art directions in a hundred rectangles. Applying a dramatic serif and
 generous negative space on top of that produces something slow to scan and ugly
 in a way that is hard to diagnose. The grid's job is density and speed.
@@ -385,7 +385,7 @@ in a way that is hard to diagnose. The grid's job is density and speed.
 
 **This replaces the locked `2/3` portrait poster that stood from M3 to v1.3.0.**
 The change was a deliberate change of direction by the maintainer, not a
-correction — the old rule was coherent, it was simply not the look wanted. Do not
+correction - the old rule was coherent, it was simply not the look wanted. Do not
 reinstate the portrait card because an older comment or commit still describes
 it. See `DECISIONS.md` 33.
 
@@ -393,7 +393,7 @@ it. See `DECISIONS.md` 33.
   the library grid.
 - **The artwork is the film's backdrop**, at `w780`, because a backdrop is
   already 16/9 and so is not cropped to fit. Posters are not used on cards.
-- **Corners use `--radius-card`** — `clamp(1rem, 1.6vw, 1.375rem)`. The interface
+- **Corners use `--radius-card`** - `clamp(1rem, 1.6vw, 1.375rem)`. The interface
   rounds two ways: pills at `999px` for anything you press, and a panel radius
   from `1rem` up for anything you look at. A card belongs to the second family,
   scaled slightly down for a smaller box. The old `4px` is gone.
@@ -403,7 +403,7 @@ it. See `DECISIONS.md` 33.
   two fixed columns instead**, because `auto-fill` against a 12rem minimum
   resolves to exactly one column on a phone: at 390px the content box is 342px
   and two cards plus their gap need 398. One card per row is a screen and a half
-  of library at a time. Two columns give a 164px card there — larger than the
+  of library at a time. Two columns give a 164px card there - larger than the
   thumbnail any phone-sized catalogue uses, still plainly readable, and four rows
   visible instead of one. The 12rem floor below stays what it is; it was measured
   on a desktop and it is right there. The minimum is what a
@@ -419,13 +419,13 @@ it. See `DECISIONS.md` 33.
 Artwork that is missing is a normal state, and the fallbacks are ordered:
 
 1. the backdrop, covering the frame;
-2. failing that, the poster, **contained** rather than covering — a portrait
+2. failing that, the poster, **contained** rather than covering - a portrait
    image cropped to fill a landscape box loses its title off the top and bottom.
    On the current library this case is empty: artwork arrives in pairs or not at
    all;
 3. failing both, the title as text on `--surface`. Never a broken-image icon.
 
-**A real 2:3 poster still exists** — on the film detail page, which has the room
+**A real 2:3 poster still exists** - on the film detail page, which has the room
 for it. It takes `--radius-card` like everything else. What changed is that cards
 show backdrops; posters were not banished from the interface.
 
@@ -450,8 +450,8 @@ Rules that override §4 and §5:
   card by a pixel.
   On hover and on keyboard focus the frame lifts `0.5rem`, scales `1.015`, and
   draws a radial scrim with a filled play mark at its centre. The mark is
-  `--bone`, not gold — the accent still means "look here" elsewhere on the
-  screen, exactly as it does for the player's one filled control (§6b) — and it
+  `--bone`, not gold - the accent still means "look here" elsewhere on the
+  screen, exactly as it does for the player's one filled control (§6b) - and it
   is `aria-hidden`, because the link around it already says where it goes.
   Radial rather than a bottom-up gradient: the title sits *under* the card, so
   weighting the bottom would darken artwork to protect text that is not there.
@@ -463,14 +463,14 @@ Rules that override §4 and §5:
   holding it.
 - **One exception, added in M5: the playback progress bar.** A 3px gold rule
   across the bottom of a part-watched card. It earns its place because it is
-  information rather than decoration — it is the entire reason the
-  "continue watching" row exists — and because no amount of hover state can
+  information rather than decoration - it is the entire reason the
+  "continue watching" row exists - and because no amount of hover state can
   convey it. It is drawn only for films actually part-watched: never at zero,
   never on a finished film. Nothing else in the grid may take this exemption
   without being written down here first.
 - Card chrome is minimal: artwork, title, one compact legend. Home rows use the
-  year. On `/films`, the legend follows the active sort — year, rating, date
-  added or runtime — and stays visible at rest. It is never revealed only on
+  year. On `/films`, the legend follows the active sort - year, rating, date
+  added or runtime - and stays visible at rest. It is never revealed only on
   hover: a library operated with a D-pad cannot hide useful information behind
   a mouse gesture. Title sorting keeps the year as its useful secondary value.
   The legend stays in the muted UI register with no accent; everything else
@@ -493,8 +493,8 @@ move card by card through the row's own arrow handling. The chevrons stay
 `tabindex="-1"` and outside the directional-navigation graph, so they add no
 stops to either.
 
-**The library page follows the same split.** Its toolbar — search, sort, genre,
-watch state — is chrome and carries the treatment: a rounded bar, glass, the
+**The library page follows the same split.** Its toolbar - search, sort, genre,
+watch state - is chrome and carries the treatment: a rounded bar, glass, the
 label register. The grid beneath it is a wrapping `auto-fill` grid of the same
 plain cards, because that page exists to find one film among hundreds and a row
 you have to drag through is the wrong shape for it. Nothing about a card changes
@@ -525,7 +525,7 @@ a player.
 - **The furniture hides** after three seconds of no pointer, no key and no state
   change, and takes the cursor with it. It comes back on any sign of life. It
   never hides while paused, seeking or buffering, and never with focus stranded
-  on a control — focus moves to the dialog first.
+  on a control - focus moves to the dialog first.
 - **The scrub bar shows three things**: played in gold, buffered in a lighter
   bone, and the rest. The bar itself is 4px because that reads as precision; its
   hit area is 24px because a thumb is not a mouse. A hover anywhere on it shows
@@ -534,7 +534,7 @@ a player.
   without dimming the film.
 - **The bar never wraps.** A control row that reflows into two lines moves the
   play button out from under a thumb mid-press. Below 30rem the volume control
-  and the shortcuts button go instead — a phone has hardware volume keys, and a
+  and the shortcuts button go instead - a phone has hardware volume keys, and a
   keyboard-shortcuts panel on a touchscreen is help for a keyboard nobody is
   holding. Everything that stays keeps its 3.25rem target.
 - **The clock shows two numbers.** Elapsed in `--bone` at 500, total in
@@ -552,7 +552,7 @@ a player.
   what the choice is made on; codec, channels and provenance sit under it as a
   tracked label in `--muted`. One middot-joined string put four facts at one
   weight, which at three metres is a wall. A detail that merely repeats the line
-  above it is dropped — a French track titled "Français" read as
+  above it is dropped - a French track titled "Français" read as
   `Français · Français`.
 - **The chosen track carries a tick**, in gold, in a column that is reserved
   whether or not it is drawn. A 2px rule at 6% fill does not survive the room.
@@ -560,7 +560,7 @@ a player.
 - **Subtitles are shadowed, never boxed.** A `background` on `::cue` is painted
   per line, so a two-line cue gets two slabs of different widths with a ragged
   step between them. A tight four-way shadow plus one soft drop follows the
-  letterforms instead of boxing them, and holds on saturated colour bars — the
+  letterforms instead of boxing them, and holds on saturated colour bars - the
   worst case there is. Type runs to 2.375rem, about 3.5% of a 1080p frame,
   which is broadcast practice; the previous ceiling measured 2.8% and read as a
   caption on a monitor.
@@ -588,7 +588,7 @@ web. A maintainer-supplied, licence-checked pack may be used under the following
 constraints:
 
 - imagery belongs to the chrome only: hero, onboarding, empty and error states;
-- the card grid remains exempt under §6 — no decorative image, overlay,
+- the card grid remains exempt under §6 - no decorative image, overlay,
   colour grade or authored photographic treatment is added to it;
 - source files never ship as-is: crop to the rendered aspect ratio, resize for
   the largest real viewport, then encode as WebP or AVIF before `web-dist`;
@@ -638,7 +638,7 @@ to the right so it reads as a horizon running off rather than an underline that
 stopped. The rule is the mark's single use of the accent.
 
 Where the word does not fit, the mark is **its initial standing on the same
-rule** — a crop of the lockup, not a second mark beside it. That is the favicon
+rule** - a crop of the lockup, not a second mark beside it. That is the favicon
 and, rendered from the same file, the touch icon.
 
 Two rules that are not preferences:
@@ -675,7 +675,7 @@ document first.
 Hero type and full-bleed message content fade up 16px on entrance at
 `--duration-slow`, via `.enter`. `.enter-2` and `.enter-3` stagger by 90ms each
 so a heading leads its own paragraph instead of the block arriving as one slab.
-Everything else uses `--duration-base`. **The card grid never animates in** —
+Everything else uses `--duration-base`. **The card grid never animates in** -
 a hundred cards fading up is a slideshow, not a library (§6).
 
 **Every animation must be wrapped in a reduced-motion guard.** Not optional:
@@ -692,8 +692,8 @@ a hundred cards fading up is a slideshow, not a library (§6).
 ```
 
 **Never put `backdrop-filter` in a transition.** A backdrop blur is the most
-expensive thing a compositor does — it reads back everything behind the element
-and blurs it — and transitioning one asks for that work on every frame. The
+expensive thing a compositor does - it reads back everything behind the element
+and blurs it - and transitioning one asks for that work on every frame. The
 navigation bar used to go from `blur(14px)` to `blur(24px)` on scroll: the one
 element on screen the whole time, re-blurring the page behind it, triggered by
 the one gesture that already costs the most. It now holds a single `blur(20px)`
@@ -717,7 +717,7 @@ rather than here:
 - Focus ring: `2px solid var(--accent)` with `2px` offset, rising to `4px` and a
   `3px` offset above 100rem. Gold on near-black is 8.2:1 and unmistakable. Never
   remove the outline without replacing it. The television step exists because
-  focus *is* the cursor there — no pointer, no hover — and 2px at 1920 on a
+  focus *is* the cursor there - no pointer, no hover - and 2px at 1920 on a
   55-inch set subtends about one arcminute from a sofa, which is the threshold
   of seeing a line at all before a panel's motion blur gets to it. Cards are
   already exempt: §6.2 gave them a border, a lift, a scale and a shadow together
@@ -737,7 +737,7 @@ rather than here:
   horizontal axis weighted `2.25`, which is hostile to stacked full-width rows:
   a wide row's centre sits far right of every narrow control in the same column,
   so a distant link wins the press and the list is skipped entirely. Three rules
-  follow, and they are not tuning — they were measured on the film page before
+  follow, and they are not tuning - they were measured on the film page before
   they were written down (decision 47):
   - a list of options handles up and down itself, in reading order, and does
     **not** consume the press at either edge, so leaving the list still falls
@@ -747,7 +747,7 @@ rather than here:
   - option rows stay near `26rem` rather than full-bleed, and the list sits
     close to the action it serves rather than at the far end of the page.
 
-  This applies to any screen with a list of choices — files, episodes, devices —
+  This applies to any screen with a list of choices - files, episodes, devices -
   not only to the film page where it was found.
 - Fine-pointer desktop users may reveal scroll chevrons by hovering a home row.
   They are supplemental controls with `tabindex="-1"` and sit outside the row's
@@ -764,7 +764,7 @@ rather than here:
 
 **Cinzel Variable** for the display register and **Jost Variable** for the label
 register. Both SIL Open Font License 1.1, which is GPL-compatible and imposes
-nothing on the rest of the project. Prose has no shipped face at all — see §4.
+nothing on the rest of the project. Prose has no shipped face at all - see §4.
 
 They are self-hosted, not linked. The packages come from npm
 (`@fontsource-variable/*`), but their stylesheets are deliberately not imported:
@@ -775,7 +775,7 @@ the Latin files only, which covers both shipped interface languages completely.
 
 Cost: two WOFF2 files, 52 KB together, hashed into `_app/immutable/` and so
 covered by the immutable cache header the Go server already sets. They are not
-gzipped on the way out — WOFF2 carries its own compression and doing it twice
+gzipped on the way out - WOFF2 carries its own compression and doing it twice
 only spends CPU. `font/ttf` *is* in the compressible list for anything dropped
 into `static/`, and a test pins the WOFF exclusion.
 
@@ -788,14 +788,14 @@ worse than unclear:
 - **Dalek Pinpoint** is K-Type's, and K-Type's free fonts are for "personal use
   among friends and family". Webfont use requires a paid licence, embedding in
   a software product requires the Enterprise tier, and every tier forbids giving
-  the file to others — which a public repository does by existing.
+  the file to others - which a public repository does by existing.
 - **Augustus** is not orphaned. It is Paulo W's, published by Intellecta Design,
   a commercial foundry that sells it; the copy circulating on free-font sites
   carries no licence and only an "ALLTYPE" conversion stamp.
 
 Neither could ship in a GPL-3.0 repository that publishes binaries, so the
 identity was kept and the files were changed. Cinzel is the same Roman
-inscriptional brief as Augustus and does it better — real small capitals where
+inscriptional brief as Augustus and does it better - real small capitals where
 Augustus had no case distinction at all, and a working question mark where
 Augustus drew a figure 9. Jost gives the label register the geometric contrast
 Dalek gave it, with real weights instead of one.
@@ -809,7 +809,7 @@ three metres.
 
 The rule that came out of shipping a font nobody had seen: **a screenshot does
 not verify a web font.** Georgia sits behind the display stack and Georgia is a
-good serif, so a refused face renders a page that looks entirely correct —
+good serif, so a refused face renders a page that looks entirely correct -
 including the specimen sheet a face is chosen from. `document.fonts.check()` is
 one line and is the only thing that answers the question. The frontend guard in
 `web/tests/` asserts it on every page.
@@ -817,7 +817,7 @@ one line and is the only thing that answers the question. The frontend guard in
 **There is no CDN request anywhere in the application**, which is not a
 preference but the project's no-external-calls rule.
 
-The system stacks are still listed behind both faces in §4 and still work — they
+The system stacks are still listed behind both faces in §4 and still work - they
 are what renders during the swap.
 
 ## 11. Implementation status
@@ -829,7 +829,7 @@ palette (`--color-ink: #0b0b0f`, `--color-helios: #f5a623`) is gone.
 The running interface now implements the hero-and-rows library, detail page,
 player, onboarding, empty state and settings chrome described above. Cards keep
 the §6 exemption: their artwork is untouched, and gold appears only for progress
-and interaction state. Their ratio is `16 / 9` as of §6.1 — earlier revisions of
+and interaction state. Their ratio is `16 / 9` as of §6.1 - earlier revisions of
 this paragraph said `2/3`, which was true until v1.3.0.
 
 Colour, type scale, tracking, target sizes and directional row navigation are
@@ -862,14 +862,14 @@ places. That was closed:
   a catalogued screen in the active language instead of SvelteKit's untouched
   built-in one.
 
-**The home screen, rebuilt after that.** It is now four short rows — continue
-watching, recently added, best rated, tonight's suggestion — instead of a hero
+**The home screen, rebuilt after that.** It is now four short rows - continue
+watching, recently added, best rated, tonight's suggestion - instead of a hero
 and eight genre rows. The hero shows the film you left, with how far in you are
 and what is left, and its button opens the player rather than a detail page. The
 grid underneath was unchanged at the time and still exempt under §6: the only
 gold at rest is the 3px progress rule and no card title takes the display serif.
 Verified against the 274-film library rather than inferred. The card shape itself
-changed later — see below.
+changed later - see below.
 
 **The interface language layer.** French is the default
 and English ships as a second complete catalogue. The choice is local to each
@@ -880,7 +880,7 @@ cached as `fr-FR` do not change and are not fetched again: they are film data,
 not interface chrome.
 
 **The record on a detail page, added post-v2.** A film and a series now show the
-whole TMDB record rather than a synopsis and a cast list of names — see decision
+whole TMDB record rather than a synopsis and a cast list of names - see decision
 85 for why none of it costs a request. Four things it settles about this document:
 
 - A **tagline** is prose, so it takes `--font-ui` italic at `calc(var(--text-body)
@@ -903,12 +903,12 @@ whole TMDB record rather than a synopsis and a cast list of names — see decisi
 `4K`, `HDR`, `DOLBY VISION`, `TRUEHD`, `ATMOS`, `7.1`, in the label register on
 `--surface` inside a `--line` hairline, text in `--muted`. That measures
 **5.12:1** here rather than the 5.42:1 the token table states, because the table
-measures against the page background and a badge sits on a panel — still clear of
+measures against the page background and a badge sits on a panel - still clear of
 the 4.5 AA floor, and `scripts/contrast.mjs` now carries a second section for
 text set on a surface, since this was the first thing to need one.
 
 Built entirely from tokens that already existed, and deliberately **not** in
-gold — §3 allows five uses of `--accent` per screen and the film page has already
+gold - §3 allows five uses of `--accent` per screen and the film page has already
 spent them on the rating and the play affordance. A sixth and seventh in
 gold would also make the loudest thing on a film page its audio codec, which is
 the wrong answer to "what is this film".
@@ -917,7 +917,7 @@ They sit under the metadata line rather than in it: the year, the runtime and th
 director describe a *film*, while these describe one *encode* of it, and a
 household holding two files of the same title needs to see which one is on
 screen. Tracking is the full `--text-label` 0.18em, unlike `.certificate`, whose
-tighter 0.08em exists because "12" at 0.18em reads as "1 2" — an argument that
+tighter 0.08em exists because "12" at 0.18em reads as "1 2" - an argument that
 does not apply to a word.
 
 Measured in a running build at 375px: six badges wrap to two rows with no page
@@ -941,7 +941,7 @@ composition, not the brand.
 
 The site is built with Astro, React and Tailwind CSS (rebuilt 11 September
 2026, decision 108): most of the page is static build-time HTML, and the two
-interactive parts — the download station and the demonstration player chrome —
+interactive parts - the download station and the demonstration player chrome -
 are React islands hydrated only when they approach the viewport. The page
 performs no runtime API call, ships no analytics and loads no remote
 subresource; the publishing contract below is what the stack exists to serve.
@@ -978,7 +978,7 @@ the README, where somebody asking for detail can choose to read them.
 
 Screenshots keep their application colours and aspect ratio. No page-wide grade,
 decorative image or second flourish competes with the player. Imagery may go
-beyond the three moments in exactly one subordinate form: a still strip — a
+beyond the three moments in exactly one subordinate form: a still strip - a
 single quiet row of real captures, no motion, placed after the moments. Facts
 that describe a capture may sit as an overlay card on it; a moment without
 capture keeps the structured fact panel, not a stock photograph.
@@ -1004,7 +1004,7 @@ metadata; a missing fact is omitted. Links themselves use GitHub's
 
 - Consequence precedes jargon: « un appareil autorisé » before « WireGuard ».
 - Three differences and three limits are enough, and the page shows them as a
-  ledger — what you gain, what you give up — with the limits before the final
+  ledger - what you gain, what you give up - with the limits before the final
   invitation to download.
 - No superlative claims that depend on another platform's current product.
 - Gold remains reserved for the mark's rule, focus, and playback progress. A
@@ -1017,7 +1017,7 @@ metadata; a missing fact is omitted. Links themselves use GitHub's
 
 ### 12.5 What the page stopped carrying
 
-The field-test section — the « ten households » narrative — was retired with
+The field-test section - the « ten households » narrative - was retired with
 the rebuild. It addressed people who already knew the project; the new
 audience arrives cold and wants the file, not the roadmap. The story lives in
 the repository (`docs/field-testing.md` and the field-test issue template),

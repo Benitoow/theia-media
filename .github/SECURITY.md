@@ -16,7 +16,7 @@ house, use the built-in remote access, which is a different door entirely:
 
 - a separate userspace WireGuard listener, encrypted, on its own UDP port;
 - one-time device provisioning, with per-device keys and individual revocation;
-- **viewer capabilities only** — a remote device can read the catalogue, images,
+- **viewer capabilities only** - a remote device can read the catalogue, images,
   streams and progress, and cannot reach settings, scans, onboarding, updates or
   device management;
 - no relay, no rendezvous server, no control plane. The port request goes to your
@@ -35,7 +35,7 @@ binary as a rollback target.
 | Version | Supported |
 |---|---|
 | Latest release | Yes |
-| Anything older | No — update first |
+| Anything older | No - update first |
 
 ## Reporting a vulnerability
 
@@ -44,8 +44,8 @@ binary as a rollback target.
 Use GitHub's private reporting:
 [Report a vulnerability](https://github.com/Benitoow/theia-media/security/advisories/new).
 
-Useful reports include what an attacker must already have — network position,
-a provisioned device, physical access — and how to reproduce it. A proof of
+Useful reports include what an attacker must already have - network position,
+a provisioned device, physical access - and how to reproduce it. A proof of
 concept against a local instance is worth more than a description.
 
 This is a single-maintainer hobby project with no bug bounty and no guaranteed
@@ -63,7 +63,7 @@ fix ships as a release with the reasoning recorded in the decision log.
 - The update path: installing a binary whose digest does not match the published
   one, or defeating the rollback.
 - The image and subtitle endpoints being used to read or serve arbitrary files.
-- Secrets leaking into logs, the API or the repository — the TMDB key in
+- Secrets leaking into logs, the API or the repository - the TMDB key in
   particular.
 
 **Out of scope**

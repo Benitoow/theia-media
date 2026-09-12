@@ -2,9 +2,6 @@ package api
 
 import (
 	"context"
-	"net/http"
-	"strconv"
-	"sync"
 
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/library"
@@ -17,7 +14,8 @@ import (
 // actually produce -- the encoder list is a probe, not a compile-time list. And
 // nothing is started that would ruin what is already playing: a software
 // transcode of a 1080p source runs at about real time, so a second one does not
-// run at all, it makes both stall.
+// run at all, it makes both stall. The limiter that enforces the second rule
+// lives with the execution it guards, in internal/playback.
 
 // videoQuality is one rung the interface may offer.
 type videoQuality struct {
@@ -47,111 +45,6 @@ type transcodeInfo struct {
 	Busy bool `json:"busy,omitempty"`
 }
 
-// transcodeLimiter keeps the furnace from being lit twice.
-//
-// The numbers come from a measurement rather than a feeling: on the
-// maintainer's machine a 1080p HEVC source re-encodes at 1.04x real time in
-// software and 4.56x on the GPU. One software transcode therefore consumes the
-// whole margin, and a second would leave both viewers watching a spinner --
-// the failure mode where nobody can tell what went wrong. Hardware has room
-// for a few.
-type transcodeLimiter struct {
-	mu     sync.Mutex
-	active int
-	limit  int
-}
-
-func newTranscodeLimiter() *transcodeLimiter {
-	return &transcodeLimiter{limit: 1}
-}
-
-// setKind raises the ceiling once the encoder is known.
-func (l *transcodeLimiter) setKind(kind ffmpeg.EncoderKind) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if kind == ffmpeg.KindHardware {
-		l.limit = 3
-	} else {
-		l.limit = 1
-	}
-}
-
-// acquire takes a slot, returning the release function and whether it got one.
-//
-// toneMap is the second thing the ceiling has to know, and decision 87 measured
-// why. Converting HDR to SDR is zscale work on the CPU: a GPU encoder does not
-// relieve any of it, so a tone-mapped transcode runs at 1.09x real time at the
-// source's own size whatever encoder is chosen -- the same margin the software
-// limit of one exists to protect. Counting it as one of three hardware slots was
-// optimistic, and two concurrent HDR playbacks would have stalled together with
-// nobody able to say why.
-//
-// So it costs the whole budget: one runs, and anything else is refused with a
-// code the interface can explain, which is the answer decision 58 chose over a
-// queue nobody can see.
-func (l *transcodeLimiter) acquire(toneMap bool) (func(), bool) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	cost := 1
-	if toneMap {
-		cost = l.limit
-	}
-	if l.active+cost > l.limit {
-		return nil, false
-	}
-	l.active += cost
-	return func() {
-		l.mu.Lock()
-		defer l.mu.Unlock()
-		l.active -= cost
-	}, true
-}
-
-func (l *transcodeLimiter) busy() bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return l.active >= l.limit
-}
-
-// forcedTranscode reads ?video=transcode.
-//
-// This is how a browser reports what no server can know. `hevc` is classified
-// risky rather than unsupported because Safari plays it and Chrome does not, so
-// the remux is worth attempting -- and when it fails it fails silently, with
-// sound over a picture that never arrives. The player detects that (videoWidth
-// stays 0) and asks again with this flag, which turns the one dead end M1 could
-// not resolve into a film that plays.
-func forcedTranscode(r *http.Request) bool {
-	return r.URL.Query().Get("video") == "transcode"
-}
-
-// requestedHeight reads ?h=. Absent means "leave the picture alone".
-func requestedHeight(w http.ResponseWriter, r *http.Request) (int, bool, bool) {
-	raw, present := r.URL.Query()["h"]
-	if !present {
-		return 0, false, true
-	}
-	if len(raw) != 1 {
-		writeJSONError(w, http.StatusBadRequest, "invalid_height")
-		return 0, false, false
-	}
-	height, err := strconv.Atoi(raw[0])
-	if err != nil || height <= 0 {
-		writeJSONError(w, http.StatusBadRequest, "invalid_height")
-		return 0, false, false
-	}
-	// Only a rung this server actually offers. An arbitrary number would let a
-	// caller ask for a scale nobody sized a bitrate for.
-	for _, offered := range stream.Qualities {
-		if offered == height {
-			return height, true, true
-		}
-	}
-	writeJSONError(w, http.StatusBadRequest, "invalid_height")
-	return 0, false, false
-}
-
 // videoCapabilities answers what this machine can do.
 //
 // The M1 rule it has to respect is precise: asking how a file will play must
@@ -164,18 +57,15 @@ func (s *Server) videoCapabilities(ctx context.Context) transcodeInfo {
 	if s.ffmpeg == nil || !ffmpeg.Supported() || !s.ffmpeg.Available() {
 		return transcodeInfo{}
 	}
-
-	caps := s.ffmpeg.Capabilities(ctx)
-	best, ok := caps.Best()
+	kind, encoder, busy, ok := s.playback.TranscodeStatus(ctx)
 	if !ok {
 		return transcodeInfo{}
 	}
-	s.transcodes.setKind(best.Kind)
 	return transcodeInfo{
 		Available: true,
-		Kind:      string(best.Kind),
-		Encoder:   best.Name,
-		Busy:      s.transcodes.busy(),
+		Kind:      kind,
+		Encoder:   encoder,
+		Busy:      busy,
 	}
 }
 
@@ -183,15 +73,11 @@ func (s *Server) videoCapabilities(ctx context.Context) transcodeInfo {
 //
 // "Original" is always first and is whatever the file already does -- direct
 // play, or a remux. The rungs below it exist only when something can encode
-// them, and never above the source.
+// them, and never above the source. The unsupported-to-transcode rewrite of
+// the original rung used to live here; the planner (internal/playback) owns
+// that decision now, so base.Mode arrives already final.
 func qualityLadder(media library.FileMedia, base stream.Decision, canTranscode bool) []videoQuality {
-	original := videoQuality{Height: 0, Mode: string(base.Mode)}
-	if base.Mode == stream.ModeUnsupported && canTranscode {
-		// The case that opened this milestone: an HEVC file no browser decodes
-		// becomes playable, at its own size, by being re-encoded.
-		original.Mode = string(stream.ModeTranscode)
-	}
-	ladder := []videoQuality{original}
+	ladder := []videoQuality{{Height: 0, Mode: string(base.Mode)}}
 
 	if !canTranscode || media.Status != library.MediaOK || media.Video == nil {
 		return ladder

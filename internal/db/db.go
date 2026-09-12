@@ -42,6 +42,13 @@ func Open(ctx context.Context, path string) (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
+	// database/sql otherwise keeps an unbounded pool. SQLite still serialises
+	// writes, but a small fixed read pool lets independent API requests proceed
+	// while a scan owns another connection without turning a household server
+	// into a connection factory under load.
+	const connections = 2
+	database.SetMaxOpenConns(connections)
+	database.SetMaxIdleConns(connections)
 	if err := database.PingContext(ctx); err != nil {
 		database.Close()
 		return nil, fmt.Errorf("opening database at %s: %w", path, err)
@@ -52,6 +59,16 @@ func Open(ctx context.Context, path string) (*sql.DB, error) {
 		return nil, err
 	}
 	return database, nil
+}
+
+// Snapshot writes a transactionally consistent copy of the live database.
+// SQLite performs the copy itself, so WAL pages are included and the caller
+// never has to race three files with ordinary filesystem copies.
+func Snapshot(ctx context.Context, database *sql.DB, destination string) error {
+	if _, err := database.ExecContext(ctx, `VACUUM INTO ?`, destination); err != nil {
+		return fmt.Errorf("snapshotting database: %w", err)
+	}
+	return nil
 }
 
 // Migrate applies every migration that has not run yet, in filename order.

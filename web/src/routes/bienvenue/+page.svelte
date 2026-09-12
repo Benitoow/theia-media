@@ -30,7 +30,7 @@
 </script>
 
 <svelte:head>
-	<title>{t.welcome.title} — {t.appName}</title>
+	<title>{t.welcome.title} - {t.appName}</title>
 </svelte:head>
 
 <main class="relative isolate min-h-screen overflow-hidden">

@@ -4,6 +4,7 @@
 	import { getJSON } from '$lib/api.js';
 	import { i18n } from '$lib/i18n/index.svelte.js';
 	import { codecPlayback } from '$lib/codec-playback.svelte.js';
+	import { diagnosticClientContext } from '$lib/diagnostic-events.js';
 	import { strings as t, formatUptime, formatSize } from '$lib/strings.js';
 	import ConnectPanel from '$lib/components/ConnectPanel.svelte';
 
@@ -14,6 +15,8 @@
 	let update = $state(null);
 	let updateBusy = $state(false);
 	let diagnostics = $state(null);
+	let supportExport = $state('idle');
+	let supportExportName = $state('');
 
 	let editing = $state(false);
 	let saving = $state(false);
@@ -69,7 +72,7 @@
 				missingPaths: result.missing_paths ?? []
 			};
 			editing = false;
-			await refresh();
+			await refreshCore();
 		} catch {
 			saveNotice = { ok: false, code: 'saveFailed' };
 		} finally {
@@ -117,19 +120,85 @@
 	let scanning = $state(false);
 	let scanError = $state(null);
 
-	async function refresh() {
+	async function refreshCore() {
+		// Each answer lands independently. A slow updater check cannot hold back
+		// the library paths, and one failed endpoint cannot erase five good ones.
+		const healthRequest = getJSON('/api/health').then((value) => (health = value));
+		const statsRequest = getJSON('/api/library/stats').then((value) => (stats = value));
+		const settingsRequest = getJSON('/api/settings').then((value) => (settings = value));
+		const updateRequest = getJSON('/api/update').then((value) => (update = value));
+		await Promise.allSettled([healthRequest, statsRequest, settingsRequest, updateRequest]);
+	}
+
+	async function loadConnect() {
 		try {
-			[health, stats, settings, connect, update, diagnostics] = await Promise.all([
-				getJSON('/api/health'),
-				getJSON('/api/library/stats'),
-				getJSON('/api/settings'),
-				getJSON('/api/onboarding'),
-				getJSON('/api/update'),
-				getJSON('/api/diagnostics')
-			]);
+			connect = await getJSON('/api/onboarding');
 		} catch {
-			// The layout already shows a dead page well enough; a settings screen
-			// that cannot reach the server has nothing useful to add.
+			// Remote connection details are optional on this page.
+		}
+	}
+
+	async function loadDiagnostics() {
+		try {
+			diagnostics = await getJSON('/api/diagnostics');
+		} catch {
+			// Diagnostics enrich the settings page after its controls are usable.
+		}
+	}
+
+	async function exportSupportReport() {
+		if (supportExport === 'working') return;
+		supportExport = 'working';
+		supportExportName = '';
+		const suggestedName = `theia-support-${new Date().toISOString().replaceAll(/[-:]/g, '').slice(0, 15)}.zip`;
+		let handle = null;
+		const saveFilePicker = /** @type {any} */ (window['showSaveFilePicker']);
+		if (window.isSecureContext && typeof saveFilePicker === 'function') {
+			try {
+				handle = await saveFilePicker({
+					suggestedName,
+					types: [{ description: 'Theia support report', accept: { 'application/zip': ['.zip'] } }]
+				});
+			} catch (error) {
+				if (error?.name === 'AbortError') {
+					supportExport = 'idle';
+					return;
+				}
+				// Some embedded browsers expose the method but refuse it. Their
+				// ordinary download path remains a perfectly usable fallback.
+				handle = null;
+			}
+		}
+
+		try {
+			const response = await fetch('/api/diagnostics/export', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ client: diagnosticClientContext() })
+			});
+			if (!response.ok) throw new Error(`HTTP ${response.status}`);
+			const archive = await response.blob();
+			const disposition = response.headers.get('Content-Disposition') ?? '';
+			const name = disposition.match(/filename="([^"]+)"/)?.[1] ?? suggestedName;
+
+			if (handle) {
+				const writable = await handle.createWritable();
+				await writable.write(archive);
+				await writable.close();
+			} else {
+				const url = URL.createObjectURL(archive);
+				const link = document.createElement('a');
+				link.href = url;
+				link.download = name;
+				document.body.append(link);
+				link.click();
+				link.remove();
+				setTimeout(() => URL.revokeObjectURL(url), 1000);
+			}
+			supportExportName = name;
+			supportExport = 'saved';
+		} catch {
+			supportExport = 'failed';
 		}
 	}
 
@@ -138,7 +207,7 @@
 		scanError = null;
 		try {
 			await getJSON('/api/library/scan', { method: 'POST' });
-			await refresh();
+			await refreshCore();
 		} catch (e) {
 			scanError = e.status === 409 ? 'scanBusy' : 'scanFailed';
 		} finally {
@@ -147,8 +216,12 @@
 	}
 
 	onMount(() => {
-		refresh();
-		const timer = setInterval(refresh, 10_000);
+		void refreshCore();
+		void loadConnect();
+		void loadDiagnostics();
+		// Health and scan counts can move. Encoder probes cannot, and repeatedly
+		// spawning them every ten seconds only made this page slower.
+		const timer = setInterval(refreshCore, 10_000);
 		return () => clearInterval(timer);
 	});
 
@@ -156,7 +229,7 @@
 </script>
 
 <svelte:head>
-	<title>{t.settings.heading} — {t.appName}</title>
+	<title>{t.settings.heading} - {t.appName}</title>
 </svelte:head>
 
 <main class="settings-page page-shell page-body max-w-6xl">
@@ -166,7 +239,7 @@
 	{#if settings && stats}
 		<!-- A browser preference, deliberately outside the server settings PUT:
 		     changing language on the TV must not change somebody else's laptop. -->
-		<section class="mb-14 border-b border-line pb-14">
+		<section class="mb-14 border-b border-line pb-14" data-settings-ready>
 			<h2 class="label mb-5">{t.settings.interface}</h2>
 			<p class="text-small mb-5 max-w-prose text-muted">{t.settings.languageHint}</p>
 			<div class="flex flex-wrap gap-3" role="group" aria-label={t.settings.language}>
@@ -495,6 +568,34 @@
 				</dl>
 			</section>
 		{/if}
+
+		<section class="mb-14 border-b border-line pb-14" data-support-export>
+			<div class="mb-5 flex flex-wrap items-baseline justify-between gap-4">
+				<h2 class="label">{t.support.heading}</h2>
+				{#if diagnostics?.logs?.bytes > 0}
+					<span class="micro">{t.support.retained(formatSize(diagnostics.logs.bytes))}</span>
+				{/if}
+			</div>
+			<p class="tv-copy mb-3 max-w-prose">{t.support.intro}</p>
+			<p class="text-small mb-6 max-w-prose text-muted">{t.support.privacy}</p>
+			<button
+				type="button"
+				onclick={exportSupportReport}
+				disabled={supportExport === 'working'}
+				class="tv-action tv-action--primary cursor-pointer disabled:cursor-wait disabled:text-faint"
+			>
+				{supportExport === 'working' ? t.support.working : t.support.export}
+			</button>
+			{#if supportExport === 'saved'}
+				<p class="mt-5 border-l border-accent py-1 pl-5 text-small text-parchment" role="status">
+					{t.support.saved(supportExportName)}
+				</p>
+			{:else if supportExport === 'failed'}
+				<p class="mt-5 border-l border-error py-1 pl-5 text-small text-parchment" role="alert">
+					{t.support.failed}
+				</p>
+			{/if}
+		</section>
 
 		<section>
 			<h2 class="label mb-5">{t.settings.metadata}</h2>

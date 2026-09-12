@@ -12,7 +12,7 @@ import (
 //
 // It carries what a person needs to recognise the right film across a row of
 // near-identical titles: the poster, the year, and the first line of the
-// synopsis. Not what the library stores — nothing here is written anywhere
+// synopsis. Not what the library stores - nothing here is written anywhere
 // until a choice is made and the full record is fetched by id.
 type Candidate struct {
 	TMDBID        int    `json:"tmdb_id"`
@@ -38,7 +38,7 @@ func (c *Client) Candidates(ctx context.Context, query string, year int) ([]Cand
 		return nil, err
 	}
 	// A wrong year is one of the two reasons somebody is on this screen at all
-	// — the other being a wrong title — so a search that comes back empty is
+	// - the other being a wrong title - so a search that comes back empty is
 	// retried without it, exactly as Search does.
 	if len(results) == 0 && year != 0 {
 		if results, err = c.searchCandidates(ctx, query, 0); err != nil {

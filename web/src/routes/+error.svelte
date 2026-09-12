@@ -15,7 +15,7 @@
 </script>
 
 <svelte:head>
-	<title>{missing ? t.notFound.eyebrow : t.notFound.crash} — {t.appName}</title>
+	<title>{missing ? t.notFound.eyebrow : t.notFound.crash} - {t.appName}</title>
 </svelte:head>
 
 <ChromeScene

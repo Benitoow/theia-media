@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thank you for taking the time. The fields below are the ones that
-        usually decide whether a bug can be reproduced at all — a playback
+        usually decide whether a bug can be reproduced at all - a playback
         report without the file's codecs generally cannot be.
 
         **Do not report a security problem here.** Use
@@ -102,5 +102,5 @@ body:
       options:
         - label: I am on the latest release, or I have said which older one I am on and why.
           required: true
-        - label: This is not a report that the LAN port has no login — that is [documented and deliberate](https://github.com/Benitoow/theia-media/blob/main/.github/SECURITY.md).
+        - label: This is not a report that the LAN port has no login - that is [documented and deliberate](https://github.com/Benitoow/theia-media/blob/main/.github/SECURITY.md).
           required: true

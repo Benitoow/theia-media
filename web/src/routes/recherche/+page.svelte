@@ -54,8 +54,8 @@
 	onMount(async () => {
 		recent = readRecent();
 		await profiles.ready();
-		// Arriving with ?q= — from a link, a bookmark, or the browser's back
-		// button — searches straight away rather than showing an empty box.
+		// Arriving with ?q= - from a link, a bookmark, or the browser's back
+		// button - searches straight away rather than showing an empty box.
 		const initial = $page.url.searchParams.get('q') ?? '';
 		if (initial.trim()) {
 			query = initial;
@@ -163,7 +163,7 @@
 </script>
 
 <svelte:head>
-	<title>{t.search.title} — {t.appName}</title>
+	<title>{t.search.title} - {t.appName}</title>
 </svelte:head>
 
 <main class="search-page page-body">
@@ -220,7 +220,7 @@
 								type="button"
 								class="search-chip-forget"
 								onclick={() => forget(entry)}
-								aria-label="{t.search.forget} — {entry}"
+								aria-label="{t.search.forget} - {entry}"
 							>
 								<Icon name="close" size={12} />
 							</button>

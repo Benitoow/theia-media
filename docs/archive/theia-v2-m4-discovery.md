@@ -1,4 +1,4 @@
-# V2-M4 — Découverte backend accès distant
+# V2-M4 - Découverte backend accès distant
 
 > **Mise à jour après implémentation :** M4-BE est livré dans
 > [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a).

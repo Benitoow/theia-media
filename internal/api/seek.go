@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
+	"github.com/Benitoow/theia-media/internal/playback"
 )
 
 // Where a seek actually lands, asked separately from the stream itself.
@@ -67,10 +68,12 @@ func (s *Server) serveSeekStart(w http.ResponseWriter, r *http.Request, path str
 		return
 	}
 
-	if forcedTranscode(r) || r.URL.Query().Has("h") {
+	if playback.ForcedTranscode(r) || r.URL.Query().Has("h") {
 		writeJSON(w, 200, seekStartResponse{Requested: requested, Start: requested})
 		return
 	}
+	release := s.beginCostlyWork()
+	defer release()
 	start, err := s.ffmpeg.KeyframeAt(r.Context(), path, requested)
 	if err != nil {
 		// Not an error the interface has to explain. The clock stays as

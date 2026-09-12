@@ -1,4 +1,4 @@
-# THEIA — Feuille de route v2
+# THEIA - Feuille de route v2
 
 > Document de consolidation. Sert de point de départ pour la prochaine phase
 > de développement. Complète, sans les remplacer, docs/spec-fondatrice.md et
@@ -22,7 +22,7 @@ Ajouts post-v1 livrés et publiés :
   sélection "au hasard ce soir") plutôt qu'un second catalogue redondant
   avec `/films`.
 - Format de carte 16/9 sur backdrop (remplace le 2/3 verrouillé depuis M3,
-  déverrouillage assumé — voir décisions 33/34).
+  déverrouillage assumé - voir décisions 33/34).
 - Internationalisation FR/EN.
 - README technique : légèreté mesurée sur le vrai binaire, tableau
   comparatif sourcé face à Plex/Jellyfin/Emby.
@@ -46,13 +46,13 @@ supposition. C'est la discipline à ne jamais relâcher.
   comparant aussi `original_title` et en retenant le résultat le plus
   populaire, jamais le premier.
 - **Le décalage de lecture en mode remux** pouvait sauvegarder une position
-  de reprise fausse après un repositionnement — corruption silencieuse de
+  de reprise fausse après un repositionnement - corruption silencieuse de
   données sans aucune erreur visible.
 - **La réconciliation du scan basée sur des horodatages** confondait mise à
   jour et ajout si deux scans avaient lieu dans la même seconde. Remplacé
   par un compteur de génération entier, atomique.
 - **Une sélection "aléatoire" à base de `(id * k) mod p`** n'était pas
-  aléatoire du tout — progression arithmétique à pas fixe, découverte
+  aléatoire du tout - progression arithmétique à pas fixe, découverte
   seulement en imprimant les identifiants bruts et en les regardant, jamais
   via les tests automatisés qui passaient tous.
 
@@ -106,15 +106,15 @@ partir d'une ancienne conversation.
 
 | Jalon | Backend | Frontend | Blocage actuel |
 |---|---|---|---|
-| V2-M1 — fichiers et qualités | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Implémenté et vérifié à l'écran (décision 47) | **Seul jalon non validé par le mainteneur** : un vrai film décodable multi-pistes |
-| V2-M2 — profils | Implémenté et vérifié (décision 48) | Implémenté et vérifié (décisions 48/50) | Reste la validation TV et D-pad |
-| V2-M3 — séries | [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7), [PR #5](https://github.com/Benitoow/theia-media/pull/5) | Implémenté et vérifié, confirmé par le mainteneur | Aucun |
-| V2-M4 — accès distant | [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a) | Implémenté et vérifié, mode distant confirmé par le mainteneur | Aucun |
-| V2-M5 — logo/navigation | Aucun chantier backend | Implémenté (décision 54) | Aucun |
-| V2-M5b — retours d'usage | Sous-titres, pistes dans `/info`, ouverture de port automatique (décisions 55–57) | Menu de pistes dans le lecteur, panneau distant à un bouton | Aucun |
-| V2-M6 — optimisation matérielle | Encodeurs sondés, transcodage, échelle de qualité (décision 58) | Section Qualité dans le lecteur, bascule automatique | Aucun |
+| V2-M1 - fichiers et qualités | [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e), [PR #4](https://github.com/Benitoow/theia-media/pull/4) | Implémenté et vérifié à l'écran (décision 47) | **Seul jalon non validé par le mainteneur** : un vrai film décodable multi-pistes |
+| V2-M2 - profils | Implémenté et vérifié (décision 48) | Implémenté et vérifié (décisions 48/50) | Reste la validation TV et D-pad |
+| V2-M3 - séries | [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7), [PR #5](https://github.com/Benitoow/theia-media/pull/5) | Implémenté et vérifié, confirmé par le mainteneur | Aucun |
+| V2-M4 - accès distant | [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a) | Implémenté et vérifié, mode distant confirmé par le mainteneur | Aucun |
+| V2-M5 - logo/navigation | Aucun chantier backend | Implémenté (décision 54) | Aucun |
+| V2-M5b - retours d'usage | Sous-titres, pistes dans `/info`, ouverture de port automatique (décisions 55–57) | Menu de pistes dans le lecteur, panneau distant à un bouton | Aucun |
+| V2-M6 - optimisation matérielle | Encodeurs sondés, transcodage, échelle de qualité (décision 58) | Section Qualité dans le lecteur, bascule automatique | Aucun |
 
-### V2-M1 — Dédoublonnage de fichiers + sélection de qualité
+### V2-M1 - Dédoublonnage de fichiers + sélection de qualité
 Le chantier resté en suspens depuis plusieurs sessions. Le flux visible est
 maintenant tranché ; la règle technique d'association appartient à `M1-BE` :
 - Un film = une fiche, plusieurs fichiers possibles dessous, sélection sur
@@ -122,12 +122,12 @@ maintenant tranché ; la règle technique d'association appartient à `M1-BE` :
 - Qualité audio sélectionnable dans les pistes réellement mesurées du fichier ;
   une sélection explicite passe par le remux pour garantir la piste.
 - Qualité vidéo à la demande sur un fichier unique (ex : lire un REMUX
-  2160p en 720p60) implique un vrai transcodage à la volée — ce n'est pas
+  2160p en 720p60) implique un vrai transcodage à la volée - ce n'est pas
   gratuit, ça rouvre le chantier "optimisation CPU/GPU" mis de côté
   jusqu'ici. À trancher explicitement : combien de ce scope maintenant, et
   combien attend la vraie passe d'optimisation matérielle.
 
-Interview tranchée le 31/07/2026 — le jalon est promptable tel quel :
+Interview tranchée le 31/07/2026 - le jalon est promptable tel quel :
 - **Regroupement par nom de base identique** : deux fichiers portant le
   même nom sans extension (hors casse et hors extension) sont une seule
   fiche avec plusieurs fichiers dessous.
@@ -150,7 +150,7 @@ de 274 lignes fichier à 248 films / 274 fichiers, dont 25 films multi-fichiers,
 sans perdre métadonnées ni progression. Le contrat complet est dans
 `theia-v2-backend.md`.
 
-### V2-M2 — Profils, nouvelle mouture
+### V2-M2 - Profils, nouvelle mouture
 Les profils reviennent en V2 pour séparer l'expérience et la progression des
 membres du foyer, mais l'ancienne implémentation ne sert pas de point de départ.
 Le chantier repart d'une base vierge : pas de résurrection de l'écran, de l'API
@@ -163,8 +163,8 @@ faits locaux, avatar fourni par l'utilisateur, et écran d'accueil tant qu'aucun
 profil n'est actif dans ce navigateur.
 
 Les références montrent des écrans Netflix, donnés pour la **disposition, pas le
-style**. Tout ce qu'ils portent de compte — déconnexion, email, rôle, statut,
-badge d'abonnement, transfert de profil, centre d'aide, notifications — est
+style**. Tout ce qu'ils portent de compte - déconnexion, email, rôle, statut,
+badge d'abonnement, transfert de profil, centre d'aide, notifications - est
 refusé, pas traduit. Leurs illustrations ne peuvent pas entrer dans un dépôt
 public GPL-3.0.
 
@@ -172,7 +172,7 @@ Il reste à concevoir `M2-BE` : aucune route profils n'existe aujourd'hui. Tant
 que la décision zéro-authentification reste en vigueur, un profil n'est ni un
 compte, ni une permission.
 
-### V2-M3 — Séries
+### V2-M3 - Séries
 Le plus gros morceau du backlog, mérite son propre cycle multi-session
 complet façon M0-M8, pas une phase parmi d'autres. Modèle série/saison/
 épisode, parsing `SxxExx`, endpoints TMDB TV, enchaînement automatique
@@ -197,7 +197,7 @@ spéciale, multi-épisode, deux qualités, deux pistes, Range et remux. M3-FE es
 débloqué, mais devra refaire la validation dès que les premiers fichiers série
 réels seront disponibles.
 
-### V2-M4 — Accès distant hors réseau local
+### V2-M4 - Accès distant hors réseau local
 
 Le backend est implémenté dans
 [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a).
@@ -220,12 +220,12 @@ un test navigateur via un vrai endpoint extérieur ; le backend a été vérifi�
 avec un vrai tunnel et un client séparé sur UDP loopback, ce qui prouve le code,
 pas la box internet du mainteneur.
 
-### V2-M5 — Logo et identité de nav
+### V2-M5 - Logo et identité de nav
 Vrai travail de direction artistique, pas un câblage technique. À traiter
 comme la conception du logo initial (plusieurs pistes, validation avant
 implémentation), pas comme une correction de bug.
 
-### V2-M6 — Optimisation matérielle
+### V2-M6 - Optimisation matérielle
 CPU/GPU, iGPU inclus. Explicitement "plus tard" depuis le premier message
 de ce projet. Ne pas commencer avant que tout le reste soit stable, et
 probablement à coupler avec la partie qualité vidéo de V2-M1 si elle a été
@@ -241,7 +241,7 @@ partiellement ouverte.
 ### Explicitement écarté, pas en backlog
 - Rotten Tomatoes / Letterboxd comme sources alternatives : RT exige une
   licence commerciale payante avec candidature et délai d'approbation,
-  Letterboxd n'accorde l'accès à son API que sur demande sans garantie —
+  Letterboxd n'accorde l'accès à son API que sur demande sans garantie -
   aucune des deux n'offre l'équivalent d'une clé TMDB auto-servie et
   gratuite. Repris uniquement si l'un des deux change fondamentalement ses
   conditions d'accès.
@@ -250,7 +250,7 @@ partiellement ouverte.
 
 ## 5. Rappel de discipline (celle qui a fait tenir tout le projet)
 
-- Un jalon, une vérification à l'écran, un feu vert — jamais un agent qui
+- Un jalon, une vérification à l'écran, un feu vert - jamais un agent qui
   enchaîne plusieurs chantiers sans checkpoint humain.
 - "Vérifié" veut dire testé en conditions réelles, jamais supposé à partir
   de la lecture du code seule.
@@ -258,6 +258,6 @@ partiellement ouverte.
   simples valeurs numériques) doit être signalée et validée par toi avant
   d'être appliquée, même si le raisonnement de l'agent est bon.
 - Licence de tout asset (image, police, logo) vérifiée par toi avant qu'il
-  entre dans le repo public GPL-3.0 — jamais par l'agent seul.
+  entre dans le repo public GPL-3.0 - jamais par l'agent seul.
 - Ne jamais faire tourner deux agents en parallèle sur le même territoire
   frontend sans synchronisation explicite entre les deux sessions.

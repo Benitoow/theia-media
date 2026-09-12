@@ -4,7 +4,7 @@
 	// grid to be dense and fast rather than to invent a second visual language
 	// for a second kind of row.
 	import { onMount } from 'svelte';
-	import { getJSON } from '$lib/api.js';
+	import { getAllSeries } from '$lib/api.js';
 	import { profiles } from '$lib/profiles.svelte.js';
 	import { strings as t } from '$lib/strings.js';
 	import PosterCard from '$lib/components/PosterCard.svelte';
@@ -17,9 +17,7 @@
 
 	onMount(async () => {
 		try {
-			await profiles.ready();
-			const payload = await getJSON(profiles.url('/api/library/series?limit=500'));
-			series = payload.series ?? [];
+			series = await getAllSeries();
 			loadState = 'ready';
 		} catch {
 			loadState = 'failed';
@@ -28,7 +26,7 @@
 </script>
 
 <svelte:head>
-	<title>{t.series.title} — {t.appName}</title>
+	<title>{t.series.title} - {t.appName}</title>
 </svelte:head>
 
 <!--

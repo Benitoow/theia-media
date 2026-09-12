@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -20,10 +21,13 @@ import (
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/imagecache"
 	"github.com/Benitoow/theia-media/internal/library"
+	"github.com/Benitoow/theia-media/internal/playback"
 	"github.com/Benitoow/theia-media/internal/preview"
 	"github.com/Benitoow/theia-media/internal/profiles"
 	"github.com/Benitoow/theia-media/internal/remoteaccess"
+	"github.com/Benitoow/theia-media/internal/supportlog"
 	"github.com/Benitoow/theia-media/internal/updater"
+	"github.com/Benitoow/theia-media/internal/workload"
 )
 
 // Options is everything the server needs. A struct rather than a parameter
@@ -47,6 +51,15 @@ type Options struct {
 	// Previews builds the frames shown under a dragged seek bar. Optional
 	// everywhere: nil simply means no previews.
 	Previews *preview.Manager
+	// SupportLogs is the bounded on-disk history bundled by the explicit support
+	// export. Nil keeps tests and read-only embeddings fully functional.
+	SupportLogs *supportlog.Store
+	Workload    *workload.Coordinator
+
+	// Playback owns the converted-stream execution. Nil builds the default
+	// service from FFmpeg and Workload; tests inject one backed by a fake
+	// binary, because the real Manager would download a real one.
+	Playback *playback.Service
 
 	Web       fs.FS
 	Version   string
@@ -70,40 +83,64 @@ type Server struct {
 	remote      *remoteaccess.Service
 	watcher     *library.Watcher
 	previews    *preview.Manager
+	supportLogs *supportlog.Store
+	workload    *workload.Coordinator
+	playback    *playback.Service
 	web         fs.FS
 	log         *slog.Logger
 	version     string
 	keySource   config.KeySource
 	started     time.Time
-
-	// How many pictures may be re-encoded at once. See transcode.go: the
-	// ceiling comes from a measurement, not a preference.
-	transcodes *transcodeLimiter
 }
 
 // New builds a Server. Web is the compiled frontend, normally the embedded
 // bundle returned by theia.WebFS.
 func New(opts Options) *Server {
-	return &Server{
-		cfg:       opts.Config,
-		lib:       opts.Library,
-		images:    opts.Images,
-		ffmpeg:    opts.FFmpeg,
-		state:     opts.State,
-		updater:   opts.Updater,
-		activity:  opts.Activity,
-		profiles:  opts.Profiles,
-		remote:    opts.Remote,
-		watcher:   opts.Watcher,
-		previews:  opts.Previews,
-		web:       opts.Web,
-		log:       opts.Logger,
-		version:   opts.Version,
-		keySource: opts.KeySource,
-		started:   time.Now(),
-
-		transcodes: newTranscodeLimiter(),
+	// The nil check keeps a nil *workload.Coordinator from becoming a non-nil
+	// interface whose first method call panics.
+	var workload playback.Workload
+	if opts.Workload != nil {
+		workload = opts.Workload
 	}
+	playbackService := opts.Playback
+	if playbackService == nil {
+		playbackService = playback.NewService(playback.Options{
+			Binary:   opts.FFmpeg,
+			Workload: workload,
+			Logger:   opts.Logger,
+		})
+	}
+	return &Server{
+		cfg:         opts.Config,
+		lib:         opts.Library,
+		images:      opts.Images,
+		ffmpeg:      opts.FFmpeg,
+		state:       opts.State,
+		updater:     opts.Updater,
+		activity:    opts.Activity,
+		profiles:    opts.Profiles,
+		remote:      opts.Remote,
+		watcher:     opts.Watcher,
+		previews:    opts.Previews,
+		supportLogs: opts.SupportLogs,
+		workload:    opts.Workload,
+		playback:    playbackService,
+		web:         opts.Web,
+		log:         opts.Logger,
+		version:     opts.Version,
+		keySource:   opts.KeySource,
+		started:     time.Now(),
+	}
+}
+
+// KillStreams terminates every converted stream this server is feeding.
+//
+// main calls it on every path that ends the process: killing before the HTTP
+// drain lets a film's handler finish instead of holding the shutdown open for
+// the length of the film, and killing before an os.Exit is the net that keeps
+// the updater's restart from leaving an encoder running beside a dead server.
+func (s *Server) KillStreams() {
+	s.playback.KillStreams()
 }
 
 // Handler returns the fully routed HTTP handler.
@@ -113,6 +150,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/playback/heartbeat", s.handlePlaybackHeartbeat)
 	mux.HandleFunc("GET /api/settings", s.handleSettings)
 	mux.HandleFunc("GET /api/diagnostics", s.handleDiagnostics)
+	mux.HandleFunc("POST /api/diagnostics/events", s.handleClientDiagnostic)
+	mux.HandleFunc("POST /api/diagnostics/export", s.handleSupportExport)
 	mux.HandleFunc("PUT /api/settings", s.handleUpdateSettings)
 	mux.HandleFunc("GET /api/onboarding", s.handleOnboarding)
 	mux.HandleFunc("POST /api/onboarding/complete", s.handleCompleteOnboarding)
@@ -267,4 +306,21 @@ type errorResponse struct {
 
 func writeJSONError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, errorResponse{Error: message})
+}
+
+// writeDeliveryError turns a playback refusal into the response shape the
+// interface already knows: a JSON error code, plus Retry-After when the
+// refusal says when to come back.
+func (s *Server) writeDeliveryError(w http.ResponseWriter, derr *playback.DeliveryError) {
+	if derr.RetryAfter > 0 {
+		w.Header().Set("Retry-After", strconv.Itoa(derr.RetryAfter))
+	}
+	writeJSONError(w, derr.Status, derr.Code)
+}
+
+func (s *Server) beginCostlyWork() func() {
+	if s.workload == nil {
+		return func() {}
+	}
+	return s.workload.BeginInteractive()
 }

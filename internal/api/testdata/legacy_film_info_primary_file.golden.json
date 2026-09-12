@@ -1,0 +1,1 @@
+{"id":1,"movie_id":1,"file_id":1,"mode":"direct","reason_code":"container_direct","container":"mp4","media_status":"pending","ffmpeg_ready":false,"ffmpeg_supported":true,"progress":{"position_seconds":0,"finished":false},"qualities":[{"height":0,"mode":"direct"}],"transcode":{"available":false}}

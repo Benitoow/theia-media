@@ -29,19 +29,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
+      - uses: actions/download-artifact@v8
         with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci
-        working-directory: web
-      - run: npm run build
-        working-directory: web
+          name: embedded-web
+          path: web-dist
 
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.26'
+          go-version: '1.26.6'
 
       # This matrix is the guardrail, not a convenience: every target has to
       # cross-compile from one Linux runner with CGO off. The day a dependency
@@ -58,7 +53,7 @@ jobs:
           CGO_ENABLED: '0'
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: |
-          go build -trimpath \
+          go build -buildvcs=false -trimpath \
             -ldflags "-s -w -X main.version=${GITHUB_SHA::7} -X main.tmdbAPIKey=${TMDB_API_KEY}" \
             -o "dist/theia-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}" \
             ./cmd/theia

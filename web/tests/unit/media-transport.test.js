@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { initializationMIME } from '../../src/lib/media-transport.js';
+import {
+ bufferTargetKey,
+ initializationMIME,
+ reducedRollingBufferSeconds,
+ rememberedRollingBufferSeconds
+} from '../../src/lib/media-transport.js';
 const record = (type, payload) => {
  const bytes = new Uint8Array(8 + payload.length);
  new DataView(bytes.buffer).setUint32(0, bytes.length);
@@ -18,4 +23,22 @@ test('HEVC profiles, compatibility flags, constraints and level are not hardcode
 test('missing or truncated codec data is rejected', () => {
  assert.throws(() => initializationMIME(new Uint8Array()), /browser_cannot_decode_video/);
  assert.throws(() => initializationMIME(record('hvcC',[1,2,3])), /browser_cannot_decode_video/);
+});
+test('a full SourceBuffer reduces its rolling target without losing the startup reserve', () => {
+ assert.equal(reducedRollingBufferSeconds(30, 30), 15);
+ assert.equal(reducedRollingBufferSeconds(15, 14), 7.5);
+ assert.equal(reducedRollingBufferSeconds(7.5, 7), 6);
+ assert.equal(reducedRollingBufferSeconds(6, 30), 6);
+});
+test('a browser remembers a conservative target per output class', () => {
+ const values = new Map();
+ const storage = { getItem: key => values.get(key), setItem: (key, value) => values.set(key, value) };
+ const key = bufferTargetKey('2160p');
+ assert.equal(key, 'theia.playback.buffer.2160p');
+ assert.equal(rememberedRollingBufferSeconds(storage, key), 30);
+ values.set(key, '7.5');
+ assert.equal(rememberedRollingBufferSeconds(storage, key), 7.5);
+ assert.equal(rememberedRollingBufferSeconds(storage, bufferTargetKey('1080p')), 30);
+ values.set(key, 'not-a-number');
+ assert.equal(rememberedRollingBufferSeconds(storage, key), 30);
 });

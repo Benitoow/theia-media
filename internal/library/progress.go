@@ -217,7 +217,7 @@ func (s *Store) SaveDuration(ctx context.Context, id int64, seconds float64) err
 // recently watched first.
 func (s *Store) ContinueWatching(ctx context.Context, profileID int64, limit int) ([]Movie, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT `+movieColumns+movieSource+`
+		SELECT `+movieListColumns+movieSource+`
 		WHERE p.finished = 0
 		  AND p.watched_at > 0
 		  AND p.position_seconds >= ?

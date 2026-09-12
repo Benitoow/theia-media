@@ -1,6 +1,7 @@
 package library
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"testing"
@@ -87,6 +88,32 @@ func TestAFileStillBeingWrittenIsLeftAloneUntilItSettles(t *testing.T) {
 	watcher.pass(t.Context(), false)
 	if got := count(t, service); got != 2 {
 		t.Errorf("films = %d, want 2: the finished copy was never picked up", got)
+	}
+}
+
+func TestAFileSkippedWhileFreshIsRetriedWhenItSettles(t *testing.T) {
+	watcher, service, root := newTestWatcher(t)
+	watcher.interval = time.Hour
+	watcher.stability = 50 * time.Millisecond
+	writeFile(t, root, "Heat (1995).mkv")
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	go watcher.Run(ctx)
+
+	deadline := time.NewTimer(2 * time.Second)
+	defer deadline.Stop()
+	poll := time.NewTicker(10 * time.Millisecond)
+	defer poll.Stop()
+	for {
+		select {
+		case <-deadline.C:
+			t.Fatal("the fresh file waited for the one-hour regular interval")
+		case <-poll.C:
+			if count(t, service) == 1 {
+				return
+			}
+		}
 	}
 }
 

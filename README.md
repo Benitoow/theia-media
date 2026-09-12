@@ -16,14 +16,13 @@
 </p>
 
 <p align="center">
-  <a href="https://benitoow.github.io/theia-media/">Website</a> ·
   <a href="https://github.com/Benitoow/theia-media/releases/latest">Download</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
 </p>
 
-![Theia V3.1 home screen with Dune, the programme dock and the beginning of the collection](docs/screenshots/home.webp)
+![Theia home screen with Dune, the programme dock and the beginning of the collection](docs/screenshots/home.webp)
 
 Theia turns folders of films and series into a private cinema for the browsers
 already on your television, phone and computer. Run one native executable, add
@@ -37,10 +36,10 @@ external database or separate web app to install.
 ## Project phase: field testing
 
 > [!IMPORTANT]
-> **V3.1 is the feature baseline. New product features are paused while Theia is
+> **V3.2 is the engine baseline. New surface features are paused while Theia is
 > tested in roughly ten real households.** Maintenance continues for security,
 > data-loss risks, playback blockers, regressions and compatibility problems.
-> Those fixes will ship as `v3.1.1`, `v3.1.2`, `v3.1.3` and so on.
+> Those fixes will ship as `v3.2.1`, `v3.2.2`, `v3.2.3` and so on.
 
 This phase is about replacing guesses with evidence. Theia needs people who will
 run it against their own film and series libraries for at least a week, on the
@@ -53,19 +52,6 @@ Feature ideas are still welcome and will be collected. Broader development
 resumes when those real libraries have shown which problems deserve to shape the
 next release. Shipping features into an evidence vacuum is just expensive
 fan-fiction.
-
-## See V3.1
-
-| Search the whole library | Open a film |
-| --- | --- |
-| ![The centred V3.1 search stage](docs/screenshots/search.webp) | ![The V3.1 Dune detail page](docs/screenshots/film.webp) |
-
-![The V3.1 Theia player with its playback controls visible over the original demonstration media](docs/screenshots/player.webp)
-
-These are captures from the running V3.1 build, not mock-ups. Film artwork and
-metadata come from TMDB. The player image uses the repository's original
-[demonstration frame](docs/screenshots/source-player-demo-media.svg), so no film
-frame was copied into the project.
 
 ## What you get
 
@@ -96,7 +82,7 @@ an installation you would later resent.
 
 1. Download the binary for your operating system and CPU from
    [GitHub Releases](https://github.com/Benitoow/theia-media/releases/latest).
-2. Run it and keep the terminal open. Theia prints `http://localhost:8383` and
+2. Run it and keep the terminal open. Theia prints `http://localhost:8395` and
    the LAN address for your other screens.
 3. Open **Settings**, add one or more media folders, then start the scan.
 
@@ -133,12 +119,13 @@ decode is an excellent way to purchase an idle CPU.
 | Network | Faster than the media file's bitrate | Gigabit Ethernet for high-bitrate 4K remuxes |
 | Viewer | A current browser that decodes the media codec | A device with hardware decode for the codecs in your library |
 
-The current V3.1 Windows build measured **29.4 MB of resident memory** just after
-startup and **35.3 MB** after loading the home, library and search screens. The
-binary is **17.2 MB**; FFmpeg adds about **79 MB** after the first remux or
-transcode. Hardware encoders and decoders are tested on the host before Theia
-chooses one. Software conversion still needs enough CPU to remain above real
-time.
+The V3.2 Windows candidate measured **27.3 MB of resident memory** before a
+100-cycle stream endurance run and **32.9 MB** at its observed end and peak. A
+separate 10,000-film catalogue benchmark ended at **44.0 MB** of working set;
+the workloads are not interchangeable. The binary is **17.7 MB** and the
+installed FFmpeg runtime is about **87.9 MB**. Hardware encoders and decoders
+are tested on the host before Theia chooses one. Software conversion still
+needs enough CPU to remain above real time.
 
 Windows x64 is the real-device validation platform today. Release CI builds all
 six x64/ARM64 targets and executes the Linux x64 binary, but the ARM64 binaries
@@ -195,7 +182,7 @@ site uses HTTP. Remote traffic is encrypted by WireGuard.
 
 ## Build and contribute
 
-The build uses Go `1.26.5` and Node.js `22`:
+The build uses Go `1.26.6` and Node.js `22`:
 
 ```bash
 git clone https://github.com/Benitoow/theia-media.git
@@ -209,10 +196,12 @@ interface guard. The guard covers phone, desktop and television widths, font
 loading, minimum targets and horizontal overflow.
 
 Read [CONTRIBUTING.md](.github/CONTRIBUTING.md) before changing the project. The
-[founding spec](docs/spec-fondatrice.md), [decision record](docs/DECISIONS.md)
-and [design system](docs/design-system.md) are the source of truth. Theia is a
-single-maintainer project built with disclosed AI assistance; every change is
-still reviewed and verified on the running product.
+[documentation index](docs/README.md) separates current rules, release notes and
+technical archives. The [founding spec](docs/spec-fondatrice.md),
+[decision record](docs/DECISIONS.md) and [design system](docs/design-system.md)
+are the source of truth. Theia is a single-maintainer project built with
+disclosed AI assistance; every change is still reviewed and verified on the
+running product.
 
 ## Licence and attribution
 

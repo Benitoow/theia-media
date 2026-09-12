@@ -202,5 +202,5 @@ func tidy(s string) string {
 		return r
 	}, s)
 	s = whitespacePattern.ReplaceAllString(s, " ")
-	return strings.Trim(s, " -–—.,_:;|")
+	return strings.Trim(s, " -–-.,_:;|")
 }

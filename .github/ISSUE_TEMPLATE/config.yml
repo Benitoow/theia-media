@@ -8,7 +8,7 @@ contact_links:
     about: Ask for setup help, compare hardware and playback results, or meet other field testers.
   - name: Security vulnerability
     url: https://github.com/Benitoow/theia-media/security/advisories/new
-    about: Report privately, never as a public issue. Read SECURITY.md first — no login on the LAN port is deliberate.
+    about: Report privately, never as a public issue. Read SECURITY.md first - no login on the LAN port is deliberate.
   - name: Product scope and limits
     url: https://github.com/Benitoow/theia-media/blob/main/README.md#what-you-get
     about: Accounts, live TV, plugins, music and native apps are settled scope decisions rather than missing features.

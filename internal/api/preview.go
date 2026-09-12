@@ -13,7 +13,7 @@ import (
 //
 // The strip of frames a player shows under the cursor while somebody drags the
 // bar. It is a comfort and is treated as one everywhere: three states, none of
-// them an error the interface has to explain. Ready, not yet, or never — and
+// them an error the interface has to explain. Ready, not yet, or never - and
 // the player simply draws no preview for the last two.
 //
 // "Never" covers the case that matters most: no ffmpeg on disk. Asking for a

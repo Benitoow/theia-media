@@ -3,10 +3,7 @@
 	import { attachMedia } from '$lib/media-transport.js';
 	import { apiFetch, getJSON, formatTime, displayTitle } from '$lib/api.js';
 	import { strings as t } from '$lib/strings.js';
-	import {
-		audioLabel as labelAudio,
-		subtitleLabel as labelSubtitle
-	} from '$lib/track-labels.js';
+	import { subtitleLabel as labelSubtitle } from '$lib/track-labels.js';
 	import {
 		cueFloor,
 		cueLine,
@@ -16,8 +13,21 @@
 	} from '$lib/subtitle-layout.js';
 	import { profiles } from '$lib/profiles.svelte.js';
 	import { codecPlayback } from '$lib/codec-playback.svelte.js';
+	import {
+		initialCompatibilityHeight,
+		nextLowerHeight
+	} from '$lib/playback-adaptation.js';
+	import { PlaybackLifecycle } from '$lib/playback-lifecycle.js';
+	import {
+		diagnosticSessionID,
+		playbackFrameCounters,
+		playbackSnapshot,
+		reportDiagnostic
+	} from '$lib/diagnostic-events.js';
 	import Icon from './Icon.svelte';
+	import PlayerHelp from './PlayerHelp.svelte';
 	import PlayerPreviewStrip from './PlayerPreviewStrip.svelte';
+	import PlayerTrackMenu from './PlayerTrackMenu.svelte';
 
 	// fileId and audioTrackId come from the chooser on the film page. When they
 	// are absent the player falls back to the v1 routes, which the server still
@@ -42,6 +52,9 @@
 	);
 	const progressRoute = $derived(progressPath ?? `/api/library/movies/${movie.id}/progress`);
 	const heading = $derived(title ?? displayTitle(movie));
+	const diagnosticSession = diagnosticSessionID();
+	const diagnosticItemKind = $derived(streamBase?.includes('/episodes/') ? 'episode' : 'movie');
+	let lastReadySource = null;
 
 	// Which audio and which subtitles, owned here rather than by the page.
 	//
@@ -56,6 +69,7 @@
 
 	// V2-M6. `null` is the file as it is; a number is a height to re-encode to.
 	let qualityHeight = $state(null);
+	let automaticQuality = $state(false);
 	// Set when the browser has proved it cannot decode the picture. The server
 	// cannot know this -- HEVC plays in Safari and not in Chrome -- so this is
 	// the one fact only the client holds, sent back as a request to re-encode.
@@ -71,10 +85,14 @@
 			.join('&')
 	);
 
-	/** @type {'checking' | 'resume' | 'playing' | 'preparing' | 'failed'} */
+	/** @type {'checking' | 'resume' | 'playing' | 'preparing' | 'paused' | 'failed'} */
 	let phase = $state('checking');
 	let info = $state(null);
 	let source = $state(null);
+	// Captured when a stream URL is built. Reading info.height from the transport
+	// effect itself makes a later /info refresh tear down that very transport,
+	// invalidating codec recovery before it can switch to the fallback.
+	let transportBufferClass = $state('source');
 	let failureCode = $state(null);
 	let triedRemux = $state(false);
 
@@ -92,6 +110,7 @@
 	let elapsed = $state(0);
 	let duration = $state(0);
 	let paused = $state(true);
+	let hasStartedPlayback = $state(false);
 	let muted = $state(false);
 	let volume = $state(1);
 	let seeking = $state(false);
@@ -131,6 +150,12 @@
 	// it. One refresh after the picture arrives fills the menu; a flag keeps it
 	// to one, because /info must never become a poll.
 	let refreshedAfterProbe = $state(false);
+	// A fresh installation can finish downloading ffmpeg while the first risky
+	// remux is already opening. Its initial /info snapshot then says conversion
+	// is unavailable even though it is ready by the time Edge rejects the codec.
+	// One guarded refresh closes that race without making /info wait on a download.
+	let refreshedBeforeCodecFailure = $state(false);
+	let recoveringCodecFailure = false;
 
 	// While a scrub is in progress the bar follows the pointer rather than the
 	// video, otherwise the handle fights the person dragging it.
@@ -204,23 +229,73 @@
 	);
 
 	let transportGeneration = 0;
+	// A native fragmented-MP4 fallback can keep the last request associated
+	// with a dead media pipeline even with Cache-Control: no-store. WebKit does
+	// this after a stream is released and the same seek point is reopened. Give
+	// every remux session a distinct URL so a resume always owns a fresh pipe.
+	let remuxSession = 0;
+	const playbackLifecycle = new PlaybackLifecycle({
+		heartbeat: () => {
+			void apiFetch('/api/playback/heartbeat', { method: 'POST' }).catch(() => {});
+		},
+		release: releasePausedStream
+	});
+	$effect(() => {
+		playbackLifecycle.update({ phase, paused, fragmented: isRemux, started: hasStartedPlayback });
+	});
 	$effect(() => {
 		const element = video, url = source;
 		if (!element || !url) return;
 		const generation = ++transportGeneration;
-		const stop = attachMedia(element, url, (code) => {
-			if (generation !== transportGeneration) return;
-			if (code === 'browser_cannot_decode_video' && info?.transcode?.available && !forceTranscode) { forceTranscode = true; start(position); return; }
-			phase = 'failed'; failureCode = code;
-		});
+		const stop = attachMedia(
+			element,
+			url,
+			(code) => { void handleTransportFailure(generation, code); },
+			(status) => {
+				if (generation !== transportGeneration) return;
+				phase = status === 'preparing' ? 'preparing' : 'playing';
+				if (status === 'ready') reportReady();
+			},
+			{
+				bufferClass: transportBufferClass,
+				onBufferPressure: (detail) => reportPlayback('playback_buffer_pressure', detail)
+			}
+		);
 		return () => { transportGeneration++; stop(); };
 	});
-	$effect(() => {
-		if (phase !== 'playing' && phase !== 'preparing') return;
-		const heartbeat = () => { void apiFetch('/api/playback/heartbeat', { method:'POST' }).catch(() => {}); };
-		heartbeat(); const timer = setInterval(heartbeat, 15000);
-		return () => clearInterval(timer);
-	});
+
+	async function handleTransportFailure(generation, code) {
+		if (generation !== transportGeneration) return;
+		if (code === 'browser_cannot_decode_video' && await recoverCodecFailure(generation)) return;
+		if (generation !== transportGeneration) return;
+		phase = 'failed';
+		failureCode = code;
+		reportPlayback('playback_error', {}, code);
+	}
+
+	async function recoverCodecFailure(generation = null) {
+		if (forceTranscode) return false;
+		// The MSE and video-element error paths can report the same failed source.
+		// The first owns the recovery; the second must not turn it into a failure
+		// while the one permitted refresh is in flight.
+		if (recoveringCodecFailure) return true;
+		recoveringCodecFailure = true;
+		try {
+			if (!info?.transcode?.available && !refreshedBeforeCodecFailure) {
+				refreshedBeforeCodecFailure = true;
+				phase = 'preparing';
+				await refreshTracks();
+				if (generation !== null && generation !== transportGeneration) return true;
+			}
+			if (!info?.transcode?.available || forceTranscode) return false;
+			activateCompatibilityTranscode('browser_cannot_decode_video');
+			start(position);
+			return true;
+		} finally {
+			recoveringCodecFailure = false;
+		}
+	}
+
 	let saveTimer;
 	let lastSaved = 0;
 	let returnFocus;
@@ -250,6 +325,7 @@
 	});
 
 	onDestroy(() => {
+		playbackLifecycle.destroy();
 		clearInterval(saveTimer);
 		clearTimeout(idleTimer);
 		clearTimeout(paceTimer);
@@ -276,14 +352,17 @@
 		} catch (error) {
 			phase = 'failed';
 			failureCode = error?.code ?? 'unavailable';
+			reportPlayback('playback_error', {}, failureCode);
 			return false;
 		}
+		reportPlayback('playback_plan');
 		// The server decides; it does not merely advise. A refusal is reported
 		// with its own reason rather than letting the element fail on its own
 		// and blaming "an unsupported format" for a codec already named.
 		if (info.mode === 'unsupported') {
 			phase = 'failed';
 			failureCode = info.reason_code ?? 'failed';
+			reportPlayback('playback_error', {}, failureCode);
 			return false;
 		}
 		// A verdict this browser already reached, on an earlier film. Without it
@@ -297,7 +376,7 @@
 			info.transcode?.available &&
 			codecPlayback.strugglesWith(info.video_codec)
 		) {
-			forceTranscode = true;
+			activateCompatibilityTranscode('remembered_slow_decode');
 			return loadInfo();
 		}
 
@@ -310,6 +389,7 @@
 	}
 
 	function start(from) {
+		recentStalls = [];
 		offset = from;
 		elapsed = 0;
 		triedRemux = false;
@@ -325,6 +405,21 @@
 		startRemux(from);
 	}
 
+	function releasePausedStream() {
+		if (!paused || !isRemux || !source) return;
+		const at = position;
+		void save(true, at);
+		reportPlayback('playback_paused_release', { position_seconds: at });
+		clearTimeout(paceTimer);
+		lastReadySource = null;
+		offset = at;
+		elapsed = 0;
+		buffered = at;
+		waiting = false;
+		source = null;
+		phase = 'paused';
+	}
+
 	// Which playback a late answer belongs to. Seeking again before the server
 	// has located the last one must not move the clock of the new stream.
 	let seekToken = 0;
@@ -334,6 +429,7 @@
 		if (!info?.ffmpeg_supported) {
 			phase = 'failed';
 			failureCode = 'noFfmpeg';
+			reportPlayback('playback_error', {}, failureCode);
 			return;
 		}
 		// The offset belongs here rather than only in start(), because seeking
@@ -347,7 +443,8 @@
 		phase = info?.ffmpeg_ready ? 'playing' : 'preparing';
 		// `audio` has to survive every seek: dropping it would silently restart
 		// the film on the file's default track halfway through.
-		const query = [`t=${asked}`, audioQuery].filter(Boolean).join('&');
+		const query = [`t=${asked}`, audioQuery, `session=${++remuxSession}`].filter(Boolean).join('&');
+		transportBufferClass = `${qualityHeight || info?.height || 0}p`;
 		source = `${base}/remux?${query}`;
 		locateStart(asked);
 	}
@@ -410,10 +507,70 @@
 		if (height === qualityHeight) return;
 		const at = position;
 		qualityHeight = height;
+		automaticQuality = false;
 		phase = 'preparing';
 		if (!(await loadInfo())) return;
 		duration = info.duration_seconds || duration;
 		start(at);
+	}
+
+	function activateCompatibilityTranscode(reasonCode = 'browser_codec_failure') {
+		forceTranscode = true;
+		if (qualityHeight === null) {
+			const height = initialCompatibilityHeight(info);
+			if (height) {
+				qualityHeight = height;
+				automaticQuality = true;
+			}
+		}
+		reportPlayback('quality_adapted', {
+			reason_code: reasonCode,
+			output_height: qualityHeight || info?.height || 0,
+			automatic: true
+		});
+	}
+
+	function reportPlayback(event, extra = {}, errorMessage = '') {
+		const audio = audioTracks.find((track) => track.id === audioTrackId)
+			?? audioTracks.find((track) => track.is_default)
+			?? audioTracks[0];
+		reportDiagnostic(event, {
+			playback: {
+				session_id: diagnosticSession,
+				item_kind: diagnosticItemKind,
+				item_id: movie.id,
+				file_id: fileId ?? info?.file_id ?? 0,
+				mode: info?.mode ?? '',
+				reason_code: info?.reason_code ?? '',
+				video_codec: info?.video_codec ?? '',
+				audio_codec: audio?.codec ?? '',
+				encoder: info?.transcode?.encoder ?? '',
+				encoder_kind: info?.transcode?.kind ?? '',
+				source_height: info?.height ?? 0,
+				output_height: qualityHeight || info?.height || 0,
+				frame_rate: info?.frame_rate ?? 0,
+				automatic: automaticQuality,
+				...playbackSnapshot(video),
+				// A fragmented source starts its element clock at zero after every
+				// seek. Diagnostics describe the film, not the disposable pipe.
+				position_seconds: position,
+				...extra
+			},
+			...(errorMessage ? { error_message: errorMessage } : {})
+		});
+	}
+
+	function reportReady() {
+		if (!source || source === lastReadySource) return;
+		lastReadySource = source;
+		reportPlayback('playback_ready');
+	}
+
+	function onPlaying() {
+		waiting = false;
+		phase = 'playing';
+		showControls();
+		reportReady();
 	}
 
 	// `default` on a <track> only counts while the document is parsed, and
@@ -578,7 +735,7 @@
 		liftCues();
 	});
 
-	function onLoadedMetadata() {
+	async function onLoadedMetadata() {
 		// Direct play knows its own length. A remux does not, so the value from
 		// the server stands.
 		if (!isRemux && Number.isFinite(video.duration) && video.duration > 0) {
@@ -602,13 +759,10 @@
 			// this machine, so the film is asked for again, re-encoded --
 			// once, guarded by the flag, because a transcode that also fails
 			// must not loop.
-			if (info?.transcode?.available && !forceTranscode) {
-				forceTranscode = true;
-				start(position);
-				return;
-			}
+			if (await recoverCodecFailure(transportGeneration)) return;
 			phase = 'failed';
 			failureCode = 'browser_cannot_decode_video';
+			reportPlayback('playback_error', {}, failureCode);
 			return;
 		}
 		showSubtitleTrack();
@@ -683,10 +837,10 @@
 		// Only a risky remux is worth measuring. H.264 that already plays does not
 		// need watching, and a transcode is this check's own answer.
 		if (!isRemux || !info?.video_risky || forceTranscode) return;
-		if (!video?.getVideoPlaybackQuality) return;
+		if (playbackFrameCounters(video).totalFrames === undefined) return;
 
 		const sample = () => ({
-			frames: video.getVideoPlaybackQuality().totalVideoFrames,
+			frames: playbackFrameCounters(video).totalFrames,
 			at: video.currentTime
 		});
 
@@ -724,7 +878,7 @@
 
 			codecPlayback.recordStruggle(info?.video_codec);
 			if (info?.transcode?.available) {
-				forceTranscode = true;
+				activateCompatibilityTranscode('slow_decode');
 				start(position);
 			}
 			// Deliberately not rearmed: the verdict is in. Either a transcode is
@@ -732,6 +886,35 @@
 			// encoder and there is nothing further to decide.
 		};
 		paceTimer = setTimeout(step, paceInterval);
+	}
+
+	let recentStalls = [];
+
+	function onWaiting() {
+		waiting = true;
+		reportPlayback('playback_waiting');
+		// The initial wait belongs to preparation. Three later waits close enough
+		// together mean the current workload is not sustaining playback, whatever
+		// the encoder name promised.
+		if (position <= 2 || phase === 'preparing' || !info?.transcode?.available) return;
+		const now = performance.now();
+		recentStalls = recentStalls.filter((at) => now - at <= 20_000);
+		recentStalls.push(now);
+		if (recentStalls.length < 3) return;
+
+		const height = nextLowerHeight(info, qualityHeight);
+		if (!height || height === qualityHeight) return;
+		const at = position;
+		qualityHeight = height;
+		forceTranscode = true;
+		automaticQuality = true;
+		phase = 'preparing';
+		reportPlayback('quality_adapted', {
+			reason_code: 'repeated_stalls',
+			output_height: height,
+			automatic: true
+		});
+		start(at);
 	}
 
 	// Deliberately silent, unlike loadInfo: the film is playing. A refresh that
@@ -827,6 +1010,7 @@
 		}
 		phase = 'failed';
 		failureCode = 'failed';
+		reportPlayback('playback_error', {}, failureCode);
 	}
 
 	async function save(force = false, at = null) {
@@ -853,7 +1037,15 @@
 	}
 
 	function togglePlay() {
-		if (!video) return;
+		if (!video) {
+			if (phase === 'paused') {
+				paused = false;
+				phase = 'preparing';
+				start(position);
+			}
+			showControls();
+			return;
+		}
 		if (video.paused) video.play();
 		else video.pause();
 		showControls();
@@ -1191,22 +1383,6 @@
 		});
 	}
 
-	// A row is two lines, not one string.
-	//
-	// Joining everything with middots gave "Anglais · Original 5.1 · AC3 ·
-	// 5.1(side)" -- four facts at one weight, which at three metres is a wall.
-	// People choose by language; the codec only confirms the choice. So the
-	// language leads at reading size and the rest sits under it as metadata,
-	// which is the same hierarchy the card grid uses for a title and its year.
-	// A release title is written for a forum post, not for a menu: one real file
-	// carried "DTS 5.1  70mm Theatrical v3 by hairy_hen", which pushed the two
-	// facts that separate the tracks -- how many channels, which codec -- off the
-	// end of the line. So the detail is built from the measurements, and the
-	// title only joins it when it is short enough to be a name rather than a
-	// paragraph.
-	// Thin wrappers: the maths and the wording rules live in $lib/track-labels.js,
-	// where they are pure and tested. Only the catalogue is bound here.
-	const audioLabel = (track, index) => labelAudio(track, index, t);
 	const subtitleLabel = (track, index) => labelSubtitle(track, index, t);
 
 	$effect(() => {
@@ -1226,33 +1402,6 @@
 <!-- The layer is placed in pixels against the picture, so a resize or a rotation
      has to re-measure it; going full screen is the case that matters most. -->
 <svelte:window onkeydown={onKeydown} onresize={liftCues} />
-
-<!--
-	One row, defined once. Audio and subtitles differ in what they list, not in
-	how a choice looks, and writing the markup twice is how the two drift apart.
--->
-{#snippet trackOption(label, chosen, choose, first)}
-	<button
-		type="button"
-		class="track-option"
-		class:track-option--chosen={chosen}
-		aria-pressed={chosen}
-		onclick={choose}
-		{...first ? { 'data-remote-default': '' } : {}}
-	>
-		<span class="track-lines">
-			<span class="track-primary">{label.primary}</span>
-			{#if label.detail}
-				<span class="track-detail">{label.detail}</span>
-			{/if}
-		</span>
-		<!-- A tick, not a tinted row. The chosen state has to survive three
-		     metres, and a 2px rule at 6% opacity did not. -->
-		<span class="track-tick" aria-hidden="true">
-			{#if chosen}<Icon name="check" size={18} />{/if}
-		</span>
-	</button>
-{/snippet}
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
@@ -1324,9 +1473,9 @@
 				onloadedmetadata={onLoadedMetadata}
 				ontimeupdate={onTimeUpdate}
 				onprogress={readBuffered}
-				onwaiting={() => (waiting = true)}
-				onplaying={() => { waiting = false; showControls(); }}
-				onplay={() => { paused = false; phase = 'playing'; showControls(); }}
+				onwaiting={onWaiting}
+				onplaying={onPlaying}
+				onplay={() => { hasStartedPlayback = true; paused = false; phase = 'playing'; showControls(); }}
 				onpause={() => { paused = true; save(true); showControls(); }}
 				onended={() => save(true, duration || position)}
 				onvolumechange={() => { muted = video.muted; volume = video.volume; }}
@@ -1391,7 +1540,13 @@
 					     be showing. §3 reserves faint for decoration and forbids it for
 					     anything read. A bordered pill in --muted instead: it reads as
 					     chrome rather than as a caption trying to disappear. -->
-					<span class="player-badge">{forceTranscode || qualityHeight || info?.mode === 'transcode' ? t.v3.transcode : t.player.remuxBadge}</span>
+					<span class="player-badge">
+						{automaticQuality && qualityHeight
+							? t.player.adaptiveQuality(qualityHeight)
+							: forceTranscode || qualityHeight || info?.mode === 'transcode'
+								? t.v3.transcode
+								: t.player.remuxBadge}
+					</span>
 				{/if}
 			</div>
 		</header>
@@ -1454,7 +1609,7 @@
 				     for decoration and forbids for anything read. -->
 				<div class="player-time">
 					<span class="player-time-now">{formatTime(position)}</span>
-					<span class="player-time-total">{duration > 0 ? formatTime(duration) : '—'}</span>
+					<span class="player-time-total">{duration > 0 ? formatTime(duration) : '-'}</span>
 				</div>
 
 				<span class="flex-1"></span>
@@ -1479,169 +1634,29 @@
 				</div>
 
 				{#if hasTrackMenu}
-					<!--
-						The panel lives inside this wrapper rather than floating in the
-						player, so it is anchored by construction and cannot drift.
-
-						It used to be positioned against the frame: measured on a 900px
-						viewport, the panel's right edge sat 117px away from the right
-						edge of the button that opened it, which reads as a slab that
-						happened to appear rather than a menu belonging to a control.
-						Anchoring in CSS also means it follows the button at every
-						viewport without a line of measuring code.
-					-->
-					<div class="player-tracks-anchor">
-						<button
-							type="button"
-							onclick={(event) => (tracksOpen ? closeTracks() : openTracks(event.currentTarget))}
-							class="player-icon-button"
-							aria-expanded={tracksOpen}
-							aria-haspopup="true"
-						>
-							<Icon name="settings" label={t.player.tracks.open} />
-						</button>
-
-						{#if tracksOpen}
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<section
-								bind:this={tracksPanel}
-								class="player-tracks"
-								aria-label={t.player.tracks.title}
-								onkeydown={onTracksKeydown}
-							>
-								{#if audioTracks.length > 1}
-									<h2 class="track-heading">{t.film.audio.title}</h2>
-									<ul class="track-list">
-										<li>
-											{@render trackOption(
-												{ primary: t.film.audio.auto, detail: '' },
-												!audioTrackId,
-												() => chooseAudio(null),
-												true
-											)}
-										</li>
-										{#each audioTracks as track, index (track.id)}
-											<li>
-												{@render trackOption(
-													audioLabel(track, index),
-													audioTrackId === track.id,
-													() => chooseAudio(track.id),
-													false
-												)}
-											</li>
-										{/each}
-									</ul>
-								{/if}
-
-								{#if qualities.length > 1}
-									<h2 class="track-heading">
-										{t.player.tracks.quality}
-										{#if transcodeKind}
-											<span class="track-heading-note">
-												{t.player.tracks.kinds[transcodeKind] ?? ''}
-											</span>
-										{/if}
-									</h2>
-									<ul class="track-list">
-										{#each qualities as quality (quality.height)}
-											<li>
-												{@render trackOption(
-													{
-														primary: quality.height
-															? t.player.tracks.height(quality.height)
-															: t.player.tracks.original,
-														detail:
-															quality.mode === 'transcode' && quality.height
-																? t.player.tracks.reencoded
-																: ''
-													},
-													qualityHeight === (quality.height || null),
-													() => chooseQuality(quality.height || null),
-													audioTracks.length <= 1 && !subtitleTracks.length
-												)}
-											</li>
-										{/each}
-									</ul>
-								{/if}
-
-								{#if subtitleTracks.length}
-									<h2 class="track-heading">{t.player.tracks.subtitles}</h2>
-									<ul class="track-list">
-										<li>
-											{@render trackOption(
-												{ primary: t.player.tracks.noSubtitles, detail: '' },
-												!subtitleTrackId,
-												() => chooseSubtitle(null),
-												audioTracks.length <= 1
-											)}
-										</li>
-										{#each textSubtitles as track, index (track.id)}
-											<li>
-												{@render trackOption(
-													subtitleLabel(track, index),
-													subtitleTrackId === track.id,
-													() => chooseSubtitle(track.id),
-													false
-												)}
-											</li>
-										{/each}
-										{#if subtitleTrackId}
-										<!--
-											Only offered while a subtitle is actually on. A sync
-											control under a film showing none is a setting for
-											nothing, and the panel is already three sections long.
-										-->
-										<div class="track-offset">
-											<span class="track-offset-label">{t.player.tracks.offset}</span>
-											<div class="track-offset-controls">
-												<button
-													type="button"
-													class="track-offset-step"
-													onclick={() => nudgeSubtitles(-1)}
-													aria-label={t.player.tracks.offsetEarlier}
-												>
-													−
-												</button>
-												<button
-													type="button"
-													class="track-offset-value"
-													onclick={resetSubtitleOffset}
-													disabled={subtitleOffset === 0}
-													aria-label={t.player.tracks.offsetReset}
-												>
-													{t.player.tracks.offsetValue(subtitleOffset)}
-												</button>
-												<button
-													type="button"
-													class="track-offset-step"
-													onclick={() => nudgeSubtitles(1)}
-													aria-label={t.player.tracks.offsetLater}
-												>
-													+
-												</button>
-											</div>
-										</div>
-									{/if}
-
-									{#each refusedSubtitles as track, index (track.id)}
-											<li>
-												<!--
-													Only reached when the file has no text track at all.
-													Decision 3 refuses to render a bitmap subtitle, and
-													saying so beats a film that silently appears to have
-													no subtitles.
-												-->
-												<p class="track-option track-option--refused">
-													<span class="track-primary">{subtitleLabel(track, index).primary}</span>
-													<span class="track-detail">{t.player.tracks.imageBased}</span>
-												</p>
-											</li>
-										{/each}
-									</ul>
-								{/if}
-							</section>
-						{/if}
-					</div>
+					<PlayerTrackMenu
+						open={tracksOpen}
+						bind:panel={tracksPanel}
+						{phase}
+						{audioTracks}
+						{audioTrackId}
+						{qualities}
+						{qualityHeight}
+						{transcodeKind}
+						{subtitleTracks}
+						{textSubtitles}
+						{refusedSubtitles}
+						{subtitleTrackId}
+						{subtitleOffset}
+						onopen={openTracks}
+						onclose={closeTracks}
+						onkeydown={onTracksKeydown}
+						onaudio={chooseAudio}
+						onquality={chooseQuality}
+						onsubtitle={chooseSubtitle}
+						onoffset={nudgeSubtitles}
+						onoffsetreset={resetSubtitleOffset}
+					/>
 				{/if}
 
 				{#if phase === 'playing'}
@@ -1662,43 +1677,7 @@
 
 
 		{#if helpOpen && phase === 'playing'}
-			<section
-				bind:this={helpPanel}
-				class="player-shortcuts"
-				aria-labelledby="player-shortcuts-title"
-			>
-				<div class="player-shortcuts-header">
-					<div>
-						<span class="label">{t.appName}</span>
-						<h2 id="player-shortcuts-title">{t.player.shortcuts.title}</h2>
-					</div>
-					<button
-						type="button"
-						onclick={closeHelp}
-						class="player-icon-button"
-						data-shortcuts-close
-					>
-						<Icon name="close" label={t.player.shortcuts.close} />
-					</button>
-				</div>
-
-				<p class="tv-copy player-shortcuts-intro">{t.player.shortcuts.intro}</p>
-
-				<dl class="player-shortcuts-list">
-					{#each t.player.shortcuts.items as shortcut (shortcut.action)}
-						<div>
-							<dt>
-								{#each shortcut.keys as key (key)}
-									<kbd>{key}</kbd>
-								{/each}
-							</dt>
-							<dd>{shortcut.action}</dd>
-						</div>
-					{/each}
-				</dl>
-
-				<p class="player-shortcuts-hint">{t.player.shortcuts.scrubHint}</p>
-			</section>
+			<PlayerHelp bind:panel={helpPanel} onclose={closeHelp} />
 		{/if}
 	{/if}
 </div>

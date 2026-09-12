@@ -4,6 +4,7 @@
 // on disk, and nothing in the interface ever makes an external request.
 
 import { formatRuntime as formatLocalizedRuntime } from '$lib/i18n/index.svelte.js';
+import { fetchAllPages } from '$lib/library-pagination.js';
 import { profiles } from '$lib/profiles.svelte.js';
 
 export async function apiFetch(path, options) {
@@ -89,26 +90,26 @@ export function displayYear(item) {
  * a few thousand films on a LAN; past that the sorting belongs in SQL, and the
  * place to change it is here.
  */
-export async function getAllMovies(onProgress) {
+async function getAllPages(path, key, onProgress) {
 	// The watch-state filter and the resume badges come from the profile's own
 	// progress, so the answer to who is watching has to be in hand first.
 	await profiles.ready();
-	const pageSize = 500;
-	let offset = 0;
-	let total = Infinity;
-	const movies = [];
+	return fetchAllPages(
+		(limit, offset) => getJSON(profiles.url(`${path}?limit=${limit}&offset=${offset}`)),
+		key,
+		onProgress
+	);
+}
 
-	while (offset < total) {
-		const page = await getJSON(
-			profiles.url(`/api/library/movies?limit=${pageSize}&offset=${offset}`)
-		);
-		total = page.total ?? page.movies.length;
-		movies.push(...page.movies);
-		offset += pageSize;
-		onProgress?.(movies.length, total);
-		if (!page.movies.length) break; // never spin on an endpoint that stops paging
-	}
-	return movies;
+export async function getAllMovies(onProgress) {
+	return getAllPages('/api/library/movies', 'movies', onProgress);
+}
+
+// The endpoint has the same 500-row ceiling as films. Keeping series on a
+// one-shot request worked right up to item 501, where the catalogue silently
+// became incomplete while still claiming to be ready.
+export async function getAllSeries(onProgress) {
+	return getAllPages('/api/library/series', 'series', onProgress);
 }
 
 /** Strips accents and case so "Amelie" finds "Amélie". */

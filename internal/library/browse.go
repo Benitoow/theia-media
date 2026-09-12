@@ -3,6 +3,7 @@ package library
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -21,6 +22,18 @@ var ErrNoSuchMovie = errors.New("no such film")
 const movieColumns = `
 	m.id, m.path, m.file_name, m.size_bytes, m.modified_at, m.title, m.year,
 	m.added_at, m.updated_at,` + metadataColumns + `,
+	m.duration_seconds,
+	COALESCE(p.position_seconds, 0), COALESCE(p.watched_at, 0), COALESCE(p.finished, 0)`
+
+// movieListColumns produces the same JSON that collectMovies has always
+// returned, without first reading detail-only cast, crew and collection blobs
+// that forList would immediately discard.
+const movieListColumns = `
+	m.id, m.path, m.file_name, m.size_bytes, m.modified_at, m.title, m.year,
+	m.added_at, m.updated_at,
+	m.tmdb_id, m.tmdb_title, m.overview, m.release_date, m.poster_path,
+	m.backdrop_path, m.director, m.genres_json, m.runtime_minutes,
+	m.vote_average, m.metadata_status, m.metadata_fetched_at,
 	m.duration_seconds,
 	COALESCE(p.position_seconds, 0), COALESCE(p.watched_at, 0), COALESCE(p.finished, 0)`
 
@@ -83,47 +96,76 @@ func scanMovie(row interface{ Scan(...any) error }) (Movie, error) {
 	return m, nil
 }
 
+func scanMovieList(row interface{ Scan(...any) error }) (Movie, error) {
+	var (
+		m                              Movie
+		modifiedAt, addedAt, updatedAt int64
+		year, tmdbID, runtime          sql.NullInt64
+		tmdbTitle, overview            sql.NullString
+		releaseDate, poster, backdrop  sql.NullString
+		director, genresJSON           sql.NullString
+		vote, duration                 sql.NullFloat64
+		fetchedAt, watchedAt           int64
+		position                       float64
+		finished                       int
+	)
+	err := row.Scan(
+		&m.ID, &m.Path, &m.FileName, &m.SizeBytes, &modifiedAt, &m.Title, &year,
+		&addedAt, &updatedAt, &tmdbID, &tmdbTitle, &overview, &releaseDate,
+		&poster, &backdrop, &director, &genresJSON, &runtime, &vote,
+		&m.Metadata.Status, &fetchedAt, &duration, &position, &watchedAt, &finished,
+	)
+	if err != nil {
+		return Movie{}, err
+	}
+	m.ModifiedAt, m.AddedAt, m.UpdatedAt = unix(modifiedAt), unix(addedAt), unix(updatedAt)
+	if year.Valid {
+		m.Year = int(year.Int64)
+	}
+	if tmdbID.Valid {
+		m.Metadata.TMDBID = int(tmdbID.Int64)
+	}
+	m.Metadata.Title = tmdbTitle.String
+	m.Metadata.Overview = overview.String
+	m.Metadata.ReleaseDate = releaseDate.String
+	m.Metadata.PosterPath = poster.String
+	m.Metadata.BackdropPath = backdrop.String
+	m.Metadata.Director = director.String
+	if runtime.Valid {
+		m.Metadata.Runtime = int(runtime.Int64)
+	}
+	if vote.Valid {
+		m.Metadata.VoteAverage = vote.Float64
+	}
+	if fetchedAt > 0 {
+		m.Metadata.FetchedAt = unix(fetchedAt)
+	}
+	if genresJSON.Valid && genresJSON.String != "" {
+		_ = json.Unmarshal([]byte(genresJSON.String), &m.Metadata.Genres)
+	}
+	m.Progress = Progress{
+		PositionSeconds: position,
+		DurationSeconds: duration.Float64,
+		Finished:        finished != 0,
+	}
+	if watchedAt > 0 {
+		at := unix(watchedAt)
+		m.Progress.WatchedAt = &at
+	}
+	return m, nil
+}
+
 func collectMovies(rows *sql.Rows, capacity int) ([]Movie, error) {
 	defer rows.Close()
 	out := make([]Movie, 0, capacity)
 	for rows.Next() {
-		m, err := scanMovie(rows)
+		m, err := scanMovieList(rows)
 		if err != nil {
 			return nil, err
 		}
-		forList(&m.Metadata)
 		out = append(out, m)
 	}
 	return out, rows.Err()
-}
-
-// forList drops what only a detail page shows.
-//
-// Every list read comes through collectMovies and every single-film read does
-// not, which makes this the one place the distinction can be made without a
-// second projection -- and a second projection is exactly what must be avoided
-// here: the column list and the scan order are already paired by hand, and a
-// third pairing is a shifted field waiting to happen.
-//
-// It is about the wire, not the query. Reading a few more columns out of a local
-// SQLite file costs nothing; sending the cast, the crew, the tagline and the
-// certificate of two hundred and fifty films to draw cards that show a title and
-// a year is 31% of that response, measured, for data no list view reads. Decision
-// 74 is the standard: text answers travel compressed, and the ones that travel
-// are the ones somebody asked for.
-//
-// What stays is what a card, a filter or a sort actually uses: the artwork, the
-// title, the year, the runtime, the rating, the genres, the director and the
-// synopsis the hero prints.
-func forList(m *Metadata) {
-	m.Cast = nil
-	m.Crew = nil
-	m.Tagline = ""
-	m.OriginalTitle = ""
-	m.OriginalLanguage = ""
-	m.Certification = ""
-	m.CertificationCountry = ""
-	m.Collection = nil
 }
 
 // Get returns one film by id, with the progress belonging to profileID.
@@ -172,18 +214,18 @@ const heroMinimumRating = 6.0
 // hole, and one without text is a title floating in the dark.
 func (s *Store) Hero(ctx context.Context, profileID int64) (Movie, error) {
 	const query = `
-		SELECT ` + movieColumns + movieSource + `
+		SELECT ` + movieListColumns + movieSource + `
 		WHERE m.backdrop_path IS NOT NULL AND m.backdrop_path != ''
 		  AND m.overview IS NOT NULL AND m.overview != ''
 		  AND COALESCE(m.vote_average, 0) >= ?
 		ORDER BY m.added_at DESC, m.vote_average DESC, m.id DESC
 		LIMIT 1`
 
-	m, err := scanMovie(s.db.QueryRowContext(ctx, query, profileID, heroMinimumRating))
+	m, err := scanMovieList(s.db.QueryRowContext(ctx, query, profileID, heroMinimumRating))
 	if errors.Is(err, sql.ErrNoRows) {
 		// A small or poorly rated library still deserves a hero; drop the floor
 		// rather than show nothing.
-		m, err = scanMovie(s.db.QueryRowContext(ctx, query, profileID, 0.0))
+		m, err = scanMovieList(s.db.QueryRowContext(ctx, query, profileID, 0.0))
 	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return Movie{}, ErrNoSuchMovie
@@ -191,16 +233,13 @@ func (s *Store) Hero(ctx context.Context, profileID int64) (Movie, error) {
 	if err != nil {
 		return Movie{}, fmt.Errorf("choosing a hero film: %w", err)
 	}
-	// The hero is one film but it is not a detail page: it shows artwork, a
-	// title, the genres, the director and the synopsis. Same rule as a list.
-	forList(&m.Metadata)
 	return m, nil
 }
 
 // RecentlyAdded returns the newest films first.
 func (s *Store) RecentlyAdded(ctx context.Context, profileID int64, limit int) ([]Movie, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT `+movieColumns+movieSource+`
+		SELECT `+movieListColumns+movieSource+`
 		ORDER BY m.added_at DESC, m.id DESC
 		LIMIT ?`, profileID, limit)
 	if err != nil {
@@ -221,7 +260,7 @@ func (s *Store) RecentlyAdded(ctx context.Context, profileID int64, limit int) (
 // fix is to store vote_count, not to invent a weighting from what we have.
 func (s *Store) TopRated(ctx context.Context, profileID int64, limit int) ([]Movie, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT `+movieColumns+movieSource+`
+		SELECT `+movieListColumns+movieSource+`
 		WHERE m.poster_path IS NOT NULL AND m.poster_path != ''
 		  AND COALESCE(m.vote_average, 0) > 0
 		ORDER BY m.vote_average DESC, m.added_at DESC, m.id DESC
@@ -236,7 +275,7 @@ func (s *Store) TopRated(ctx context.Context, profileID int64, limit int) ([]Mov
 // caller supplies.
 //
 // Stability is the point. ORDER BY RANDOM() reshuffles on every page load, which
-// turns a suggestion into a slot machine — you would reload until you liked the
+// turns a suggestion into a slot machine - you would reload until you liked the
 // answer, and the row would mean nothing. Seeded with the date, the selection
 // holds for the evening and turns over tomorrow.
 //
@@ -244,7 +283,7 @@ func (s *Store) TopRated(ctx context.Context, profileID int64, limit int) ([]Mov
 // then the chosen rows. That is deliberate, after an ORDER BY arithmetic trick
 // produced a stable order that was not remotely random. Sorting by (id * k) mod
 // p and taking the first twelve selects ids at a fixed stride, so on the real
-// 274-film library the row came back as 257, 234, 211, 188 … — every
+// 274-film library the row came back as 257, 234, 211, 188 … - every
 // twenty-third film, every time. It reads as random only until you look at it.
 //
 // Two earlier attempts failed more visibly, and are worth recording because they
@@ -310,7 +349,7 @@ func (s *Store) byIDs(ctx context.Context, profileID int64, ids []int64) ([]Movi
 	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
 
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT `+movieColumns+movieSource+` WHERE m.id IN (`+placeholders+`)`, args...)
+		`SELECT `+movieListColumns+movieSource+` WHERE m.id IN (`+placeholders+`)`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("reading films by id: %w", err)
 	}
@@ -336,11 +375,11 @@ func (s *Store) byIDs(ctx context.Context, profileID int64, ids []int64) ([]Movi
 // carry a hero: artwork and a synopsis, the same bar Hero applies.
 //
 // Separate from ContinueWatching because the requirements differ. The row can
-// show a film with no backdrop — it is a poster among posters. The hero cannot:
+// show a film with no backdrop - it is a poster among posters. The hero cannot:
 // a hero without artwork is a hole in the top of the screen.
 func (s *Store) ResumeHero(ctx context.Context, profileID int64) (Movie, error) {
 	const query = `
-		SELECT ` + movieColumns + movieSource + `
+		SELECT ` + movieListColumns + movieSource + `
 		WHERE p.finished = 0
 		  AND p.watched_at > 0
 		  AND p.position_seconds >= ?
@@ -349,13 +388,12 @@ func (s *Store) ResumeHero(ctx context.Context, profileID int64) (Movie, error) 
 		ORDER BY p.watched_at DESC, m.id DESC
 		LIMIT 1`
 
-	m, err := scanMovie(s.db.QueryRowContext(ctx, query, profileID, minimumRememberedSeconds))
+	m, err := scanMovieList(s.db.QueryRowContext(ctx, query, profileID, minimumRememberedSeconds))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Movie{}, ErrNoSuchMovie
 	}
 	if err != nil {
 		return Movie{}, fmt.Errorf("choosing a resume hero: %w", err)
 	}
-	forList(&m.Metadata)
 	return m, nil
 }

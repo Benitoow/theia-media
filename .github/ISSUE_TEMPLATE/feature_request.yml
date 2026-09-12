@@ -7,7 +7,7 @@ body:
       value: |
         Theia is deliberately small, and a good part of the project is what it
         refuses to do. Several popular requests are already settled decisions
-        rather than open questions — accounts and permissions, live TV, a plugin
+        rather than open questions - accounts and permissions, live TV, a plugin
         system, music and photos, native apps.
 
         That does not make your idea unwelcome. It means the answer may be

@@ -293,7 +293,7 @@ type Home struct {
 // The home screen is a personal surface, not a second catalogue. /films already
 // searches, sorts and filters the whole library, so this answers a narrower and
 // more useful question: what were you watching, what is new, and what should you
-// put on tonight. It deliberately no longer lists a row per genre — that was the
+// put on tonight. It deliberately no longer lists a row per genre - that was the
 // library pretending to be a shop front, and browsing by genre now belongs to
 // the page built for it.
 //
@@ -307,21 +307,6 @@ func (s *Service) HomeScreen(ctx context.Context, profileID int64, perRow int) (
 	home := &Home{Total: total}
 	if total == 0 {
 		return home, nil
-	}
-
-	// The hero is whichever of the two is true right now, never a fixed choice:
-	// a film in progress if there is one, otherwise something worth starting.
-	switch hero, err := s.store.ResumeHero(ctx, profileID); {
-	case err == nil:
-		home.Hero, home.HeroKind = &hero, HeroResume
-	case errors.Is(err, ErrNoSuchMovie):
-		if featured, err := s.store.Hero(ctx, profileID); err == nil {
-			home.Hero, home.HeroKind = &featured, HeroFeatured
-		} else if !errors.Is(err, ErrNoSuchMovie) {
-			return nil, err
-		}
-	default:
-		return nil, err
 	}
 
 	// Seeded with the local date so tonight's suggestion holds for the evening.
@@ -342,15 +327,56 @@ func (s *Service) HomeScreen(ctx context.Context, profileID int64, perRow int) (
 		{RowTonight, func() ([]Movie, error) { return s.store.Tonight(ctx, profileID, perRow, seed) }},
 	}
 
-	for _, src := range sources {
-		movies, err := src.fetch()
-		if err != nil {
-			return nil, err
+	// The rows are independent reads. Run them concurrently through SQLite's
+	// bounded connection pool, then assemble them in the stable UI order above.
+	type rowResult struct {
+		movies []Movie
+		err    error
+	}
+	results := make([]rowResult, len(sources))
+	type heroResult struct {
+		movie *Movie
+		kind  string
+		err   error
+	}
+	var hero heroResult
+	var wg sync.WaitGroup
+	wg.Add(len(sources) + 1)
+	go func() {
+		defer wg.Done()
+		switch candidate, err := s.store.ResumeHero(ctx, profileID); {
+		case err == nil:
+			hero.movie, hero.kind = &candidate, HeroResume
+		case errors.Is(err, ErrNoSuchMovie):
+			featured, featureErr := s.store.Hero(ctx, profileID)
+			if featureErr == nil {
+				hero.movie, hero.kind = &featured, HeroFeatured
+			} else if !errors.Is(featureErr, ErrNoSuchMovie) {
+				hero.err = featureErr
+			}
+		default:
+			hero.err = err
 		}
-		if len(movies) == 0 {
+	}()
+	for i := range sources {
+		go func(index int) {
+			defer wg.Done()
+			results[index].movies, results[index].err = sources[index].fetch()
+		}(i)
+	}
+	wg.Wait()
+	if hero.err != nil {
+		return nil, hero.err
+	}
+	home.Hero, home.HeroKind = hero.movie, hero.kind
+	for i, result := range results {
+		if result.err != nil {
+			return nil, result.err
+		}
+		if len(result.movies) == 0 {
 			continue
 		}
-		home.Rows = append(home.Rows, Row{Kind: src.kind, Movies: movies})
+		home.Rows = append(home.Rows, Row{Kind: sources[i].kind, Movies: result.movies})
 	}
 	return home, nil
 }
@@ -366,6 +392,17 @@ func (s *Service) Scan(ctx context.Context, roots []string) (*ScanReport, error)
 }
 
 func (s *Service) scanStable(ctx context.Context, roots []string, cutoff time.Time) (*ScanReport, error) {
+	return s.scanResult(ctx, roots, cutoff, nil)
+}
+
+// scanObserved reconciles a scanner result the watcher already produced. A
+// changed library used to be walked once to notice the change and immediately
+// walked a second time to apply it; network shares paid that cost most.
+func (s *Service) scanObserved(ctx context.Context, roots []string, cutoff time.Time, observed scanner.Result) (*ScanReport, error) {
+	return s.scanResult(ctx, roots, cutoff, &observed)
+}
+
+func (s *Service) scanResult(ctx context.Context, roots []string, cutoff time.Time, observed *scanner.Result) (*ScanReport, error) {
 	s.mu.Lock()
 	if s.scanning {
 		s.mu.Unlock()
@@ -400,9 +437,15 @@ func (s *Service) scanStable(ctx context.Context, roots []string, cutoff time.Ti
 
 	s.log.Info("scan started", "directories", len(roots), "generation", generation)
 
-	found, scanErr := scanner.Scan(ctx, roots, s.log)
-	if scanErr != nil {
-		return nil, scanErr
+	var found scanner.Result
+	if observed != nil {
+		found = *observed
+	} else {
+		var scanErr error
+		found, scanErr = scanner.Scan(ctx, roots, s.log)
+		if scanErr != nil {
+			return nil, scanErr
+		}
 	}
 	report.Found = len(found.Files)
 	report.Problems = found.Problems

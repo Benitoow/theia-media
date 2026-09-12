@@ -188,6 +188,9 @@ func TestRemoteAllowlistPlacesTheNewRoutesOnTheRightSide(t *testing.T) {
 		// Seek previews are part of watching, like artwork.
 		{http.MethodGet, "/api/previews/0123456789abcdef0123456789abcdef"},
 		{http.MethodGet, "/api/stream/7/preview"},
+		// Playback diagnostics describe this viewer's browser and let a remote
+		// stall reach the same local support history as a LAN stall.
+		{http.MethodPost, "/api/diagnostics/events"},
 	}
 	for _, tc := range allowed {
 		if !remoteRouteAllowed(tc.method, tc.path) {
@@ -207,6 +210,7 @@ func TestRemoteAllowlistPlacesTheNewRoutesOnTheRightSide(t *testing.T) {
 		{http.MethodGet, "/api/library/series/7/match/candidates"},
 		// What this machine can do is a server question, not a viewing one.
 		{http.MethodGet, "/api/diagnostics"},
+		{http.MethodPost, "/api/diagnostics/export"},
 	}
 	for _, tc := range refused {
 		if remoteRouteAllowed(tc.method, tc.path) {

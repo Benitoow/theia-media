@@ -24,7 +24,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Benitoow/theia-media/internal/boundedio"
 	"github.com/Benitoow/theia-media/internal/stream"
+	"github.com/Benitoow/theia-media/internal/workload"
 )
 
 // ErrNotReady means the sheet does not exist yet. The caller should say so and
@@ -117,10 +119,17 @@ type Manager struct {
 	// a preview is worth far less than the film playing, so it queues rather
 	// than competing.
 	slot chan struct{}
+	jobs *workload.Coordinator
 }
 
 // New prepares the cache directory.
 func New(dir string, binary Binary, log *slog.Logger) (*Manager, error) {
+	return NewWithCoordinator(dir, binary, log, nil)
+}
+
+// NewWithCoordinator gives playback authority to cancel and postpone preview
+// generation. New remains for small embeddings and tests.
+func NewWithCoordinator(dir string, binary Binary, log *slog.Logger, jobs *workload.Coordinator) (*Manager, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("creating the preview cache %s: %w", dir, err)
 	}
@@ -131,6 +140,7 @@ func New(dir string, binary Binary, log *slog.Logger) (*Manager, error) {
 		building: map[string]bool{},
 		failed:   map[string]bool{},
 		slot:     make(chan struct{}, 1),
+		jobs:     jobs,
 	}, nil
 }
 
@@ -233,12 +243,31 @@ func (m *Manager) start(key, source string, duration float64, colorTransfer stri
 		// for the whole library because of one bad file.
 		ctx, cancel := context.WithTimeout(context.Background(), buildTimeout(duration))
 		defer cancel()
+		if m.jobs != nil {
+			var release func()
+			var err error
+			ctx, release, err = m.jobs.BeginBackground(ctx)
+			if err != nil {
+				return
+			}
+			defer release()
+		}
 
-		m.slot <- struct{}{}
+		select {
+		case m.slot <- struct{}{}:
+		case <-ctx.Done():
+			if errors.Is(context.Cause(ctx), workload.ErrPreempted) {
+				failed = false
+			}
+			return
+		}
 		defer func() { <-m.slot }()
 
 		if err := m.build(ctx, key, source, duration, colorTransfer); err != nil {
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			if errors.Is(context.Cause(ctx), workload.ErrPreempted) {
+				failed = false
+				m.log.Debug("seek preview yielded to playback", "source", source)
+			} else if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 				m.log.Warn("a seek preview took too long and was given up on",
 					"source", source, "allowed", buildTimeout(duration))
 			} else {
@@ -328,9 +357,11 @@ func (m *Manager) build(ctx context.Context, key, source string, duration float6
 		"-f", "image2",
 		"-y", temp,
 	)
-	if output, err := cmd.CombinedOutput(); err != nil {
+	output := boundedio.NewTail(64 << 10)
+	cmd.Stdout, cmd.Stderr = output, output
+	if err := cmd.Run(); err != nil {
 		os.Remove(temp)
-		return fmt.Errorf("ffmpeg: %w: %s", err, string(output))
+		return fmt.Errorf("ffmpeg: %w: %s", err, output.String())
 	}
 
 	if err := os.Rename(temp, sheet); err != nil {

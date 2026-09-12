@@ -7,6 +7,7 @@
 	import { strings as t } from '$lib/strings.js';
 	import { profiles } from '$lib/profiles.svelte.js';
 	import { remote } from '$lib/remote.svelte.js';
+	import { reportDiagnostic } from '$lib/diagnostic-events.js';
 	import ProfileMark from '$lib/components/ProfileMark.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 
@@ -71,8 +72,24 @@
 			if (!image.src.includes('/api/images/')) return;
 			image.hidden = true;
 		};
+		const reportBrowserError = (event) => {
+			if (!event.error && !event.message) return;
+			const message = event.error?.stack || event.error?.message || event.message;
+			reportDiagnostic('browser_error', { error_message: String(message) });
+		};
+		const reportRejection = (event) => {
+			const reason = event.reason;
+			const message = reason?.stack || reason?.message || reason;
+			reportDiagnostic('browser_error', { error_message: String(message ?? 'Unhandled rejection') });
+		};
 		window.addEventListener('error', hideBrokenArtwork, true);
-		return () => window.removeEventListener('error', hideBrokenArtwork, true);
+		window.addEventListener('error', reportBrowserError);
+		window.addEventListener('unhandledrejection', reportRejection);
+		return () => {
+			window.removeEventListener('error', hideBrokenArtwork, true);
+			window.removeEventListener('error', reportBrowserError);
+			window.removeEventListener('unhandledrejection', reportRejection);
+		};
 	});
 
 	const remoteFocusable = [
@@ -188,7 +205,7 @@
 		<a
 			href="/"
 			class="nav-target nav-brand"
-			aria-label="{t.appName} — {t.nav.home}"
+			aria-label="{t.appName} - {t.nav.home}"
 			aria-current={atHome ? 'page' : undefined}
 		>
 			<!-- Text, not an image: it carries the name to a screen reader

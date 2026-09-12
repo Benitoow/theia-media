@@ -1,4 +1,4 @@
-# THEIA — Spec Fondatrice v1.0
+# THEIA - Spec Fondatrice v1.0
 
 > Document de référence unique. Tout agent IA (Claude Code, Codex, Opus, Fable)
 > travaillant sur ce projet doit lire ce fichier en premier. Toute feature hors
@@ -13,9 +13,9 @@ l'anti-Plex : un seul binaire, zéro configuration, zéro compte, zéro paywall.
 On branche la machine, on scanne le réseau, ça marche.
 
 **Philosophie en trois règles :**
-1. Si une feature demande un réglage, elle est mal conçue — sauf le réglage lui-même.
+1. Si une feature demande un réglage, elle est mal conçue - sauf le réglage lui-même.
 2. Si une dépendance casse la compilation croisée (Windows/Linux/macOS), elle est bannie.
-3. Si Plex ou Jellyfin le font déjà bien, on ne le refait pas en v1 — on scope plus étroit, plus léger.
+3. Si Plex ou Jellyfin le font déjà bien, on ne le refait pas en v1 - on scope plus étroit, plus léger.
 
 **Pitch en une phrase :** Navidrome a prouvé qu'un serveur média pouvait être
 un seul binaire Go de 50 Mo de RAM avec une UI magnifique. Theia fait pareil,
@@ -31,7 +31,7 @@ gestion de comptes multiples en v1.
 1. L'utilisateur allume/branche le PC qui héberge Theia.
 2. Le binaire démarre automatiquement (service au boot), scanne les dossiers médias configurés.
 3. Le serveur s'annonce sur le réseau local via mDNS (`theia.local`).
-4. Depuis n'importe quel appareil du réseau (TV via navigateur, autre PC), l'utilisateur ouvre `theia.local` — ou scanne un QR code affiché au premier lancement.
+4. Depuis n'importe quel appareil du réseau (TV via navigateur, autre PC), l'utilisateur ouvre `theia.local` - ou scanne un QR code affiché au premier lancement.
 5. Interface façon Netflix : héros en haut, rangées par genre/catégorie, continuer à regarder.
 6. Lecture directe (direct play) ou remux HLS à la volée si le format n'est pas compatible nativement.
 
@@ -44,7 +44,7 @@ Mobile natif : **hors scope v1**, prévu plus tard (PWA suffira pour l'instant e
 | Composant | Choix | Justification |
 |---|---|---|
 | Langage backend | **Go 1.23+** | Compilation croisée triviale, un seul binaire, excellent pour agents IA, écosystème mature |
-| Driver SQLite | **`modernc.org/sqlite`** (pure Go, sans CGO) | CGO casse la compilation croisée multi-OS — piège n°1 à éviter |
+| Driver SQLite | **`modernc.org/sqlite`** (pure Go, sans CGO) | CGO casse la compilation croisée multi-OS - piège n°1 à éviter |
 | Frontend | **SvelteKit**, build statique (`adapter-static`) | Compilé en HTML/JS/CSS statique, embarqué dans le binaire via `go:embed` |
 | Style | Tailwind CSS | Rapide à itérer pour un agent IA, cohérent |
 | Base de données | SQLite embarquée | Zéro serveur DB à installer, fichier unique |
@@ -62,7 +62,7 @@ Mobile natif : **hors scope v1**, prévu plus tard (PWA suffira pour l'instant e
 
 ---
 
-## 4. Scope v1 — ce qui EST inclus
+## 4. Scope v1 - ce qui EST inclus
 
 1. **Auto-découverte** : annonce mDNS + QR code affiché au premier lancement pour connexion instantanée depuis un autre appareil.
 2. **Scan de bibliothèque** : parsing de dossiers, détection de fichiers vidéo, extraction du titre/année depuis le nom de fichier.
@@ -73,14 +73,14 @@ Mobile natif : **hors scope v1**, prévu plus tard (PWA suffira pour l'instant e
 7. **Page de réglages minimale** : dossiers surveillés, port, clé API TMDB. Rien d'autre.
 8. **Auto-mise à jour** : vérification et application automatique des nouvelles releases GitHub.
 
-## 5. Scope v1 — ce qui N'EST PAS inclus (roadmap v2+)
+## 5. Scope v1 - ce qui N'EST PAS inclus (roadmap v2+)
 
-- Transcodage matériel GPU (VAAPI / NVENC / QSV) — v2, seulement si direct play + remux CPU s'avèrent insuffisants à l'usage réel.
-- Applications natives (TV, mobile, desktop) — le web/PWA suffit pour l'instant.
+- Transcodage matériel GPU (VAAPI / NVENC / QSV) - v2, seulement si direct play + remux CPU s'avèrent insuffisants à l'usage réel.
+- Applications natives (TV, mobile, desktop) - le web/PWA suffit pour l'instant.
 - Gestion multi-utilisateurs avec permissions.
-- Assistant IA / recherche sémantique (ex: modèle type Gemma local) — idée valable, réservée à un module optionnel téléchargeable séparément, jamais dans le binaire de base.
+- Assistant IA / recherche sémantique (ex: modèle type Gemma local) - idée valable, réservée à un module optionnel téléchargeable séparément, jamais dans le binaire de base.
 - Live TV / DVR.
-- Accès distant hors réseau local (tunnel Tailscale/WireGuard) — candidat sérieux pour v2, c'est un vrai différenciateur face à Jellyfin.
+- Accès distant hors réseau local (tunnel Tailscale/WireGuard) - candidat sérieux pour v2, c'est un vrai différenciateur face à Jellyfin.
 - Système de plugins.
 
 **Règle d'or :** toute feature listée ici ne doit PAS être implémentée avant que
@@ -137,27 +137,27 @@ une fois l'API de M1/M2 stabilisée.
 ## 8. Répartition suggérée entre tes outils IA
 
 Tu as Claude Code, Codex, Opus 5 et Fable 5 sous la main. Ne les utilise pas
-au hasard — chacun a un terrain de jeu naturel :
+au hasard - chacun a un terrain de jeu naturel :
 
-- **Claude Code (Opus/Sonnet)** : backend Go — architecture, scanner, stream,
+- **Claude Code (Opus/Sonnet)** : backend Go - architecture, scanner, stream,
   updater, db. C'est là que la rigueur systémique compte le plus (compilation
   croisée, gestion de fichiers, concurrence). Donne-lui ce document en entier
   à chaque nouvelle session.
-- **Codex / GPT** : frontend SvelteKit — composants UI, animations, responsive.
+- **Codex / GPT** : frontend SvelteKit - composants UI, animations, responsive.
   Bon terrain pour lui, itération visuelle rapide, moins critique si un
   composant est refait deux fois.
-- **Fable 5** : parfait pour du contenu — rédaction du README, de la doc
+- **Fable 5** : parfait pour du contenu - rédaction du README, de la doc
   utilisateur, des messages d'erreur clairs, éventuellement les visuels/assets
   de marque de Theia.
 - Ne fais jamais travailler deux agents sur `internal/` en parallèle sans
-  synchroniser — le risque de conflits d'architecture (deux façons différentes
+  synchroniser - le risque de conflits d'architecture (deux façons différentes
   de structurer le scanner, par exemple) est réel.
 
 ---
 
 ## 9. Nom et identité
 
-**Nom du projet : Theia** — Titanide grecque de la vue et de la lumière céleste,
+**Nom du projet : Theia** - Titanide grecque de la vue et de la lumière céleste,
 mère d'Hélios (le soleil). Cohérent avec ton écosystème mythologique (Hermes).
 Nom de binaire : `theia`. Repo GitHub suggéré : `theia-media`.
 
@@ -171,7 +171,7 @@ lance en moins de 3 clics. Si ça prend plus que ça, on a raté la mission.
 
 ---
 
-## 11. Addendum — Décisions de cadrage M0
+## 11. Addendum - Décisions de cadrage M0
 
 Questions soulevées par l'agent au démarrage de M0, tranchées ici pour référence.
 
@@ -203,7 +203,7 @@ Questions soulevées par l'agent au démarrage de M0, tranchées ici pour réfé
    open source). UI utilisateur en français pour v1, avec les chaînes
    isolées dans un fichier dédié pour permettre une i18n future sans
    réécriture. L'updater est conçu à partir du pattern documenté (§3, ligne
-   "Mise à jour") — pas de code source Hermes disponible à réutiliser tel
+   "Mise à jour") - pas de code source Hermes disponible à réutiliser tel
    quel ; attention particulière à la contrainte Windows (un `.exe` en cours
    d'exécution ne peut pas se remplacer lui-même : prévoir un petit binaire
    ou script relais).
@@ -217,7 +217,7 @@ Questions soulevées par l'agent au démarrage de M0, tranchées ici pour réfé
 10. **Logo v1 retenu** : wordmark "THEIA" en serif capitales, lettres
     révélant une image de lever de soleil/horizon terrestre (thème "mère du
     soleil"). Licence de l'image source à vérifier avant tout usage public
-    (README, favicon) — préférer une source domaine public (NASA) ou générée.
+    (README, favicon) - préférer une source domaine public (NASA) ou générée.
     Ce traitement photographique sert de pièce de prestige (README, écran de
     démarrage) ; une version simplifiée à plat (couleur unique) reste à
     produire pour favicon/icône d'app/nav bar, où le détail photographique
@@ -240,7 +240,7 @@ Notes) :
   en référence visuelle pour les écrans d'accroche, beaucoup d'espace négatif.
 - **Périmètre d'application** : le chrome de l'app (nav, hero, écrans vides,
   page de connexion QR, typographie globale) porte cette identité à fond. La
-  **grille d'affiches reste dense et fonctionnelle** — les posters/backdrops
+  **grille d'affiches reste dense et fonctionnelle** - les posters/backdrops
   TMDB portent déjà leur propre esthétique, pas besoin d'espace négatif façon
   galerie d'art à cet endroit précis.
 - **Assets décoratifs** : jamais scrapés automatiquement par l'agent (risque
@@ -249,11 +249,11 @@ Notes) :
 
 ---
 
-## 13. Backlog v1.1+ — raffinement visuel (ne pas injecter avant la release v1)
+## 13. Backlog v1.1+ - raffinement visuel (ne pas injecter avant la release v1)
 
 Références glanées en cours de route, à évaluer une fois v1 livrée et
 stable, jamais pendant un jalon de polish/release actif :
 - Traitement de hero en portrait "par couches"/relief (réf. Apple TV+),
-  alternative possible au backdrop plat actuel — à évaluer après usage réel.
+  alternative possible au backdrop plat actuel - à évaluer après usage réel.
 - Le dashboard générique violet/pilule (réf. Netflix) est explicitement
-  écarté — contredit le choix de l'or et l'identité éditoriale déjà actée.
+  écarté - contredit le choix de l'or et l'identité éditoriale déjà actée.

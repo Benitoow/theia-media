@@ -7,7 +7,7 @@
 	from the television they are holding the remote for.
 
 	It is deliberately not a metadata editor. There are no fields to type into
-	and nothing to correct by hand — only the list of records the automatic
+	and nothing to correct by hand - only the list of records the automatic
 	search passed over, in the order it ranked them, and one of them is right.
 -->
 <script>
@@ -16,7 +16,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 
 	let {
-		/** "movies" or "series" — the two catalogues this can correct. */
+		/** "movies" or "series" - the two catalogues this can correct. */
 		kind,
 		id,
 		/** What the item is currently called, so the heading names it. */

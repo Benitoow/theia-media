@@ -11,8 +11,34 @@ jobs:
   validate:
     uses: ./.github/workflows/validate.yml
 
-  build:
+  release-gates:
+    name: Update rollback and stream endurance
     needs: validate
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.6'
+
+      # These are deliberately release-only. Pull requests keep the fast unit
+      # contracts; a tag pays for real process replacement and 100 real FFmpeg
+      # cancellations before any distributable binary is built.
+      - name: Exercise install, restart and unhealthy rollback
+        run: go run ./scripts/verify-update
+
+      - name: Build the endurance candidate
+        env:
+          CGO_ENABLED: '0'
+        run: go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=${{ github.ref_name }}-release-gate" -o theia-release-gate.exe ./cmd/theia
+
+      - name: Exercise 100 cancellations and one complete stream
+        run: go run ./scripts/verify-endurance -theia .\theia-release-gate.exe -cycles 100 -long-minutes 30 -port 8395
+
+  build:
+    needs: [validate, release-gates]
     name: ${{ matrix.goos }}/${{ matrix.goarch }}
     runs-on: ubuntu-latest
     strategy:
@@ -28,19 +54,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
+      - uses: actions/download-artifact@v8
         with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci
-        working-directory: web
-      - run: npm run build
-        working-directory: web
+          name: embedded-web
+          path: web-dist
 
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.26'
+          go-version: '1.26.6'
 
       # The asset name is a contract with the updater: internal/updater builds
       # exactly this string to find its own binary, and TestAssetName pins it.
@@ -55,7 +76,7 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME}"
           mkdir -p dist
-          go build -trimpath \
+          go build -buildvcs=false -trimpath \
             -ldflags "-s -w -X main.version=${version} -X main.tmdbAPIKey=${TMDB_API_KEY}" \
             -o "dist/theia-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}" \
             ./cmd/theia

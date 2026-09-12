@@ -99,7 +99,7 @@ const maxSearchResults = 20
 // indistinguishable from something cleverer.
 //
 // Matching happens in Go rather than in SQL because SQLite's LIKE cannot see
-// past an accent — "amelie" matches "Amélie" in no collation available without
+// past an accent - "amelie" matches "Amélie" in no collation available without
 // CGO. The candidate query stays narrow, so what crosses the boundary is a few
 // columns per title rather than every synopsis and cast list; only the rows
 // that matched are then read in full.
@@ -111,7 +111,6 @@ func (s *Store) Search(ctx context.Context, profileID int64, query string) (Resu
 	if needle == "" {
 		return Results{}, nil
 	}
-
 	movies, moreMovies, err := s.searchMovies(ctx, profileID, needle)
 	if err != nil {
 		return Results{}, err
@@ -141,7 +140,7 @@ func (s *Store) searchMovies(ctx context.Context, profileID int64, needle string
 	}
 
 	found, err := s.db.QueryContext(ctx, `
-		SELECT `+movieColumns+movieSource+`
+		SELECT `+movieListColumns+movieSource+`
 		WHERE m.id IN (`+placeholders(len(ids))+`)
 		ORDER BY m.title COLLATE NOCASE, m.year`,
 		append([]any{profileID}, ids...)...)
@@ -188,14 +187,8 @@ func (s *Store) searchSeries(ctx context.Context, needle string) ([]Series, bool
 
 // matchingIDs walks a candidate projection of (id, title, alternate title,
 // year, person) and keeps the rows whose folded text contains the needle.
-//
-// Those four fields are what somebody actually types: the title the file gave
-// it, the title TMDB gave it — which is how a film stored under its original
-// language is found under the local one, and the reverse — the year, and the
-// one name attached to the work.
 func matchingIDs(rows *sql.Rows, needle string) ([]any, bool, error) {
 	defer rows.Close()
-
 	var (
 		ids       []any
 		truncated bool

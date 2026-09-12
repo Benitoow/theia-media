@@ -13,7 +13,7 @@ them will be asked to change the document first.
 |---|---|
 | [`docs/spec-fondatrice.md`](../docs/spec-fondatrice.md) | What Theia is and what it refuses to be. Start here. |
 | [`docs/DECISIONS.md`](../docs/DECISIONS.md) | Every decision already taken, with its reasoning and, where it matters, the bug that forced it. |
-| [`docs/design-system.md`](../docs/design-system.md) | Colour, type, spacing, motion, focus. §6 — *the card grid is exempt* — is the single most important interface constraint. |
+| [`docs/design-system.md`](../docs/design-system.md) | Colour, type, spacing, motion, focus. §6 - *the card grid is exempt* - is the single most important interface constraint. |
 
 If your change contradicts one of them, that is not automatically wrong. It means
 the document changes first, in the same commit, with the reasoning written down.
@@ -59,9 +59,9 @@ user-facing string lives in `web/src/lib/i18n/locales/fr.js` and `en.js`. A new
 language is a new catalogue, not a hunt through Svelte markup, and
 `web/scripts/check-locales.mjs` fails the build if the two drift apart.
 
-**The server never writes what the user reads.** The API sends codes — a scan
+**The server never writes what the user reads.** The API sends codes - a scan
 problem is `{kind, path}`, an update failure carries a `reason`, a home row
-carries a `kind` — and the interface owns every sentence. This rule exists
+carries a `kind` - and the interface owns every sentence. This rule exists
 because the settings page once showed somebody a Windows syscall name wrapped in
 English in the middle of a French page.
 
@@ -104,7 +104,7 @@ afternoon. Look at recent commits for the tone.
 ## Reporting a bug
 
 Open an issue with the template. The three things that make a media-server bug
-solvable are the **exact file** involved (container, video codec, audio codec —
+solvable are the **exact file** involved (container, video codec, audio codec -
 `ffmpeg -i` output is ideal), the **browser and device**, and whether it happens
 in direct play, remux or re-encode. Without those, most playback reports cannot
 be reproduced.

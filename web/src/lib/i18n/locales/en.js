@@ -213,7 +213,7 @@ export const strings = {
 		installing: 'Installing…',
 		upToDate: 'Theia is up to date.',
 		available: 'A new version is available.',
-		ready: 'Update installed. Theia is restarting — reload this page in a few seconds.',
+		ready: 'Update installed. Theia is restarting - reload this page in a few seconds.',
 		deferred:
 			'Update postponed: playback is active. It will be offered again when playback has stopped.',
 		failed:
@@ -231,7 +231,7 @@ export const strings = {
 		copied: 'Copied',
 		mdns: 'Also available at',
 		mdnsCaveat:
-			'This name does not work on Android — use the IP address above instead.',
+			'This name does not work on Android - use the IP address above instead.',
 		otherAddresses: 'Other addresses for this machine',
 		otherAddressesHint:
 			'If the code leads nowhere, this machine has several network adapters and Theia may have selected the wrong one. Try one of these addresses.',
@@ -259,8 +259,9 @@ export const strings = {
 		buffering: 'Buffering…',
 		seeking: 'Seeking…',
 		remuxBadge: 'Remuxed on the fly',
+		adaptiveQuality: (height) => `Adapted to ${height}p`,
 		preparing:
-			'Preparing playback — ffmpeg only needs to be downloaded once, so this may take a moment.',
+			'Preparing playback - ffmpeg only needs to be downloaded once, so this may take a moment.',
 
 		unavailable: 'Playback could not be prepared.',
 		noFfmpeg:
@@ -273,6 +274,8 @@ export const strings = {
 		codes: {
 			browser_cannot_decode_video:
 				'Your browser cannot decode this file\u2019s video: the sound would run on a frozen picture. Open it in another browser, or choose another file on the movie page.',
+			stream_buffer_full:
+				'The browser video buffer is full. Restart playback; Theia will keep less media in memory.',
 			invalid_movie_id: 'This movie cannot be identified.',
 			invalid_file_id: 'This file cannot be identified.',
 			invalid_audio_track_id: 'This audio track cannot be identified.',
@@ -327,7 +330,7 @@ export const strings = {
 			// ffmpeg writes "stereo" and "mono"; the rest (5.1, 7.1, 3.0) already
 			// reads as itself and needs no translation.
 			channels: { mono: 'Mono', stereo: 'Stereo' },
-			imageBased: 'image — cannot be shown',
+			imageBased: 'image - cannot be shown',
 
 			// Subtitle offset. The sign is spelled out because "+1 s" and "1 s"
 			// do not mean the same thing here, and the value doubles as the reset
@@ -420,6 +423,68 @@ export const strings = {
 			mono: 'Mono',
 			channels: (layout) => layout
 		},
+		compatibility: {
+			heading: 'Playback on this device',
+			intro: 'Theia compares the measured file with its delivery plan and this browser.',
+			preview: '3.2 preview',
+			features: {
+				analysis: 'File analysis',
+				video: 'Video',
+				hdr: 'HDR display',
+				dolbyVision: 'Dolby Vision',
+				atmos: 'Dolby Atmos'
+			},
+			statuses: {
+				checking: 'Checking',
+				planned: 'Playback plan',
+				adapted: 'Adapted by Theia',
+				reported: 'Browser-reported',
+				measured: 'Measured issue',
+				unknown: 'Not verified',
+				unavailable: 'Unavailable'
+			},
+			details: {
+				analysisRequired: 'Analyse this file first to compare it with the current device.',
+				analysisFailed: 'The file analysis failed, so compatibility cannot be assessed yet.',
+				checking: 'Building the playback plan without opening or downloading the file.',
+				planUnavailable: 'The playback plan could not be read. Actual playback remains the test.',
+				directReported: (codec) =>
+					`The browser reports support for ${codec.toUpperCase() || 'this codec'}; Theia will send the file unchanged. Playback has not verified smooth decoding yet.`,
+				directPlanned: (codec) =>
+					`Theia plans direct playback for ${codec.toUpperCase() || 'this video'}. This browser did not provide a useful codec verdict.`,
+				containerAdapted: (codec) =>
+					`Theia will repackage the container while preserving the ${codec.toUpperCase() || 'video'} stream.`,
+				audioContainerAdapted: (codec) =>
+					`Theia will preserve the ${codec.toUpperCase() || 'video'} picture and convert the audio for the browser.`,
+				measuredFallback: (codec, kind) =>
+					`Real playback already showed that ${codec.toUpperCase() || 'this codec'} falls behind in this browser. Theia will switch to ${kind === 'hardware' ? 'hardware' : 'software'} video conversion.`,
+				measuredNoFallback: (codec) =>
+					`Real playback showed that ${codec.toUpperCase() || 'this codec'} falls behind here, and this server has no verified video encoder available.`,
+				riskyReported: (codec) =>
+					`The browser reports ${codec.toUpperCase() || 'this codec'} support, but Theia will measure decoded frames during playback before trusting it.`,
+				riskyUnknown: (codec) =>
+					`This browser does not report usable ${codec.toUpperCase() || 'codec'} support. Theia will try it and measure the result.`,
+				videoTranscoded: (codec, kind) =>
+					`Theia will convert ${codec.toUpperCase() || 'the video'} with its verified ${kind === 'hardware' ? 'hardware' : 'software'} encoder.`,
+				videoUnavailable: (codec) =>
+					`${codec.toUpperCase() || 'This video codec'} requires conversion, but no verified encoder is available.`,
+				hdrToneMapped: 'Theia will convert the HDR picture to SDR for this playback.',
+				hdrDisplayReported:
+					'The browser reports a high-dynamic-range display. The full playback and cable chain is not verified yet.',
+				hdrDisplayNotReported:
+					'The browser does not report a high-dynamic-range display. That is not proof that the screen is SDR.',
+				hdrDisplayUnknown: 'This browser does not expose the display dynamic range.',
+				dolbyVisionConverted:
+					'Theia will produce an SDR picture; Dolby Vision metadata will not be preserved.',
+				dolbyVisionUnknown:
+					'The file contains Dolby Vision, but the browser and display chain cannot be verified end to end.',
+				atmosConverted:
+					'The audio must be converted for the browser, so the Atmos presentation will not be preserved.',
+				atmosUnknown:
+					'The file contains Atmos metadata. Browsers do not expose the speakers, receiver or HDMI chain, so reproduction is unverified.'
+			},
+			caveat: '“Browser-reported” is a clue. Only real playback can turn it into evidence.'
+		},
 		notFound: 'This movie could not be found.',
 		overview: 'Overview',
 		cast: 'Cast',
@@ -491,7 +556,7 @@ export const strings = {
 		discovery: {
 			remote_router_silent:
 				'Your router did not answer. Automatic port opening (UPnP or NAT-PMP) is probably ' +
-				'switched off in its settings — which is the default on some ISP boxes. Turn it on, ' +
+				'switched off in its settings - which is the default on some ISP boxes. Turn it on, ' +
 				'or open the port by hand below.',
 			remote_router_refused:
 				'Your router refused to open this port. It may already be forwarded to another ' +
@@ -499,7 +564,7 @@ export const strings = {
 			remote_carrier_nat:
 				'Your provider places you behind carrier-grade NAT: your connection has no public ' +
 				'address of its own, and no port forwarding can reach through it. Ask them for a ' +
-				'public IP address — it is usually free and immediate.'
+				'public IP address - it is usually free and immediate.'
 		},
 		router:
 			'Your router must forward the UDP port below to this machine. Never forward Theia’s TCP port: it has no authentication at all.',
@@ -740,7 +805,7 @@ export const strings = {
 		portChanged:
 			'The new port is saved, but Theia is still listening on the old one. Restart it to apply the change.',
 		missingPaths:
-			'Saved, but these folders cannot be found right now — this is normal if the drive is disconnected:',
+			'Saved, but these folders cannot be found right now - this is normal if the drive is disconnected:',
 		keyLabel: 'Personal TMDB key',
 		keyHint:
 			'Optional. Leave this blank to use the key provided with Theia. A key entered here takes priority.',
@@ -839,6 +904,21 @@ export const strings = {
 		episodes: 'Episodes'
 	},
 
+	support: {
+		heading: 'Diagnostic report',
+		intro:
+			'When something breaks, this report collects Theia’s state, measured machine capabilities ' +
+			'and recent playback history.',
+		privacy:
+			'Everything stays on this machine until you choose to share the file. Keys, personal ' +
+			'folders and media filenames are hidden.',
+		retained: (size) => `${size} of diagnostic history retained`,
+		export: 'Export report',
+		working: 'Preparing…',
+		saved: (name) => `${name} is ready. Send it with a description of the problem.`,
+		failed: 'The report could not be created.'
+	},
+
 	errors: {
 		scanFailed: 'The scan could not be completed.',
 		scanBusy: 'A scan is already in progress.'
@@ -868,7 +948,7 @@ export function formatUptime(seconds) {
 }
 
 export function formatSize(bytes) {
-	if (!bytes) return '—';
+	if (!bytes) return '-';
 	const units = ['B', 'KB', 'MB', 'GB', 'TB'];
 	let value = bytes;
 	let unit = 0;

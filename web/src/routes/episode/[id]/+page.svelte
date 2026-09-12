@@ -11,12 +11,17 @@
 	import Player from '$lib/components/Player.svelte';
 	import FileChoice from '$lib/components/FileChoice.svelte';
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
+	import MediaBadges from '$lib/components/MediaBadges.svelte';
+	import PlaybackCompatibility from '$lib/components/PlaybackCompatibility.svelte';
 
 	/** @type {'loading' | 'ready' | 'missing'} */
 	let loadState = $state('loading');
 	let episode = $state(null);
 	let playing = $state(false);
 	let fileId = $state(null);
+	let compatibilityPlan = $state(null);
+	let compatibilityLoading = $state(false);
+	let compatibilityRequest = 0;
 
 	const basePath = $derived(`/api/library/episodes/${episode?.id}`);
 	const files = $derived(episode?.files ?? []);
@@ -45,7 +50,7 @@
 	);
 	// The heading the player announces: the series, then which episode.
 	const playerTitle = $derived(
-		`${episode?.series_title ?? ''} — ${numberLabel}${title ? ` · ${title}` : ''}`
+		`${episode?.series_title ?? ''} - ${numberLabel}${title ? ` · ${title}` : ''}`
 	);
 
 	async function load(id) {
@@ -56,6 +61,7 @@
 			fileId =
 				(episode.files?.find((file) => file.is_primary) ?? episode.files?.[0])?.id ?? null;
 			loadState = 'ready';
+			void loadCompatibility(fileId);
 		} catch {
 			loadState = 'missing';
 		}
@@ -70,6 +76,7 @@
 
 	function onFileChoice({ fileId: nextFile }) {
 		fileId = nextFile ?? fileId;
+		void loadCompatibility(fileId);
 	}
 
 	const watched = $derived(!!episode?.progress?.finished);
@@ -104,6 +111,29 @@
 			...episode,
 			files: episode.files.map((file) => (file.id === measured.id ? measured : file))
 		};
+		if (measured.id === fileId) void loadCompatibility(fileId);
+	}
+
+	async function loadCompatibility(selectedId) {
+		const request = ++compatibilityRequest;
+		compatibilityPlan = null;
+		const file = episode?.files?.find((candidate) => candidate.id === selectedId);
+		if (!episode?.id || !selectedId || file?.media?.status !== 'ok') {
+			compatibilityLoading = false;
+			return;
+		}
+
+		compatibilityLoading = true;
+		try {
+			const plan = await getJSON(
+				profiles.url(`/api/library/episodes/${episode.id}/files/${selectedId}/stream/info`)
+			);
+			if (request === compatibilityRequest) compatibilityPlan = plan;
+		} catch {
+			// Playback owns the definitive retry. This preflight remains advisory.
+		} finally {
+			if (request === compatibilityRequest) compatibilityLoading = false;
+		}
 	}
 </script>
 
@@ -144,6 +174,8 @@
 					</p>
 				{/if}
 
+				<MediaBadges media={selectedFile?.media} />
+
 				<div class="episode-actions mt-2 mb-8">
 					<button
 						type="button"
@@ -179,6 +211,12 @@
 			{fileId}
 			onselect={onFileChoice}
 			onmeasure={onFileMeasured}
+		/>
+
+		<PlaybackCompatibility
+			media={selectedFile?.media}
+			plan={compatibilityPlan}
+			loading={compatibilityLoading}
 		/>
 
 		{#each members as member (member.id)}

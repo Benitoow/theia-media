@@ -1,4 +1,15 @@
-# Archive: the V2 planning documents
+# Archives techniques de Theia
+
+Les campagnes et plans terminés vivent ici afin de garder la racine de
+`docs/` lisible. Ils restent consultables, mais ne remplacent jamais les
+documents courants indexés dans [`../README.md`](../README.md).
+
+## Cycle V3.2
+
+Les plans de modernisation, mesures A/B et validations sur médias réels de la
+3.2 sont regroupés dans [`v3.2/`](v3.2/README.md).
+
+## Cycle V2
 
 These five documents ran the V2 cycle, from the roadmap interview in July 2026 to
 the last milestone shipping in August. **They describe a plan that is finished.**
@@ -24,9 +35,9 @@ reason [`DECISIONS.md`](../DECISIONS.md) is append-only.
 
 Three documents govern the project, and they are maintained:
 
-- [`../spec-fondatrice.md`](../spec-fondatrice.md) — what Theia is and refuses to be.
-- [`../DECISIONS.md`](../DECISIONS.md) — every decision taken, with its reasoning.
-- [`../design-system.md`](../design-system.md) — colour, type, spacing, motion, focus.
+- [`../spec-fondatrice.md`](../spec-fondatrice.md) - what Theia is and refuses to be.
+- [`../DECISIONS.md`](../DECISIONS.md) - every decision taken, with its reasoning.
+- [`../design-system.md`](../design-system.md) - colour, type, spacing, motion, focus.
 
 ## The delivery split, and why it is over
 

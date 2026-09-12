@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 // The pages that have a layout worth guarding. The player is deliberately
 // absent: it needs a real file to open, and what it does with one is the Go
@@ -14,6 +15,44 @@ const pages = [
 
 test.beforeEach(async ({ page }) => {
  await page.addInitScript(() => localStorage.setItem('theia.profile', '1'));
+});
+
+test('settings controls do not wait for the FFmpeg diagnostics', async ({ page }) => {
+	let releaseDiagnostics = () => {};
+	const diagnosticsMayFinish = new Promise((resolve) => (releaseDiagnostics = resolve));
+	await page.route('**/api/diagnostics', async (route) => {
+		await diagnosticsMayFinish;
+		await route.continue();
+	});
+
+	try {
+		await page.goto('/reglages', { waitUntil: 'domcontentloaded' });
+		await expect(page.locator('[data-settings-ready]')).toBeVisible({ timeout: 2_000 });
+	} finally {
+		releaseDiagnostics();
+		await page.unrouteAll({ behavior: 'wait' });
+	}
+});
+
+test('settings exports a real local support archive', async ({ page }) => {
+	// Chromium exposes the native file picker even in this headless run. The
+	// fallback is the path Playwright can observe; production keeps the picker
+	// so the owner chooses the destination before Theia builds the archive.
+	await page.addInitScript(() => {
+		Object.defineProperty(window, 'showSaveFilePicker', { value: undefined });
+	});
+	await page.goto('/reglages');
+	await expect(page.locator('[data-support-export]')).toBeVisible();
+
+	const downloadStarted = page.waitForEvent('download');
+	await page.getByRole('button', { name: /Extraire le rapport|Export report/ }).click();
+	const download = await downloadStarted;
+	expect(download.suggestedFilename()).toMatch(/^theia-support-\d{8}-\d{6}\.zip$/);
+	const savedPath = await download.path();
+	expect(savedPath).not.toBeNull();
+	const bytes = await readFile(savedPath);
+	expect(bytes.subarray(0, 4).toString('hex')).toBe('504b0304');
+	await expect(page.getByRole('status')).toContainText(download.suggestedFilename());
 });
 
 /** Waits for the interface to have finished arriving, fonts included. */

@@ -1,6 +1,7 @@
 package updater
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -246,6 +247,29 @@ func TestApplyLeavesTheBinaryIntactWhenTheDownloadDoesNotRun(t *testing.T) {
 
 	if err := u.Apply(t.Context()); err == nil {
 		t.Fatal("Apply succeeded despite the binary reporting the wrong version")
+	}
+	inst.assertUntouched(t)
+}
+
+func TestApplyRequiresARecoveryPointBeforeTheSwap(t *testing.T) {
+	inst := newInstallation(t)
+	newBinary := buildHelper(t, "1.1.0")
+	server := stubGitHub(t, "v1.1.0", newBinary, digestOf(t, newBinary))
+	u := newUpdater(t, inst, server.URL, activity.New(), func() {
+		t.Error("restart requested after recovery preparation failed")
+	})
+	u.prepare = func(context.Context, string) error { return errors.New("disk full") }
+	aborted := false
+	u.abort = func() error {
+		aborted = true
+		return nil
+	}
+
+	if err := u.Apply(t.Context()); err == nil {
+		t.Fatal("Apply succeeded without a recovery point")
+	}
+	if !aborted {
+		t.Fatal("partial recovery point was not cleared")
 	}
 	inst.assertUntouched(t)
 }

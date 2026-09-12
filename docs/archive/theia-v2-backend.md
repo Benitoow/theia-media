@@ -1,4 +1,4 @@
-# THEIA — Piste backend V2
+# THEIA - Piste backend V2
 
 > File de travail backend de la V2. À lire après `spec-fondatrice.md`,
 > `DECISIONS.md` et `theia-v2-roadmap.md`. Le roadmap décide du produit ; ce
@@ -29,7 +29,7 @@ ce fichier, `theia-v2-frontend.md` et `DECISIONS.md` dans le même commit.
 
 ## 2. État des jalons backend
 
-### M1-BE — Plusieurs fichiers par film
+### M1-BE - Plusieurs fichiers par film
 
 **Statut : implémenté et vérifié dans
 [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e),
@@ -293,7 +293,7 @@ lisent le fichier principal. M1-FE doit utiliser les routes avec `file_id`.
   anciennes métadonnées et l'interdiction de purger après une écriture SQLite
   volontairement rejetée pendant le scan.
 
-### M2-BE — Profils, nouvelle mouture
+### M2-BE - Profils, nouvelle mouture
 
 **Statut : implémenté et vérifié. Contrat figé par la décision 48 ; le backend
 suit cette section. Aucun écran M2 n'est inclus.**
@@ -321,7 +321,7 @@ le spectateur. Seules la position, la date et l'état terminé deviennent
 personnels.
 
 La migration crée un profil par défaut et y copie les deux familles de
-progression existantes — films depuis 0001, épisodes depuis 0007.
+progression existantes - films depuis 0001, épisodes depuis 0007.
 
 **Les colonnes historiques de `movies` restent et sont tenues à jour** avec le
 profil par défaut. Elles sont mortes pour ce binaire, qui lit `movie_progress` ;
@@ -408,7 +408,7 @@ pas être supprimé.
 #### Traitement de l'image
 
 Décodage JPEG/PNG/GIF, **encodage toujours JPEG** : un PNG piégé ne peut pas
-être restitué tel quel. Bornes en amont du décodage — 8 Mio d'octets et 64 Mpx
+être restitué tel quel. Bornes en amont du décodage - 8 Mio d'octets et 64 Mpx
 revendiqués, ce qui arrête la bombe de décompression classique dont l'en-tête
 tient en quelques octets et réclame des gigaoctets. Orientation EXIF lue avant
 le recadrage, sinon une photo portrait couchée est rognée sur le mauvais axe et
@@ -442,7 +442,7 @@ le garde. C'est le point de contrat que la décision 48 signalait.
   du seul profil par défaut, son accueil est repassé en héros `featured` sans
   rangée `continue`, tandis que celui de Mimi gardait sa reprise ;
 - les colonnes historiques sont restées à 76 s pendant que Mimi écrivait 121 s,
-  puis ont suivi le profil par défaut — le contrat de retour arrière v1.5.0 tient ;
+  puis ont suivi le profil par défaut - le contrat de retour arrière v1.5.0 tient ;
 - un JPEG 1600×900 de 61 990 octets est ressorti en 512×512 de 22 607 octets ;
 - un rescan complet de la bibliothèque réelle avec les profils actifs a retrouvé
   281 fichiers et 253 films, zéro ajout, zéro suppression ;
@@ -452,7 +452,7 @@ le garde. C'est le point de contrat que la décision 48 signalait.
 Hors contrat : frontend M2, comptes, mots de passe, permissions, avatars fournis
 par Theia, et toute notion d'abonnement.
 
-### M3-BE — Séries
+### M3-BE - Séries
 
 **Statut : implémenté et vérifié dans
 [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7),
@@ -509,7 +509,7 @@ série courte.
 
 La réconciliation suit cet ordre : chemin connu, déplacement prouvé par taille
 et date, puis association locale titre normalisé + année. Plusieurs candidats
-de déplacement sont départagés seulement par un meilleur contexte unique —
+de déplacement sont départagés seulement par un meilleur contexte unique -
 même item, saison, puis série. Une égalité reste non fusionnée. Deux identités
 TMDB contradictoires bloquent l'association locale ; un même `tmdb_id` non nul
 est au contraire la preuve qui consolide des titres localisés. Une bascule
@@ -680,7 +680,7 @@ Hors contrat : sous-titres, transcodage vidéo, ordre DVD/absolu, profils,
 accès distant et choix automatique de « meilleure » qualité. Ils ne se sont pas
 glissés dans M3 par la fenêtre pendant que la porte était ouverte.
 
-### M4-BE — Accès distant
+### M4-BE - Accès distant
 
 **Statut : implémenté et vérifié dans
 [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a).
@@ -746,11 +746,11 @@ future route est distante **seulement** si elle est ajoutée à l'allowlist.
 
 | Méthode et route | Requête | Réponse / effet |
 |---|---|---|
-| `GET /api/remote-access` | — | Configuration, état, clé publique serveur, portée et pairs actifs |
+| `GET /api/remote-access` | - | Configuration, état, clé publique serveur, portée et pairs actifs |
 | `PUT /api/remote-access` | Champs partiels `enabled`, `listen_port`, `endpoint` | Valide puis applique la configuration complète |
 | `POST /api/remote-access/peers` | `{"name":"Télévision du salon"}` | 201, configuration et QR privés affichables une fois |
-| `DELETE /api/remote-access/peers/{id}` | — | 204, révocation immédiate et persistée |
-| `GET /api/remote-access/session` | — | `{"mode":"lan"}` ou pair distant authentifié |
+| `DELETE /api/remote-access/peers/{id}` | - | 204, révocation immédiate et persistée |
+| `GET /api/remote-access/session` | - | `{"mode":"lan"}` ou pair distant authentifié |
 
 `endpoint` est un `host:port`, sans schéma ni chemin. Il peut utiliser un DNS,
 IPv4 ou IPv6 entre crochets ; son port public peut différer de `listen_port`.
@@ -886,12 +886,12 @@ mal rempli.
 Hors contrat : frontend M4, configuration automatique du routeur, CGNAT/relay,
 HTTPS public, comptes, profils, sous-titres et transcodage vidéo.
 
-### M5-BE — Logo et navigation
+### M5-BE - Logo et navigation
 
 **Statut : aucun chantier backend.** Ce jalon appartient entièrement à la piste
 frontend et à la direction artistique.
 
-### M5b-BE — Sous-titres, pistes dans `/info`, ouverture de port automatique
+### M5b-BE - Sous-titres, pistes dans `/info`, ouverture de port automatique
 
 **Statut : implémenté et vérifié.** Décisions 55 à 57.
 
@@ -916,7 +916,7 @@ sens et aucune route n'est retirée.
 
 `kind` vaut `"text"` ou `"image"`. Une piste `image` (PGS, VobSub) est **listée
 et jamais servie** : décision 3 refuse de l'incruster. Les deux tableaux sont
-absents quand le fichier n'a pas encore été mesuré — `/info` ne déclenche
+absents quand le fichier n'a pas encore été mesuré - `/info` ne déclenche
 toujours pas ffmpeg (contrat M1 inchangé). Le frontend redemande `/info` une
 fois après le début de lecture si `media_status !== "ok"`.
 
@@ -944,7 +944,7 @@ de la même façon. Erreurs : `415 subtitle_image_based`,
 
 `PUT {"enabled": true, "automatic": true}` suffit : le serveur demande au
 routeur le port et l'adresse publique, puis démarre le tunnel. Mesuré sur la box
-du mainteneur — 438 ms de bout en bout, UPnP, endpoint public réel. Poser
+du mainteneur - 438 ms de bout en bout, UPnP, endpoint public réel. Poser
 `endpoint` à la main bascule `automatic` à `false`, sinon la découverte suivante
 écraserait la saisie.
 
@@ -953,8 +953,8 @@ du mainteneur — 438 ms de bout en bout, UPnP, endpoint public réel. Poser
 `remote_carrier_nat`. Le frontend possède les phrases (décision 25).
 
 **Migrations.** `0010_subtitles.sql` crée `movie_file_subtitle_tracks` et
-`episode_file_subtitle_tracks` — une seule table par famille, `stream_index`
-pour l'embarqué et `source_path` pour l'externe, exclusifs par CHECK — et ajoute
+`episode_file_subtitle_tracks` - une seule table par famille, `stream_index`
+pour l'embarqué et `source_path` pour l'externe, exclusifs par CHECK - et ajoute
 `subtitles_scanned` aux deux tables de fichiers. `0011_remote_automatic.sql`
 ajoute `automatic`, `mapped_method` et `mapped_port`.
 
@@ -967,7 +967,7 @@ lancer ffmpeg de toute façon.
 vrai fichier Star Wars du mainteneur (SRT servie rebasée à `t=1800`, PGS refusée
 en 415) et sur un corpus généré de quatre séries à pistes multiples.
 
-### M6-BE — Optimisation matérielle
+### M6-BE - Optimisation matérielle
 
 **Statut : implémenté et vérifié.** Décision 58.
 
@@ -998,12 +998,12 @@ un changement.
 
 **Deux paramètres sur `/remux`** :
 
-- `?h=720` — une hauteur de l'échelle, sinon `400 invalid_height`.
-- `?video=transcode` — réencode sans changer la taille. C'est ainsi que le
+- `?h=720` - une hauteur de l'échelle, sinon `400 invalid_height`.
+- `?video=transcode` - réencode sans changer la taille. C'est ainsi que le
   navigateur signale ce qu'aucun serveur ne peut savoir : il a chargé le
   fichier, il jouera le son, il ne produira jamais d'image.
 
-**Refus** : `503 transcode_busy` quand toutes les places sont prises — une en
+**Refus** : `503 transcode_busy` quand toutes les places sont prises - une en
 logiciel, trois en matériel. `415 video_transcode_required` quand aucun encodeur
 ne tourne.
 
@@ -1025,5 +1025,5 @@ cibles de compilation existantes.
 | M2-BE | Implémenté et vérifié | branche `feat/m1-frontend-and-m2-profiles` | Contrat ci-dessus ; M2-FE part de ce commit |
 | M3-BE | Implémenté et vérifié | [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7), [PR #5](https://github.com/Benitoow/theia-media/pull/5) | Contrat ci-dessus ; M3-FE part de ce commit |
 | M4-BE | Implémenté et vérifié | [`a547528`](https://github.com/Benitoow/theia-media/commit/a547528ddb0606a3dbe21c44015ced5088c78d2a) | Contrat ci-dessus ; M4-FE part de ce commit après fusion |
-| M5-BE | Sans backend | — | Aucun |
-| M6-BE | Différé | — | — |
+| M5-BE | Sans backend | - | Aucun |
+| M6-BE | Différé | - | - |

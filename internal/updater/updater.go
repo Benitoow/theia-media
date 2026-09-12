@@ -85,6 +85,8 @@ type Updater struct {
 	// restart is called once a new binary is in place. It is main's job: close
 	// the listener, start the replacement, exit.
 	restart func()
+	prepare func(context.Context, string) error
+	abort   func() error
 
 	// execPath is the file to replace. Injected so tests can point it at a
 	// copy rather than at the running test binary.
@@ -103,6 +105,10 @@ type Options struct {
 	Activity *activity.Tracker
 	Logger   *slog.Logger
 	Restart  func()
+	// Prepare snapshots durable application state immediately before the
+	// executable swap. Abort clears it if that swap fails.
+	Prepare func(context.Context, string) error
+	Abort   func() error
 
 	// APIBase defaults to GitHub. Tests point it at a stub.
 	APIBase string
@@ -123,6 +129,8 @@ func New(opts Options) *Updater {
 		log:      opts.Logger,
 		activity: opts.Activity,
 		restart:  opts.Restart,
+		prepare:  opts.Prepare,
+		abort:    opts.Abort,
 		execPath: opts.ExecPath,
 		status:   Status{State: StateIdle, CurrentVersion: opts.Version},
 	}

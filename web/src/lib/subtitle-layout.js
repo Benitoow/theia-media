@@ -1,7 +1,7 @@
 // Where a subtitle sits, in numbers.
 //
 // Every value here was measured in a real browser rather than reasoned about,
-// and the comments say which — this is the one part of the player whose
+// and the comments say which - this is the one part of the player whose
 // correctness cannot be read off the source, because it depends on what Chrome
 // does with a cue box that lives in a closed shadow root.
 //
@@ -13,8 +13,8 @@
  * The height of one line of subtitle text, which no API will tell you: the cue
  * box is inside a closed shadow root.
  *
- * The font size mirrors `.player-video::cue` in app.css — changing one means
- * changing the other — and the 2.2 multiplier is measured, not assumed, because
+ * The font size mirrors `.player-video::cue` in app.css - changing one means
+ * changing the other - and the 2.2 multiplier is measured, not assumed, because
  * Chrome does not honour `line-height` on `::cue`.
  */
 export function cueFontSize(rootFontSize, viewportWidth) {
@@ -30,7 +30,7 @@ export function cueLineHeight(rootFontSize, viewportWidth) {
  * The picture inside the element, which are not the same thing.
  *
  * `object-fit: contain` means a 2.39:1 film paints 1280x536 inside a 1280x720
- * element and puts 92px of black above and below it — measured on a real scope
+ * element and puts 92px of black above and below it - measured on a real scope
  * rip. Anchoring anything to the element floats it a sixth of the way up the
  * frame, over the actors rather than under them.
  *
@@ -63,7 +63,7 @@ export function layerBottom({ letterbox, picture, bar }) {
  * `line` as a count of lines was the obvious answer and does not work: it snaps
  * to a line height the browser picks, and at this type size a two-line cue still
  * sat under the scrub bar at -4. `lineAlign: 'end'` would anchor the bottom of
- * the cue and is the right idea, but Chrome ignores it — verified, the box
+ * the cue and is the right idea, but Chrome ignores it - verified, the box
  * stayed anchored by its top. So the position is computed instead.
  *
  * What it buys is worth being precise about. Measured at 1080p on a one-line
@@ -71,7 +71,7 @@ export function layerBottom({ letterbox, picture, bar }) {
  * lift, which is the bar's own height. The engine then maps that request through
  * a safe area of its own, so the absolute resting position is Chrome's to decide
  * and lands in the lower third, where a subtitle belongs. What this controls
- * reliably — and all it needs to control — is that the text moves out of the way
+ * reliably - and all it needs to control - is that the text moves out of the way
  * of the furniture and comes back when the furniture goes.
  */
 export function cueLine({ floor, area, lines, lineHeight, gap }) {

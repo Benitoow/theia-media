@@ -110,7 +110,7 @@ func (s *Store) List(ctx context.Context, profileID int64, limit, offset int) ([
 	}
 
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT `+movieColumns+movieSource+`
+		SELECT `+movieListColumns+movieSource+`
 		ORDER BY m.title COLLATE NOCASE, m.year
 		LIMIT ? OFFSET ?`, profileID, limit, offset)
 	if err != nil {

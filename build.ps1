@@ -4,22 +4,28 @@
 #   .\build.ps1 -Version 0.2.0  -> theia.exe, version "0.2.0"
 
 param(
-    [string]$Version = 'dev'
+    [string]$Version = 'dev',
+    [switch]$SkipFrontend
 )
 
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 
-Write-Host '==> Building the frontend' -ForegroundColor Cyan
-Push-Location (Join-Path $root 'web')
-try {
-    if (Test-Path 'package-lock.json') { npm ci } else { npm install }
-    if ($LASTEXITCODE -ne 0) { throw 'npm install failed' }
-    npm run build
-    if ($LASTEXITCODE -ne 0) { throw 'npm run build failed' }
+if (-not $SkipFrontend) {
+    Write-Host '==> Building the frontend' -ForegroundColor Cyan
+    Push-Location (Join-Path $root 'web')
+    try {
+        if (Test-Path 'package-lock.json') { npm ci } else { npm install }
+        if ($LASTEXITCODE -ne 0) { throw 'npm install failed' }
+        npm run build
+        if ($LASTEXITCODE -ne 0) { throw 'npm run build failed' }
+    }
+    finally {
+        Pop-Location
+    }
 }
-finally {
-    Pop-Location
+elseif (-not (Test-Path (Join-Path $root 'web-dist\index.html'))) {
+    throw '-SkipFrontend requires an existing built web-dist/index.html.'
 }
 
 # The static adapter wipes web-dist/, including the placeholder that keeps the
@@ -55,7 +61,7 @@ Write-Host "==> Building the binary (using $go)" -ForegroundColor Cyan
 Push-Location $root
 try {
     $env:CGO_ENABLED = '0'
-    & $go build -trimpath -ldflags "-s -w -X main.version=$Version" -o theia.exe ./cmd/theia
+    & $go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=$Version" -o theia.exe ./cmd/theia
     if ($LASTEXITCODE -ne 0) { throw 'go build failed' }
 }
 finally {

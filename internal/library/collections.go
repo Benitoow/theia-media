@@ -30,7 +30,7 @@ func (s *Store) CollectionParts(ctx context.Context, profileID, movieID int64, c
 	}
 
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT `+movieColumns+movieSource+`
+		SELECT `+movieListColumns+movieSource+`
 		WHERE m.collection_id = ? AND m.id != ?
 		ORDER BY
 			CASE WHEN m.release_date IS NULL OR m.release_date = '' THEN 1 ELSE 0 END,

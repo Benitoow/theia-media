@@ -1,4 +1,4 @@
-# THEIA — Piste frontend V2
+# THEIA - Piste frontend V2
 
 > File de travail frontend destinée à Claude. À lire après `CLAUDE.md`,
 > `spec-fondatrice.md`, `DECISIONS.md`, `design-system.md`,
@@ -28,7 +28,7 @@ Contraintes communes à tous les écrans :
 
 ## 2. État des jalons frontend
 
-### M1-FE — Choix du fichier sur la fiche film
+### M1-FE - Choix du fichier sur la fiche film
 
 **Statut : implémenté sur le contrat backend
 [`8518bab`](https://github.com/Benitoow/theia-media/commit/8518bab69a84a0f1a5073a16694e4efd52b0a02e)
@@ -97,7 +97,7 @@ La fixture complète, les payloads `info`, les codes HTTP et les limites sont
 dans la section M1-BE de `theia-v2-backend.md`. Le frontend traduit les codes ;
 il n'affiche aucune prose technique du serveur.
 
-### M2-FE — Profils, nouvelle mouture
+### M2-FE - Profils, nouvelle mouture
 
 **Statut : implémenté, vérifié à l'écran et confirmé par le mainteneur
 (décisions 48 et 50).**
@@ -119,7 +119,7 @@ label tracké pour les métadonnées, un seul accent, cibles de 52 à 56 px.
 
 #### Trois surfaces
 
-**1. Le sélecteur — écran plein, nav supprimée pour cette route.**
+**1. Le sélecteur - écran plein, nav supprimée pour cette route.**
 Marque en haut à gauche, titre en question au registre display, une rangée
 horizontale de cartes (image carrée, nom centré dessous en registre UI), puis,
 nettement détaché, un unique bouton contourné vers la gestion. Beaucoup de vide :
@@ -128,17 +128,17 @@ son esprit de densité non plus).
 
 Le premier focus D-pad est une carte de profil, jamais la nav ni le bouton de
 gestion : c'est la question que l'écran pose. La rangée suit la règle §9 des
-listes d'options — largeur partagée, axe géré, bords non consommés.
+listes d'options - largeur partagée, axe géré, bords non consommés.
 
-**2. La fiche de profil — deux panneaux empilés.**
+**2. La fiche de profil - deux panneaux empilés.**
 Identité en haut : image circulaire cerclée, nom, action d'édition discrète mais
 jamais réservée au survol. Puis une liste libellé-gauche / valeur-droite séparée
 par des filets : créé le, films commencés, films terminés, dernière lecture.
-Aucune ligne email, rôle, statut ou abonnement — elles n'existent pas ici.
+Aucune ligne email, rôle, statut ou abonnement - elles n'existent pas ici.
 En pied, isolée et pleine largeur, la suppression du profil, en `--error`, avec
 confirmation. Aucun bouton de déconnexion : il n'y a pas de session.
 
-**3. L'entrée dans la nav — un raccourci, pas un menu.**
+**3. L'entrée dans la nav - un raccourci, pas un menu.**
 L'avatar actif dans la nav **ouvre le sélecteur**. Pas de liste déroulante :
 la décision 35 avait mesuré pourquoi (illisible à trois mètres, débordement au
 plancher de 320 px, premier focus D-pad détourné vers la navigation).
@@ -148,7 +148,7 @@ plancher de 320 px, premier focus D-pad détourné vers la navigation).
 Tant qu'aucun profil n'est choisi dans ce navigateur, le sélecteur s'affiche à
 l'arrivée. Le choix vit en `localStorage`, comme la langue : une télévision et
 un portable n'imposent pas leur profil l'un à l'autre. Un retour n'est proposé
-que si un profil est déjà actif — arriver ici parce que l'application a besoin
+que si un profil est déjà actif - arriver ici parce que l'application a besoin
 d'une réponse ne doit pas offrir de partir sans la donner.
 
 #### États obligatoires à maquetter et tester au D-pad
@@ -163,7 +163,7 @@ entrer dans le dépôt, et les artworks des références sont exclus (dépôt pu
 GPL-3.0). Un profil sans image retombe sur une marque CSS, jamais sur une icône
 d'image cassée.
 
-### M3-FE — Séries
+### M3-FE - Séries
 
 **Statut : implémenté, vérifié à l'écran et confirmé par le mainteneur
 (décision 52).**
@@ -189,7 +189,7 @@ encodages, un `S01E02E03` combiné, un `S01E05` créant un trou, et un `S00E01`.
 Le corpus **utilisateur** ne contient toujours aucune série ; c'est la validation
 qui reste.
 
-### M4-FE — Accès distant
+### M4-FE - Accès distant
 
 **Statut : implémenté, vérifié sur le LAN et confirmé par le mainteneur en
 mode distant réel (décision 53).**
@@ -213,14 +213,14 @@ Ce qui **n'a pas** été vérifié : le mode distant lui-même. La navigation sa
 réglages et le saut d'onboarding sont implémentés selon le contrat, mais ils ne
 peuvent être observés que depuis une vraie session derrière WireGuard.
 
-### M5-FE — Logo et identité de navigation
+### M5-FE - Logo et identité de navigation
 
 **Statut : implémenté (décision 54).** Quatre pistes ont été dessinées, rendues
 à 16, 28 et 96 px puis en verrou de navigation, et soumises au mainteneur avant
 la première ligne de code, comme le jalon l'exigeait.
 
 Retenu : **le mot et le filet**. La marque réduite est l'initiale posée sur le
-même filet — un recadrage du verrou, pas une seconde marque à côté. Elle sert de
+même filet - un recadrage du verrou, pas une seconde marque à côté. Elle sert de
 favicon et, rendue depuis le même SVG, d'icône d'application. `icon-512.png` et
 `theia-wordmark.webp` ont quitté le binaire.
 
@@ -228,7 +228,7 @@ Le trait est dessiné en chemins et non en `<text>` : un favicon est chargé com
 une image, donc sans police web. Le fichier est vérifié en le décodant dans un
 `Image()`, pas en constatant qu'il existe.
 
-### M5b-FE — Pistes dans le lecteur, accès distant à un bouton
+### M5b-FE - Pistes dans le lecteur, accès distant à un bouton
 
 **Statut : implémenté et vérifié.** Décisions 55 à 57. Issu d'un retour d'usage
 après une vraie soirée de visionnage, pas d'un jalon planifié.
@@ -240,14 +240,14 @@ avec « Aucun » en premier. Le panneau possède son axe vertical comme la liste
 fichiers (§9), et n'est pas un second dialogue : le bouton qui l'ouvre doit
 rester atteignable pour le refermer.
 
-La page du film ne garde que le choix du fichier — le seul qui précède
+La page du film ne garde que le choix du fichier - le seul qui précède
 réellement le visionnage. Le sélecteur audio qui s'y trouvait était invisible
 dans le cas qui compte : voir décision 55.
 
 **Trois pièges mesurés, pas devinés.**
 
 - Changer de piste audio est un nouveau flux, pas un réglage : ffmpeg mappe une
-  piste et ne peut pas en changer en cours de tube. La position est conservée —
+  piste et ne peut pas en changer en cours de tube. La position est conservée -
   vérifié, lecture jusqu'à 8 s puis `?t=8&audio=15`, l'horloge reprend à 0:11.
 - Les sous-titres se placent en calculant, parce que `line` en nombre de lignes
   s'aligne sur une hauteur choisie par le moteur et que Chrome ignore
@@ -259,8 +259,8 @@ dans le cas qui compte : voir décision 55.
 
 **L'accès distant tient en un bouton.** Plus de champ de port, plus de champ
 d'adresse, plus de paragraphe sur la redirection de port en tête de panneau. Le
-panneau affiche ce que le routeur a répondu — adresse publique, protocole
-utilisé — et un seul bouton. Le réglage manuel existe toujours, replié, et
+panneau affiche ce que le routeur a répondu - adresse publique, protocole
+utilisé - et un seul bouton. Le réglage manuel existe toujours, replié, et
 s'ouvre de lui-même quand le routeur a refusé.
 
 Les trois refus possibles ont chacun leur phrase, y compris le CGNAT, qui
@@ -271,7 +271,7 @@ profil mesuré à 52 × 52 px (rond, plus ovale), panneau de pistes ouvert et
 sous-titres affichés au-dessus de la barre, panneau distant actif avec
 `77.194.186.253` et « Port ouvert par UPnP ».
 
-### M6-FE — Contrôles de qualité et capacités matérielles
+### M6-FE - Contrôles de qualité et capacités matérielles
 
 **Statut : implémenté et vérifié.** Décision 58.
 
@@ -279,7 +279,7 @@ Une troisième section dans le panneau du lecteur, alimentée uniquement par
 `qualities`. Aucun bouton décoratif : sans encodeur qui tourne, le serveur
 n'envoie rien et la section n'existe pas.
 
-Le titre de section porte le coût — « carte graphique » ou « processeur » —
+Le titre de section porte le coût - « carte graphique » ou « processeur » -
 parce que c'est un fait sur cette machine, pas une propriété du 720p, et parce
 que l'écart mesuré est de 4,56× contre 1,04×.
 

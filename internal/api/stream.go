@@ -23,6 +23,7 @@ type streamInfoResponse struct {
 	Container    string `json:"container"`
 	MediaStatus  string `json:"media_status,omitempty"`
 	VideoRisky   bool   `json:"video_risky,omitempty"`
+	ToneMap      bool   `json:"tone_map,omitempty"`
 
 	// The measured video codec, lowercase, e.g. "hevc". Sent so the browser can
 	// remember its own verdict per codec rather than for "risky files" as a
@@ -92,26 +93,10 @@ func (s *Server) handleStreamDirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer endPlayback()
-
-	file, err := os.Open(movie.Path)
-	if err != nil {
-		s.log.Warn("opening a film for direct play failed", "path", movie.Path, "error", err)
-		writeJSONError(w, http.StatusNotFound, "the file could not be opened")
-		return
-	}
-	defer file.Close()
-
-	info, err := file.Stat()
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "the file could not be read")
-		return
-	}
-
-	w.Header().Set("Content-Type", contentTypeFor(movie.Path))
-	// Private: this is one household's media, and no proxy has any business
-	// keeping a copy of it.
-	w.Header().Set("Cache-Control", "private, max-age=0")
-	http.ServeContent(w, r, filepath.Base(movie.Path), info.ModTime(), file)
+	// The legacy route keeps its documented gap: it does not refuse an audio
+	// selection, unlike the per-file route. Decision 59 territory, unchanged
+	// until a contract change is validated separately.
+	s.serveDirectContent(w, r, movie.Path, "film", movie.ID, 0)
 }
 
 // handleStreamRemux rewraps a file into fragmented MP4 on the fly.

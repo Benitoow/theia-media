@@ -32,7 +32,7 @@ const (
 )
 
 // compressible reports whether a Content-Type is worth the trouble. Anything
-// not named here — video, JPEG, WebP, the sprite sheets — goes out untouched.
+// not named here - video, JPEG, WebP, the sprite sheets - goes out untouched.
 func compressible(contentType string) bool {
 	if i := strings.IndexByte(contentType, ';'); i >= 0 {
 		contentType = contentType[:i]

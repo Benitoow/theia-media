@@ -12,18 +12,20 @@ anything; they answer most questions that would otherwise be asked again.
 |---|---|
 | [`docs/spec-fondatrice.md`](docs/spec-fondatrice.md) | What Theia is and what it refuses to be. The scope of v1, and the technical prohibitions. Start here. |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Every decision already taken, with its reasoning and, where it matters, the bug that forced it. Check here before re-opening a question. |
-| [`docs/design-system.md`](docs/design-system.md) | Colour, type, spacing, motion, focus. §6 — *the card grid is exempt* — is the single most important constraint in the interface. |
+| [`docs/design-system.md`](docs/design-system.md) | Colour, type, spacing, motion, focus. §6 - *the card grid is exempt* - is the single most important constraint in the interface. |
 
 **V3 shipped in `v3.0.0`.** Its verified product and playback boundaries are in
-[`docs/v3.md`](docs/v3.md). V3.1 is the current feature baseline and begins the
-field-testing phase described in decision 97. New features wait for evidence
-from roughly ten real household libraries; security, data-loss, playback,
-regression and concrete compatibility fixes continue as `v3.1.x` patches.
+[`docs/v3.md`](docs/v3.md). V3.2 is the current engine baseline; its release
+summary is [`docs/releases/v3.2.0.md`](docs/releases/v3.2.0.md) and the detailed
+campaigns are indexed in [`docs/archive/v3.2/`](docs/archive/v3.2/README.md).
+Field testing still follows decision 97: new features wait for evidence from
+roughly ten real household libraries, while security, data-loss, playback,
+regression and concrete compatibility fixes remain admissible.
 
-The five V2 coordination documents — the roadmap, two track handoffs and two
-discovery notes — live in [`docs/archive/`](docs/archive/README.md). They retain
-useful reasoning but do not describe the current product. Read the code, the V3
-record and the three governing documents above instead.
+Finished coordination notes and measurement campaigns live in
+[`docs/archive/`](docs/archive/README.md). They retain useful reasoning but do
+not describe the current product. Read the code, the V3 record and the three
+governing documents above instead.
 
 If a change contradicts one of them, the document is changed first, in the same
 commit, with the reasoning written down. `DECISIONS.md` is append-only in
@@ -54,8 +56,8 @@ the default. User-facing copy and locale-specific formatters live in
 language is a new catalogue, not a hunt through Svelte markup.
 
 **The server never writes what the user reads** (decision 25). The API sends
-codes — a scan problem is `{kind, path}`, an update failure carries a `reason`,
-a home row carries a `kind` — and the interface owns every sentence. This rule
+codes - a scan problem is `{kind, path}`, an update failure carries a `reason`,
+a home row carries a `kind` - and the interface owns every sentence. This rule
 exists because the settings page once showed somebody a Windows syscall name
 wrapped in English in the middle of a French page.
 
@@ -117,7 +119,7 @@ Two traps already paid for:
 - **A screenshot does not verify a web font.** A refused face renders as the
   fallback behind it, which is a perfectly good font, so the page looks entirely
   correct. `document.fonts.check()` is the only thing that answers; the guard
-  asserts it. This cost a shipped release — decision 79.
+  asserts it. This cost a shipped release - decision 79.
 - The in-app preview pane does **not** composite frames. `requestAnimationFrame`
   never fires there, so no CSS animation, transition or smooth scroll advances,
   and computed styles for a `position: fixed` subtree can be stale. Anything

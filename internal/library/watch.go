@@ -62,6 +62,7 @@ type Watcher struct {
 
 	interval  time.Duration
 	stability time.Duration
+	now       func() time.Time
 
 	mu    sync.Mutex
 	roots []string
@@ -84,6 +85,7 @@ func NewWatcher(svc *Service, roots []string, log *slog.Logger) *Watcher {
 		log:       log,
 		interval:  DefaultWatchInterval,
 		stability: defaultStabilityDelay,
+		now:       time.Now,
 		roots:     slices.Clone(roots),
 		wake:      make(chan struct{}, 1),
 	}
@@ -124,51 +126,70 @@ func (w *Watcher) Wake() {
 // fingerprint would otherwise make the first tick do the same work a minute
 // later and call it a change.
 func (w *Watcher) Run(ctx context.Context) {
-	w.pass(ctx, true)
-
-	ticker := time.NewTicker(w.interval)
-	defer ticker.Stop()
+	retry := w.pass(ctx, true)
+	timer := time.NewTimer(w.nextDelay(retry))
+	defer timer.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-w.wake:
-			w.pass(ctx, true)
-		case <-ticker.C:
-			w.pass(ctx, false)
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			retry = w.pass(ctx, true)
+			timer.Reset(w.nextDelay(retry))
+		case <-timer.C:
+			retry = w.pass(ctx, false)
+			timer.Reset(w.nextDelay(retry))
 		}
 	}
 }
 
+// nextDelay keeps the low-frequency disk policy while closing its blind spot:
+// if a walk deliberately skipped a file that was still settling, the next walk
+// happens when that file becomes eligible rather than up to another minute
+// later. A copy that is still active simply moves its mtime and schedules the
+// following check again.
+func (w *Watcher) nextDelay(retry time.Duration) time.Duration {
+	if retry > 0 && retry < w.interval {
+		return retry
+	}
+	return w.interval
+}
+
 // pass looks at the disk and reconciles if there is a reason to.
-func (w *Watcher) pass(ctx context.Context, force bool) {
+func (w *Watcher) pass(ctx context.Context, force bool) time.Duration {
 	roots := w.Roots()
 	if len(roots) == 0 {
-		return
+		return 0
 	}
 
-	fingerprint, ok := w.observe(ctx, roots)
+	observed, fingerprint, retry, ok := w.observe(ctx, roots)
 	if !ok {
-		return
+		return 0
 	}
 
 	if !force && w.hasSeen && fingerprint == w.seen && !w.svc.HasOutstandingMetadata(ctx) {
-		return
+		return retry
 	}
 
-	report, err := w.svc.scanStable(ctx, roots, time.Now().Add(-w.stability))
+	report, err := w.svc.scanObserved(ctx, roots, w.now().Add(-w.stability), observed)
 	switch {
 	case errors.Is(err, ErrScanInProgress):
 		// Somebody pressed the button, or a previous pass is still going. Their
 		// scan does exactly this work; claiming this fingerprint as reconciled
 		// would be taking credit for it, so the next pass tries again.
-		return
+		return retry
 	case errors.Is(err, context.Canceled):
-		return
+		return 0
 	case err != nil:
 		w.log.Error("the automatic scan failed", "error", err)
-		return
+		return retry
 	}
 
 	w.seen, w.hasSeen = fingerprint, true
@@ -177,6 +198,7 @@ func (w *Watcher) pass(ctx context.Context, force bool) {
 		w.log.Info("the library changed on disk",
 			"added", report.Added, "removed", report.Removed, "found", report.Found)
 	}
+	return retry
 }
 
 // observe walks the roots and reduces what it saw to one number.
@@ -186,13 +208,15 @@ func (w *Watcher) pass(ctx context.Context, force bool) {
 // in as well: a root that has vanished takes its files with it, and without
 // this a library whose every file lived on that one drive would produce the
 // same fingerprint as a library that had genuinely been emptied.
-func (w *Watcher) observe(ctx context.Context, roots []string) (uint64, bool) {
+func (w *Watcher) observe(ctx context.Context, roots []string) (scanner.Result, uint64, time.Duration, bool) {
 	result, err := scanner.Scan(ctx, roots, quiet)
 	if err != nil {
-		return 0, false
+		return scanner.Result{}, 0, 0, false
 	}
 
-	settled := time.Now().Add(-w.stability)
+	now := w.now()
+	settled := now.Add(-w.stability)
+	var retry time.Duration
 	digest := fnv.New64a()
 	scratch := make([]byte, 8)
 
@@ -207,6 +231,10 @@ func (w *Watcher) observe(ctx context.Context, roots []string) (uint64, bool) {
 
 	for _, file := range result.Files {
 		if file.ModifiedAt.After(settled) {
+			untilSettled := file.ModifiedAt.Add(w.stability).Sub(now)
+			if retry == 0 || untilSettled < retry {
+				retry = untilSettled
+			}
 			continue
 		}
 		text(file.Path)
@@ -217,5 +245,5 @@ func (w *Watcher) observe(ctx context.Context, roots []string) (uint64, bool) {
 		text(string(problem.Kind))
 		text(problem.Path)
 	}
-	return digest.Sum64(), true
+	return result, digest.Sum64(), retry, true
 }

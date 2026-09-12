@@ -203,7 +203,7 @@ func (r *tunnelRuntime) protect(next http.Handler, httpPort int) http.Handler {
 }
 
 func remoteRouteAllowed(method, path string) bool {
-	if method == http.MethodPost && path == "/api/playback/heartbeat" {
+	if method == http.MethodPost && (path == "/api/playback/heartbeat" || path == "/api/diagnostics/events") {
 		return true
 	}
 	if !strings.HasPrefix(path, "/api/") {

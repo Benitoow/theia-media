@@ -28,6 +28,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Benitoow/theia-media/internal/boundedio"
 )
 
 var (
@@ -40,36 +42,113 @@ var (
 	ErrMediaUnreadable = errors.New("ffmpeg: media is unreadable")
 )
 
-// releaseTag is an immutable git tag, which matters more than it looks.
-//
-// The obvious alternatives publish under moving tags -- BtbN/FFmpeg-Builds uses
-// "latest", which is republished in place -- and a pinned checksum against a
-// moving target fails the day upstream rebuilds. eugeneware/ffmpeg-static tags
-// each build, covers every OS and architecture Theia ships for, and hosts on
-// GitHub Releases, which is one of the two hosts this project is allowed to
-// contact at all.
-const releaseTag = "b6.1.1"
+// releaseTag is an immutable GitHub release. Jellyfin's portable FFmpeg build
+// is the newest stable source found with native artifacts for every platform
+// Theia ships, including Windows ARM64. FFmpeg's own 9.x release currently has
+// no single trustworthy binary source covering that six-platform matrix; using
+// one runtime family everywhere is preferable to changing features by OS.
+const releaseTag = "v8.1.2-4"
 
-const downloadBase = "https://github.com/eugeneware/ffmpeg-static/releases/download/" + releaseTag + "/"
+const expectedVersion = "ffmpeg version 8.1.2-Jellyfin"
 
-// build is one pinned artifact. The digests come from the GitHub release API,
-// which reports a sha256 for every asset, so they were pinned without having to
-// trust a separately published checksum file.
+const (
+	previousRuntimeSuffix  = ".previous"
+	unmanagedRuntimeSuffix = ".unmanaged"
+	invalidRuntimeSuffix   = ".invalid"
+)
+
+const downloadBase = "https://github.com/jellyfin/jellyfin-ffmpeg/releases/download/" + releaseTag + "/"
+
+// No pinned package is larger than 65 MiB. Keep enough room for packaging
+// changes, but never let a broken or hostile response fill the data disk before
+// its (necessarily wrong) digest can be rejected.
+const maxPackageBytes int64 = 256 << 20
+
+// build is one pinned package and the one executable Theia extracts from it.
+// packageSHA256 is GitHub's digest for the release asset; binarySHA256 was
+// measured after extracting that verified package. Both are required: the first
+// protects the download, the second keeps every subsequent startup verifiable.
 type build struct {
-	asset  string
-	sha256 string
+	asset         string
+	packageSHA256 string
+	binarySHA256  string
+	format        archiveFormat
+}
+
+type legacyRuntime struct {
+	binarySHA256    string
+	expectedVersion string
+}
+
+// RuntimeManifest is the complete provenance of the external executable used
+// on one platform. Keeping it queryable makes runtime upgrades reviewable
+// without duplicating asset names and digests in diagnostics or scripts.
+type RuntimeManifest struct {
+	Release        string `json:"release"`
+	Asset          string `json:"asset"`
+	SHA256         string `json:"sha256"`
+	DownloadSHA256 string `json:"download_sha256"`
+	Source         string `json:"source"`
+}
+
+func Manifest() (RuntimeManifest, bool) {
+	spec, ok := builds[runtime.GOOS+"/"+runtime.GOARCH]
+	if !ok {
+		return RuntimeManifest{}, false
+	}
+	return RuntimeManifest{
+		Release:        releaseTag,
+		Asset:          spec.asset,
+		SHA256:         spec.binarySHA256,
+		DownloadSHA256: spec.packageSHA256,
+		Source:         downloadBase + spec.asset,
+	}, true
 }
 
 var builds = map[string]build{
-	"windows/amd64": {"ffmpeg-win32-x64", "04e1307997530f9cf2fe35cba2ca7e8875ca91da02f89d6c7243df819c94ad00"},
-	// No native Windows ARM64 build exists upstream. Windows runs x64 binaries
-	// under emulation, so the x64 one is used rather than leaving the platform
-	// without remuxing entirely.
-	"windows/arm64": {"ffmpeg-win32-x64", "04e1307997530f9cf2fe35cba2ca7e8875ca91da02f89d6c7243df819c94ad00"},
-	"linux/amd64":   {"ffmpeg-linux-x64", "e7e7fb30477f717e6f55f9180a70386c62677ef8a4d4d1a5d948f4098aa3eb99"},
-	"linux/arm64":   {"ffmpeg-linux-arm64", "6bb182d0d75d23028db82e9e4f723ca69b853d055698486e6984ddb2c06fb8ce"},
-	"darwin/amd64":  {"ffmpeg-darwin-x64", "ebdddc936f61e14049a2d4b549a412b8a40deeff6540e58a9f2a2da9e6b18894"},
-	"darwin/arm64":  {"ffmpeg-darwin-arm64", "a90e3db6a3fd35f6074b013f948b1aa45b31c6375489d39e572bea3f18336584"},
+	"windows/amd64": {
+		"jellyfin-ffmpeg_8.1.2-4_portable_win64-clang-gpl.zip",
+		"a6821d72985ee6d5a8af16925b468d1c4ec1f652b582a0a2a5039282c26ffca5",
+		"546580347aa7553ea9ac5fbcba05b787e423f9ce0685a71e7500b554cc21bc6c", archiveZip,
+	},
+	"windows/arm64": {
+		"jellyfin-ffmpeg_8.1.2-4_portable_winarm64-clang-gpl.zip",
+		"f77e3d0b2dcb4bb7eec51e7240cceaee9071f715ab7d7efb4b6e263b04f75f0d",
+		"ce0f3f8225fcd23c75a8786ba91d99dc6df8dcce696194878c967fca9befaac9", archiveZip,
+	},
+	"linux/amd64": {
+		"jellyfin-ffmpeg_8.1.2-4_portable_linux64-gpl.tar.xz",
+		"6e7150c358f9817a04ce82c62d81135cb4535d8525047393f4b296fff3d7a664",
+		"9302bc18b99a39de49bcb44be392b534340c2d27ded75f0c1225bae4612c24c9", archiveTarXZ,
+	},
+	"linux/arm64": {
+		"jellyfin-ffmpeg_8.1.2-4_portable_linuxarm64-gpl.tar.xz",
+		"ceb9642ee513491d0440bc0027dfa33f2fc6c9966cabb0ec69f43edcbb853e84",
+		"ebc8f52d82f71fa4d982a8a1954805e9605c72c7b8c4d20b84b74e63237f1d33", archiveTarXZ,
+	},
+	"darwin/amd64": {
+		"jellyfin-ffmpeg_8.1.2-4_portable_mac64-gpl.tar.xz",
+		"d50d288cd321f12f506d91ef3c21cfdec34f160191a556d4da8fe73b3d1b22bd",
+		"a8c942a96825aab9ca112dbc1b194109e38aae4f7adfb28e6f577666f9c6f913", archiveTarXZ,
+	},
+	"darwin/arm64": {
+		"jellyfin-ffmpeg_8.1.2-4_portable_macarm64-gpl.tar.xz",
+		"1362e5cd8399bb9d648f237b94fff86f864aa9b61a3f239cfcccd77f91bf2649",
+		"e4947e53444dda2bc1fb1f6c0461b4691b93483ab76829f5e9a9c3f2dfa0b67b", archiveTarXZ,
+	},
+}
+
+// legacyRuntimes contains only binaries that Theia itself previously shipped.
+// They are allowed as a one-process fallback when the pinned replacement cannot
+// be downloaded. An arbitrary executable dropped into the managed directory is
+// preserved for the owner, but is never executed by Theia.
+var legacyRuntimes = map[string][]legacyRuntime{
+	"windows/amd64": {{"04e1307997530f9cf2fe35cba2ca7e8875ca91da02f89d6c7243df819c94ad00", "ffmpeg version 6.1.1"}},
+	"windows/arm64": {{"04e1307997530f9cf2fe35cba2ca7e8875ca91da02f89d6c7243df819c94ad00", "ffmpeg version 6.1.1"}},
+	"linux/amd64":   {{"e7e7fb30477f717e6f55f9180a70386c62677ef8a4d4d1a5d948f4098aa3eb99", "ffmpeg version 6.1.1"}},
+	"linux/arm64":   {{"6bb182d0d75d23028db82e9e4f723ca69b853d055698486e6984ddb2c06fb8ce", "ffmpeg version 6.1.1"}},
+	"darwin/amd64":  {{"ebdddc936f61e14049a2d4b549a412b8a40deeff6540e58a9f2a2da9e6b18894", "ffmpeg version 6.1.1"}},
+	"darwin/arm64":  {{"a90e3db6a3fd35f6074b013f948b1aa45b31c6375489d39e572bea3f18336584", "ffmpeg version 6.1.1"}},
 }
 
 // Manager owns the local copy of ffmpeg.
@@ -92,14 +171,24 @@ type Manager struct {
 	// see decoders.go. The empty string is a valid answer.
 	decoderOnce sync.Once
 	decoder     string
+
+	probeMu sync.Mutex
+	probes  map[string]*probeFlight
+}
+
+type probeFlight struct {
+	done chan struct{}
+	info MediaInfo
+	err  error
 }
 
 // New prepares a manager. dir is where the binary is kept.
 func New(dir string, log *slog.Logger) *Manager {
 	return &Manager{
-		dir:  dir,
-		log:  log,
-		http: &http.Client{Timeout: 15 * time.Minute},
+		dir:    dir,
+		log:    log,
+		http:   &http.Client{Timeout: 15 * time.Minute},
+		probes: map[string]*probeFlight{},
 	}
 }
 
@@ -129,7 +218,8 @@ func (m *Manager) Available() bool {
 // The first call may take a while; every later one is a stat. Callers should
 // treat the first invocation as user-visible work.
 func (m *Manager) Path(ctx context.Context) (string, error) {
-	spec, ok := builds[runtime.GOOS+"/"+runtime.GOARCH]
+	platform := runtime.GOOS + "/" + runtime.GOARCH
+	spec, ok := builds[platform]
 	if !ok {
 		return "", ErrUnsupportedPlatform
 	}
@@ -143,29 +233,71 @@ func (m *Manager) Path(ctx context.Context) (string, error) {
 		return target, nil
 	}
 
-	// A file already there is re-hashed once per process. Cheap insurance
-	// against a half-finished download from a previous run, or a swapped
-	// binary.
+	// The directory is owned by Theia. A current runtime is used, a runtime
+	// shipped by an older Theia may carry one failed download, and every other
+	// executable is quarantined only after its verified replacement is ready.
+	// Nothing is deleted merely because GitHub or the network is unavailable.
+	var (
+		fallback     *legacyRuntime
+		backupSuffix string
+	)
 	if _, err := os.Stat(target); err == nil {
-		switch err := verify(target, spec.sha256); {
-		case err == nil:
-			m.verified = true
-			return target, nil
-		default:
-			m.log.Warn("the cached ffmpeg failed verification and will be downloaded again",
-				"error", err)
-			os.Remove(target)
+		if err := verify(target, spec.binarySHA256); err == nil {
+			if err := validateRuntime(ctx, target); err == nil {
+				m.removeVerifiedLegacyBackup(target)
+				m.verified = true
+				return target, nil
+			} else {
+				m.log.Warn("the cached ffmpeg has the pinned hash but cannot be executed; a verified replacement will be prepared", "error", err)
+				backupSuffix = invalidRuntimeSuffix
+			}
+		} else if legacy := matchingLegacyRuntime(target, legacyRuntimes[platform]); legacy != nil {
+			fallback = legacy
+			backupSuffix = previousRuntimeSuffix
+			m.log.Info("a previous Theia ffmpeg runtime will be upgraded", "from", legacy.expectedVersion, "to", expectedVersion)
+		} else {
+			backupSuffix = unmanagedRuntimeSuffix
+			m.log.Warn("the ffmpeg executable in Theia's managed directory was not installed by this or the previous release; it will not be executed")
 		}
 	}
 
-	if err := m.download(ctx, spec, target); err != nil {
+	if err := m.downloadAndInstall(ctx, spec, target, backupSuffix); err != nil {
+		if fallback != nil {
+			if fallbackErr := validateRuntimeVersion(ctx, target, fallback.expectedVersion); fallbackErr == nil {
+				m.log.Warn("the pinned ffmpeg update failed; this process will keep the verified previous Theia runtime", "error", err)
+				m.verified = true
+				return target, nil
+			}
+		}
 		return "", err
 	}
 	m.verified = true
 	return target, nil
 }
 
+func validateRuntime(ctx context.Context, path string) error {
+	return validateRuntimeVersion(ctx, path, expectedVersion)
+}
+
+func validateRuntimeVersion(ctx context.Context, path, expected string) error {
+	checkCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(checkCtx, path, "-version").Output()
+	if err != nil {
+		return fmt.Errorf("ffmpeg: validating runtime version: %w", err)
+	}
+	first := strings.SplitN(strings.TrimSpace(string(out)), "\n", 2)[0]
+	if !strings.Contains(first, expected) {
+		return fmt.Errorf("ffmpeg: runtime reports %q, expected %q", first, expected)
+	}
+	return nil
+}
+
 func (m *Manager) download(ctx context.Context, spec build, target string) error {
+	return m.downloadAndInstall(ctx, spec, target, "")
+}
+
+func (m *Manager) downloadAndInstall(ctx context.Context, spec build, target, backupSuffix string) error {
 	if err := os.MkdirAll(m.dir, 0o755); err != nil {
 		return fmt.Errorf("ffmpeg: creating %s: %w", m.dir, err)
 	}
@@ -185,41 +317,135 @@ func (m *Manager) download(ctx context.Context, spec build, target string) error
 	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("ffmpeg: downloading: unexpected status %d", res.StatusCode)
 	}
-
-	// Downloaded to a temporary name with no executable bit. It is only given
-	// one, and only moved into place, after the digest matches -- an unverified
-	// binary must never be runnable, however briefly.
-	tmp, err := os.CreateTemp(m.dir, ".ffmpeg-download-*")
-	if err != nil {
-		return fmt.Errorf("ffmpeg: creating a temporary file: %w", err)
+	if res.ContentLength > maxPackageBytes {
+		return fmt.Errorf("ffmpeg: package is too large: %d bytes", res.ContentLength)
 	}
-	tmpName := tmp.Name()
-	defer os.Remove(tmpName)
+
+	// The release asset and the executable extracted from it are two separate
+	// trust boundaries. Both temporary files are non-executable; neither byte is
+	// run until the GitHub package digest and the pinned runtime digest match.
+	archiveFile, err := os.CreateTemp(m.dir, ".ffmpeg-download-*")
+	if err != nil {
+		return fmt.Errorf("ffmpeg: creating a temporary package: %w", err)
+	}
+	archiveName := archiveFile.Name()
+	defer os.Remove(archiveName)
 
 	digest := sha256.New()
-	if _, err := io.Copy(io.MultiWriter(tmp, digest), res.Body); err != nil {
-		tmp.Close()
+	written, err := io.Copy(io.MultiWriter(archiveFile, digest), io.LimitReader(res.Body, maxPackageBytes+1))
+	if err != nil {
+		archiveFile.Close()
 		return fmt.Errorf("ffmpeg: downloading: %w", err)
 	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("ffmpeg: writing the download: %w", err)
+	if written > maxPackageBytes {
+		archiveFile.Close()
+		return fmt.Errorf("ffmpeg: package exceeds %d bytes", maxPackageBytes)
+	}
+	if err := archiveFile.Close(); err != nil {
+		return fmt.Errorf("ffmpeg: writing the package: %w", err)
 	}
 
 	got := hex.EncodeToString(digest.Sum(nil))
-	if got != spec.sha256 {
+	if got != spec.packageSHA256 {
 		return fmt.Errorf("ffmpeg: checksum mismatch for %s: expected %s, got %s",
-			spec.asset, spec.sha256, got)
+			spec.asset, spec.packageSHA256, got)
 	}
 
-	if err := os.Chmod(tmpName, 0o755); err != nil {
+	runtimeFile, err := os.CreateTemp(m.dir, ".ffmpeg-runtime-*")
+	if err != nil {
+		return fmt.Errorf("ffmpeg: creating a temporary runtime: %w", err)
+	}
+	runtimeName := runtimeFile.Name()
+	defer os.Remove(runtimeName)
+	if err := runtimeFile.Close(); err != nil {
+		return fmt.Errorf("ffmpeg: preparing the temporary runtime: %w", err)
+	}
+
+	if err := extractRuntime(archiveName, runtimeName, binaryName(), spec.format); err != nil {
+		return fmt.Errorf("ffmpeg: extracting %s: %w", spec.asset, err)
+	}
+	if err := verify(runtimeName, spec.binarySHA256); err != nil {
+		return fmt.Errorf("ffmpeg: extracted runtime verification failed: %w", err)
+	}
+	if err := os.Chmod(runtimeName, 0o755); err != nil {
 		return fmt.Errorf("ffmpeg: making the binary executable: %w", err)
 	}
-	if err := os.Rename(tmpName, target); err != nil {
+	// Execute the staged file before touching what currently works. A correct
+	// pair of hashes proves provenance; this proves the binary runs here.
+	if err := validateRuntime(ctx, runtimeName); err != nil {
+		return fmt.Errorf("ffmpeg: validating the staged runtime: %w", err)
+	}
+	if err := installRuntime(runtimeName, target, backupSuffix); err != nil {
 		return fmt.Errorf("ffmpeg: installing the binary: %w", err)
 	}
 
-	m.log.Info("ffmpeg installed", "path", target, "sha256", spec.sha256[:12]+"…")
+	m.log.Info("ffmpeg installed", "path", target, "sha256", spec.binarySHA256[:12]+"…")
 	return nil
+}
+
+func matchingLegacyRuntime(path string, candidates []legacyRuntime) *legacyRuntime {
+	for index := range candidates {
+		if verify(path, candidates[index].binarySHA256) == nil {
+			return &candidates[index]
+		}
+	}
+	return nil
+}
+
+// installRuntime swaps only after the replacement has been fully verified and
+// executed. Windows permits renaming a running executable but not replacing it
+// in place, so the same two-renames protocol as Theia's updater is used here.
+func installRuntime(staged, target, backupSuffix string) error {
+	if _, err := os.Stat(target); errors.Is(err, os.ErrNotExist) {
+		return os.Rename(staged, target)
+	} else if err != nil {
+		return err
+	}
+	if backupSuffix == "" {
+		return fmt.Errorf("refusing to replace an existing runtime without a preservation class")
+	}
+
+	backup, err := availableRuntimeBackup(target + backupSuffix)
+	if err != nil {
+		return err
+	}
+	if err := os.Rename(target, backup); err != nil {
+		return err
+	}
+	if err := os.Rename(staged, target); err != nil {
+		if restoreErr := os.Rename(backup, target); restoreErr != nil {
+			return fmt.Errorf("install failed: %v; restoring the previous runtime failed: %w", err, restoreErr)
+		}
+		return err
+	}
+	return nil
+}
+
+func availableRuntimeBackup(base string) (string, error) {
+	for index := 0; index < 100; index++ {
+		candidate := base
+		if index > 0 {
+			candidate = fmt.Sprintf("%s.%d", base, index)
+		}
+		if _, err := os.Stat(candidate); errors.Is(err, os.ErrNotExist) {
+			return candidate, nil
+		} else if err != nil {
+			return "", err
+		}
+	}
+	return "", fmt.Errorf("too many preserved runtimes beside %s", base)
+}
+
+func (m *Manager) removeVerifiedLegacyBackup(target string) {
+	for _, candidate := range legacyRuntimes[runtime.GOOS+"/"+runtime.GOARCH] {
+		path := target + previousRuntimeSuffix
+		if verify(path, candidate.binarySHA256) == nil {
+			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+				m.log.Debug("the previous ffmpeg runtime could not be removed", "path", path, "error", err)
+			}
+			return
+		}
+	}
 }
 
 // verify hashes a file on disk against an expected digest.
@@ -337,13 +563,42 @@ var (
 // the stream table and exits non-zero on purpose -- the exit code is therefore
 // ignored, and only the absence of a video stream is treated as failure.
 func (m *Manager) Probe(ctx context.Context, path string) (MediaInfo, error) {
+	key := path
+	if stat, err := os.Stat(path); err == nil {
+		key = fmt.Sprintf("%s\x00%d\x00%d", path, stat.Size(), stat.ModTime().UnixNano())
+	}
+	m.probeMu.Lock()
+	if active := m.probes[key]; active != nil {
+		m.probeMu.Unlock()
+		select {
+		case <-ctx.Done():
+			return MediaInfo{}, ctx.Err()
+		case <-active.done:
+			return active.info, active.err
+		}
+	}
+	flight := &probeFlight{done: make(chan struct{})}
+	m.probes[key] = flight
+	m.probeMu.Unlock()
+
+	flight.info, flight.err = m.probe(ctx, path)
+	m.probeMu.Lock()
+	delete(m.probes, key)
+	close(flight.done)
+	m.probeMu.Unlock()
+	return flight.info, flight.err
+}
+
+func (m *Manager) probe(ctx context.Context, path string) (MediaInfo, error) {
 	binary, err := m.Path(ctx)
 	if err != nil {
 		return MediaInfo{}, err
 	}
 
 	cmd := exec.CommandContext(ctx, binary, "-hide_banner", "-i", path)
-	output, runErr := cmd.CombinedOutput()
+	output := boundedio.NewTail(1 << 20)
+	cmd.Stdout, cmd.Stderr = output, output
+	runErr := cmd.Run()
 	if err := ctx.Err(); err != nil {
 		return MediaInfo{}, err
 	}
@@ -355,7 +610,7 @@ func (m *Manager) Probe(ctx context.Context, path string) (MediaInfo, error) {
 		return MediaInfo{}, fmt.Errorf("ffmpeg: starting probe: %w", runErr)
 	}
 
-	info := parseProbeOutput(string(output))
+	info := parseProbeOutput(output.String())
 	if info.VideoCodec == "" {
 		return info, fmt.Errorf("%w: no video stream found in %s", ErrMediaUnreadable, filepath.Base(path))
 	}

@@ -14,7 +14,7 @@ TrueHD. Full video transcoding stays out of v1.
 
 The spec says "remux", which taken literally means changing the container and
 copying every stream untouched. That would ship a product where a perfectly
-ordinary H.264 + AC3 MKV plays with a picture and no sound — a technical success
+ordinary H.264 + AC3 MKV plays with a picture and no sound - a technical success
 that is a product failure. Audio re-encoding to AAC costs about one CPU core;
 video transcoding is the real furnace, and that is what remains out of scope.
 
@@ -31,7 +31,7 @@ onto v1 would have blurred every milestone it touched.
 ## 3. Subtitles: text tracks only
 
 **Decided.** External `.srt` files, plus SRT and ASS tracks extracted from
-containers with ffmpeg. Image-based subtitles — PGS, VobSub — are out.
+containers with ffmpeg. Image-based subtitles - PGS, VobSub - are out.
 
 Extracting a text track is nearly free given ffmpeg is already a dependency.
 Image subtitles cannot be extracted into anything a browser renders; they have
@@ -56,7 +56,7 @@ the same way.
 Announcing over mDNS and *resolving* a `.local` name are different things.
 Windows and Apple devices resolve it; many Android builds and smart-TV browsers
 do not. On top of that, a second mDNS responder on the machine can quietly take
-the port — this actually happened during M0 development on the dev machine, and
+the port - this actually happened during M0 development on the dev machine, and
 `hashicorp/mdns` reports it as success, so `internal/discovery` probes the
 sockets itself and warns when only one IP family came up.
 
@@ -102,7 +102,7 @@ Two separate mechanisms, easy to confuse:
   values back into the persisted config, and `Config` implements
   `slog.LogValuer` so that logging one prints `eyJh…OM4w` rather than the key.
 - **Distribution.** The shipped default has to be injected at build time from a
-  CI secret — `-ldflags "-X ...=$TMDB_KEY"` — not committed. That work belongs
+  CI secret - `-ldflags "-X ...=$TMDB_KEY"` - not committed. That work belongs
   with M2, when there is finally something to call TMDB about.
 
 ## 7c. Reconciliation counts scans, not seconds
@@ -118,7 +118,7 @@ pruned. Seconds are not fine-grained enough for a scan of a small library, and
 an NTP correction between two scans breaks the ordering outright. A counter has
 neither failure mode.
 
-Timestamps are still stored, but nothing branches on them — they are there for
+Timestamps are still stored, but nothing branches on them - they are there for
 people to read.
 
 ## 9. Metadata is cached, but never frozen
@@ -128,8 +128,8 @@ not recognise is retried after **7 days**. Both are re-fetched silently by the
 next scan; nothing asks the user to press anything.
 
 The two lifetimes differ because the failures differ. A TMDB record changes
-slowly — synopses get rewritten, a poster gets replaced, a missing runtime gets
-filled in — so re-reading it more than a few times a year is pure waste. A
+slowly - synopses get rewritten, a poster gets replaced, a missing runtime gets
+filled in - so re-reading it more than a few times a year is pure waste. A
 *miss*, though, is usually our fault rather than TMDB's: a mangled filename, or
 a title parsed badly enough that a slightly different guess would have landed.
 Making somebody wait three months to see a poster appear after they fixed a
@@ -141,8 +141,8 @@ upsert resets the row to `pending` whenever the parsed title or year changes.
 Waiting out ninety days after fixing a name would make the fix look like it did
 nothing.
 
-Images are separate. TMDB image paths are content-addressed — a given path
-always returns the same picture — so a cached file never expires. What can
+Images are separate. TMDB image paths are content-addressed - a given path
+always returns the same picture - so a cached file never expires. What can
 change is which path a film points at, and that is covered by the metadata
 lifetime above. Images are also fetched lazily, on first request rather than
 during a scan: a first scan of a large library would otherwise download
@@ -197,7 +197,7 @@ film is reliably more popular than the making-of about it.
 
 **Also found on the large library.** The scanner's sample-file word list
 contained `rarbg`, which silently deleted every film whose filename carried that
-release group — nine real films out of 277.
+release group - nine real films out of 277.
 
 The junk it was meant to catch (`RARBG.txt` and similar) is not a video file and
 never reaches that function, so the rule could only ever do harm. Only words
@@ -212,7 +212,7 @@ insertion order. On the test library that put a mis-identified junk file on the
 front page.
 
 The hero is now ordered by recency *then* rating, with a floor of 6.0 and a
-requirement for both a backdrop and a synopsis — a hero without artwork is a
+requirement for both a backdrop and a synopsis - a hero without artwork is a
 hole, and one without text is a title floating in the dark. On a first scan,
 where recency says nothing, the best-rated film wins; afterwards a genuinely new
 film takes the slot if it is worth showing. The floor drops to zero if nothing
@@ -227,7 +227,7 @@ second-resolution timestamps cannot order events that happen inside one second.
 
 The obvious candidates were the ones every guide names: gyan.dev for Windows,
 johnvansickle.com for Linux, evermeet.cx for macOS. Two of those three are not
-GitHub, and this project is allowed to contact exactly two hosts — TMDB and
+GitHub, and this project is allowed to contact exactly two hosts - TMDB and
 GitHub Releases. Using them would have meant widening that rule for a
 convenience.
 
@@ -237,13 +237,13 @@ upstream rebuilds, which is the worst kind of failure: it works for months and
 then breaks for everyone at once.
 
 `eugeneware/ffmpeg-static` tags every build, ships bare binaries rather than
-archives — no zip or tar.xz handling — and covers all six OS/architecture pairs
+archives - no zip or tar.xz handling - and covers all six OS/architecture pairs
 Theia builds for. Its Windows binary identifies itself as
 `6.1.1-essentials_build-www.gyan.dev`, so it is gyan.dev's build after all,
 served from a host the project is already allowed to talk to.
 
 There is no upstream Windows ARM64 build. That platform gets the x64 binary,
-which Windows runs under emulation — better than leaving it unable to remux.
+which Windows runs under emulation - better than leaving it unable to remux.
 
 **Checksums come from the GitHub release API**, which reports a `digest` for
 every asset. They were pinned without downloading 450 MB and without trusting a
@@ -261,7 +261,7 @@ then run as a subprocess is exactly the thing that has to be checked.
 This is why the "how will this play" endpoint answers from the container alone
 rather than probing: probing means running ffmpeg, and running it means fetching
 80 MB. The cost is that an MP4 hiding an exotic codec is attempted directly and
-fails in the browser — the player catches that and retries as a remux, so the
+fails in the browser - the player catches that and retries as a remux, so the
 worst case is a moment's delay rather than a wrong answer.
 
 Only the remux endpoint downloads. Verified on the running binary: asking for
@@ -278,13 +278,13 @@ stream info left no `bin/` directory behind.
 
 The third row is decision 1 in practice: an ordinary H.264 + AC3 MKV would
 otherwise remux into a film with a picture and no sound. The fourth is decision
-1's other half — re-encoding video is the furnace v1 refuses to light, and
+1's other half - re-encoding video is the furnace v1 refuses to light, and
 saying so beats pinning a CPU for two hours.
 
 HEVC sits between the rows: it copies into MP4 and plays in Safari but generally
 not in Chrome. It is attempted and flagged, rather than refused outright.
 
-**Seeking.** Direct play seeks natively — `http.ServeContent` answers byte
+**Seeking.** Direct play seeks natively - `http.ServeContent` answers byte
 ranges and the browser's scrub bar just works. The remux path is a pipe with no
 length, so it seeks by restarting ffmpeg at a timestamp (`?t=`). `-ss` goes
 *before* `-i`, which seeks by keyframe without decoding everything in between;
@@ -307,12 +307,12 @@ so both streams start on the keyframe together.
 ## 17. When a film counts as watched
 
 **Decided.** Finished when the remaining time is under **two minutes**, or under
-**five per cent** of the running time — *whichever sits closer to the end*.
+**five per cent** of the running time - *whichever sits closer to the end*.
 
 The first version combined the two the other way round, taking whichever
 triggered first, and a test caught what that meant: a ten-minute short was
 called finished at eight minutes, because two minutes is a fifth of it. Taking
-the stricter threshold gives the behaviour both cases want — a two-hour film
+the stricter threshold gives the behaviour both cases want - a two-hour film
 clears when the credits roll, a ten-minute one needs its last thirty seconds,
 and a three-hour epic does not demand nine minutes of credits.
 
@@ -340,7 +340,7 @@ timestamp and moving the offset with it.
 
 Getting that wrong is subtle and was caught in the browser rather than by a
 test: setting the source without moving the offset left the displayed clock
-reading the old position while the stream played the new one — and saved that
+reading the old position while the stream played the new one - and saved that
 wrong number as the resume point.
 
 The duration comes from the server, since the stream cannot supply it: the
@@ -350,7 +350,7 @@ until then.
 ## 19. The QR code encodes an IP address, never the mDNS name
 
 **Settled by measurement, not by argument.** `theia.local` does not resolve on
-Android — tested on a real phone, five milestones after decision 5 predicted it.
+Android - tested on a real phone, five milestones after decision 5 predicted it.
 It is a platform limitation rather than a Theia bug, and it is exactly why
 decision 5 made the numeric address the contract and mDNS the convenience.
 
@@ -365,8 +365,8 @@ at a Hyper-V switch is worse than no QR code at all: it scans perfectly and
 leads nowhere.
 
 There is no portable way in pure Go to ask which interface carries the default
-route, so `discovery.Candidates` ranks by what can be observed — real adapters
-before virtual ones, private addresses before public — using a list of adapter
+route, so `discovery.Candidates` ranks by what can be observed - real adapters
+before virtual ones, private addresses before public - using a list of adapter
 name markers. Ranking cannot be certain, so the other addresses are offered in
 the interface with their interface names, and the screen says what to do if the
 code leads nowhere.
@@ -385,7 +385,7 @@ ago.
 
 **Verifying the code without a camera.** The encoder is a well-used library and
 is taken on trust. The SVG rendering is code written here, and that is where a
-bug would live — inverted modules, an off-by-one in the run merging, a missing
+bug would live - inverted modules, an off-by-one in the run merging, a missing
 quiet zone. So the test parses the generated SVG back into a module matrix and
 compares it against the encoder's own bitmap, module by module. A symbol that
 survives that scans, or the encoder is wrong.
@@ -396,16 +396,16 @@ survives that scans, or the encoder is wrong.
 The order of operations is the whole design, and it is deliberate:
 
 1. Fetch the release, find the asset for this platform, read its SHA-256 from
-   the GitHub API. **No digest, no update** — "we could not check it" is not a
+   the GitHub API. **No digest, no update** - "we could not check it" is not a
    reason to install something.
-2. Download to a temporary file *beside the executable* — a rename across
-   filesystems is a copy, and a copy is not atomic — with no executable bit.
+2. Download to a temporary file *beside the executable* - a rename across
+   filesystems is a copy, and a copy is not atomic - with no executable bit.
 3. Verify the digest. Mismatch: delete, stop, nothing has been touched.
 4. Set the executable bit and **run the downloaded binary with `-version`**.
 5. Only now rename the current binary aside and the new one into place.
 
 Step 4 is the one that is easy to leave out. A correct checksum proves the bytes
-match what was published; it says nothing about whether that file runs *here* —
+match what was published; it says nothing about whether that file runs *here* -
 wrong architecture, a release built from a broken commit. Finding that out
 before the swap is the difference between a failed update and a dead
 installation.
@@ -426,7 +426,7 @@ executable at all is the one outcome that must never happen.
 | Delete it after the process exits | allowed |
 
 Only deletion is blocked. So the swap is two renames, and the outgoing binary
-sits as `theia.exe.old` until the next start clears it away — which also makes
+sits as `theia.exe.old` until the next start clears it away - which also makes
 it the manual way back if a release turns out to be bad. Verified across two
 chained updates: `.old` appears at the swap, is byte-identical to the previous
 version, and is gone after the restart.
@@ -436,21 +436,21 @@ following the original plan.
 
 ## 23. Updates never interrupt playback, and never happen unannounced
 
-Checking is automatic — at startup and every six hours. **Installing is not.**
+Checking is automatic - at startup and every six hours. **Installing is not.**
 A media server that restarts itself in the middle of an evening is one nobody
 trusts, so the interface says an update is available and waits to be told.
 
 Even then it can refuse. `internal/activity` tracks streaming, and `Apply`
 re-checks at the moment of installing rather than trusting the button press,
 because another device may have started watching since. The two playback paths
-look completely different from the server's side — a remux is one request held
+look completely different from the server's side - a remux is one request held
 open for the film's length, direct play is a burst of short range requests with
-long gaps — so the tracker combines in-flight requests with a ninety-second
+long gaps - so the tracker combines in-flight requests with a ninety-second
 memory of the last one. Neither signal alone describes both.
 
 ## 24. A build that cannot name itself never updates
 
-Any version string that is not semver — `dev`, a bare commit hash — puts the
+Any version string that is not semver - `dev`, a bare commit hash - puts the
 updater in an unsupported state permanently. There is nothing to compare a
 release against, and guessing would overwrite a developer's working binary with
 whatever was published last.
@@ -490,7 +490,7 @@ deliberately not on the settings page: an advanced knob for a file, not a
 setting for a person.
 
 Two behaviours worth writing down. A folder that does not exist is **saved
-anyway** and reported — configuring a drive before plugging it in is a normal
+anyway** and reported - configuring a drive before plugging it in is a normal
 thing to do, and refusing would be wrong. And a TMDB key is never sent to the
 browser, so an empty field means "leave it alone" rather than "clear it";
 clearing is possible, but only deliberately.
@@ -545,7 +545,7 @@ tell which one a given number came from. The ramp bought nothing that
 `mb-14`/`gap-4` did not already buy, and cost a synchronisation duty forever.
 
 What *was* worth tokenising is the page frame, because those are contracts
-between screens rather than matters of taste — and unlike spacing, they had
+between screens rather than matters of taste - and unlike spacing, they had
 visibly drifted. `--nav-offset`, `.page-body` and `.page-title` were added for
 exactly that reason: four screens had each guessed their own top padding and
 three had overridden the heading style with `!important`. The rule that
@@ -555,7 +555,7 @@ screen chooses.**
 ## 29. The home screen is a personal surface, not a second catalogue
 
 Until now the home screen carried a hero, continue-watching, recently added and
-then **a row per genre** — eight of them, twenty films each. That made sense when
+then **a row per genre** - eight of them, twenty films each. That made sense when
 it was the only way to reach anything. It stopped making sense the moment `/films`
 arrived with search across title, director, genre and year, five sorts and two
 filters over the whole library.
@@ -563,8 +563,8 @@ filters over the whole library.
 Two screens were answering the same question, and the worse one was the front
 door. So the home screen now answers a narrower one: *what were you watching,
 what is new, and what should you put on tonight.* The genre rows are gone; genre
-browsing belongs to the page built for it, and the rows that remain are short —
-twelve rather than twenty — with a link through to `/films` pre-filtered to match.
+browsing belongs to the page built for it, and the rows that remain are short -
+twelve rather than twenty - with a link through to `/films` pre-filtered to match.
 
 Three consequences worth stating:
 
@@ -583,19 +583,19 @@ Three consequences worth stating:
 ## 30. Tonight's suggestion is shuffled in Go, not in SQL
 
 The "au hasard ce soir" row must be stable for the evening: `ORDER BY RANDOM()`
-reshuffles on every page load, which turns a suggestion into a slot machine —
+reshuffles on every page load, which turns a suggestion into a slot machine -
 you reload until you like the answer, and the row means nothing.
 
 Seeding the date into a SQL `ORDER BY` took three attempts, and the first two
 failed in ways that read as correct:
 
-1. `(id * constant + seed) % p` — adding the seed shifts every row equally, so
+1. `(id * constant + seed) % p` - adding the seed shifts every row equally, so
    the order changes only for a row whose value happens to cross the modulus.
    With a dozen rows that is almost never: the row showed the same films daily.
-2. `(id * seed) % p` — a date seed is about 2e7, so `id * seed` for a few hundred
+2. `(id * seed) % p` - a date seed is about 2e7, so `id * seed` for a few hundred
    films never reaches a 2.1e9 modulus. Nothing wraps, and the result is plain
    id order.
-3. `(id * k) % p` with `k` spread across the full range — this passed every test
+3. `(id * k) % p` with `k` spread across the full range - this passed every test
    written for it, and was still wrong. Sorting by a modular multiply and taking
    the first twelve selects ids at a **fixed stride**. On the real library the
    row came back `257, 234, 211, 188 …`: every twenty-third film, every time.
@@ -692,7 +692,7 @@ The new reference is §6.1 of the design system. In short: `16 / 9`, the film's
 Three things made it work rather than merely look different:
 
 - **The artwork already exists at the right shape.** TMDB ships a 16/9
-  `backdrop_path`, so nothing is cropped to fit — which matters, because the old
+  `backdrop_path`, so nothing is cropped to fit - which matters, because the old
   rule's "never crop" instinct was right even though its ratio is gone. On the
   274-film library 257 films (93.8%) carry a backdrop, and **not one carries a
   poster without one**: artwork arrives in pairs or not at all. The remaining 17
@@ -755,8 +755,8 @@ followed since M6:
   their horizontal padding is tightened below 26rem.
 
 So `/profils` is now a full screen with the nav suppressed for that route only.
-It appears on arrival when a profile is needed — the existing `needsSelection`
-guard, untouched — and is reached from a new **Profils** section in settings the
+It appears on arrival when a profile is needed - the existing `needsSelection`
+guard, untouched - and is reached from a new **Profils** section in settings the
 rest of the time. Profile management (add, rename, photo, delete) stays behind
 the same "Gérer les profils" toggle on that screen rather than moving to
 settings: one place for everything about profiles is easier to describe than
@@ -769,7 +769,7 @@ way to leave without giving one.
 Verified against the running binary with three profiles: the D-pad enters on a
 card and moves between them, Enter selects and returns to where you came from,
 `localStorage` follows, and the same film reports 0 / 1200 / 5400 seconds for
-profiles 1 / 2 / 3 — the isolation of decision 31 survived the rework intact.
+profiles 1 / 2 / 3 - the isolation of decision 31 survived the rework intact.
 
 ## 36. Household profiles are removed; playback is single-viewer again
 
@@ -1053,7 +1053,7 @@ candidates by centre-to-centre distance with the horizontal axis weighted
   every downward press: from "Lire" the first file option scored 1705 against
   the button's 1095, and the file options were unreachable by D-pad entirely.
 - Moved beside its file, the rows still lost to `← Retour` at the foot of a
-  short page — 1454 against 1272 — because a full-bleed row's centre sits ~384px
+  short page - 1454 against 1272 - because a full-bleed row's centre sits ~384px
   right of every narrow control in the column.
 - Making every row full width made it worse, not better: all five options then
   scored ~1170 against Retour's 915.
@@ -1064,7 +1064,7 @@ candidates by centre-to-centre distance with the horizontal axis weighted
 Three things fix it together, and the third is the one that matters:
 
 1. the chooser sits directly under the play button rather than after the cast
-   list — editorially right anyway, since choosing the file is part of deciding
+   list - editorially right anyway, since choosing the file is part of deciding
    to watch;
 2. option rows are capped at `26rem` and share one width, so no sibling is
    penalised for having a shorter label;
@@ -1075,15 +1075,15 @@ Three things fix it together, and the third is the one that matters:
 
 Tuning the width alone was tried and rejected: it only ever won by twenty-odd
 points against whatever happened to sit below, which is a number that changes
-with the length of a synopsis. Any future screen with a list of options — M3's
-episodes and M4's device list both qualify — inherits this constraint.
+with the length of a synopsis. Any future screen with a list of options - M3's
+episodes and M4's device list both qualify - inherits this constraint.
 
 Verified against the maintainer's real library rather than a fixture: 279 files
 resolved to 253 films with 25 genuinely multi-file cards, including a three-file
 *Amélie* consolidated across a localised title. Playback of a chosen file with a
 chosen track reached `readyState 4` at 1280×720 through
 `/api/stream/3/files/4/remux?t=0&audio=2`, and the server log confirms it mapped
-stable track id 2 to ffmpeg stream index 2 — the browser never sends a stream
+stable track id 2 to ffmpeg stream index 2 - the browser never sends a stream
 index. Film-level progress survived a change of file: 62 seconds saved on one
 file resumed at `t=62` on the other.
 
@@ -1107,7 +1107,7 @@ the repository is public and GPL-3.0, and the rule is no unverified image, ever.
 Four things were settled with the maintainer before any code:
 
 - **The chooser is a full screen, and the nav only points at it.** The reference
-  shows an inline dropdown; decision 35 had already measured why that fails —
+  shows an inline dropdown; decision 35 had already measured why that fails -
   a 2rem avatar and an 11px name are unreadable at three metres, four targets in
   one pill overflowed the 320px floor, and the first D-pad arrow landed on
   navigation rather than on the question the app opens with. The nav entry
@@ -1115,8 +1115,8 @@ Four things were settled with the maintainer before any code:
   layout, not a licence to repeat a measured failure.
 - **The detail panel keeps its shape and loses its subject.** Two stacked
   panels, identity above and a label/value list below, with the destructive
-  action isolated at the foot. The rows become local facts — created, films
-  started, films finished, last watched — and the foot action is "delete this
+  action isolated at the foot. The rows become local facts - created, films
+  started, films finished, last watched - and the foot action is "delete this
   profile".
 - **An avatar is an image the viewer supplies.** Generated marks were offered
   and refused. This revives a mechanism, not the retired code, and it revives
@@ -1132,7 +1132,7 @@ Four things were settled with the maintainer before any code:
 Two constraints M2-BE inherits and must not discover late: progress now lives in
 **two** places, `movies` from M1 and `episode_items` from M3 (decision 41), so
 the migration owns both or it corrupts one. And a profile remains neither an
-account nor a permission — anyone on the LAN may select and edit every profile,
+account nor a permission - anyone on the LAN may select and edit every profile,
 exactly as they may already change every setting.
 
 ## 49. A profile travels in the open, and the rollback mirror follows whoever is default
@@ -1140,7 +1140,7 @@ exactly as they may already change every setting.
 **Implementation decisions from V2-M2-BE, which decision 48 left to the backend.**
 
 The active profile is `?profile={id}` on the routes that read or write a
-position — not a header. The removed implementation used `X-Theia-Profile`, and
+position - not a header. The removed implementation used `X-Theia-Profile`, and
 the shape was the problem as much as the name: a header reads like a credential,
 and this is not one. Anyone on the LAN may pass any id, exactly as anyone on the
 LAN may already change every setting. Putting it in the URL keeps that honest,
@@ -1161,20 +1161,20 @@ screen existed.
 Two hazards were found by running the thing rather than reading it:
 
 - **Consolidation and rename lost every viewer but one.** Both paths moved
-  progress through the single legacy columns, so merging two copies of a film —
-  or renaming an episode — discarded the other profiles' rows when the duplicate
+  progress through the single legacy columns, so merging two copies of a film -
+  or renaming an episode - discarded the other profiles' rows when the duplicate
   cascaded away. Both now move `movie_progress` / `episode_progress` per profile,
   most recently watched winning within each profile rather than across all of
   them.
 - **Deleting the default profile stranded the rollback mirror.** The legacy
   columns on `movies` exist so a rolled-back v1.5.0 still finds a history, and
   they follow whichever profile is oldest. Deleting that profile promotes the
-  next one, and the columns kept serving the deleted viewer's positions —
+  next one, and the columns kept serving the deleted viewer's positions -
   a history belonging to nobody. Deletion now re-points them.
 
 The avatar endpoint re-encodes everything to JPEG regardless of what arrived, so
 a hostile PNG cannot be stored and served back intact, and bounds both the bytes
-read and the pixels claimed — a decompression bomb is a few bytes of header
+read and the pixels claimed - a decompression bomb is a few bytes of header
 asking for gigabytes. One EXIF tag is parsed by hand, because a full parser is a
 dependency and a much larger surface for a single integer, and every other field
 in that block is precisely what Theia throws away.
@@ -1186,7 +1186,7 @@ because it is a narrowing.** The startup gate was specified as "show the chooser
 whenever no profile is active in this browser". Built exactly that way, a
 household that never creates a second profile meets "Qui regarde ?" on every new
 device, with one card to press. That is a click whose answer is already known,
-standing between a television and a film — and the founding criterion is a film
+standing between a television and a film - and the founding criterion is a film
 in under three clicks.
 
 So a lone profile is adopted silently, and the chooser appears the moment there
@@ -1203,7 +1203,7 @@ Two things were found by looking at the built screens rather than the code:
   as the fact it introduces.
 - **Deleting an unknown profile reported the wrong reason.** The last-profile
   rule was checked before existence, so removing an id that did not exist
-  answered "the last profile cannot be deleted" whenever one remained — a true
+  answered "the last profile cannot be deleted" whenever one remained - a true
   sentence about the wrong subject. Existence is checked first.
 
 A profile's page is addressable as `/profils?gerer=1&profil=<id>` so a reload
@@ -1211,7 +1211,7 @@ does not throw the viewer back to the row they came from.
 
 ## 51. The wordmark is set, not placed
 
-The photographic wordmark — serif letterforms filled with an earth horizon — is
+The photographic wordmark - serif letterforms filled with an earth horizon - is
 the prestige piece the founding spec §11.10 describes, and the same paragraph
 warns that photographic detail does not survive the reduction to nav-bar size.
 It does not, and the failure is specific rather than a matter of taste. At the
@@ -1232,8 +1232,8 @@ name to a screen reader without an alt attribute, it cannot reflow the bar while
 it loads, and it is legible from a favicon to a television.
 
 `web/static/theia-wordmark.webp` is now referenced by nothing. It is left in
-place rather than deleted — it is the maintainer's licence-checked asset and
-M5's starting point — and joins `icon-512.png` in the roadmap's open points.
+place rather than deleted - it is the maintainer's licence-checked asset and
+M5's starting point - and joins `icon-512.png` in the roadmap's open points.
 Designing a new mark is still M5; this is integration, not identity.
 
 ## 52. A series is a catalogue of items, not of episodes
@@ -1252,12 +1252,12 @@ the model rather than from taste:
   Specials are a named season and lead nowhere: `S00` never receives a
   `next_episode_id`, so the page says so instead of inventing a successor.
 - **Seasons are options, not pages.** Switching season on a television should
-  not be a navigation, and the season payload is compact by design — files live
+  not be a navigation, and the season payload is compact by design - files live
   on the episode page. The row obeys §9: one shared width, its own axis.
 
 The file chooser and the player are the components M1 built, not copies. Both
-now take the resource they act on — `basePath` for inspection, `streamBase` and
-`progressPath` for playback — because an episode is a different resource, not a
+now take the resource they act on - `basePath` for inspection, `streamBase` and
+`progressPath` for playback - because an episode is a different resource, not a
 different interaction. The same is true of the card: `PosterCard` gained an
 artwork and title override so an episode can use it without pretending in its
 data to be a film.
@@ -1292,7 +1292,7 @@ from somebody sitting at home is the worse of the two mistakes.
 The panel says the uncomfortable parts out loud, before anything can be switched
 on: the router forwards **UDP** and never Theia's TCP port, which has no
 authentication at all; and CGNAT is stated as unsupported rather than quietly
-attempted. `unverified` is presented as a fact, not a fault — no device has
+attempted. `unverified` is presented as a fact, not a fault - no device has
 proven the path, and Theia owns no probe that could say otherwise. `confirmed`
 says "since this start", not "guaranteed". The byte counters are labelled as
 tunnel traffic so nobody reads them as viewing statistics.
@@ -1308,7 +1308,7 @@ The provisioning dialog holds the one copy of a private key that will ever
 exist. It lives in component memory: verified in a real browser that after
 creating a device, `PrivateKey` appears in no localStorage value, no
 sessionStorage value, no IndexedDB database, not in the URL and not in the
-document — the QR renders as SVG and the configuration text is never written
+document - the QR renders as SVG and the configuration text is never written
 into the DOM. Closing without copying asks first, and closing clears it. Losing
 it offers "revoke and recreate", never "show it again", because a server that
 could show it twice would not have thrown it away.
@@ -1316,7 +1316,7 @@ could show it twice would not have thrown it away.
 Two things found by running it: `.profile-input` carries a row-direction flex
 basis for the profile page, and reused in this column it stretched the port
 field to the height of the whole group, stranding the value at the bottom of a
-very tall box. And a device name typed with accents round-trips intact — the
+very tall box. And a device name typed with accents round-trips intact - the
 mojibake in the first screenshot came from the shell that created the peer, not
 from the server, which was checked rather than assumed.
 
@@ -1324,7 +1324,7 @@ from the server, which was checked rather than assumed.
 
 **Decided in V2-M5, from four directions put in front of the maintainer before
 anything was written.** The brief was the one the roadmap set: real art
-direction, several options, validation before implementation — not a cosmetic
+direction, several options, validation before implementation - not a cosmetic
 retouch smuggled into another milestone.
 
 Four were drawn and rendered at 16px, 28px and 96px, then in a navigation
@@ -1334,7 +1334,7 @@ sun lost its rays at 16px and became a gold dot, which is exactly the failure
 decision 51 had just removed. The maintainer chose **the word and the rule**:
 THEIA in the display serif, underlined by a gold rule that reads as a horizon.
 
-Its weakness was known when it was chosen — at 16px the word does not fit — so
+Its weakness was known when it was chosen - at 16px the word does not fit - so
 the reduction was designed and tested rather than assumed. Three candidates were
 rendered in a real browser tab: a disc crossed by the rule read as a ringed
 planet and said nothing about the lockup; the rule alone became a grey smudge;
@@ -1373,7 +1373,7 @@ pour les sous-titres."*
 
 The audio chooser existed. It was on the film page, under the file list, and it
 was invisible in exactly the case that matters. M1's contract is that a file is
-measured lazily — asking how a file will play must never download ffmpeg — so a
+measured lazily - asking how a file will play must never download ffmpeg - so a
 file played for the first time is probed *by that playback*. The page had loaded
 before the probe, its copy of the tracks was empty, and it stayed empty until
 somebody reloaded. The chooser was not missing; it was one page load behind
@@ -1387,7 +1387,7 @@ so it now carries `audio_tracks` and `subtitle_tracks` alongside the mode and th
 duration, and the player asks for it itself rather than inheriting a snapshot
 from the page behind it. The stale-copy failure cannot recur, because there is
 no copy. When playback probes a file that had never been measured, `/info` is
-asked once more — guarded by a flag, and silently, so a refresh that fails costs
+asked once more - guarded by a flag, and silently, so a refresh that fails costs
 a menu entry and never a running film.
 
 **Subtitles are built, at last.** Decision 3 settled them in the first week and
@@ -1399,7 +1399,7 @@ Three details cost something to get right.
   timestamp, so the element's clock begins again at zero on every seek. Text on
   the film's own clock would sit as far from the picture as the viewer has
   travelled into it. The same `-ss` that seeks the video seeks the subtitle, so
-  the two cannot drift apart — measured on a generated MKV, a cue at 00:07.023
+  the two cannot drift apart - measured on a generated MKV, a cue at 00:07.023
   comes back at 00:00.023 for `t=7`.
 - **`.srt` files beside a film need no ffmpeg.** They are found by reading the
   directory when the player asks how the file will play, which is once per
@@ -1423,13 +1423,13 @@ too. And the subtitle's position is computed rather than declared: `line` as a
 count of lines snaps to a height the browser picks, and left the second line of a
 cue under the scrub bar; `lineAlign: 'end'` is the right idea and Chrome ignores
 it. The cue is placed from its own line count and the measured height of the
-control bar, in units of the picture — because that is what browsers scale
+control bar, in units of the picture - because that is what browsers scale
 subtitle text against, whatever the stylesheet says.
 
 A library measured before this change has every fact except this one, which is
 indistinguishable from a file that genuinely has no subtitles. Rather than reset
-274 films to `pending` and re-probe the lot — throwing away durations and
-resolutions already measured, to learn one new thing — `subtitles_scanned` marks
+274 films to `pending` and re-probe the lot - throwing away durations and
+resolutions already measured, to learn one new thing - `subtitles_scanned` marks
 the difference, and the next playback of a file re-probes it once. It was about
 to run ffmpeg anyway.
 
@@ -1440,7 +1440,7 @@ distance à une documentation complexe et devrait se faire automatiquement, on
 avait rien de compliquer, on clique et ça marche."* The first answer given was
 that this could not be done without breaking decision 43, because "automatic"
 sounded like a relay. That answer was wrong about what was being asked. The
-clarification — *"quand je dis auto je parle de l'url et du port etc"* — named
+clarification - *"quand je dis auto je parle de l'url et du port etc"* - named
 two facts, and neither of them needs a relay to obtain.
 
 M4 shipped a panel with a UDP port field, a public endpoint field, and a
@@ -1449,7 +1449,7 @@ Four steps, three of them in somebody else's admin interface, in a product whose
 founding promise is no configuration.
 
 **Both facts belong to the gateway, and there are two standard ways to ask it.**
-UPnP IGD — SSDP to 239.255.255.250, then SOAP — and NAT-PMP — two datagrams to
+UPnP IGD - SSDP to 239.255.255.250, then SOAP - and NAT-PMP - two datagrams to
 UDP 5351. Both are tried concurrently, because they fail by timing out and a
 router that speaks neither would otherwise cost the sum of two waits with
 somebody watching a spinner. `internal/portmap` implements both in the standard
@@ -1467,8 +1467,8 @@ Three things this refuses to do:
 - **It will not lie about carrier-grade NAT.** A router behind CGNAT reports its
   own 100.64.0.0/10 address perfectly happily, and a client configuration
   pointing at one cannot work. That is checked and reported as the specific
-  thing it is — `remote_carrier_nat`, with the advice that asking the operator
-  for a public address is usually free — rather than left to fail as a timeout
+  thing it is - `remote_carrier_nat`, with the advice that asking the operator
+  for a public address is usually free - rather than left to fail as a timeout
   on the evening somebody is away from home.
 - **It will not follow an SSDP reply anywhere.** That reply is an
   unauthenticated datagram from anybody on the network, naming a URL this
@@ -1477,7 +1477,7 @@ Three things this refuses to do:
   connections are not kept.
 - **It will not leave a hole open.** Disabling withdraws the mapping. Closing
   Theia does not, because somebody who shut the application for the night has
-  not asked their router to forget anything — and the next start re-checks the
+  not asked their router to forget anything - and the next start re-checks the
   address anyway, since a domestic connection is renumbered by a reboot.
 
 **The manual fields survive, folded away.** UPnP is off by default on some ISP
@@ -1497,7 +1497,7 @@ tunnel whose generated client configuration carried the discovered endpoint.
 **Decided in V2-M5b, from a screenshot.** A specials episode drew the browser's
 torn-page glyph in the middle of the row: TMDB had recorded a `still_path`, and
 the image behind it was not there. The `{#if}` guard was correct and
-insufficient — it covers a missing path, not a path that 404s.
+insufficient - it covers a missing path, not a path that 404s.
 
 The rule already existed for profile marks and had been written one component at
 a time, which is why it did not hold: posters, backdrops, stills and avatars all
@@ -1516,7 +1516,7 @@ play and CPU remux prove insufficient in real use.*
 
 They did, and not in theory. The maintainer watched a film and reported that
 the sound was badly out of sync. It was not: Chrome had loaded an HEVC Main 10
-rip, played its audio, and never produced a picture — `canPlayType` empty,
+rip, played its audio, and never produced a picture - `canPlayType` empty,
 `videoWidth` 0, not one frame decoded. Direct play cannot help, a remux copies
 the same undecodable stream, and the honest answer M5b shipped was to name the
 codec and stop. That is a file the household owns and cannot watch.
@@ -1527,7 +1527,7 @@ because all five are compiled in; whether any runs depends on the card and the
 driver. Each candidate is asked to encode one frame of nothing, and only the
 ones that come back are offered. Measured on the maintainer's desktop:
 `usable=h264_amf,h264_mf,libx264`, `refused=h264_nvenc,h264_qsv,h264_vaapi,
-h264_videotoolbox` — NVENC cannot load `nvcuda.dll`, QSV cannot create an MFX
+h264_videotoolbox` - NVENC cannot load `nvcuda.dll`, QSV cannot create an MFX
 session, both instantly, because there is no NVIDIA card and no Intel graphics.
 
 **The ceiling is a measurement, not a preference.** On a 1080p HEVC source at
@@ -1542,7 +1542,7 @@ than unsupported because Safari plays it and Chrome does not, and no server can
 ask a client what it will decode. So the client answers: when the picture never
 arrives, the player asks for the same film again with `video=transcode`. Once,
 guarded, because a transcode that also fails must not loop. Verified end to end
-on the file that started this — the log shows `mode=remux` at 63 s, then
+on the file that started this - the log shows `mode=remux` at 63 s, then
 `mode=transcode video_encoder=h264_amf` at 63 s, and Chrome reports 1920×804
 with frames decoding. Star Wars plays.
 
@@ -1552,7 +1552,7 @@ Three refusals kept:
   spends a GPU inventing detail that is not in the file.
 - **Nothing this machine cannot make.** With no encoder that runs, the player
   shows no quality section at all rather than a button that fails. The rung
-  list comes from the probe, and `/info` only probes an ffmpeg already on disk —
+  list comes from the probe, and `/info` only probes an ffmpeg already on disk -
   M1's promise was that asking how a file plays must never *download* it.
 - **Nothing about the cost is hidden.** The section heading says "carte
   graphique" or "processeur", because on this machine those are 4.56× and 1.04×
@@ -1564,7 +1564,7 @@ Decision 58 lit the furnace for a picture Chrome **never decodes**. This is its
 other half: a picture Chrome decodes and cannot keep up with.
 
 Reported as "a very big delay between the sound and the image" on a real HEVC
-Main 10 rip, in "Qualité du fichier" — the remux. The same file at 720p, same
+Main 10 rip, in "Qualité du fichier" - the remux. The same file at 720p, same
 DTS track, is perfectly in sync. The remux copies the video, so the browser does
 the decoding; it produced a picture, reported `1920x804` and `readyState 4`, and
 then rendered far slower than the film runs while the audio, trivially
@@ -1595,7 +1595,7 @@ Three consequences:
 
 - **The re-encode keeps the source resolution.** `?video=transcode` with no `h`
   reaches `TranscodeArgs` with `height = 0`, adds no `scale`, and returns
-  1920x804 H.264 — verified. Only the codec changes. Falling back to 720p would
+  1920x804 H.264 - verified. Only the codec changes. Falling back to 720p would
   have cost definition on a machine measured at eight times real time.
 - **The verdict belongs to the browser**, in `localStorage`, for the reason
   decision 32 gives for the language: the television and the laptop have
@@ -1622,8 +1622,8 @@ is not.
 
 **Superseded in part by decision 86.** The fixed floor of ten and the single
 sample both survived only as long as the files were 1080p. The reasoning above
-still holds — no API answers this, and the playback itself is the only honest
-signal — but the threshold is now six tenths of the file's own frame rate, which
+still holds - no API answers this, and the playback itself is the only honest
+signal - but the threshold is now six tenths of the file's own frame rate, which
 the server stores since migration 0014, and the measurement repeats for as long
 as the film plays.
 
@@ -1661,8 +1661,8 @@ expensive, and not worth paying until it is needed.
 household profiles, WireGuard remote access, track selection in the player,
 hardware-probed transcoding, and English beside French.
 
-The five documents that ran that cycle — the roadmap, the backend and frontend
-handoffs, and the two discovery notes — move to
+The five documents that ran that cycle - the roadmap, the backend and frontend
+handoffs, and the two discovery notes - move to
 [`archive/`](archive/README.md). **This supersedes the pointers in decision 41**,
 which named `theia-v2-backend.md` and `theia-v2-frontend.md` at their old paths.
 That decision stays as written, because it was true: those documents did own
@@ -1681,8 +1681,8 @@ records a decision when it settles an argument.
 The one thing left undone at release: **the README screenshots predate the v2
 interface.** They show the 2:3 poster grid, before the 16/9 cards, the wordmark
 in the navigation, profiles and series. Neither browser available to the agent
-could produce replacements — the preview pane does not composite frames, and the
-Chrome extension was not connected — so the release ships with a note above the
+could produce replacements - the preview pane does not composite frames, and the
+Chrome extension was not connected - so the release ships with a note above the
 images saying so, rather than with images that quietly misrepresent the product.
 
 ## 62. The screenshots are taken by a scripted headless Chrome, against a library built for the purpose
@@ -1696,7 +1696,7 @@ cannot seed `localStorage`, and the profile chooser intercepts every route until
 a profile is chosen, so every capture came back as *Qui regarde ?*. What works is
 a scripted session: launch headless Chrome with `--remote-debugging-port`, drive
 it over CDP, set `theia.profile`, then navigate and capture. Two details are
-easily lost — a device scale factor of 2 downscaled to 1600px is what makes the
+easily lost - a device scale factor of 2 downscaled to 1600px is what makes the
 type crisp, and the scroll offset must be set explicitly on *every* shot,
 including to zero, because navigating back to a URL restores the offset the tab
 had last time and silently reframes the picture.
@@ -1707,11 +1707,11 @@ with no artwork. The library here is forty films and twelve series as two-second
 H.264 clips cloned from one 3.5 kB master, named the way releases are named, in a
 folder outside the maintainer's own. TMDB matched all fifty-two with no failures,
 which is what puts real posters, backdrops and episode stills on screen. It is a
-few hundred kilobytes, and it is *valid media* — unlike the 3 TB of unopenable
+few hundred kilobytes, and it is *valid media* - unlike the 3 TB of unopenable
 placeholders it replaces, which is the trap decision 59 was written about.
 
-The frames avoid the panels that expose the rig — the watched folder, the data
-directory, `VERSION dev` — not to flatter the product but because a reader
+The frames avoid the panels that expose the rig - the watched folder, the data
+directory, `VERSION dev` - not to flatter the product but because a reader
 should not have to work out which parts of a screenshot are real.
 
 **Two more traps, found taking the v2.4.0 film-page shots.** Navigating straight
@@ -1720,7 +1720,7 @@ application has not finished booting when the URL changes, and the capture comes
 back looking plausible and wrong. Navigate, then read `location.pathname` back and
 retry until it matches. And cast portraits are `loading="lazy"`, so a frame that
 scrolls to them still photographs empty frames unless the images in view are
-flipped to eager and given a moment — the screenshot is taken from a page that was
+flipped to eager and given a moment - the screenshot is taken from a page that was
 never scrolled by a human, and nothing else triggers the load.
 
 **This is also how the profile bug in decision 63 was found.** A screenshot of a
@@ -1739,7 +1739,7 @@ house had started, and showed the default profile's *Continuer à regarder*.
 Worse, and silently: the player wrote its position against the wrong viewer, so
 one person's evening landed in another person's history. Navigating within the
 application fixed it, which is exactly why it survived M2 and shipped in
-`v2.0.0` — it is invisible unless the first page you land on is the one that
+`v2.0.0` - it is invisible unless the first page you land on is the one that
 matters.
 
 The fix is a shared promise. `profiles.ready()` starts the load on first ask and
@@ -1762,6 +1762,8 @@ that happens to hold is not ordering.
 
 ## 64. The presentation site lives in the repository, builds without a bundler, and fetches nothing
 
+**Superseded by decision 116.**
+
 `site/` holds a landing page, published to GitHub Pages by
 `.github/workflows/pages.yml`. It exists because a README is written for someone
 who already found the repository, and the question the project actually has to
@@ -1772,7 +1774,7 @@ Four decisions inside it, each of which had an easier alternative:
 **Both languages render from one template.** `page.mjs` is the markup once, as a
 function of a catalogue; `build.mjs` writes `index.html` and `en/index.html`
 from it and **fails if a key exists in one catalogue and not the other**. The
-easy version — a page in French with a JavaScript toggle — puts one language in
+easy version - a page in French with a JavaScript toggle - puts one language in
 the markup and the other in a script, which is the arrangement decision 32 was
 written against. A new language is a third file in `locales/`.
 
@@ -1800,6 +1802,8 @@ Theia. A landing page is exactly where the temptation is to drop them, which is
 exactly why they stay.
 
 ## 65. The public site proves the product before it inventories it
+
+**Superseded by decision 116.**
 
 **Supersedes decision 64's page composition, not its technical boundary.** The
 site still lives in `site/`, renders French and English from one strict template,
@@ -1859,7 +1863,7 @@ notifier, because it looks like it works. It also needs a watch descriptor per
 directory, which is a limit to run into rather than a limit to reason about.
 
 **So the disk is read, and the answer is compared with the last one.** A pass
-walks the roots with `scanner.Scan` — the same walk, stat calls only — and
+walks the roots with `scanner.Scan` - the same walk, stat calls only - and
 reduces what it saw to one 64-bit fingerprint. Unchanged means nothing happens:
 no generation is burned, no row is written, nothing is logged. Reading the disk
 and reconciling with the database are two very different costs, and only the
@@ -1874,7 +1878,7 @@ is indistinguishable from instant for the person who just put it there.
 film arriving over the network is not there all at once, and indexing it halfway
 produces a card with no duration, a failed inspection and a wasted TMDB lookup,
 all of which have to be undone. Excluding recent files means a copy in progress
-reads as "nothing has changed yet" rather than as a new film — and the pass after
+reads as "nothing has changed yet" rather than as a new film - and the pass after
 it finishes sees it properly. This is also why the walk logs nothing: an unplugged
 drive is reported once per root per pass, which at a pass a minute is fourteen
 hundred identical warnings a day burying the one line that matters.
@@ -1896,7 +1900,7 @@ reading and writing the same slice.
 
 Verified against the configured library: startup scan, then a film copied in at
 18:47:39 and indexed at 18:48:13 with its metadata fetched. Three scans in three
-minutes — startup, one metadata catch-up, one real change — and none on the
+minutes - startup, one metadata catch-up, one real change - and none on the
 quiet ticks.
 
 ## 67. A wrong match is corrected in the interface, not on the filesystem
@@ -1908,8 +1912,8 @@ a boundary, and it is unactionable from the television the remote belongs to.
 
 **It is not a metadata editor, and must not become one.** There are no fields to
 type into and nothing to correct by hand. There is a list of the records the
-automatic search passed over, ranked the way `pick` ranks them — exact title
-first, then popularity — so that the film the matcher chose leads and the
+automatic search passed over, ranked the way `pick` ranks them - exact title
+first, then popularity - so that the film the matcher chose leads and the
 alternative sits directly under it. Decision 11 already documented the failure
 this exists for: searching "The Handmaiden" returns the making-of above the film,
 because TMDB orders by text relevance. Confirmed again on the real library, where
@@ -1925,7 +1929,7 @@ the data does not.
 **A series is corrected with its whole cascade.** Every season and every episode
 title came from whichever show the series was matched to, so replacing only the
 series record leaves a page headed by the right show and filled with another
-one's episodes — worse than the original mistake, because it looks deliberate.
+one's episodes - worse than the original mistake, because it looks deliberate.
 `refreshSeries` was split out of `enrichSeries` for this and is reused whole,
 rather than a second implementation of the same cascade drifting beside the first.
 
@@ -1947,8 +1951,8 @@ nothing will ever finish it. A film seen somewhere else is not on this server's
 record at all.
 
 **Stored as a statement, not as a position at the end.** `finishedRule` is
-recomputed from the position on every report — deliberately, so that starting a
-film again returns it to the row — which means a position wound to the end would
+recomputed from the position on every report - deliberately, so that starting a
+film again returns it to the row - which means a position wound to the end would
 be erased by the first second of playback. The position is cleared instead:
 a film already seen starts at the beginning when it goes on again, not eight
 seconds before the credits.
@@ -1976,7 +1980,7 @@ its client-side filtering: its sorts, genres and watch-state filters are instant
 and that trade still holds at household scale.
 
 **Matching happens in Go, not in SQL.** SQLite's `LIKE` cannot see past an
-accent — "amelie" matches "Amélie" in no collation available without CGO, and CGO
+accent - "amelie" matches "Amélie" in no collation available without CGO, and CGO
 is the first prohibition in the founding spec. `searchKey` therefore mirrors the
 one in `web/src/lib/api.js`, folding accents through an explicit table rather
 than buying `golang.org/x/text` for one function. The candidate query stays
@@ -1987,7 +1991,7 @@ written at scan time, not a different matching rule.
 
 **A page, not a field in the navigation pill.** At three metres the pill is
 already carrying as much as it can, and a text box there would take the first
-D-pad press away from the library — decision 35 measured exactly that for the
+D-pad press away from the library - decision 35 measured exactly that for the
 profile control.
 
 ## 70. The measurements are shown, because the standard is to report what was verified
@@ -2012,14 +2016,14 @@ fetching sixty megabytes to fill a field. This is the same promise M1 made for
 
 While writing it, one older breach of decision 25 was removed: `settingsResponse`
 carried a French sentence advising the user to add a TMDB key. Nothing in the
-interface ever read it — the catalogues already own that sentence — and a French
+interface ever read it - the catalogues already own that sentence - and a French
 paragraph inside a Go struct is precisely what that decision exists to prevent.
 
 ## 71. The seek strip is built from keyframes, once, and is never waited for
 
 Dragging the bar showed a timestamp and nothing else, which tells you where you
 are and not what is there. The frames now shown under the cursor are one JPEG
-sheet of a hundred tiles, windowed by `background-position` — one decode for the
+sheet of a hundred tiles, windowed by `background-position` - one decode for the
 whole strip rather than a hundred image elements.
 
 **Keyframes only.** `-skip_frame nokey` is what makes this affordable: a
@@ -2031,8 +2035,8 @@ every seventy seconds, which is what a scrub preview is for; more would be a
 longer encode and a larger download for a picture nobody studies.
 
 **It is a comfort, and behaves like one.** It is asked for once when a player
-opens and never awaited. Three states reach the interface — ready, building, or
-nothing — and the last two draw the timestamp alone, exactly as before. One
+opens and never awaited. Three states reach the interface - ready, building, or
+nothing - and the last two draw the timestamp alone, exactly as before. One
 encode runs at a time, because decision 58 measured that a single software
 transcode consumes the whole real-time margin on this machine and the film
 somebody is watching is worth more than the strip under their cursor.
@@ -2042,14 +2046,14 @@ missing, so the build is gated on `Available()` and a machine without one simply
 has no previews. Same promise as `/info` and the encoder probe.
 
 **The client measures the tile.** The pinned upstream build ships ffmpeg and no
-ffprobe — the reason `Probe` already shells out to ffmpeg — so the server cannot
+ffprobe - the reason `Probe` already shells out to ffmpeg - so the server cannot
 say how wide a tile came out without guessing an aspect ratio the file may not
 have. The browser divides the loaded sheet's natural width by the column count
 instead, which is a fact rather than a guess.
 
 Two faults found by running it rather than by reading it. ffmpeg chooses its
-muxer from the file extension and refused `.jpg.tmp` outright — *"Unable to
-choose an output format"* — so the format is now named and the temporary file
+muxer from the file extension and refused `.jpg.tmp` outright - *"Unable to
+choose an output format"* - so the format is now named and the temporary file
 carries a real extension. And a file that cannot be built was re-attempted on
 every request: three identical failures in a third of a second while a player
 polled. Failures are now remembered for the life of the process, which is not
@@ -2058,8 +2062,8 @@ reason to try again.
 
 Verified against a four-minute file: a hundred tiles at 2.4-second intervals, a
 1600×900 sheet of 160×90 tiles weighing 205 KB, and the browser resolving the
-midpoint of the bar to `background-position: 0px -450px` — column 0, row 5,
-tile 50 — with the timestamp reading 2:00. The hover itself was not seen: the
+midpoint of the bar to `background-position: 0px -450px` - column 0, row 5,
+tile 50 - with the timestamp reading 2:00. The hover itself was not seen: the
 in-app preview pane does not composite frames, so the appearance of the strip
 under a moving cursor remains unverified.
 
@@ -2072,7 +2076,7 @@ and a laptop it is the right object and it stays. On a phone it never was.
 **Measured before anything was changed.** At 375px the pill is 327px wide and
 its contents need 459px. Decision-free tightening of the padding had already
 been applied and was not enough; "Réglages" was cut in half and the profile mark
-sat 113px past the right edge — in the document, painted nowhere, reachable by
+sat 113px past the right edge - in the document, painted nowhere, reachable by
 nothing. `overflow-x: hidden` on the body was the only reason the page did not
 also scroll sideways, which is to say the clipping was hiding the symptom.
 
@@ -2082,8 +2086,8 @@ for the first time settled it: two rows of chrome, 140px, seventeen per cent of
 the viewport, permanently, with the wordmark alone and centred on a line of its
 own. It was a fix, not a design.
 
-**So the destinations move to where the thumb already is.** Five tabs —
-accueil, films, séries, rechercher, réglages — pinned to the bottom, icons over
+**So the destinations move to where the thumb already is.** Five tabs -
+accueil, films, séries, rechercher, réglages - pinned to the bottom, icons over
 a micro label, the current one in gold. The pill stays above carrying the two
 things that are not destinations: the mark, and whose history is being written.
 
@@ -2091,15 +2095,15 @@ This is what every streaming application on a phone converged on, and the reason
 is reach rather than fashion: the top of a six-inch screen is the one place a
 hand holding the phone cannot go. It is also the only part of this interface
 where that argument applies, which is why the bar is hidden above 36rem and on
-the television. Section 9's contract — the first D-pad arrow enters at the
-primary action, the pill is the surface it enters — is written against the pill
+the television. Section 9's contract - the first D-pad arrow enters at the
+primary action, the pill is the surface it enters - is written against the pill
 and is untouched.
 
 Three glyphs were drawn for it, on the 24-unit grid and 1.7 stroke the icon file
 opens by insisting on: a house, a film strip, a television. The tab label tracks
 *in* at 0.03em rather than out, against §4's rule, because five tabs across
 375px give each one 75px and "Rechercher" measured 77px at the label register's
-normal tracking — its own slot exactly, touching both neighbours. The tracking
+normal tracking - its own slot exactly, touching both neighbours. The tracking
 is what stretched it, so the tracking is what gave.
 
 **Two things followed from having a phone layout at all.** The library toolbar
@@ -2107,13 +2111,13 @@ is one pill on a wide screen and stacked at 390px, where a 999px radius on a
 280px-tall box turns the ends into two enormous arcs; it becomes a plain stack
 there, with the field in a pill of its own and the filters in one horizontal row
 that scrolls. And `ChromeScene`'s veil is a left-to-right gradient, opaque where
-a wide screen puts its copy and down to 18% at the right edge — on a phone the
+a wide screen puts its copy and down to 18% at the right edge - on a phone the
 copy is full width and lands in that 18%, so "Aucune série" was grey type over a
 lit statue. Same veil, rotated to face the copy.
 
 Seen rather than measured, finally: Chrome will not resize below 1430px on this
 machine, so the phone was verified through an iframe of the running application
-at 390px inside a full-size tab. One caution for anyone repeating it — a CSS
+at 390px inside a full-size tab. One caution for anyone repeating it - a CSS
 animation inside that iframe does not advance (`theia-enter` reports
 `running` with `currentTime: 0`), so every `.enter` element reads as
 `opacity: 0` and looks like a contrast bug that is not there. The rig disables
@@ -2128,7 +2132,7 @@ by a remote that cannot hover. Measured on a 1905px viewport, every one of those
 four things was unaccounted for.
 
 **The safe area, first, because it is the one that loses content.** Every
-television guideline agrees on the outer five per cent — about 96px horizontally
+television guideline agrees on the outer five per cent - about 96px horizontally
 and 54px vertically on 1920×1080. The bar sat 16px from the top edge, the gutter
 was 77px, and the player's own furniture was 32px from the sides and 28px from
 the bottom: the play button and both ends of the scrub bar were inside the part
@@ -2138,18 +2142,18 @@ of the picture a set is allowed to eat. All three move out to 96 and 56.
 is 1536px, so past about 1712px the shell stops touching the gutters and centres
 itself while anything positioned from the gutter does not. The result at 1920
 was four different left edges: the wordmark at 185, the hero title at 77, the
-row headings at 261 — 184px to the right of their own cards — and the settings
+row headings at 261 - 184px to the right of their own cards - and the settings
 column at 384, floating in the middle of the picture with nothing to line up
 against. `--content-wide` becomes 120rem at this step, the settings column gives
 up its centring, and everything starts at 96.
 
 **Then the type, which is the part that argues.** Section 4's three-metre rule
 tops out at 19px body, 24px row headings, 16px card titles and 13px labels, and
-the code implements it exactly — so it is the rule that is short, not the
+the code implements it exactly - so it is the rule that is short, not the
 implementation. Fire TV puts the floor for body text at 28px on 1080p, Android
 TV asks 24sp, and the common advice is two and a half to three times a phone's
 sizes; 16px to 19px is 1.19x. It shows in the one place a television is actually
-read: the metadata under a hero — year, runtime, director — is the label
+read: the metadata under a hero - year, runtime, director - is the label
 register, and from a sofa it is a grey smudge.
 
 The tokens move rather than the classes. Sixty-one places in the markup reach
@@ -2159,7 +2163,7 @@ film's rating stayed 13px while the director beside it became 16px.
 
 **And the focus ring, because on a television focus is the cursor.** 2px at 1920
 on a 55-inch set is about 1.3mm, subtending roughly one arcminute from three
-metres — the threshold of seeing a line at all, before a panel's motion blur and
+metres - the threshold of seeing a line at all, before a panel's motion blur and
 a stream's compression get to it. It becomes 4px with a 3px offset. Cards were
 already exempt: decision 33's §6.2 gave them a border, a lift, a scale and a
 shadow together, for exactly this reason.
@@ -2194,7 +2198,7 @@ Measured on a 192-film bench, on the request the frontend actually makes
 Wi-Fi to a television, or down the WireGuard tunnel to a phone on mobile data,
 it is the difference between a page that appears and a page that arrives.
 
-Both listeners share one handler, so the same middleware covers LAN and remote —
+Both listeners share one handler, so the same middleware covers LAN and remote -
 which is the right way round, because remote is where it matters most.
 
 Measured after: the catalogue 148,142 → 20,860 bytes (−86%), the stylesheet
@@ -2204,7 +2208,7 @@ Measured after: the catalogue 148,142 → 20,860 bytes (−86%), the stylesheet
 gzipping it burns CPU to make it bigger. Worse, a range request answered with a
 compressed body no longer means what the player asked for, because the offsets
 it seeked to are offsets into the file, not into a gzip stream. So: never a
-request carrying `Range`, and only a named list of text types — never video,
+request carrying `Range`, and only a named list of text types - never video,
 never JPEG, never the sprite sheets. There is a test for each of those, and the
 range one is the one that would be a bug rather than a missed optimisation.
 
@@ -2218,7 +2222,7 @@ including the ones already on screen.
 
 Neither was right. A card is between 158 and 336 CSS pixels wide depending on
 the screen. On the real cache, one backdrop is 80,499 bytes at w780, 44,247 at
-w500 and 22,552 at w342 — so a television was downloading nearly four times the
+w500 and 22,552 at w342 - so a television was downloading nearly four times the
 picture it could display. And a lazy image on the first screen is a page that
 paints its artwork late for no reason at all.
 
@@ -2234,14 +2238,14 @@ The last row is the point: a screen that can use the pixels still gets them.
 
 The first six cards of a grid, and the first four of the home page's first row,
 are `eager` with `fetchpriority="high"`. Six covers one row on a television and
-three on a phone. Only the first row opts in — eager-loading every row would
+three on a phone. Only the first row opts in - eager-loading every row would
 fetch the whole page at once, which is the same fault in the other direction.
 
 ## 76. The decoder is benchmarked, not probed, because the answer is a property of the machine
 
 Decision 58's note ended by saying that if the chosen hardware decoder ever
 turned out slower in real use, the liveness probe should be replaced by a short
-benchmark against software decoding — more honest, more expensive, and not worth
+benchmark against software decoding - more honest, more expensive, and not worth
 paying for until it was needed.
 
 It was needed. The same `-hwaccel d3d11va` that won by 22% on the maintainer's
@@ -2262,7 +2266,7 @@ to decode and every hwaccel "passed".
 
 So the candidate list now says only which methods are worth *trying*, and a
 benchmark decides: build two seconds of 1080p H.264, time software decoding,
-then time each candidate in the shape a transcode uses it — including the scale
+then time each candidate in the shape a transcode uses it - including the scale
 filter, because timing a bare decode would hide exactly the readback being
 looked for. Sequentially, because two accelerators timed at once contend for the
 same silicon and both come out looking slow.
@@ -2273,7 +2277,7 @@ it costs nothing to be wrong about. Observed in the log on the laptop:
 
 	software=104ms  d3d11va=252ms  dxva2=316ms  chosen=""
 
-The whole benchmark cost 849ms, once, lazily, on the first transcode — cheaper
+The whole benchmark cost 849ms, once, lazily, on the first transcode - cheaper
 than the probe's worst case, which was a 15-second timeout.
 
 ## 77. libx264 is not tuned for a video call
@@ -2302,7 +2306,7 @@ encode starts noticeably later and finishes no sooner. Capped at
 `min(NumCPU, 8)`, so a small machine is never asked for threads it has not got.
 
 Hardware encoders keep their own defaults. Their `-usage` and `-quality` knobs
-were measured and changed nothing — 10,679ms against 10,786ms and 10,768ms —
+were measured and changed nothing - 10,679ms against 10,786ms and 10,768ms -
 because on this hardware the transcode is decode-bound, not encode-bound, which
 is the same finding as decision 76 seen from the other end.
 
@@ -2312,7 +2316,7 @@ The maintainer supplied five faces and asked for the shipped two to go. Two were
 taken, and the reasons the other three were not are the useful part.
 
 **Capitalis TypOasis** maps 65 glyphs. Every French accent is missing, and four
-of the ten digits are absent — "1 h 45" rendered as a row of architectural
+of the ten digits are absent - "1 h 45" rendered as a row of architectural
 dingbats. **Greek Freak** looked complete in the character map but draws its
 accented codepoints without accents, so "Réalisé" came out "REALISE": a defect
 the cmap could not show and only rendering did. **Poseidon AOE** is a brush
@@ -2322,7 +2326,7 @@ face, legible at hero size and a smudge anywhere below it.
 
 That is two faces where there were two, but the registers went from two to
 three, because Augustus cannot do what Playfair did in the middle: it has no
-lowercase at all — `abcdef` and `ABCDEF` measure identically — and Dalek is
+lowercase at all - `abcdef` and `ABCDEF` measure identically - and Dalek is
 small caps. Neither can carry a synopsis. So prose falls to the platform's own
 interface face, which ships nothing and is the one font on any device already
 tuned for reading.
@@ -2342,7 +2346,7 @@ theirs; the previous claim was load-bearing, so its removal is written down.
 Augustus was refused by every browser and the page looked completely fine,
 because the fallback in the stack is Georgia and Georgia is a perfectly good
 serif. The screenshot that was supposed to prove the new face was working was
-in fact proof of the old fallback doing its job — including the specimen sheet
+in fact proof of the old fallback doing its job - including the specimen sheet
 the face was *chosen* from, which means the choice was very nearly made on the
 strength of a font nobody had actually seen.
 
@@ -2358,7 +2362,7 @@ cheap and the specific one was nearly expensive: **a rendered screenshot does
 not verify a web font.** `document.fonts.check()` does, and it is one line.
 
 `font/ttf` joined the compressible types in the same change (decision 74's
-middleware). WOFF and WOFF2 are deliberately excluded — they carry their own
+middleware). WOFF and WOFF2 are deliberately excluded - they carry their own
 compression, and a test pins that.
 
 ## 80. The version tells itself
@@ -2493,7 +2497,7 @@ sections long.
 asked TMDB for a film and kept eleven fields out of the answer. The tagline, the
 original title, the age certificate, the collection the film belongs to, every
 crew credit except the director, and the portrait of every actor named on the
-page were all in the payload, already downloaded, and thrown away — the film page
+page were all in the payload, already downloaded, and thrown away - the film page
 was showing roughly a tenth of the record its own request had returned.
 
 **Nothing here costs a request.** `append_to_response=credits,release_dates` on
@@ -2504,13 +2508,13 @@ being parsed. A scan of the real library makes exactly as many TMDB calls after
 this change as before it.
 
 **The interface still owns every word.** A crew credit crosses the API as a role
-code — `writing`, `music`, `cinematography` — never as TMDB's English job title,
+code - `writing`, `music`, `cinematography` - never as TMDB's English job title,
 and a series carries `ended` or `returning` rather than "Returning Series".
 Decision 25 exists because a Windows syscall name once appeared in the middle of
 a French page; "Original Music Composer" would have been the same fault with a
 nicer accent. A job title this whitelist does not know is dropped rather than
-passed through. The one exception is deliberate: a certificate is *data* — "12",
-"TP", "R" is what the board wrote — and the country beside it is named by
+passed through. The one exception is deliberate: a certificate is *data* - "12",
+"TP", "R" is what the board wrote - and the country beside it is named by
 `Intl.DisplayNames` in the active locale, so no catalogue carries a list of two
 hundred countries to print one of them.
 
@@ -2520,13 +2524,13 @@ three sees two films, not one film and two absences: the home screen is a
 personal surface rather than a second catalogue (decision 29), and that rule does
 not stop being true one page down. The row is the ordinary `Row` component with
 its heading overridden, so it scrolls, snaps and answers a D-pad exactly like
-every other row in the interface — measured at 1920, its cards start on the same
+every other row in the interface - measured at 1920, its cards start on the same
 96px rule as the home screen's.
 
 **The backfill is a column, not a migration that guesses.** Every film already in
 a library carries `metadata_status = 'ok'` and a recent fetch timestamp, so
 decision 9's ninety-day lifetime would have left the new columns empty until
-November on a library scanned in August — for data sitting in an answer TMDB had
+November on a library scanned in August - for data sitting in an answer TMDB had
 already given. `metadata_version` records the field set a row was written with,
 and a row behind the current one is stale regardless of its age. It refetches in
 the ordinary scan batches at the ordinary rate limit, and the next new TMDB field
@@ -2534,19 +2538,19 @@ is a constant bump rather than a hand-written UPDATE. Rows TMDB never matched ar
 untouched: there are no new fields to fetch for a film it does not know.
 
 **Where the type went.** The tagline is a sentence, so it is set in the reading
-face and not in the display serif — section 4 keeps Cinzel for titles, and a
+face and not in the display serif - section 4 keeps Cinzel for titles, and a
 marketing line in small capitals reads as a second heading arguing with the
 first. The certificate is a box drawn with the line colour rather than the accent,
 whose five-per-screen budget was already spent on the rating beside it, and its
 tracking is tighter than a `.label` because "12" at 0.18em reads as "1 2". Cast
-portraits are 2:3 at w185 — the smallest size the image cache whitelists, still
-twice what the frame draws at — and they keep `loading="lazy"`, because the cast
+portraits are 2:3 at w185 - the smallest size the image cache whitelists, still
+twice what the frame draws at - and they keep `loading="lazy"`, because the cast
 is below the fold on every screen this runs on.
 
 **The catalogue got lighter, not heavier.** Sending the record with every film in
 a list would have been the obvious cost of this change, and it was: measured on
 250 films, the cast, crew, taglines and certificates were 31% of the `/films`
-response, for fields no list view reads — the library page draws cards showing a
+response, for fields no list view reads - the library page draws cards showing a
 title and a year, filters on genre and sorts on rating. So `collectMovies`, which
 every list read goes through and no single-film read does, drops what only a
 detail page shows; the two heroes do the same, being one film each but not a
@@ -2558,22 +2562,22 @@ local SQLite file costs nothing; the wire is what decision 74 is about.
 Measured on the bench, same server, before and after the slimming: `/films` at
 250 films went from 450 KB to 194 KB uncompressed and 45.3 KB to 23.9 KB gzipped,
 and the home screen from 8.0 KB to 4.3 KB gzipped. Against what the response
-carried *before this whole change* — cast names, no portraits — it is roughly 36%
+carried *before this whole change* - cast names, no portraits - it is roughly 36%
 smaller uncompressed. The film page gained its whole record and the library page
 pays less than it used to.
 
 **Verified, and what was not.** Against a real film with live TMDB data: the
 tagline, `TP (France)`, the Star Wars collection, John Williams under *Musique*,
-ten portraits fetched at 185px. Against a 250-film bench for the rest — sagas,
-missing certificates, a cast member with no portrait, an odd cast count — at 375,
+ten portraits fetched at 185px. Against a 250-film bench for the rest - sagas,
+missing certificates, a cast member with no portrait, an odd cast count - at 375,
 1280 and 1920: nothing overflows, the page never scrolls sideways, both faces
 load, no target is under 44px, and the type moves with the 100rem step (tagline
 27.6px, cast names 18px, credits 16/18px). Language switching was driven through
 the settings screen and back: `Classification R, États-Unis` becomes `Rated R,
 United States` without a reload.
 
-The interface guard still does not reach either detail page — its harness starts
-against an empty throwaway library, and there is no API that creates a film — so
+The interface guard still does not reach either detail page - its harness starts
+against an empty throwaway library, and there is no API that creates a film - so
 everything above was measured by hand in a browser. That gap is the reason this
 paragraph exists rather than a passing test.
 
@@ -2581,16 +2585,16 @@ paragraph exists rather than a passing test.
 
 **Decided post-v2, from a 13.9 GB file and four measurements.** Reported as big
 sound-against-picture desync, on a 2160p HEVC Main 10 Dolby Vision remux with two
-TrueHD Atmos 7.1 tracks — 2 h 35, `bt2020nc/bt2020/smpte2084`, 23.98 fps.
+TrueHD Atmos 7.1 tracks - 2 h 35, `bt2020nc/bt2020/smpte2084`, 23.98 fps.
 
 **Three suspects were measured and cleared before anything was changed**, which
 is most of what this entry is worth:
 
 | Asked of the real file | Answer |
 |---|---|
-| Remux drift over 20 minutes, Theia's exact arguments | video 1200.114 s, audio 1200.083 s — 83 ms of offset, **constant** |
+| Remux drift over 20 minutes, Theia's exact arguments | video 1200.114 s, audio 1200.083 s - 83 ms of offset, **constant** |
 | The same at `-ss 3600`, `3605`, `3607.5` | the same 83 ms; input seek does not desynchronise the two streams |
-| Transcoding 4K with `h264_amf`, Theia's exact arguments | **2.36×** real time — the pipe does not starve |
+| Transcoding 4K with `h264_amf`, Theia's exact arguments | **2.36×** real time - the pipe does not starve |
 
 So neither the remux, nor seeking, nor the encoder was the cause, and the honest
 place to look next was the guard that was supposed to catch this and did not.
@@ -2600,7 +2604,7 @@ expired.** It measures frames decoded per second *of film* and compares them to
 ten, "deliberately not the source frame rate, which the server does not store".
 That was calibrated on a 1080p file measuring near zero. On a 4K one, a decoder
 managing fourteen frames of a 23.98 fps film is losing two fifths of a second of
-picture every second — a minute of drift every two and a half — and fourteen sits
+picture every second - a minute of drift every two and a half - and fourteen sits
 comfortably above ten. The guard stays silent for the entire running time.
 
 The frame rate is now measured and stored. It was always printed on the stream
@@ -2611,7 +2615,7 @@ a file inspected before migration 0014, whose column is NULL until it is
 re-inspected.
 
 **And it watched once.** The check sampled 2.5 s after playback began and never
-again, with three of its own guards — paused, seeking, too little film elapsed —
+again, with three of its own guards - paused, seeking, too little film elapsed -
 returning without rearming. A film started paused, or scrubbed in its first
 seconds, spent the rest of its length unwatched; so did one whose decoder was
 fine at the opening titles and not fine an hour later. It now rearms at the end
@@ -2623,7 +2627,7 @@ sample can be a buffer emptying.
 running binary on port 8395: the probe reads `frame_rate: 23.98`, migration 0014
 carries it, and `/api/stream/1/files/1/info` returns it beside `video_risky:
 true` and `reason_code: audio_transcode`. Migration 0014 was applied to a copy of
-the real database — 8 films, 8 files, 5 audio tracks, 2 inspections, all
+the real database - 8 films, 8 files, 5 audio tracks, 2 inspections, all
 unchanged, source hash identical afterwards.
 
 **Not verified, and it must be checked in a real browser.** Whether Chrome on
@@ -2634,7 +2638,7 @@ inverted this very measurement once before, which is the whole reason decision 5
 ends the same way.
 
 Two limits left standing on purpose. The episode info route does not carry a
-frame rate, so episodes keep the constant — the reported fault is a film, and
+frame rate, so episodes keep the constant - the reported fault is a film, and
 teaching a second handler this costs more than it returns until an episode shows
 the same thing. And `totalVideoFrames` counts frames decoded rather than
 presented, which is the right half of the pair here: dropping frames is how a
@@ -2644,7 +2648,7 @@ behind.
 ## 87. HDR is tone mapped, because the failure has no error message
 
 **Decided post-v2, from the same 4K file as decision 86.** Its picture is
-`bt2020nc/bt2020/smpte2084` — PQ, under a Dolby Vision profile 8 record. Every
+`bt2020nc/bt2020/smpte2084` - PQ, under a Dolby Vision profile 8 record. Every
 re-encode Theia performed on it forced `-pix_fmt yuv420p` and nothing else, which
 hands an H.264 encoder BT.2020 code points and tells it they are BT.709.
 
@@ -2652,7 +2656,7 @@ hands an H.264 encoder BT.2020 code points and tells it they are BT.709.
 right aspect, with sound. It simply looks wrong: flat, grey, green-cast, with the
 detail crushed out of everything bright. There is no log line to find because no
 part of the pipeline believes anything went wrong. That is the whole reason this
-entry exists — it is the second fault in a row on this file whose only symptom is
+entry exists - it is the second fault in a row on this file whose only symptom is
 that a person looks at the screen and something is off.
 
 Extracted from the file at 40:00, scaled to the same size, average pixel over the
@@ -2660,8 +2664,8 @@ whole frame:
 
 | | avg RGB |
 |---|---|
-| what shipped | 135, 137, 136 — flat grey, moons with no surface left |
-| tone mapped, `npl=100` | 166, 180, 171 — surface detail back, the grade's blue-green returned |
+| what shipped | 135, 137, 136 - flat grey, moons with no surface left |
+| tone mapped, `npl=100` | 166, 180, 171 - surface detail back, the grade's blue-green returned |
 
 **The chain is `zscale`, and it is affordable only in the right order.** Four
 steps, none optional: linearise against a 100-nit display, convert to 32-bit
@@ -2690,7 +2694,7 @@ frame comes out at 166,180,171; at 200, 134,144,137; at 400, 105,112,107. The
 higher values give back the flatness this exists to remove.
 
 **The known limit, stated because it is measured.** At the source's own
-resolution the same chain runs at **1.09x** real time on this machine — the
+resolution the same chain runs at **1.09x** real time on this machine - the
 margin decision 58 called a coin toss rather than a margin. It survives here
 because tone mapping is CPU work that a hardware encoder does not help with, so
 an HDR transcode is CPU-bound whatever encoder runs it. The transcode limiter
@@ -2700,8 +2704,8 @@ transcodes would provably stall. Left alone rather than redesigned on one
 measurement, and written down here so the next person does not have to find it
 twice.
 
-The seek-preview builder runs the same chain for the same reason — a strip cut
-from an HDR source is grey — and imports it from `internal/stream` rather than
+The seek-preview builder runs the same chain for the same reason - a strip cut
+from an HDR source is grey - and imports it from `internal/stream` rather than
 repeating it, because a colour pipeline written twice is one that drifts. There
 it costs nothing: the frames are ninety pixels tall by the time it runs.
 
@@ -2714,7 +2718,7 @@ extracted and looked at.
 ## 88. A file says what it is, from what was measured and nothing else
 
 **Decided post-v2, asked for as decoration and built under the existing rule.**
-The film page now carries a row of badges — for the 4K file that prompted it,
+The film page now carries a row of badges - for the 4K file that prompted it,
 `4K · HDR · DOLBY VISION · TRUEHD · ATMOS · 7.1`.
 
 **Every one of them is a measurement.** The filename of that file contains the
@@ -2722,13 +2726,13 @@ words `2160p`, `DOLBY VISION`, `TrueHD` and `Atmos`, and none of them is where a
 badge comes from. The scanner already strips those tokens when it parses a title
 (`internal/library/parse.go`), and reading them back out to decorate the page
 would be the same guess wearing a different hat. A file that has not been
-inspected shows no badges at all — the rule the file chooser has followed since
+inspected shows no badges at all - the rule the file chooser has followed since
 V2-M1, applied to the one place where breaking it would have been easy and
 invisible.
 
 Everything needed was already printed by the ffmpeg Theia runs and thrown away.
 Decision 87 added the transfer function and the DOVI record for the tone map; the
-audio profile — `truehd (Dolby TrueHD + Dolby Atmos)`, `dts (DTS-HD MA)` — came
+audio profile - `truehd (Dolby TrueHD + Dolby Atmos)`, `dts (DTS-HD MA)` - came
 with it. So the badge row cost one migration and no new subprocess.
 
 Three judgements worth keeping:
@@ -2751,7 +2755,7 @@ shown and because `Stéréo`/`Stereo` and `SD` do differ. Parity check: 609 valu
 40 functions, matching.
 
 **Verified in a running browser** against the real library. Dune reports the six
-badges above with computed styles matching the tokens exactly — Jost, 11px,
+badges above with computed styles matching the tokens exactly - Jost, 11px,
 1.98px of tracking, `#8C857A` on `#131211` inside `#2A2724`, no gold anywhere. A
 640x360 AC3 mono clip reports `SD · DOLBY DIGITAL · MONO`, an MPEG-2 clip with no
 audio track reports `SD` alone, and an uninspected film renders no row and leaves
@@ -2767,7 +2771,7 @@ take the same component, and are left until somebody wants them there.
 shipped into the working tree.**
 
 **The rating.** It was a bare gold number at the end of the film page's metadata
-row — a year, a runtime, a certificate, then `7,8`. Nothing said it was out of
+row - a year, a runtime, a certificate, then `7,8`. Nothing said it was out of
 ten, in the one row on the page where every other figure is a date or a duration,
 and it spent one of §3's five accent uses with no context to justify it. It now
 reads `7,8 / 10`: the figure in the display face at 1.25rem in `--accent`, the
@@ -2785,7 +2789,7 @@ its loading skeleton.
 Decision 82's guard did not notice, and the reason is worth keeping: a loading
 skeleton overflows nothing, loads every font, offers no target under 44px and has
 exactly one left edge. All four assertions passed against a page that never
-rendered. So there is a fifth now — no uncaught page error, and no skeleton left
+rendered. So there is a fifth now - no uncaught page error, and no skeleton left
 standing after the network is idle.
 
 **Its limit is measured, not assumed.** The fault was reintroduced on purpose and
@@ -2793,13 +2797,13 @@ the new assertion still passed. `web/tests/serve.mjs` starts the binary against 
 empty throwaway directory; with no films there is no hero, so the component that
 throws is never rendered. The fifth question catches a page that breaks on its
 own and cannot catch one that only breaks once there is something to show.
-Closing that gap means seeding the guard's library — `scripts/bench` already
-builds one (decision 83) — at the cost of a Go toolchain the frontend guard does
+Closing that gap means seeding the guard's library - `scripts/bench` already
+builds one (decision 83) - at the cost of a Go toolchain the frontend guard does
 not currently need. Not paid yet, and written down rather than pretended away.
 
 What actually caught it was looking at a screenshot: the home page rendered as a
 grid of grey blocks. Which is decision 82's own thesis, arriving from the other
-direction — the guard exists because looking does not work, and this time only
+direction - the guard exists because looking does not work, and this time only
 looking worked.
 
 **A third measurement, while the colours were open.** `scripts/contrast.mjs`
@@ -2812,7 +2816,7 @@ system says 5.12 where it used to quote the wrong number.
 ## 90. A copied stream can only start on a keyframe, so both streams start there
 
 **Decided post-v2.5.0, from a report that says exactly where to look:** normal
-playback is fine, and clicking anywhere in the seek bar — forward or backward —
+playback is fine, and clicking anywhere in the seek bar - forward or backward -
 puts the sound a long way ahead of the picture.
 
 That sentence rules out most of the pipeline. There is no `-ss` in a playback
@@ -2841,7 +2845,7 @@ The picture was located by hashing the first output frame and matching it agains
 frames of the source carrying absolute timestamps, so the answer does not depend
 on the seek being trusted. The sound was located by cross-correlating the output
 against a decode of the source taken with an **output-side** `-ss`, which decodes
-from the beginning and never touches the seek index — the only reference in this
+from the beginning and never touches the seek index - the only reference in this
 exercise that is not subject to the behaviour being measured. A first attempt
 used input-side seeks to build that reference and produced numbers that
 contradicted each other; a second mislabelled 5 ms windows as 10 ms and put the
@@ -2854,8 +2858,8 @@ stream at the keyframe: measured again, picture at 3595.467 and sound at 3595.47
 three milliseconds apart.
 
 **What it costs, stated plainly.** Playback resumes up to one keyframe interval
-before the point that was clicked, and the player's clock — which counts from
-what it asked for — is optimistic by the same amount, as is a resume position
+before the point that was clicked, and the player's clock - which counts from
+what it asked for - is optimistic by the same amount, as is a resume position
 saved from it. Decision 16 already called that granularity inherent to stream
 copy; what changes is that both streams now pay it together instead of the
 picture paying it alone. A viewer landing four seconds early with the sound
@@ -2865,7 +2869,7 @@ seconds ahead is a broken film.
 **The transcode path keeps its accurate seek**, and that is deliberate. Its video
 is decoded, so ffmpeg trims it exactly as it trims the audio. Verified on the
 same file and the same timestamp: the first transcoded frame is the source frame
-at 3600, not the keyframe before it — the two are visibly different shots, which
+at 3600, not the keyframe before it - the two are visibly different shots, which
 is how it was checked.
 
 ## 91. The rule was written down and broken anyway, so it is checked instead
@@ -2875,7 +2879,7 @@ is how it was checked.
 A full-bleed backdrop with no `object-position` centres itself. In a header two
 or three times wider than it is tall, that puts the subject exactly where the
 navigation pill floats. It was fixed once, in `Hero.svelte`, and written into the
-design system at the same time — and the film detail header, which has the same
+design system at the same time - and the film detail header, which has the same
 shape and the same bar over it, shipped centred regardless. So did the series
 one. The rule was correct, documented, and not applied, which is the whole
 argument of this entry.
@@ -2891,7 +2895,7 @@ Measured at 1920×1080, against a bar 128px deep:
 The detail headers had more to lose than the hero did, not less.
 
 **`web/scripts/check-backdrops.mjs` is the answer, not another paragraph.** It
-fails the frontend build — and therefore `build.ps1` and CI — when a picture
+fails the frontend build - and therefore `build.ps1` and CI - when a picture
 pinned to every edge with `object-cover` does not say where it is framed. It
 reads both idioms the application uses: Tailwind utilities on the element, and a
 class in `app.css` setting `object-fit: cover`.
@@ -2903,7 +2907,7 @@ reason, the way `contrast.mjs` carries the role of every token.
 
 **It was proved to fail before it was trusted.** The fault was reintroduced on
 the film page: the script exits 1 naming `src/routes/film/[id]/+page.svelte:207`,
-and `npm run prebuild` exits 1 with it. That step is not ceremony — the interface
+and `npm run prebuild` exits 1 with it. That step is not ceremony - the interface
 guard's fifth assertion, added one release earlier, was tested the same way and
 turned out **not** to catch the fault it was written for.
 
@@ -2914,14 +2918,14 @@ ways: centred, the winged figure is cropped above the frame, which reads as
 framing; from the top she appears with her face inside the bar, which reads as a
 fault. Top alignment is already the furthest that picture can move down, so there
 is no third option, and a head out of shot beats a head cut in half. It keeps
-`object-center` — explicit, so the guard passes it — with the reasoning in the
+`object-center` - explicit, so the guard passes it - with the reasoning in the
 file beside it.
 
 **Verified.** The film page was rendered at 1920×1080 and looked at: both faces
 now sit clear of the bar, where the reported screenshot had one of them entirely
 inside it. `object-position` computes to `50% 0%`. The series header takes the
 same one-word change and is covered by the guard and by the geometry above, but
-**was not looked at** — the throwaway library the guard runs against holds no
+**was not looked at** - the throwaway library the guard runs against holds no
 series, and nothing here pretends otherwise.
 
 
@@ -2934,7 +2938,7 @@ rather than chosen.**
 
 Decision 90 made both streams start on the keyframe, which keeps a seeked film
 together and leaves the player counting from the moment it asked for rather than
-the one it got — up to 10.4 s later on this file, always in the same direction,
+the one it got - up to 10.4 s later on this file, always in the same direction,
 and saved as the resume position.
 
 **The elegant fix does not exist, and that was worth finding out first.** Letting
@@ -2947,7 +2951,7 @@ plain remux. Nobody should spend an afternoon on that route again.
 So `GET /api/stream/{id}/files/{file_id}/seek?t=` answers it instead, from one
 short ffmpeg run: `-copyts -noaccurate_seek -c copy -frames:v 1 -f framecrc`,
 which is an index seek and a single packet read rather than a decode. Measured
-through the running server: **165–181 ms**, and correct — 3600 and 3605 both
+through the running server: **165–181 ms**, and correct - 3600 and 3605 both
 answer 3595.384, which is the keyframe they share.
 
 **The timebase is read, not assumed**, and that is the whole fragile part.
@@ -2961,7 +2965,7 @@ and corrects its clock when the answer lands.
 
 ### A bitrate for the picture being made
 
-`targetBitrate` stopped at 1080p and handed everything larger the same 8 Mb/s —
+`targetBitrate` stopped at 1080p and handed everything larger the same 8 Mb/s -
 the 1080p figure applied to four times the pixels, which was the top of a table
 nobody had needed to extend rather than a judgement. Measured: the 4K transcode
 produced **7734 kb/s against an 8 Mb/s ceiling**, an encoder pressed flat against
@@ -2990,7 +2994,7 @@ nobody can see.
 ### A preview build that could not end
 
 `internal/preview` runs one encode at a time on purpose, and gave it
-`context.Background()` — no deadline at all. A file ffmpeg could not finish held
+`context.Background()` - no deadline at all. A file ffmpeg could not finish held
 that slot for the life of the process, and no other film in the library ever got
 a strip.
 
@@ -3003,7 +3007,7 @@ going to produce a strip and the slot is worth more to the next film.
 
 **And the strip was looked at**, which had never happened: decision 87 said the
 preview runs the same tone-mapping chain and nobody had checked. A hundred tiles
-of Dune, correctly mapped — skin tones, the gold of the desert, none of the grey
+of Dune, correctly mapped - skin tones, the gold of the desert, none of the grey
 the chain exists to prevent.
 
 
@@ -3032,7 +3036,7 @@ it. Chromium therefore treats the element as unseekable whatever it has cached:
 assigning `currentTime = 12` snapped straight back to 0, and the film restarted
 from the beginning of the stream.
 
-There is no cheap fix. Making this work needs Media Source Extensions —
+There is no cheap fix. Making this work needs Media Source Extensions -
 appending fragments into a `SourceBuffer` the player owns, so the timeline
 belongs to us rather than to the element. That is a different player, not a
 shortcut in this one. The reasoning is left in `seekTo` so the next person does
@@ -3043,7 +3047,7 @@ the real controls.
 
 ### The subtitle layer stopped re-laying out the whole film
 
-`liftCues` loops over `track.cues` — every cue, not the active ones — setting
+`liftCues` loops over `track.cues` - every cue, not the active ones - setting
 `snapToLines` and `line` on each, and it ran on every `cuechange`. A feature film
 carries around two thousand cues.
 
@@ -3062,7 +3066,7 @@ the honest figure rather than the totals: before, every line of dialogue rewrote
 every cue in the film.
 
 It also stopped measuring twice. `placeSubtitles` read the video box and the
-control bar, then `liftCues` — which called it first — read both again plus the
+control bar, then `liftCues` - which called it first - read both again plus the
 root font size: four `getBoundingClientRect` calls and two `querySelector`
 lookups for one answer. There is one measurement now, and the arithmetic moved to
 `$lib/subtitle-layout.js` where it is tested.
@@ -3075,7 +3079,7 @@ bar with the bar up.
 `onpointermove` called `showControls`, which cleared and recreated the idle
 timeout. Measured over five seconds of continuous movement: **300 move events,
 300 timers**. Sampled at four a second it is **20**, and the bar hides three
-seconds after the last sampled movement rather than the last event — a difference
+seconds after the last sampled movement rather than the last event - a difference
 of at most a quarter of a second.
 
 Deliberately a wrapper rather than a guard inside `showControls`: that function is
@@ -3089,7 +3093,7 @@ adjusts when the answer lands, about 170 ms later, usually while the first
 fragments are still arriving.
 
 It fixes three things that all came from the same number. The position on the
-bar, the resume point saved from it, and — found while implementing, not before —
+bar, the resume point saved from it, and - found while implementing, not before -
 **the subtitles**, whose cues are shifted by exactly this offset and were
 therefore four to ten seconds out after every seek. Verified: seeking to 15 s on a
 file whose keyframe is at 14 s now shows 0:14.
@@ -3097,7 +3101,7 @@ file whose keyframe is at 14 s now shows 0:14.
 ### Two modules, and a test runner that costs nothing
 
 `subtitle-layout.js` and `track-labels.js` are pure and now carry **18 tests**,
-run by `node --test` — no browser, no new dependency. None of this was testable
+run by `node --test` - no browser, no new dependency. None of this was testable
 while it lived inside the component.
 
 `PlayerPreviewStrip.svelte` is the third extraction: it fetches its own sheet,
@@ -3115,7 +3119,7 @@ reaches the player first.
 ### A gap this session found twice
 
 Both self-inflicted breakages in v2.5 and v2.6 were the same fault: an identifier
-referenced from the markup with nothing behind it — a missing import, then a
+referenced from the markup with nothing behind it - a missing import, then a
 function removed while a `svelte:window` handler still pointed at it. Neither
 fails the build. `svelte-check` would catch both, at the cost of a devDependency
 and some build time. Not added here, because adding a toolchain in the middle of
@@ -3333,7 +3337,7 @@ deliberately not exposed because it would erase new viewing history.
 
 ## 103. The delivery decision has one source, and its answers are pinned byte for byte
 
-The backend redesign (docs/plan-refonte-lecture.md) found the delivery policy
+The backend redesign (docs/archive/v3.2/plan-refonte-lecture.md) found the delivery policy
 computed four times across the film and episode handlers, and an `/info`
 answer that could drift from the stream that followed it. The planner now
 lives in `internal/playback` (`InfoDecision`, `StreamDecision`) and both the
@@ -3415,7 +3419,7 @@ not because flushing looks diligent.
 ## 107. Hardware capacity is measured; the first measured machine confirms the runtime as it stands
 
 The tranche-6 campaign (`scripts/measure-hardware`, results in
-docs/hardware-measurements-tranche-6.md) probed every H.264, HEVC and AV1
+docs/archive/v3.2/hardware-measurements-tranche-6.md) probed every H.264, HEVC and AV1
 encoder candidate on the maintainer's Ryzen AI 9 HX 370 with Radeon 890M, and
 measured the chains a 4K HEVC source can take. Three findings carry decisions:
 
@@ -3469,8 +3473,8 @@ no-architecture-guessing rule, build-time-only release facts via
 `release.json`/`fetch-release.mjs`, self-hosted fonts, no CDN, no analytics,
 the screenshot provenance rules, and the structural checks (rewritten for the
 new output). The component libraries named during the rebuild (shadcnblocks,
-React Bits and friends) informed the vocabulary — terminal cards, bento
-ledger, spotlight wash — but no proprietary block was copied; every pattern is
+React Bits and friends) informed the vocabulary - terminal cards, bento
+ledger, spotlight wash - but no proprietary block was copied; every pattern is
 authored in this repository under GPL-3.0.
 
 Same session, same build unit, after a first review found the page short on
@@ -3479,6 +3483,138 @@ audio/subtitle/quality facts as an overlay card, and a subordinate still strip
 (five further captures of the real application) follows the moments. §12.2 was
 amended in the same session to describe both forms.
 
+## 109. Edge's byte quota makes the MSE buffer adaptive
+
+The 4K HDR remux failure reported from Microsoft Edge was reproduced as
+`QuotaExceededError: SourceBuffer is full`, not as an AMF crash. The fixed
+thirty-second target represented roughly 206 MB at the measured 54.95 Mb/s;
+Edge canceled the HTTP request when its byte quota was crossed, and the
+resulting closed socket and ffmpeg exit were consequences rather than causes.
+
+MSE keeps its six-second startup reserve, but its rolling target now halves
+from 30 to 15, 7.5 and finally 6 seconds after quota pressure. The rejected
+batch is retained, already-played media is evicted, and the exact same batch is
+retried, so recovery cannot skip content. Exhausting the floor reports the
+localised `stream_buffer_full` instead of leaving Edge's misleading native
+format error. A headed Edge 152 session against the real 54.95 Mb/s HEVC remux
+then delivered 648,252,768 bytes over its final 2m41 stream without a playback
+error and left no ffmpeg process after the browser closed.
+
+The fresh-install race is closed beside it without weakening the first-need
+rule. If the initial `/info` said conversion was unavailable but a risky codec
+fails after ffmpeg had time to install, the player reloads `/info` once before
+refusing. It never polls, and `/info` itself still never waits for a download.
+
+## 110. FFmpeg moves from 6.1.1 to Jellyfin 8.1.2-4 as one six-platform family
+
+The historical provider stopped at 6.1.1. The official 9.0.1 source release did
+not have one evaluated immutable binary provider covering all six Theia targets,
+and mixing providers would make filters and hardware support vary by OS.
+Jellyfin FFmpeg 8.1.2-4 is therefore the newest qualified family: GPL portable
+packages for Windows, Linux and macOS in both AMD64 and ARM64, including a
+native Windows ARM64 runtime for the first time. This is a qualified update,
+not a claim that 8 is intrinsically preferable to 9.
+
+Packages are ZIP on Windows and tar.xz elsewhere. Theia downloads at first need
+as before, bounds the package, verifies its GitHub asset SHA-256, extracts only
+`ffmpeg`, verifies a separately pinned executable SHA-256, then checks the
+reported `8.1.2-Jellyfin` version before use. `ffprobe` is not extracted, CGO
+remains disabled, and the xz reader is compiled into Theia. Diagnostics expose
+both hashes and the immutable source URL.
+
+On the same real UHD HDR remux and Ryzen AI 9 HX 370 / Radeon 890M, alternating
+three-run medians moved the production remux from 15.87x to 53.20x real time
+(3.35x throughput) and the 1080p HDR compatibility transcode from 1.68x to
+1.94x (+16%). A ten-second 2160p window rose from 0.98x to 1.08x, but that
+margin is too small and too short to reverse decision 87: HDR compatibility
+still starts at 1080p and one tone map still consumes the transcode budget.
+The full provenance, raw run values, Edge evidence and limitations are in
+`docs/archive/v3.2/ffmpeg-8.1.2-validation.md`.
+
+## 111. An existing FFmpeg is never trusted merely because its filename is right
+
+The six historical FFmpeg 6.1.1 executable hashes are recognised as an old
+official family and upgraded to Jellyfin 8.1.2-4 on first real need. A binary
+whose hash is neither the current release nor one of those six predecessors is
+treated as manually supplied or altered: Theia never executes it. It is moved
+to `.unmanaged` only after the new official archive and executable have passed
+both pinned hashes and the version check. A current official binary that fails
+validation is preserved as `.invalid`; a known official predecessor becomes
+`.previous`.
+
+The exchange uses two renames and rolls the first one back if the second fails.
+This makes the official runtime authoritative without turning a partial
+download, an antivirus lock or somebody's custom binary into an unrecoverable
+installation. It also closes the old loophole where any executable named
+`ffmpeg` could run before its provenance was known.
+
+## 112. A paused remux gives back its pipe, and buffer pressure belongs to the browser
+
+An active picture sends the playback heartbeat; a paused one does not. After
+two minutes, a paused fragmented stream saves its absolute position and releases
+the fetch, MediaSource and FFmpeg process. Resume starts a new uniquely named
+pipe at that position. Startup is not a pause: the timer cannot arm before the
+video has played. Direct play remains attached because it owns no encoder.
+
+The browser transport keeps the six-second startup reserve, adapts its rolling
+target from 30 to 15, 7.5 then 6 seconds on quota pressure, remembers the safe
+target per output class and retries the refused bytes. MediaSource and
+ManagedMediaSource share the implementation; a browser exposing neither gets
+the native video fallback. The fallback is covered only for what the Windows
+WebKit harness can prove and is not presented as a physical Safari result.
+
+## 113. An updater is releasable only after a healthy swap and an unhealthy rollback
+
+Unit tests of rename functions are not enough for the updater. The release gate
+builds two real Theia executables, serves a local release and checksum, installs
+the newer one, waits for the new process and verifies its health and cleanup.
+It then repeats with an executable whose actual health endpoint fails and
+requires the old version, database/config snapshot and runnable process to be
+restored. The failed update stays available for diagnosis.
+
+The same release class includes an endurance gate: repeated real remux
+open/read/cancel cycles must return to zero FFmpeg processes, and a complete
+long stream must finish without an orphan. Neither gate publishes anything;
+they prove the local candidate that the release workflow will later build.
+
+## 114. A fresh file and a large catalogue must become visible without a second chance
+
+The watcher schedules its next inspection at the file's actual stability
+deadline. It no longer waits a fixed extra minute after already observing the
+same size and modification time, so a newly copied stable file enters the
+library on the first eligible pass.
+
+Series use the same paged catalogue rule as films: fetch until a short page,
+keep stable ordering, and stop safely on an empty page. The browser no longer
+silently loses every series after row 500. The guard exercises 1,203 distinct
+series over three pages.
+
+## 115. Player extraction preserves ownership, and browsers are named individually
+
+Track, subtitle, quality and help presentation leave `Player.svelte` for two
+components; the parent keeps session state, focus, D-pad commands, the absolute
+clock and stream lifecycle. This is a boundary extraction, not a rewrite, and
+its acceptance is the same playable contract on film and episode routes.
+
+The playback gate names Chromium, the installed stable Microsoft Edge, Firefox
+and WebKit as separate projects. Chromium is not counted as proof of Edge.
+Codec/frame APIs and MSE availability are asserted only where the engine
+exposes them; conditional skips document missing harness capability instead of
+turning it into a support claim.
+
+## 116. The standalone website is removed, and the repository owns the public story
+
+The standalone Astro site, its GitHub Pages workflow, generated assets and
+site-only source images are removed. Maintaining a second presentation layer
+duplicated release metadata, screenshots, copy, dependencies and validation
+without improving the application itself. Decisions 64 and 65 remain as
+history, but their implementation is no longer current.
+
+The repository README, GitHub Releases and Discord are now the public entry
+points. The README does not carry a versioned screenshot gallery. Product proof
+belongs in the running application, release checks and technical records, not
+in a second interface that can drift away from the binary.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
@@ -3486,8 +3622,8 @@ amended in the same session to describe both forms.
   contributors. The interface defaults to French and includes English; both
   catalogues live under `web/src/lib/i18n/locales/` and must pass the parity
   check described in decision 32.
-- **Updater:** built from the documented GitHub Releases pattern — check the
-  API, download, swap atomically, restart — rather than ported from Hermes,
+- **Updater:** built from the documented GitHub Releases pattern - check the
+  API, download, swap atomically, restart - rather than ported from Hermes,
   whose source was not available. This section originally assumed Windows would
   need a relay process to replace a running `.exe`; testing showed it does not,
   because Windows allows a running executable to be *renamed*. See decision 22,

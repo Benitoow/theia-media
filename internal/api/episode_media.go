@@ -18,6 +18,8 @@ func (s *Server) handleInspectEpisodeFile(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusServiceUnavailable, "ffmpeg_unavailable")
 		return
 	}
+	release := s.beginCostlyWork()
+	defer release()
 
 	info, err := s.ffmpeg.Probe(r.Context(), file.Path)
 	switch {

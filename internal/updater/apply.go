@@ -100,11 +100,28 @@ func (u *Updater) Apply(ctx context.Context) error {
 		}
 	}
 	installed := false
+	prepared := false
 	defer func() {
+		if prepared && !installed && u.abort != nil {
+			if err := u.abort(); err != nil {
+				u.log.Warn("could not clear an unused update recovery point", "error", err)
+			}
+		}
 		if releaseInstall != nil && (!installed || u.restart == nil) {
 			releaseInstall()
 		}
 	}()
+	if u.prepare != nil {
+		if err := u.prepare(ctx, rel.TagName); err != nil {
+			if u.abort != nil {
+				if abortErr := u.abort(); abortErr != nil {
+					u.log.Warn("could not clear an incomplete update recovery point", "error", abortErr)
+				}
+			}
+			return u.fail(err, ReasonReplaceFailed, "a recovery point could not be created")
+		}
+		prepared = true
+	}
 	if err := u.swap(staged); err != nil {
 		return u.fail(err, ReasonReplaceFailed, "the binary could not be replaced")
 	}

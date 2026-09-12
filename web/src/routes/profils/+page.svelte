@@ -2,7 +2,7 @@
 	// The chooser, the management view and one profile's page, in one route.
 	//
 	// A full screen with the navigation suppressed, not a pill or a dropdown in
-	// the nav bar. Decision 35 measured why that fails here — a 2rem avatar and an
+	// the nav bar. Decision 35 measured why that fails here - a 2rem avatar and an
 	// 11px name are unreadable from a sofa, four targets overflowed the 320px
 	// floor, and the first arrow key landed on navigation rather than on the
 	// question the app opens with. Decision 48 kept that finding when the
@@ -144,7 +144,7 @@
 </script>
 
 <svelte:head>
-	<title>{t.profiles.question} — {t.appName}</title>
+	<title>{t.profiles.question} - {t.appName}</title>
 </svelte:head>
 
 {#if view === 'loading'}
@@ -289,7 +289,7 @@
 	<!-- The chooser. Brand, the question, one row of cards, and a single detached
 	     control underneath. Everything else is negative space. -->
 	<div class="profile-screen">
-		<a href="/" class="profile-brand" aria-label="{t.appName} — {t.nav.home}">
+		<a href="/" class="profile-brand" aria-label="{t.appName} - {t.nav.home}">
 			<span class="brand-wordmark"><span class="brand-word">{t.appName}</span></span>
 		</a>
 

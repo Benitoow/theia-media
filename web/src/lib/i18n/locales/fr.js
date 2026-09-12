@@ -214,7 +214,7 @@ export const strings = {
 		installing: 'Installation…',
 		upToDate: 'Theia est à jour.',
 		available: 'Une nouvelle version est disponible.',
-		ready: 'Mise à jour installée. Theia redémarre — rechargez la page dans quelques secondes.',
+		ready: 'Mise à jour installée. Theia redémarre - rechargez la page dans quelques secondes.',
 		deferred:
 			"Mise à jour reportée : une lecture est en cours. Elle sera proposée à nouveau une fois l'écran libre.",
 		failed:
@@ -232,7 +232,7 @@ export const strings = {
 		copied: 'Copié',
 		mdns: 'Également joignable à',
 		mdnsCaveat:
-			"Ce nom ne fonctionne pas sur Android — utilisez l'adresse IP ci-dessus dans ce cas.",
+			"Ce nom ne fonctionne pas sur Android - utilisez l'adresse IP ci-dessus dans ce cas.",
 		otherAddresses: 'Autres adresses de cette machine',
 		otherAddressesHint:
 			"Si le code ne mène nulle part, cette machine a plusieurs cartes réseau et Theia a peut-être choisi la mauvaise. Essayez l'une de ces adresses.",
@@ -260,8 +260,9 @@ export const strings = {
 		buffering: 'Mise en mémoire tampon…',
 		seeking: 'Repositionnement…',
 		remuxBadge: 'Réencapsulé à la volée',
+		adaptiveQuality: (height) => `Adapté en ${height}p`,
 		preparing:
-			'Préparation de la lecture — ffmpeg est téléchargé une seule fois, cela peut prendre un moment.',
+			'Préparation de la lecture - ffmpeg est téléchargé une seule fois, cela peut prendre un moment.',
 
 		unavailable: "La lecture n'a pas pu être préparée.",
 		noFfmpeg:
@@ -274,6 +275,8 @@ export const strings = {
 		codes: {
 			browser_cannot_decode_video:
 				'Votre navigateur ne sait pas décoder la vidéo de ce fichier : le son avancerait sur une image figée. Ouvrez-le dans un autre navigateur, ou choisissez un autre fichier sur la fiche du film.',
+			stream_buffer_full:
+				'Le tampon vidéo du navigateur est saturé. Relancez la lecture ; Theia réduira la quantité gardée en mémoire.',
 			invalid_movie_id: "Ce film n'est pas identifiable.",
 			invalid_file_id: "Ce fichier n'est pas identifiable.",
 			invalid_audio_track_id: "Cette piste audio n'est pas identifiable.",
@@ -330,7 +333,7 @@ export const strings = {
 			// ffmpeg écrit « stereo » et « mono » ; le reste (5.1, 7.1, 3.0) se lit
 			// déjà tel quel et n'a pas à être traduit.
 			channels: { mono: 'Mono', stereo: 'Stéréo' },
-			imageBased: 'image — non affichable',
+			imageBased: 'image - non affichable',
 
 			// Décalage des sous-titres. Le signe est explicite parce que « +1 s »
 			// et « 1 s » ne veulent pas dire la même chose ici, et la valeur est
@@ -424,6 +427,68 @@ export const strings = {
 			mono: 'Mono',
 			channels: (layout) => layout
 		},
+		compatibility: {
+			heading: 'Lecture sur cet appareil',
+			intro: 'Theia compare le fichier mesuré, son plan de lecture et ce navigateur.',
+			preview: 'Aperçu 3.2',
+			features: {
+				analysis: 'Analyse du fichier',
+				video: 'Vidéo',
+				hdr: 'Écran HDR',
+				dolbyVision: 'Dolby Vision',
+				atmos: 'Dolby Atmos'
+			},
+			statuses: {
+				checking: 'Vérification',
+				planned: 'Plan de lecture',
+				adapted: 'Adapté par Theia',
+				reported: 'Déclaré par le navigateur',
+				measured: 'Problème mesuré',
+				unknown: 'Non vérifié',
+				unavailable: 'Indisponible'
+			},
+			details: {
+				analysisRequired: "Analysez d'abord ce fichier pour le comparer à l'appareil actuel.",
+				analysisFailed: "L'analyse du fichier a échoué ; sa compatibilité ne peut pas encore être évaluée.",
+				checking: 'Theia prépare le plan de lecture sans ouvrir ni télécharger le fichier.',
+				planUnavailable: "Le plan de lecture n'a pas pu être lu. La lecture réelle reste le test.",
+				directReported: (codec) =>
+					`Le navigateur déclare prendre en charge ${codec.toUpperCase() || 'ce codec'} ; Theia enverra le fichier sans le modifier. La fluidité reste à vérifier en lecture.`,
+				directPlanned: (codec) =>
+					`Theia prévoit une lecture directe en ${codec.toUpperCase() || 'vidéo'}. Ce navigateur ne fournit pas de verdict utile sur le codec.`,
+				containerAdapted: (codec) =>
+					`Theia changera le conteneur en conservant le flux vidéo ${codec.toUpperCase() || 'd’origine'}.`,
+				audioContainerAdapted: (codec) =>
+					`Theia conservera l'image ${codec.toUpperCase() || 'd’origine'} et convertira le son pour le navigateur.`,
+				measuredFallback: (codec, kind) =>
+					`Une lecture réelle a déjà montré que ${codec.toUpperCase() || 'ce codec'} ralentit dans ce navigateur. Theia passera à une conversion vidéo ${kind === 'hardware' ? 'matérielle' : 'logicielle'}.`,
+				measuredNoFallback: (codec) =>
+					`Une lecture réelle a montré que ${codec.toUpperCase() || 'ce codec'} ralentit ici, sans encodeur vidéo vérifié disponible sur le serveur.`,
+				riskyReported: (codec) =>
+					`Le navigateur déclare prendre en charge ${codec.toUpperCase() || 'ce codec'}, mais Theia mesurera les images décodées pendant la lecture avant de le croire.`,
+				riskyUnknown: (codec) =>
+					`Ce navigateur ne déclare pas de prise en charge exploitable pour ${codec.toUpperCase() || 'ce codec'}. Theia essaiera puis mesurera le résultat.`,
+				videoTranscoded: (codec, kind) =>
+					`Theia convertira ${codec.toUpperCase() || 'la vidéo'} avec son encodeur ${kind === 'hardware' ? 'matériel' : 'logiciel'} vérifié.`,
+				videoUnavailable: (codec) =>
+					`${codec.toUpperCase() || 'Ce codec vidéo'} exige une conversion, mais aucun encodeur vérifié n'est disponible.`,
+				hdrToneMapped: "Theia convertira l'image HDR en SDR pour cette lecture.",
+				hdrDisplayReported:
+					'Le navigateur déclare un écran à grande plage dynamique. La lecture et toute la chaîne de connexion restent à vérifier.',
+				hdrDisplayNotReported:
+					"Le navigateur ne déclare pas d'écran à grande plage dynamique. Cela ne prouve pas que l'écran est SDR.",
+				hdrDisplayUnknown: "Ce navigateur n'expose pas la plage dynamique de l'écran.",
+				dolbyVisionConverted:
+					"Theia produira une image SDR ; les métadonnées Dolby Vision ne seront pas conservées.",
+				dolbyVisionUnknown:
+					"Le fichier contient du Dolby Vision, mais le navigateur et la chaîne d'affichage ne peuvent pas être vérifiés de bout en bout.",
+				atmosConverted:
+					"Le son doit être converti pour le navigateur ; la restitution Atmos ne sera donc pas conservée.",
+				atmosUnknown:
+					"Le fichier contient des métadonnées Atmos. Le navigateur n'expose ni les enceintes, ni l'ampli, ni la chaîne HDMI : la restitution reste non vérifiée."
+			},
+			caveat: '« Déclaré par le navigateur » est un indice. Seule une lecture réelle en fait une preuve.'
+		},
 		notFound: 'Ce film est introuvable.',
 		overview: 'Synopsis',
 		cast: 'Distribution',
@@ -495,7 +560,7 @@ export const strings = {
 		discovery: {
 			remote_router_silent:
 				'Votre routeur n’a pas répondu. L’ouverture automatique de ports (UPnP ou NAT-PMP) ' +
-				'est sans doute désactivée dans son interface — c’est le cas par défaut sur ' +
+				'est sans doute désactivée dans son interface - c’est le cas par défaut sur ' +
 				'certaines box. Activez-la, ou ouvrez le port à la main ci-dessous.',
 			remote_router_refused:
 				'Votre routeur a refusé d’ouvrir ce port. Il est peut-être déjà redirigé vers une ' +
@@ -504,7 +569,7 @@ export const strings = {
 			remote_carrier_nat:
 				'Votre opérateur vous place derrière un CGNAT : votre connexion n’a pas d’adresse ' +
 				'publique à elle, et aucune redirection de port ne peut la traverser. Demandez-lui ' +
-				'une adresse IP publique — c’est en général gratuit et immédiat.'
+				'une adresse IP publique - c’est en général gratuit et immédiat.'
 		},
 		router:
 			'Votre box doit rediriger le port UDP ci-dessous vers cette machine. Ne redirigez jamais le port TCP de Theia : il n’a aucune authentification.',
@@ -745,7 +810,7 @@ export const strings = {
 		portChanged:
 			'Le nouveau port est enregistré, mais Theia écoute toujours sur l’ancien. Redémarrez-le pour appliquer.',
 		missingPaths:
-			'Enregistré, mais ces dossiers sont introuvables pour l’instant — normal si le disque n’est pas branché :',
+			'Enregistré, mais ces dossiers sont introuvables pour l’instant - normal si le disque n’est pas branché :',
 		keyLabel: 'Clé TMDB personnelle',
 		keyHint:
 			'Facultatif. Laissez vide pour utiliser la clé fournie avec Theia. Une clé saisie ici est prioritaire.',
@@ -846,6 +911,21 @@ export const strings = {
 		episodes: 'Épisodes'
 	},
 
+	support: {
+		heading: 'Rapport de diagnostic',
+		intro:
+			'Quand quelque chose casse, ce rapport rassemble l’état de Theia, les capacités mesurées ' +
+			'de la machine et l’historique récent de lecture.',
+		privacy:
+			'Tout reste sur cette machine jusqu’à ce que vous choisissiez de partager le fichier. ' +
+			'Les clés, les dossiers personnels et les noms de fichiers sont masqués.',
+		retained: (size) => `${size} de journal conservé`,
+		export: 'Extraire le rapport',
+		working: 'Préparation…',
+		saved: (name) => `${name} est prêt. Envoyez ce fichier avec la description du problème.`,
+		failed: 'Le rapport n’a pas pu être créé.'
+	},
+
 	errors: {
 		scanFailed: "L'analyse n'a pas pu être menée à son terme.",
 		scanBusy: 'Une analyse est déjà en cours.'
@@ -875,7 +955,7 @@ export function formatUptime(seconds) {
 }
 
 export function formatSize(bytes) {
-	if (!bytes) return '—';
+	if (!bytes) return '-';
 	const units = ['o', 'Ko', 'Mo', 'Go', 'To'];
 	let value = bytes;
 	let unit = 0;

@@ -18,7 +18,7 @@ var ErrNoMetadataSource = errors.New("library: no metadata source is configured"
 //
 // query is what the user typed. When it is empty the film's own parsed title
 // and year are used, which is the search that produced the wrong answer in the
-// first place — and is very often enough, because the right film was sitting
+// first place - and is very often enough, because the right film was sitting
 // second in a list nobody was shown.
 func (s *Service) MovieCandidates(ctx context.Context, id int64, query string) ([]tmdb.Candidate, error) {
 	if s.tmdb == nil {

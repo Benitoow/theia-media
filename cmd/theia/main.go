@@ -5,9 +5,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -15,6 +17,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"syscall"
 	"time"
@@ -30,9 +33,12 @@ import (
 	"github.com/Benitoow/theia-media/internal/library"
 	"github.com/Benitoow/theia-media/internal/preview"
 	"github.com/Benitoow/theia-media/internal/profiles"
+	"github.com/Benitoow/theia-media/internal/recovery"
 	"github.com/Benitoow/theia-media/internal/remoteaccess"
+	"github.com/Benitoow/theia-media/internal/supportlog"
 	"github.com/Benitoow/theia-media/internal/tmdb"
 	"github.com/Benitoow/theia-media/internal/updater"
+	"github.com/Benitoow/theia-media/internal/workload"
 )
 
 // version is overwritten at build time with -ldflags "-X main.version=v1.2.3".
@@ -40,6 +46,13 @@ import (
 // A build that leaves this as "dev" never updates itself: there is nothing to
 // compare a release against, and guessing would overwrite a working binary.
 var version = "dev"
+
+// healthExpectationOverride exists only for the update end-to-end harness. An
+// official build leaves it empty. The deliberately unhealthy fixture still
+// passes `-version` and starts the real server, then fails the same local health
+// gate a broken migration or startup would fail, so automatic rollback is
+// exercised with actual processes rather than a mocked callback.
+var healthExpectationOverride string
 
 // updateRepo is where releases are published and where the updater looks.
 const updateRepo = "Benitoow/theia-media"
@@ -61,7 +74,7 @@ func main() {
 	}
 }
 
-func run() error {
+func run() (runErr error) {
 	var (
 		portFlag    = flag.Int("port", 0, "TCP port to listen on (overrides the configuration file)")
 		dataDirFlag = flag.String("data-dir", "", "directory holding the configuration, database and cache")
@@ -75,11 +88,10 @@ func run() error {
 		return nil
 	}
 
-	level := slog.LevelInfo
+	consoleLevel := slog.LevelInfo
 	if *verboseFlag {
-		level = slog.LevelDebug
+		consoleLevel = slog.LevelDebug
 	}
-	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
 
 	dataDir := *dataDirFlag
 	if dataDir == "" {
@@ -88,6 +100,44 @@ func run() error {
 			return err
 		}
 	}
+	log, logStore, logErr := supportlog.New(dataDir, os.Stdout, consoleLevel)
+	if logErr != nil {
+		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: consoleLevel}))
+		log.Warn("persistent diagnostics are unavailable", "error", logErr)
+	} else {
+		defer logStore.Close()
+	}
+	log.Info("theia starting",
+		"version", version,
+		"os", runtime.GOOS,
+		"arch", runtime.GOARCH,
+		"go_version", runtime.Version(),
+		"logical_cpus", runtime.NumCPU(),
+		"pid", os.Getpid(),
+	)
+	execPath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("locating the running binary: %w", err)
+	}
+	recoveryManager := recovery.New(dataDir, execPath, version, log)
+	// This defer was registered before the database, listener and remote service
+	// defers below, so those resources are closed before files are restored.
+	defer func() {
+		if runErr == nil || !recoveryManager.PendingFor(version) {
+			return
+		}
+		if err := recoveryManager.Rollback(); err != nil {
+			log.Error("automatic update rollback failed", "error", err, "previous", execPath+".old")
+			return
+		}
+		restored := exec.Command(execPath, os.Args[1:]...)
+		restored.Env = os.Environ()
+		restored.Stdout = os.Stdout
+		restored.Stderr = os.Stderr
+		if err := restored.Start(); err != nil {
+			log.Error("the restored version could not be restarted", "error", err)
+		}
+	}()
 
 	cfg, err := config.Load(dataDir)
 	if err != nil {
@@ -172,6 +222,7 @@ func run() error {
 	// browser-friendly containers is never.
 	transcoder := ffmpeg.New(filepath.Join(dataDir, "bin"), log)
 	watching := activity.New()
+	jobs := workload.New()
 
 	// Keeps the library in step with the disk on its own. It owns the watched
 	// folders from here on: the settings handler hands it the new list, so that
@@ -180,7 +231,7 @@ func run() error {
 
 	// The frames shown under a dragged seek bar. Builds nothing until a player
 	// asks, and never when ffmpeg is not already on disk.
-	previews, err := preview.New(filepath.Join(dataDir, "cache", "previews"), transcoder, log)
+	previews, err := preview.NewWithCoordinator(filepath.Join(dataDir, "cache", "previews"), transcoder, log, jobs)
 	if err != nil {
 		return err
 	}
@@ -188,22 +239,13 @@ func run() error {
 	remote := remoteaccess.New(database, dataDir, cfg.Port, log)
 	defer remote.Close()
 
-	// Where this binary lives, and the leftover from any previous update. The
-	// outgoing executable cannot be deleted while it is running, so it is
-	// cleared away on the next start instead.
-	execPath, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("locating the running binary: %w", err)
-	}
-	// Keep the previous executable for manual recovery. The next verified
-	// installation replaces it; merely starting this process proves no health.
-
 	// Declared here and assigned below, so the restart closure can reach the
 	// things it has to release before the replacement binds the port and the
 	// mDNS name. os.Exit skips deferred calls, so they are closed explicitly.
 	var (
 		httpSrv   *http.Server
 		announcer *discovery.Announcer
+		apiServer *api.Server
 	)
 
 	selfUpdater := updater.New(updater.Options{
@@ -217,6 +259,10 @@ func run() error {
 		// on a real binary, rather than only in unit tests; it is also the hook
 		// anyone mirroring releases internally would need.
 		APIBase: os.Getenv("THEIA_UPDATE_API"),
+		Prepare: func(ctx context.Context, target string) error {
+			return recoveryManager.Prepare(ctx, database, target)
+		},
+		Abort: recoveryManager.Abort,
 		Restart: func() {
 			// The response that triggered this is still on its way to the
 			// browser; losing it would leave the interface showing "installing"
@@ -233,6 +279,10 @@ func run() error {
 			}
 			remote.Close()
 			_ = announcer.Close()
+			// os.Exit skips every deferred call, so the kill is explicit: a
+			// replacement starting beside an encoder still feeding a film is
+			// the orphan this exists to prevent.
+			apiServer.KillStreams()
 
 			replacement := exec.Command(execPath, os.Args[1:]...)
 			replacement.Env = os.Environ()
@@ -253,24 +303,34 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("cannot listen on port %d (is Theia already running?): %w", cfg.Port, err)
 	}
+	defer listener.Close()
 
-	apiHandler := api.New(api.Options{
-		Config:    cfg,
-		Library:   libraryService,
-		Images:    images,
-		FFmpeg:    transcoder,
-		State:     state,
-		Updater:   selfUpdater,
-		Activity:  watching,
-		Profiles:  viewers,
-		Remote:    remote,
-		Watcher:   watcher,
-		Previews:  previews,
-		Web:       webFS,
-		Version:   version,
-		KeySource: keySource,
-		Logger:    log,
-	}).Handler()
+	apiServer = api.New(api.Options{
+		Config:      cfg,
+		Library:     libraryService,
+		Images:      images,
+		FFmpeg:      transcoder,
+		State:       state,
+		Updater:     selfUpdater,
+		Activity:    watching,
+		Profiles:    viewers,
+		Remote:      remote,
+		Watcher:     watcher,
+		Previews:    previews,
+		SupportLogs: logStore,
+		Workload:    jobs,
+		Web:         webFS,
+		Version:     version,
+		KeySource:   keySource,
+		Logger:      log,
+	})
+	apiHandler := apiServer.Handler()
+	// The net under every exit: a converted stream outlives neither the
+	// process nor the registry that tracks it. The explicit calls below kill
+	// before the drains they speed up; this one covers the paths that simply
+	// return -- a serve error, a failed health check -- whose handlers may
+	// still be feeding a film when the process goes away.
+	defer apiServer.KillStreams()
 	httpSrv = &http.Server{
 		Handler: remoteaccess.LANOnly(apiHandler, cfg.Hostname),
 		// Guards against a client that opens a connection and never finishes
@@ -303,6 +363,27 @@ func run() error {
 		}
 	}()
 
+	healthVersion := version
+	if healthExpectationOverride != "" {
+		healthVersion = healthExpectationOverride
+	}
+	if err := verifyLocalHealth(ctx, cfg.Port, healthVersion); err != nil {
+		apiServer.KillStreams()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		_ = httpSrv.Shutdown(shutdownCtx)
+		cancel()
+		return err
+	}
+	if recoveryManager.PendingFor(version) {
+		if err := recoveryManager.Commit(); err != nil {
+			log.Warn("the update is healthy but its recovery point could not be cleared", "error", err)
+		} else {
+			updater.CleanPrevious(execPath, log)
+		}
+	} else {
+		updater.CleanPrevious(execPath, log)
+	}
+
 	// Scan in the background rather than before serving. A library on a slow
 	// external drive would otherwise hold the interface hostage at exactly the
 	// moment the user is trying to see whether the thing works at all.
@@ -320,6 +401,10 @@ func run() error {
 		return fmt.Errorf("http server: %w", err)
 	case <-ctx.Done():
 		log.Info("shutting down")
+		// Killing before the drain: a killed encoder closes its pipe, its
+		// handler returns, and Shutdown is not left waiting out the rest of a
+		// film.
+		apiServer.KillStreams()
 	}
 
 	remote.Close()
@@ -329,6 +414,46 @@ func run() error {
 		return fmt.Errorf("shutting down: %w", err)
 	}
 	return nil
+}
+
+func verifyLocalHealth(ctx context.Context, port int, wantVersion string) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	client := &http.Client{Timeout: time.Second}
+	url := "http://127.0.0.1:" + strconv.Itoa(port) + "/api/health"
+	for {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return err
+		}
+		res, err := client.Do(req)
+		if err == nil {
+			var health struct {
+				Status  string `json:"status"`
+				Version string `json:"version"`
+			}
+			decodeErr := json.NewDecoder(res.Body).Decode(&health)
+			res.Body.Close()
+			if res.StatusCode == http.StatusOK && decodeErr == nil && health.Status == "ok" && health.Version == wantVersion {
+				statsReq, requestErr := http.NewRequestWithContext(ctx, http.MethodGet, "http://127.0.0.1:"+strconv.Itoa(port)+"/api/library/stats", nil)
+				if requestErr == nil {
+					stats, statsErr := client.Do(statsReq)
+					if statsErr == nil {
+						_, _ = io.Copy(io.Discard, stats.Body)
+						stats.Body.Close()
+						if stats.StatusCode == http.StatusOK {
+							return nil
+						}
+					}
+				}
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("local health verification failed: %w", ctx.Err())
+		case <-time.After(50 * time.Millisecond):
+		}
+	}
 }
 
 // markOnboardedIfEstablished suppresses the welcome screen for an installation

@@ -1,11 +1,11 @@
-# V2-M3 — Découverte backend séries
+# V2-M3 - Découverte backend séries
 
 > **Mise à jour après implémentation :** le verdict `PARTIAL` du spike est
 > dépassé par M3-BE, implémenté dans
 > [`5b2615e`](https://github.com/Benitoow/theia-media/commit/5b2615e77655e41567f339e68de3cf7c8e0a05d7)
 > et livré par la [PR #5](https://github.com/Benitoow/theia-media/pull/5).
 > Le contrat de production est dans `theia-v2-backend.md`. Les sections 1 à 10
-> ci-dessous restent l'archive exacte de la découverte menée avant le code —
+> ci-dessous restent l'archive exacte de la découverte menée avant le code -
 > elles expliquent les risques et ne doivent plus être lues comme l'état actuel.
 
 **Verdict historique du spike : PARTIAL.** Le chemin technique était viable,
@@ -177,9 +177,9 @@ télécharge les mauvaises métadonnées et pollue la progression.
 Le classifieur ne doit pas renvoyer un booléen paresseux. Il lui faut trois
 résultats :
 
-1. `movie` — aucun marqueur d'épisode fiable ;
-2. `episode` — série, saison et numéro(s) identifiables ;
-3. `ambiguous_episode` — marqueur fiable mais titre de série introuvable.
+1. `movie` - aucun marqueur d'épisode fiable ;
+2. `episode` - série, saison et numéro(s) identifiables ;
+3. `ambiguous_episode` - marqueur fiable mais titre de série introuvable.
 
 Le troisième cas produit un code de problème stable dans le rapport de scan.
 Il ne doit ni disparaître silencieusement, ni être transformé en film pour faire
@@ -217,18 +217,18 @@ serait une dette instantanée. Les fichiers ne sont regroupés que si leur liste
 ordonnée d'épisodes est strictement identique.
 
 La progression n'apparaît pas encore dans ce schéma. Elle doit référencer
-`episode_items` — l'élément logique que le lecteur reprend — et le profil M2 qui
+`episode_items` - l'élément logique que le lecteur reprend - et le profil M2 qui
 regarde. Créer une colonne temporaire sur `episodes`, puis la migrer quelques
 jours plus tard, serait du travail jetable dans le produit au lieu d'un spike
 jetable à côté.
 
 ### Migration proposée, en plusieurs coupes
 
-1. **M3-A — catalogue local** : tables séries additives, classifieur,
+1. **M3-A - catalogue local** : tables séries additives, classifieur,
    réconciliation et tests de renommage/suppression. Aucun changement aux films.
-2. **M3-B — métadonnées et lecture** : TMDB TV, fichiers/pistes mesurés, routes
+2. **M3-B - métadonnées et lecture** : TMDB TV, fichiers/pistes mesurés, routes
    série/saison/épisode et streaming. Toujours sans rangée personnelle.
-3. **M3-C — expérience personnelle** : seulement après le contrat M2,
+3. **M3-C - expérience personnelle** : seulement après le contrat M2,
    progression par profil, reprise, épisode suivant et accueil mixte.
 
 M3-A peut avancer pendant que le frontend M2 attend ses maquettes. M3-C ne le
@@ -282,7 +282,7 @@ et un détail par saison réellement possédée.
 
 ---
 
-## 8. API proposée — pas encore un contrat
+## 8. API proposée - pas encore un contrat
 
 | Route | Intention |
 |---|---|
@@ -373,7 +373,7 @@ de `DECISIONS.md` en sont la trace d'architecture.
 Vérification finale :
 
 - la bibliothèque réelle actuelle compte 274 vidéos, classées en 254 films et
-  0 série dans une base isolée — zéro faux positif ;
+  0 série dans une base isolée - zéro faux positif ;
 - le corpus positif séparé a réellement été décodé et contient `S00`, saison 1,
   multi-épisode, deux fichiers et deux pistes audio ;
 - TMDB réel a identifié *Severance* et seules les saisons locales ont été lues ;

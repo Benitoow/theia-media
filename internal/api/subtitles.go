@@ -1,7 +1,9 @@
 package api
 
 import (
+	"bufio"
 	"errors"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -9,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Benitoow/theia-media/internal/boundedio"
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/library"
 	"github.com/Benitoow/theia-media/internal/subtitles"
@@ -124,12 +127,21 @@ func (s *Server) serveExternalSubtitle(w http.ResponseWriter, track library.Subt
 	}
 }
 
+// maximumSubtitleBytes is what an embedded extraction may hold in memory.
+// A real WebVTT for a long film is a few megabytes at most; the ceiling is
+// comfortably above that and far below what a broken ffmpeg producing forever
+// would otherwise take. What outgrows it is not truncated silently -- the
+// response commits and the rest flows through.
+const maximumSubtitleBytes = 8 << 20
+
 // serveEmbeddedSubtitle pulls one stream out of the container with ffmpeg.
 func (s *Server) serveEmbeddedSubtitle(w http.ResponseWriter, r *http.Request, mediaPath string, track library.SubtitleTrack, start float64) {
 	if s.ffmpeg == nil || track.StreamIndex == nil {
 		writeJSONError(w, http.StatusServiceUnavailable, "ffmpeg_unavailable")
 		return
 	}
+	releaseWork := s.beginCostlyWork()
+	defer releaseWork()
 	binary, err := s.ffmpeg.Path(r.Context())
 	switch {
 	case errors.Is(err, ffmpeg.ErrUnsupportedPlatform):
@@ -149,16 +161,65 @@ func (s *Server) serveEmbeddedSubtitle(w http.ResponseWriter, r *http.Request, m
 
 	args := subtitles.ExtractArgs(mediaPath, *track.StreamIndex, start)
 	cmd := exec.CommandContext(r.Context(), binary, args...)
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	output, err := cmd.Output()
-	if err != nil {
+	stdout, pipeErr := cmd.StdoutPipe()
+	stderr := boundedio.NewTail(64 << 10)
+	cmd.Stderr = stderr
+	fail := func(cause error) {
 		s.log.Warn("extracting a subtitle track failed",
 			"track_id", track.ID, "stream_index", *track.StreamIndex,
-			"error", err, "message", strings.TrimSpace(stderr.String()))
+			"error", cause, "message", strings.TrimSpace(stderr.String()))
 		writeJSONError(w, http.StatusUnsupportedMediaType, "subtitle_unavailable")
+	}
+	if pipeErr != nil {
+		fail(pipeErr)
 		return
 	}
+	if err := cmd.Start(); err != nil {
+		fail(err)
+		return
+	}
+	reader := bufio.NewReader(stdout)
+
+	// The conversion is buffered while it fits, which keeps the contract the
+	// old cmd.Output() had: a failed extraction answers 415 before anything
+	// is written. What outgrows the ceiling commits the response and streams
+	// the rest -- a track that large is not a subtitle anyone asked for, but
+	// the bytes exist, and neither holding them nor truncating them silently
+	// is acceptable.
+	head := boundedio.NewHead(maximumSubtitleBytes)
+	_, copyErr := io.CopyN(head, reader, maximumSubtitleBytes)
+	overflow := copyErr == nil
+	if overflow {
+		if _, err := reader.Peek(1); err != nil {
+			overflow = false // the output ended exactly at the ceiling
+		}
+	}
+	if overflow {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write(head.Bytes()); err != nil {
+			s.log.Debug("a subtitle response ended early", "error", err)
+		}
+		_, restErr := io.Copy(w, reader)
+		if restErr != nil {
+			_ = cmd.Process.Kill()
+		}
+		if processErr := cmd.Wait(); processErr != nil {
+			s.log.Warn("an oversized subtitle extraction ended early",
+				"track_id", track.ID, "error", processErr,
+				"message", strings.TrimSpace(stderr.String()))
+		}
+		return
+	}
+	waitErr := cmd.Wait()
+	if copyErr != nil || waitErr != nil {
+		cause := copyErr
+		if cause == nil {
+			cause = waitErr
+		}
+		fail(cause)
+		return
+	}
+	output := head.Bytes()
 	if len(output) == 0 {
 		// A track with no cue left after the seek is still a valid, empty file.
 		// An empty body is not: the browser reports a network error for it.

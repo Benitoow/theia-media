@@ -110,7 +110,10 @@ func TestSelectedAudioForcesRemuxAndReturnsStableIDs(t *testing.T) {
 		Status:          library.MediaOK,
 		Container:       "mov,mp4,m4a,3gp,3g2,mj2",
 		DurationSeconds: 100,
-		Video:           &library.VideoStream{StreamIndex: 0, Codec: "h264", Width: 1920, Height: 1080},
+		Video: &library.VideoStream{
+			StreamIndex: 0, Codec: "h264", Width: 1920, Height: 1080,
+			ColorTransfer: "smpte2084",
+		},
 		AudioTracks: []library.AudioTrack{
 			{StreamIndex: 1, Codec: "aac", Language: "eng", IsDefault: true},
 			{StreamIndex: 2, Codec: "aac", Language: "fre"},
@@ -138,6 +141,9 @@ func TestSelectedAudioForcesRemuxAndReturnsStableIDs(t *testing.T) {
 	}
 	if info.Mode != string("remux") || info.ReasonCode != "audio_track_selected" {
 		t.Errorf("decision = %q/%q, want remux/audio_track_selected", info.Mode, info.ReasonCode)
+	}
+	if !info.ToneMap {
+		t.Error("tone_map = false, want true for a PQ source")
 	}
 }
 

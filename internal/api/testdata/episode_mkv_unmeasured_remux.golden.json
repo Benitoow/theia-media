@@ -1,0 +1,1 @@
+{"id":1,"episode_id":1,"file_id":1,"mode":"remux","reason_code":"container_remux","container":"mkv","media_status":"pending","ffmpeg_ready":false,"ffmpeg_supported":true,"progress":{"position_seconds":0,"finished":false},"qualities":[{"height":0,"mode":"remux"}],"transcode":{"available":false}}

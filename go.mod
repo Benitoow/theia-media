@@ -1,10 +1,11 @@
 module github.com/Benitoow/theia-media
 
-go 1.26.5
+go 1.26.6
 
 require (
 	github.com/hashicorp/mdns v1.0.7
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+	github.com/ulikunitz/xz v0.5.16
 	golang.org/x/sys v0.46.0
 	golang.zx2c4.com/wireguard v0.0.0-20260522210424-ecfc5a8d5446
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20241231184526-a9ab2273dd10

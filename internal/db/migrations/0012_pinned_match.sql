@@ -8,7 +8,7 @@
 --
 -- A pinned row says "the identity is settled, stop searching". It does not say
 -- "stop refreshing": decision 9 keeps metadata cached and never frozen, so a
--- pinned film still re-reads its record when the record ages out — by id
+-- pinned film still re-reads its record when the record ages out - by id
 -- instead of by title, which is the whole difference.
 --
 -- Defaults to 0, so every existing row keeps behaving exactly as it does today.

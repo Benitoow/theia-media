@@ -178,7 +178,7 @@
 	// An em dash for every value the library does not have read as a placeholder
 	// somebody had forgotten to fill in -- and on a library of unmatched files it
 	// was most of the grid. The card keeps the line's height either way, so
-	// saying nothing is both quieter and more honest than saying "—".
+	// saying nothing is both quieter and more honest than saying "-".
 	function cardLegend(movie) {
 		switch (sort) {
 			case 'rating':
@@ -198,7 +198,7 @@
 </script>
 
 <svelte:head>
-	<title>{t.library.title} — {t.appName}</title>
+	<title>{t.library.title} - {t.appName}</title>
 </svelte:head>
 
 <!--

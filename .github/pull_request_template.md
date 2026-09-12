@@ -1,5 +1,5 @@
 <!--
-Thank you for the change. Please read .github/CONTRIBUTING.md if you have not —
+Thank you for the change. Please read .github/CONTRIBUTING.md if you have not -
 in particular the three governing documents and the §3 constraints, which are
 what most rejected pull requests run into.
 -->
@@ -13,7 +13,7 @@ what most rejected pull requests run into.
 <!--
 The project standard is: report what you verified, not what you assumed.
 Say what you ran and what you observed. For playback changes, name the file
-(container, video codec, audio codec), the browser and the mode — direct play,
+(container, video codec, audio codec), the browser and the mode - direct play,
 remux or re-encode.
 
 "Could not verify X because Y" is a perfectly acceptable answer here.
@@ -33,5 +33,5 @@ An optimistic summary is not.
       sends a code, not a sentence.
 - [ ] No image added without a checked licence.
 - [ ] If this contradicts the spec, a decision or the design system, that document
-      is updated **in this pull request**, with the reasoning — superseding the old
+      is updated **in this pull request**, with the reasoning - superseding the old
       entry rather than rewriting it.
