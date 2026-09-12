@@ -1,3 +1,5 @@
+//go:build windows
+
 // Command verify-shutdown runs the shutdown acceptance of the playback
 // backend redesign (docs/plan-refonte-lecture.md, tranche 3) against a real
 // binary: hold live converted streams, ask the server to stop the way the
