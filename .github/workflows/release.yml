@@ -110,6 +110,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           path: staging
+          pattern: theia-*
           merge-multiple: true
 
       - name: List what will be published
@@ -125,4 +126,4 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" \
             --title "Theia ${GITHUB_REF_NAME}" \
             --notes-file docs/releases/${GITHUB_REF_NAME}.md \
-            staging/*
+            staging/theia-*
