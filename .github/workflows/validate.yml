@@ -59,7 +59,7 @@ jobs:
       - name: Build the binary the guard will drive
         env:
           CGO_ENABLED: '0'
-        run: go build -buildvcs=false -trimpath -o theia ./cmd/theia
+        run: go build -buildvcs=false -trimpath -o theia-server ./cmd/theia-server
 
       # Layout stays on Chromium, where it asserts geometry. Playback crosses
       # Chromium, stable Edge, Firefox and WebKit because MediaSource, codecs,

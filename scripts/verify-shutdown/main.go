@@ -32,7 +32,7 @@ import (
 )
 
 func main() {
-	theia := flag.String("theia", "theia.exe", "the Theia binary to verify")
+	theia := flag.String("theia", "theia-server.exe", "the Theia binary to verify")
 	ffmpeg := flag.String("ffmpeg", os.Getenv("THEIA_TEST_FFMPEG"), "the pinned ffmpeg, used to build the film")
 	count := flag.Int("count", 3, "how many live streams to hold during the shutdown")
 	port := flag.Int("port", 8395, "port for the throwaway server")

@@ -39,8 +39,16 @@ type asset struct {
 // assetName is what the release workflow names the binary for a platform. It
 // has to match the CI build step exactly; a mismatch means an update that can
 // never find itself.
+//
+// V3.3 renamed it: the artifact is `theia-server`, and the published asset says
+// so (decision 119). An installed v3.2 looks for `theia-<os>-<arch>` through
+// the updater it already carries, and cannot be taught otherwise - which is why
+// the first V3.3 release also publishes a transitional copy under the old name,
+// byte for byte. See the release workflow's own step, and the transitional
+// scenario in scripts/verify-update, which drives a real v3.2.0 binary through
+// this path.
 func assetName(goos, goarch string) string {
-	name := fmt.Sprintf("theia-%s-%s", goos, goarch)
+	name := fmt.Sprintf("theia-server-%s-%s", goos, goarch)
 	if goos == "windows" {
 		name += ".exe"
 	}

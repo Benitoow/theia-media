@@ -111,12 +111,18 @@ you an installation you would later resent.
 
 | Platform | First run |
 | --- | --- |
-| Windows x64 | `theia-windows-amd64.exe` |
-| Windows on ARM | `theia-windows-arm64.exe` |
-| macOS Apple silicon | `chmod +x theia-darwin-arm64 && ./theia-darwin-arm64` |
-| macOS Intel | `chmod +x theia-darwin-amd64 && ./theia-darwin-amd64` |
-| Linux x64 | `chmod +x theia-linux-amd64 && ./theia-linux-amd64` |
-| Linux ARM64 | `chmod +x theia-linux-arm64 && ./theia-linux-arm64` |
+| Windows x64 | `theia-server-windows-amd64.exe` |
+| Windows on ARM | `theia-server-windows-arm64.exe` |
+| macOS Apple silicon | `chmod +x theia-server-darwin-arm64 && ./theia-server-darwin-arm64` |
+| macOS Intel | `chmod +x theia-server-darwin-amd64 && ./theia-server-darwin-amd64` |
+| Linux x64 | `chmod +x theia-server-linux-amd64 && ./theia-server-linux-amd64` |
+| Linux ARM64 | `chmod +x theia-server-linux-arm64 && ./theia-server-linux-arm64` |
+
+The first V3.3 release also carries each of these under its pre-V3.3 name
+(`theia-windows-amd64.exe` and so on), byte for byte. That is not an alternative
+download: it is what lets an installed v3.2 update itself, since it asks for the
+old name through the updater it already has. Those copies disappear in the
+release after, and the notes say so.
 
 Release binaries are unsigned and run in the foreground. Windows may show a
 reputation warning; macOS may require **Privacy & Security → Open Anyway** after

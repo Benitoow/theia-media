@@ -1,5 +1,15 @@
 // Command verify-update drives two real Theia binaries through install,
 // restart, health commit and automatic rollback against a local release stub.
+//
+// It also verifies the rename in decision 119, which is the reason the release
+// stub advertises *both* asset names. An installed v3.2 carries the old updater
+// and looks for `theia-<os>-<arch>`; V3.3 looks for `theia-server-<os>-<arch>`.
+// Give it a real v3.2 binary and it walks the transitional path:
+//
+//	go run ./scripts/verify-update -from <a v3.2.0 executable>
+//
+// Without `-from` it builds this tree as the starting point, which is the
+// ordinary update every later release performs.
 package main
 
 import (
@@ -9,6 +19,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -64,11 +75,16 @@ func (l *processLog) contains(fragment string) bool {
 }
 
 func main() {
+	fromBinary := flag.String("from", "", "a v3.2-era executable to update from, instead of building this tree")
+	noTransitional := flag.Bool("no-transitional", false,
+		"publish only the renamed asset, as the release after the first V3.3 will: a v3.2 installation must then fail to find anything")
+	flag.Parse()
+
 	root, err := os.Getwd()
 	check(err)
 	for _, path := range []string{
 		filepath.Join(root, "go.mod"),
-		filepath.Join(root, "cmd", "theia", "main.go"),
+		filepath.Join(root, "cmd", "theia-server", "main.go"),
 	} {
 		if _, err := os.Stat(path); err != nil {
 			check(fmt.Errorf("run from the repository root: %w", err))
@@ -91,12 +107,12 @@ func main() {
 		{name: "unhealthy restart rollback", unhealthy: true},
 	} {
 		fmt.Printf("\n== %s ==\n", scenario.name)
-		check(runScenario(root, goBinary, filepath.Join(temporary, strings.ReplaceAll(scenario.name, " ", "-")), scenario.unhealthy))
+		check(runScenario(root, goBinary, filepath.Join(temporary, strings.ReplaceAll(scenario.name, " ", "-")), scenario.unhealthy, *fromBinary, *noTransitional))
 	}
 	fmt.Println("\nPASS: verified install, real restart, health commit and automatic rollback")
 }
 
-func runScenario(root, goBinary, dir string, unhealthy bool) error {
+func runScenario(root, goBinary, dir string, unhealthy bool, fromBinary string, noTransitional bool) error {
 	installDir := filepath.Join(dir, "install")
 	dataDir := filepath.Join(dir, "data")
 	if err := os.MkdirAll(installDir, 0o755); err != nil {
@@ -108,7 +124,18 @@ func runScenario(root, goBinary, dir string, unhealthy bool) error {
 		executable += ".exe"
 		target += ".exe"
 	}
-	if err := build(root, goBinary, executable, fromVersion, ""); err != nil {
+	if fromBinary != "" {
+		// A real installation of the previous line: copied in, not rebuilt, so
+		// the updater doing the looking is the one that shipped.
+		data, err := os.ReadFile(fromBinary)
+		if err != nil {
+			return fmt.Errorf("reading the binary to update from: %w", err)
+		}
+		if err := os.WriteFile(executable, data, 0o755); err != nil {
+			return err
+		}
+		fmt.Printf("updating from %s (built elsewhere)\n", fromBinary)
+	} else if err := build(root, goBinary, executable, fromVersion, ""); err != nil {
 		return err
 	}
 	override := ""
@@ -127,14 +154,27 @@ func runScenario(root, goBinary, dir string, unhealthy bool) error {
 	releaseServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case strings.HasSuffix(r.URL.Path, "/releases/latest"):
+			// Both names, as the first V3.3 release publishes them: the artifact
+			// renamed by decision 119, and a byte-identical transitional copy
+			// under the name an installed v3.2 asks for. GitHub reports a digest
+			// per asset, and both carry the same one because they are the same
+			// bytes.
+			assets := []map[string]any{}
+			names := []string{assetName()}
+			if !noTransitional {
+				names = append(names, legacyAssetName())
+			}
+			for _, name := range names {
+				assets = append(assets, map[string]any{
+					"name": name, "size": size,
+					"browser_download_url": releaseServer.URL + "/download",
+					"digest":               "sha256:" + digest,
+				})
+			}
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"tag_name": "v" + toVersion,
 				"html_url": releaseServer.URL + "/release",
-				"assets": []map[string]any{{
-					"name": assetName(), "size": size,
-					"browser_download_url": releaseServer.URL + "/download",
-					"digest":               "sha256:" + digest,
-				}},
+				"assets":   assets,
 			})
 		case r.URL.Path == "/download":
 			http.ServeFile(w, r, target)
@@ -223,7 +263,7 @@ func build(root, goBinary, output, version, healthOverride string) error {
 	if healthOverride != "" {
 		flags += " -X main.healthExpectationOverride=" + healthOverride
 	}
-	command := exec.Command(goBinary, "build", "-trimpath", "-ldflags", flags, "-o", output, "./cmd/theia")
+	command := exec.Command(goBinary, "build", "-trimpath", "-ldflags", flags, "-o", output, "./cmd/theia-server")
 	command.Dir = root
 	command.Env = append(os.Environ(), "CGO_ENABLED=0")
 	if output, err := command.CombinedOutput(); err != nil {
@@ -243,8 +283,22 @@ func fileDigest(path string) (string, int64, error) {
 	return hex.EncodeToString(hash.Sum(nil)), size, err
 }
 
+// assetName is what the release workflow names the artifact for a platform. It
+// has to match internal/updater's own copy exactly, or this verifies an update
+// nobody's binary can perform.
 func assetName() string {
-	name := "theia-" + runtime.GOOS + "-" + runtime.GOARCH
+	return releaseName("theia-server")
+}
+
+// legacyAssetName is the pre-V3.3 name. The release workflow publishes it beside
+// the new one for one release - decision 119 - so that an installed v3.2, whose
+// updater cannot be changed, still has something to find.
+func legacyAssetName() string {
+	return releaseName("theia")
+}
+
+func releaseName(prefix string) string {
+	name := prefix + "-" + runtime.GOOS + "-" + runtime.GOARCH
 	if runtime.GOOS == "windows" {
 		name += ".exe"
 	}

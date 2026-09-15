@@ -32,7 +32,7 @@ jobs:
       - name: Build the endurance candidate
         env:
           CGO_ENABLED: '0'
-        run: go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=${{ github.ref_name }}-release-gate" -o theia-release-gate.exe ./cmd/theia
+        run: go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=${{ github.ref_name }}-release-gate" -o theia-release-gate.exe ./cmd/theia-server
 
       - name: Exercise 100 cancellations and one complete stream
         run: go run ./scripts/verify-endurance -theia .\theia-release-gate.exe -cycles 100 -long-minutes 30 -port 8395
@@ -67,19 +67,35 @@ jobs:
       # exactly this string to find its own binary, and TestAssetName pins it.
       # Renaming anything here produces an updater that silently never finds a
       # release.
+      #
+      # `theia-server-*` is decision 119. An installed v3.2 asks for
+      # `theia-*` - it carries the old updater and cannot be taught otherwise -
+      # so the same bytes are also staged under the old names while
+      # THEIA_TRANSITIONAL_NAMES is 'true'. **Turning that off is the release
+      # step that removes them**: do it in the release after the first V3.3,
+      # and say so in the notes.
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: '0'
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          THEIA_TRANSITIONAL_NAMES: 'true'
         run: |
           version="${GITHUB_REF_NAME}"
           mkdir -p dist
+          asset="theia-server-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}"
           go build -buildvcs=false -trimpath \
             -ldflags "-s -w -X main.version=${version} -X main.tmdbAPIKey=${TMDB_API_KEY}" \
-            -o "dist/theia-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}" \
-            ./cmd/theia
+            -o "dist/${asset}" \
+            ./cmd/theia-server
+          # Byte-identical copies under the names v3.2 installations look for.
+          # GitHub reports a digest per asset, so the two names carry the same
+          # digest and the old updater verifies the same bytes it would have.
+          if [ "${THEIA_TRANSITIONAL_NAMES}" = "true" ]; then
+            cp "dist/${asset}" "dist/theia-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}"
+          fi
+          ls -l dist
 
       # The binary has to actually run, and report the version it was tagged
       # with. Catching a broken build here costs a red pipeline; catching it
@@ -87,7 +103,7 @@ jobs:
       - name: Check the binary reports its version
         if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
         run: |
-          reported=$(./dist/theia-linux-amd64 -version)
+          reported=$(./dist/theia-server-linux-amd64 -version)
           echo "reported: $reported"
           case "$reported" in
             *"${GITHUB_REF_NAME#v}"*) echo "version matches the tag" ;;
@@ -96,7 +112,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: theia-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: theia-server-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/
           retention-days: 1
 

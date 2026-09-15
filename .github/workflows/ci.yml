@@ -55,8 +55,8 @@ jobs:
         run: |
           go build -buildvcs=false -trimpath \
             -ldflags "-s -w -X main.version=${GITHUB_SHA::7} -X main.tmdbAPIKey=${TMDB_API_KEY}" \
-            -o "dist/theia-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}" \
-            ./cmd/theia
+            -o "dist/theia-server-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}" \
+            ./cmd/theia-server
 
       # A key baked into a binary that is then published as a build artifact is
       # a key published. Artifacts are only uploaded when no key went in.
@@ -75,6 +75,6 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: steps.keyed.outputs.upload == 'true'
         with:
-          name: theia-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: theia-server-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/
           retention-days: 7

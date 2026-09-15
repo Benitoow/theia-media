@@ -1,7 +1,7 @@
-# Windows equivalent of `make`: build the frontend, embed it, produce theia.exe.
+# Windows equivalent of `make`: build the frontend, embed it, produce theia-server.exe.
 #
-#   .\build.ps1                 -> theia.exe, version "dev"
-#   .\build.ps1 -Version 0.2.0  -> theia.exe, version "0.2.0"
+#   .\build.ps1                 -> theia-server.exe, version `dev`
+#   .\build.ps1 -Version 0.2.0  -> theia-server.exe, version `0.2.0`
 
 param(
     [string]$Version = 'dev',
@@ -61,12 +61,12 @@ Write-Host "==> Building the binary (using $go)" -ForegroundColor Cyan
 Push-Location $root
 try {
     $env:CGO_ENABLED = '0'
-    & $go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=$Version" -o theia.exe ./cmd/theia
+    & $go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=$Version" -o theia-server.exe ./cmd/theia-server
     if ($LASTEXITCODE -ne 0) { throw 'go build failed' }
 }
 finally {
     Pop-Location
 }
 
-$size = [math]::Round((Get-Item (Join-Path $root 'theia.exe')).Length / 1MB, 1)
-Write-Host "==> theia.exe ready ($size MB, version $Version)" -ForegroundColor Green
+$size = [math]::Round((Get-Item (Join-Path $root 'theia-server.exe')).Length / 1MB, 1)
+Write-Host "==> theia-server.exe ready ($size MB, version $Version)" -ForegroundColor Green

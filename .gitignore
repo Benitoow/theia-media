@@ -1,6 +1,10 @@
-# Compiled binaries
+# Compiled binaries. The server is `theia-server` from V3.3 (decision 119); the
+# old names stay listed because a transitional build, a rollback and the
+# end-to-end verifier all still produce them.
 /theia
 /theia.exe
+/theia-server
+/theia-server.exe
 /dist/
 *.exe
 *.test

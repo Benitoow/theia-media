@@ -29,7 +29,7 @@ type movie struct {
 }
 
 func main() {
-	theia := flag.String("theia", "theia.exe", "Theia binary to exercise")
+	theia := flag.String("theia", "theia-server.exe", "Theia binary to exercise")
 	ffmpegPath := flag.String("ffmpeg", os.Getenv("THEIA_TEST_FFMPEG"), "pinned FFmpeg binary; omitted to download Theia's verified runtime")
 	cycles := flag.Int("cycles", 100, "number of open/read/cancel cycles")
 	longMinutes := flag.Int("long-minutes", 30, "duration encoded into the fully consumed stream")

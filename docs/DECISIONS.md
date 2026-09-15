@@ -3762,6 +3762,33 @@ not finished when the files are renamed; it is finished when a real v3.2.0
 installation has updated into V3.3 through this path and reported the version it
 landed on. Until that run exists, this decision is a plan and not a result.
 
+**Result (V3.3 phase 3).** Both halves are now measured, locally, against a real
+v3.2.0 binary built from the tag itself - commit `7dd4124`, the shipped code, not
+a reconstruction of it.
+
+- `internal/updater` selects by exact asset name (`assetName`) and verifies the
+  digest GitHub reports per asset - `sha256:<hex>` in the release's `assets[]`,
+  with no separate checksum file. A release whose asset has no usable digest is
+  refused outright.
+- `assetName` now returns `theia-server-<os>-<arch>`, `TestAssetName` pins the
+  four platforms, and a new test refuses to let this binary prefer the old name:
+  a fallback like that would work for exactly one release and then stop finding
+  anything.
+- `scripts/verify-update` publishes **both** names from its release stub, as the
+  first V3.3 release must. A real v3.2.0 installation found it, installed
+  `v3.2.1`, restarted into the new tree and reported the new version; the
+  unhealthy scenario rolled back as before. `go run ./scripts/verify-update -from
+  <a v3.2.0 binary>` is the command.
+- The negative control is the point: with `-no-transitional`, the same v3.2.0
+  binary answers `updater: release v3.2.1 has no binary for windows/amd64` and
+  the run fails. The transitional copies are load-bearing, and the harness says so
+  when they are missing.
+
+**Still not verified here:** the published release itself - the workflow's asset
+names as GitHub actually stores them, and its digests. That needs a real tag, and
+the first V3.3 release is where it happens. The release notes must also say that
+the transitional copies are removed in the following release.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

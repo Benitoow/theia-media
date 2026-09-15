@@ -11,13 +11,23 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..', '..');
-const binary = join(root, process.platform === 'win32' ? 'theia.exe' : 'theia');
+const binary = join(root, process.platform === 'win32' ? 'theia-server.exe' : 'theia-server');
+const stale = join(root, process.platform === 'win32' ? 'theia.exe' : 'theia');
 
 if (!existsSync(binary)) {
 	console.error(
 		`No binary at ${binary}.\n` +
 			`Build one first:  .\\build.ps1   (Windows)  or  make build   (macOS, Linux)`
 	);
+	// A pre-V3.3 binary left at the root is worse than no binary at all: it runs,
+	// and the guard then reports on code that is not the code being changed.
+	if (existsSync(stale)) {
+		console.error(
+			`\nThere is a ${stale.split(/[\\/]/).pop()} at the root. That is the name the server ` +
+				`had before V3.3 (decision 119) and it is stale by definition: delete it, or it will ` +
+				`be run by anything that still looks for it.`
+		);
+	}
 	process.exit(1);
 }
 

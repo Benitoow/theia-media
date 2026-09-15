@@ -1,6 +1,10 @@
 VERSION ?= dev
 LDFLAGS := -s -w -X main.version=$(VERSION)
-BINARY  := theia
+# The artifact is theia-server from V3.3 (decision 119). The published assets are
+# theia-server-<os>-<arch>, and nothing here may go back to the old name: an
+# installed v3.2 looks for that one, and the first V3.3 release answers it with a
+# transitional copy rather than with this tree.
+BINARY  := theia-server
 
 .PHONY: all web build test vet clean
 
@@ -15,7 +19,7 @@ web:
 
 ## build: produce the single binary with the frontend embedded
 build: web
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $(BINARY) ./cmd/theia
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $(BINARY) ./cmd/theia-server
 
 ## test: run the Go test suite
 test:
