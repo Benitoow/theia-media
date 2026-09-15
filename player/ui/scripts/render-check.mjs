@@ -565,6 +565,81 @@ async function assertFurnitureNeverHidesWhenBusy(page) {
 	}
 }
 
+// A menu owns its own keys, and gives focus back when it closes.
+//
+// Section 6b: the popover has no dismiss button - Escape, the toggle, and a
+// press outside. The arrows belong to the menu while it is open, and a viewer
+// who closes it with Escape must land back on the control that opened it, or the
+// next key press goes somewhere they did not choose.
+async function assertMenuOwnsItsKeys(page) {
+	// The anchor is the button that says it opens a menu: `.menu-anchor button`
+	// also matched the five rows of the popover, because the popover is a child
+	// of the button (6b anchors it by construction).
+	const anchor = page.locator('button[aria-haspopup=menu]');
+	await anchor.click();
+	await page.waitForTimeout(350);
+	const anchorLabel = await anchor.getAttribute('aria-label');
+	const rows = await page.locator('.track-menu .track').count();
+	if (!rows) {
+		console.error('the track menu did not open, so its keyboard behaviour is untested');
+		failures++;
+		return;
+	}
+
+	// The arrows must not reach the film. The film is being seeked if the OSD
+	// asks for it - the mock records every command.
+	for (const key of ['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown']) {
+		await page.evaluate(() => {
+			window.__commands = [];
+		});
+		await page.keyboard.press(key);
+		await page.waitForTimeout(100);
+		const seeks = await page.evaluate(() => (window.__commands ?? []).filter((c) => c === 'player_seek'));
+		if (seeks.length) {
+			console.error(`${key} in the open track menu seeked the film ${seeks.length} time(s); the arrows belong to the menu`);
+			failures++;
+		}
+		if (!(await page.locator('.track-menu').count())) {
+			console.error(`${key} closed the track menu; only Escape, the toggle and a press outside may`);
+			failures++;
+			break;
+		}
+	}
+
+	// A press inside the menu chooses a track, and re-reads the list rather than
+	// assuming mpv agreed.
+	await page.evaluate(() => {
+		window.__commands = [];
+	});
+	await page.locator('.track-menu .track').nth(1).click();
+	await page.waitForTimeout(200);
+	const chosen = await page.evaluate(() => window.__commands ?? []);
+	if (!chosen.includes('player_set_track')) {
+		console.error(`choosing a track issued ${JSON.stringify(chosen)} - no player_set_track`);
+		failures++;
+	}
+	if (!chosen.includes('player_tracks')) {
+		console.error('the track list was not re-read after a choice, so the tick can be wrong');
+		failures++;
+	}
+
+	// Escape closes it, once, and focus comes home.
+	await page.keyboard.press('Escape');
+	await page.waitForTimeout(250);
+	if (await page.locator('.track-menu').count()) {
+		console.error('Escape did not close the track menu');
+		failures++;
+	}
+	const focused = await page.evaluate(() => {
+		const el = document.activeElement;
+		return { cls: el?.getAttribute('class') ?? null, label: el?.getAttribute('aria-label') ?? null };
+	});
+	if (focused.label !== anchorLabel) {
+		console.error(`after Escape focus is on ${JSON.stringify(focused)} instead of the "${anchorLabel}" button that opened the menu`);
+		failures++;
+	}
+}
+
 // What the OSD is drawn over.
 //
 // The page is transparent on purpose - the film is the background - and the real
@@ -880,6 +955,13 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	await showFilm(busy);
 	await assertFurnitureNeverHidesWhenBusy(busy);
 	await busy.close();
+
+	// (g) the menu's own keys, and where focus goes when it closes.
+	const menu = await openPage({ width: 1280, height: 720 }, { frame: true });
+	await menu.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
+	await menu.waitForTimeout(300);
+	await assertMenuOwnsItsKeys(menu);
+	await menu.close();
 }
 
 await browser.close();
