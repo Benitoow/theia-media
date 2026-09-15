@@ -18,6 +18,21 @@ body {
 	color: var(--color-bone);
 	font-family: var(--font-ui);
 	user-select: none;
+}
+
+/* The pointer is not hidden here, and that was a defect rather than a choice.
+   This rule used to read `cursor: none` unconditionally, which took the pointer
+   away on the connect screen and over the library panel - the two states where
+   the field and the buttons are the only way forward. Measured on 15 September
+   2026 on the shipped build: html, body and .osd all answered `none` before a
+   film had even been chosen.
+
+   Section 6b gives the real rule, and it is about the furniture rather than the
+   document: the furniture hides after three seconds of nothing "and takes the
+   cursor with it". So the pointer goes when, and only when, the furniture has
+   deliberately gone - which `data-idle` already states on this element. Every
+   control inside the OSD sets its own cursor and is unaffected. */
+.osd[data-idle='true'] {
 	cursor: none;
 }
 

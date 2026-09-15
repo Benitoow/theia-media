@@ -94,8 +94,17 @@ that the first three passed straight through:
   toggles twice.
 
 It also asserts the three-second hide on both sides of the boundary (visible at
-2.5 s, hidden by 3.5 s with the pointer over the picture) and that the furniture
-never hides while the film is paused.
+2.5 s, hidden by 3.5 s with the pointer over the picture), that the furniture
+never hides while the film is paused, and that the pointer follows the furniture
+rather than being hidden by the stylesheet for good.
+
+**This block is deliberately red while the defects it was written for are still
+open.** It was added in phase 1 and left failing on purpose: a check that is
+written green against the code it is meant to catch proves nothing. The failures
+it reports today are the phase-0 findings, and each one goes green in the unit
+that fixes it - the pointer with the cursor work, the faces and the keyboard with
+the OSD pass, the timeline with the target rule. A run is read by counting
+failures, not by looking for the word "passed".
 
 ## Running
 

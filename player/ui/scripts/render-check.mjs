@@ -362,6 +362,97 @@ async function assertOnePressOneCommand(page) {
 	}
 }
 
+// The pointer is visible unless the furniture has deliberately gone.
+//
+// Design system 6b: the furniture hides after three seconds and "takes the
+// cursor with it". Everywhere else - the connect screen, the library panel while
+// nothing plays, and any moment a person is actually pointing at something - the
+// pointer has to be there. The shipped build set `cursor: none` on `html, body`
+// unconditionally, so a viewer who had not started a film yet had no pointer at
+// all, and the library panel was unusable with a mouse.
+//
+// A simulation can only answer the CSS half: it reads the computed cursor of the
+// element under the pointer. Whether WebView2 honours it over a real film is the
+// maintainer's look, and it is recorded as unverified until somebody takes it.
+async function assertCursorFollowsFurniture(page) {
+	const settled = async () => {
+		await page.waitForTimeout(250);
+		return page.evaluate(() => {
+			const idle = document.querySelector('.osd')?.getAttribute('data-idle');
+			const resolve = (sel) => {
+				const el = document.querySelector(sel);
+				return el ? getComputedStyle(el).cursor : null;
+			};
+			return {
+				idle,
+				html: resolve('html'),
+				body: resolve('body'),
+				osd: resolve('.osd'),
+				primary: resolve('button.control--primary'),
+				scrub: resolve('.scrub'),
+				field: resolve('#theia-address'),
+			};
+		});
+	};
+
+	// (a) the connect screen: no film, no reason to hide anything.
+	const connect = await settled();
+	if (connect.html === 'none' || connect.body === 'none' || connect.osd === 'none') {
+		console.error(
+			`the connect screen hides the pointer (html=${connect.html} body=${connect.body} osd=${connect.osd}) - with no film playing, the field and the buttons are the only way forward`
+		);
+		failures++;
+	}
+	if (connect.field !== 'text') {
+		console.error(`the address field shows "${connect.field}" instead of a text cursor`);
+		failures++;
+	}
+
+	// (b) connected, library panel: same answer, and now with cards to aim at.
+	await page.fill('#theia-address', 'http://127.0.0.1:8395');
+	await page.click('button[type=submit]');
+	await page.waitForTimeout(600);
+	const library = await settled();
+	if (library.html === 'none' || library.osd === 'none') {
+		console.error(`the library panel hides the pointer (html=${library.html} osd=${library.osd})`);
+		failures++;
+	}
+
+	// (c) a film playing and left alone: the furniture goes, and takes the
+	//     pointer with it.
+	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
+	await page.mouse.move(640, 360);
+	await page.waitForTimeout(3800);
+	const hidden = await settled();
+	if (hidden.idle !== 'true') {
+		console.error('the furniture did not hide, so the pointer rule cannot be judged');
+		failures++;
+	} else if (hidden.html !== 'none' && hidden.osd !== 'none') {
+		console.error(`the furniture hid but the pointer stayed (html=${hidden.html} osd=${hidden.osd})`);
+		failures++;
+	}
+
+	// (d) and a sign of life brings both back.
+	await page.mouse.move(500, 300);
+	const awake = await settled();
+	if (awake.idle === 'true') {
+		console.error('the furniture did not come back on a pointer move');
+		failures++;
+	} else if (awake.html === 'none' && awake.osd === 'none') {
+		console.error('the furniture came back but the pointer is still hidden');
+		failures++;
+	}
+
+	// (e) paused: the pointer stays, exactly as the furniture does.
+	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify({ ...status, pause: true }) }), STATUS);
+	await page.waitForTimeout(3500);
+	const paused = await settled();
+	if (paused.html === 'none' && paused.osd === 'none') {
+		console.error('the pointer is hidden while the film is paused, so nothing on screen can be aimed at');
+		failures++;
+	}
+}
+
 // What the OSD is drawn over.
 //
 // The page is transparent on purpose - the film is the background - and the real
@@ -665,6 +756,12 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	await presses.waitForTimeout(300);
 	await assertOnePressOneCommand(presses);
 	await presses.close();
+
+	// (e) the pointer, which is visible unless the furniture has taken it.
+	const cursor = await openPage({ width: 1280, height: 720 }, { frame: true });
+	await showFilm(cursor);
+	await assertCursorFollowsFurniture(cursor);
+	await cursor.close();
 }
 
 await browser.close();
