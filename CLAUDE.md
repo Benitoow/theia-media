@@ -186,8 +186,22 @@ cargo build --manifest-path player/Cargo.toml
 
 `player/target`, `player/ui/dist` and `player/theia-player/gen` are generated and
 ignored. A missing `player/ui/dist` is the intended build order, not an accident.
-The engine is not vendored yet: set `THEIA_LIBMPV`, or put the DLL beside the
-executable. See [`player/README.md`](player/README.md) and decision 118.
+See [`player/README.md`](player/README.md) and decision 118.
+
+What ships is the **bundle**, not the executable:
+
+```bash
+./build-player.ps1 -Release -Bundle     # -> dist/theia-player-windows-amd64.zip
+```
+
+It adds the engine (`libmpv-2.dll`), the LGPL text and the notice naming the
+pinned build. `scripts/fetch-libmpv` downloads the archive from
+`player/libmpv.json` and checks **two** digests - the archive before extracting,
+the library after - refusing anything that disagrees. Only `windows/amd64` is
+pinned: an entry for a platform nobody has run would be a claim, not a pin. The
+release pipeline checks the four bundle files and the loaded engine's digest
+before publishing, because a bundle missing its licence is a breach rather than
+an incomplete download.
 
 The OSD is a web page whose only external dependency is `window.__TAURI__`, so it
 can be looked at without launching the player or playing anything:

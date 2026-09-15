@@ -22,6 +22,39 @@ cd ../.. && cargo build --manifest-path player/Cargo.toml
 the intended order rather than an accident. `player/ui/dist`, `player/target`
 and `player/theia-player/gen` are generated and never committed.
 
+## Shipping the engine with it
+
+```bash
+./build-player.ps1 -Release -Bundle
+```
+
+A player without an engine plays nothing, so the bundle is what gets distributed:
+`theia-player.exe`, `libmpv-2.dll`, `LICENSE-libmpv.txt` and `NOTICE.md`, zipped
+into `dist/theia-player-windows-amd64.zip` (about 43 MB). The engine is fetched by
+`scripts/fetch-libmpv`, which reads `player/libmpv.json` and **checks two
+digests** - the archive's before extracting, the library's after - and refuses to
+hand anything on if either disagrees:
+
+```bash
+go run ./scripts/fetch-libmpv -print-pin      # what is pinned, and where from
+go run ./scripts/fetch-libmpv -out player/vendor
+```
+
+The upstream project keeps thirty days of builds, so `THEIA_LIBMPV_MIRROR` points
+the fetch at a mirror first; the digest is what decides, not the URL. Only
+`windows/amd64` is pinned, because Windows is the only platform the player has
+been run and verified on.
+
+### The licence, which is not optional
+
+Decision 118 accepts the LGPL's obligations in exchange for redistributing the
+engine, and `NOTICE.md` records how each one is kept: the licence text travels in
+the bundle, the library stays a separate replaceable file, the exact source and
+digests are named by `theia-player --diagnostics`, and Theia's own source is
+public. A bundle missing any of those is a licence breach rather than an
+incomplete download, which is why the release pipeline checks for all four files
+before publishing anything.
+
 ## Looking at the OSD without playing anything
 
 ```bash

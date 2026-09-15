@@ -310,6 +310,73 @@ fn player_version() -> Option<String> {
     SESSION.lock().unwrap().as_ref().and_then(|s| s.engine.version())
 }
 
+/// The engine the player ships, as it was pinned.
+///
+/// Decision 118 accepts four obligations in exchange for redistributing libmpv
+/// under the LGPL, and one of them is that the exact upstream source and its
+/// digest are *named in the application's diagnostics*. This is that: the
+/// manifest the build fetched the library with, compiled in, so the answer
+/// cannot drift from the file that is actually loaded.
+///
+/// It is read once, lazily: the OSD asks for the version on load, and a screen
+/// that shows which engine is running is worth one parse.
+#[tauri::command]
+fn player_engine_pin() -> String {
+    PINNED_ENGINE.to_string()
+}
+
+/// player/libmpv.json, embedded at compile time. `include_str!` rather than a
+/// runtime read: a file that ships beside a binary can be edited by anybody, and
+/// a diagnostics screen that can be edited is not evidence of anything.
+static PINNED_ENGINE: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+    let raw: serde_json::Value =
+        serde_json::from_str(include_str!("../../libmpv.json")).unwrap_or(serde_json::Value::Null);
+    let platform = manifest_platform();
+    let pinned = raw
+        .get("platforms")
+        .and_then(|platforms| platforms.get(&platform))
+        .cloned()
+        .unwrap_or(serde_json::Value::Null);
+    serde_json::json!({
+        "platform": platform,
+        "engine": raw.get("engine").cloned().unwrap_or(serde_json::Value::Null),
+        "pinned_at": raw.get("pinned_at").cloned().unwrap_or(serde_json::Value::Null),
+        "provider": pinned.get("provider").cloned().unwrap_or(serde_json::Value::Null),
+        "release": pinned.get("release").cloned().unwrap_or(serde_json::Value::Null),
+        "asset": pinned.get("asset").cloned().unwrap_or(serde_json::Value::Null),
+        "archive_sha256": pinned.get("archive_sha256").cloned().unwrap_or(serde_json::Value::Null),
+        "library": pinned.get("library").cloned().unwrap_or(serde_json::Value::Null),
+        "library_sha256": pinned.get("library_sha256").cloned().unwrap_or(serde_json::Value::Null),
+        "licence": pinned.get("licence").cloned().unwrap_or(serde_json::Value::Null),
+        "source_offer": pinned.get("source_offer").cloned().unwrap_or(serde_json::Value::Null),
+        // What the engine in this process actually reports, which is the only
+        // part of this that is observed rather than declared.
+        "loaded": ENGINE_VERSION.get().cloned(),
+    })
+    .to_string()
+});
+
+/// The version string of the library that was actually loaded, set once at
+/// startup. A pin that names a build which failed to load would be worse than no
+/// pin at all.
+static ENGINE_VERSION: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+
+/// The manifest's key for this machine.
+///
+/// Rust says `x86_64` where a release asset says `amd64`, and the manifest is
+/// keyed the way assets are named because it describes an asset. Left unmapped,
+/// the lookup found nothing and the diagnostics printed a page of nulls - which
+/// is how the first run of this reported itself: the pin was there, correct, and
+/// silently not the one being asked about.
+fn manifest_platform() -> String {
+    let arch = match std::env::consts::ARCH {
+        "x86_64" => "amd64",
+        "aarch64" => "arm64",
+        other => other,
+    };
+    format!("{}/{}", std::env::consts::OS, arch)
+}
+
 #[tauri::command]
 fn player_toggle_pause() -> Result<(), String> {
     let guard = SESSION.lock().unwrap();
@@ -704,6 +771,11 @@ fn start_engine(hwnd: isize, media: Option<&str>, silent: bool) -> Result<(), St
     }
     apply_audio_mode(&engine, AudioMode::Passthrough)?;
     engine.initialize()?;
+    // What the loaded library says it is, recorded once: the pin in
+    // player/libmpv.json is a claim about a file, and this is the observation
+    // that it is the file actually running. Set before the session exists so a
+    // diagnostics call can never race the engine's own startup.
+    let _ = ENGINE_VERSION.set(engine.version());
 
     if let Some(path) = media {
         engine.command(&["loadfile", path])?;
@@ -800,6 +872,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             player_status,
             player_version,
+            player_engine_pin,
             player_toggle_pause,
             player_set_muted,
             player_tracks,
@@ -907,6 +980,14 @@ fn main() {
 
             if diagnostics {
                 std::thread::spawn(|| {
+                    // Once, at the top: which engine is running, where it came
+                    // from and the digest it was pinned with. Decision 118
+                    // accepts the LGPL's obligations in exchange for shipping
+                    // libmpv, and naming the exact source and digest in the
+                    // application's diagnostics is one of them - so it is
+                    // printed where a bug report would be taken from, not buried
+                    // in an about screen.
+                    println!("engine-pin: {}", player_engine_pin());
                     let mut last = String::new();
                     loop {
                         std::thread::sleep(Duration::from_secs(1));

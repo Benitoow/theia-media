@@ -1,0 +1,42 @@
+{
+	"engine": "libmpv",
+	"pinned_at": "2026-09-14",
+	"why": [
+		"Decision 118: the player ships its engine rather than downloading it on first",
+		"use. The upstream project keeps thirty days of builds, so a pinned URL is a",
+		"time bomb - the first installation attempted a month later would 404, and a",
+		"checksum that cannot be fetched cannot be verified.",
+		"",
+		"Only windows/amd64 is pinned, because Windows is the only platform V3.3 can be",
+		"verified on. A macOS or Linux build needs its own pin, its own digest and its",
+		"own run on real hardware before it appears here: an entry nobody has executed",
+		"would be a claim, not a pin."
+	],
+	"platforms": {
+		"windows/amd64": {
+			"provider": "zhongfly/mpv-winbuild",
+			"release": "2026-09-14-0b7ed670f7",
+			"asset": "mpv-dev-lgpl-x86_64-20260914-git-0b7ed670f7.7z",
+			"url": "https://github.com/zhongfly/mpv-winbuild/releases/download/2026-09-14-0b7ed670f7/mpv-dev-lgpl-x86_64-20260914-git-0b7ed670f7.7z",
+			"archive_bytes": 28160000,
+			"archive_sha256": "d6df1a133b7d60d30b49efac593fd58ff183c48a6d94bb78cd401430acd96dad",
+			"library": "libmpv-2.dll",
+			"library_sha256": "6f059354c5c45b41192cc52d867d94c0044edb48207c4efd2ea1244208c55359",
+			"library_bytes": 100021760,
+			"licence": "LGPL-2.1-or-later",
+			"licence_file": "LICENSE-libmpv.txt",
+			"source_offer": "https://github.com/zhongfly/mpv-winbuild",
+			"build": {
+				"mpv": "v0.41.0-1049-g0b7ed670f",
+				"libplacebo": "v7.371.0",
+				"ffmpeg": "N-126548-g6efe500d2"
+			},
+			"configuration": "-Dgpl=false -Dlibmpv=true -Dcplayer=false -Dvulkan=enabled -Dlibass -Dlibplacebo -Dsubrandr=enabled",
+			"verified": [
+				"d3d11va decoding and gpu-next rendering into our own window, 0 dropped frames",
+				"WASAPI passthrough requested, refused by this machine's endpoint, PCM fallback",
+				"the library loaded from beside the executable, and from THEIA_LIBMPV"
+			]
+		}
+	}
+}

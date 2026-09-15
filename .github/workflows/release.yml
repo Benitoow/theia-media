@@ -123,9 +123,100 @@ jobs:
           path: dist/
           retention-days: 1
 
+  # The player is a second toolchain - Rust, Node, and a 95 MB engine fetched by
+  # digest - and it is built on Windows only. Not for convenience: Windows is the
+  # only platform the player has been run and verified on (docs/v3.3.md), and a
+  # macOS or Linux artifact would be a claim nobody has tested. Those arrive when
+  # they can be validated, which is what the validation boundary says.
+  player:
+    name: Player (windows/amd64)
+    needs: [validate, release-gates]
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.6'
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # It caches the registry and the target directory, which is most of the
+      # build time: a Tauri release build is a few hundred crates.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: player
+
+      # The same script a maintainer runs. It builds the OSD first (tauri-build
+      # embeds it), compiles the player, fetches the pinned engine - refusing
+      # anything whose digest does not match - and lays out what ships.
+      #
+      # `-Version` reaches the player through the same ldflag mechanism the
+      # server uses, so a bug report can name the build.
+      - name: Build the player and its bundle
+        env:
+          CGO_ENABLED: '0'
+        run: .\build-player.ps1 -Release -Bundle
+
+      # A bundle without the engine plays nothing; one without the licence
+      # breaches the LGPL that allows us to ship the engine at all. Both are
+      # checked here rather than trusted, because both failures are silent.
+      - name: Check the bundle is complete
+        shell: pwsh
+        run: |
+          $dir = 'dist\theia-player-windows-amd64'
+          foreach ($required in 'theia-player.exe', 'libmpv-2.dll', 'LICENSE-libmpv.txt', 'NOTICE.md') {
+            if (-not (Test-Path (Join-Path $dir $required))) {
+              Write-Error "the bundle is missing $required"
+              exit 1
+            }
+          }
+          $licence = Get-Content (Join-Path $dir 'LICENSE-libmpv.txt') -Raw
+          if ($licence -notmatch 'GNU LESSER GENERAL PUBLIC LICENSE') {
+            Write-Error 'the licence file does not contain the LGPL text'
+            exit 1
+          }
+          Get-ChildItem $dir | Select-Object Name, Length
+
+      # And the player has to run, from the bundle, with the engine it was
+      # shipped with. This is the check that would have caught an unpinned
+      # download, a truncated DLL, or a build that only worked on the machine
+      # that made it.
+      - name: Check the bundled player starts and names its engine
+        shell: pwsh
+        run: |
+          $dir = (Resolve-Path 'dist\theia-player-windows-amd64').Path
+          $log = Join-Path $env:TEMP 'player-start.log'
+          $process = Start-Process -FilePath (Join-Path $dir 'theia-player.exe') `
+            -ArgumentList '--mute', '--diagnostics' -PassThru `
+            -RedirectStandardOutput $log -RedirectStandardError "$log.err"
+          Start-Sleep -Seconds 12
+          Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          $pin = Select-String -Path $log -Pattern '^engine-pin: ' | Select-Object -First 1
+          if (-not $pin) { Write-Error 'the player never printed its engine pin'; Get-Content $log; exit 1 }
+          $json = ($pin.Line -replace '^engine-pin: ', '') | ConvertFrom-Json
+          Write-Host "engine loaded: $($json.loaded)"
+          Write-Host "pinned:        $($json.library) sha256:$($json.library_sha256)"
+          if (-not $json.loaded) { Write-Error 'the bundled player loaded no engine'; exit 1 }
+          if ($json.library_sha256 -ne '6f059354c5c45b41192cc52d867d94c0044edb48207c4efd2ea1244208c55359') {
+            Write-Error "the player reports an unexpected engine digest: $($json.library_sha256)"
+            exit 1
+          }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: theia-player-windows-amd64
+          path: dist/theia-player-windows-amd64.zip
+          retention-days: 1
+
   publish:
     name: Publish the release
-    needs: build
+    needs: [build, player]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

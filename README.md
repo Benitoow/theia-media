@@ -127,6 +127,13 @@ what this machine is configured as and which of the two it found, and
 the server uses on itself. Everything is also available as flags for a script:
 `--role`, `--data-dir`, `--library`, `--port`, `--service`, `--json`.
 
+**The player is a bundle, not a single file.** Download
+`theia-player-windows-amd64.zip` and keep its contents together: the player, the
+media engine it uses (`libmpv-2.dll`), that engine's LGPL licence, and a notice
+naming the exact upstream build and its SHA-256. Unzip it anywhere and run
+`theia-player.exe`; it finds the engine beside itself. Nothing is installed and
+nothing is written outside the folders you choose.
+
 | Platform | Server | First run |
 | --- | --- | --- |
 | Windows x64 | `theia-server-windows-amd64.exe` | `theia-server-windows-amd64.exe` |
