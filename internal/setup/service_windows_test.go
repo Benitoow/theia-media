@@ -14,6 +14,46 @@ import (
 // removal - without leaving a server on somebody's logon. The one thing it
 // cannot verify is that Windows runs the entry at logon, which needs a logoff;
 // that is reported as unverified rather than assumed.
+
+// TestTheEntryStartsTheInstalledServer is about which of two real files the
+// entry names. Somebody who runs the installer out of their Downloads folder has
+// a server there and a server in the installation, and the one that starts at
+// logon has to be the installation's: the download folder is the thing they will
+// delete.
+func TestTheEntryStartsTheInstalledServer(t *testing.T) {
+	local := t.TempDir()
+	t.Setenv("LOCALAPPDATA", local)
+	installed := filepath.Join(local, "Programs", "Theia")
+	if err := os.MkdirAll(installed, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(installed, "theia-server.exe")
+	if err := os.WriteFile(want, []byte("pretend"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// And a second copy beside this test binary, which is where a downloaded
+	// archive leaves one. It must lose.
+	beside := filepath.Join(filepath.Dir(mustExecutable(t)), "theia-server.exe")
+
+	path, err := serverExecutable()
+	if err != nil {
+		t.Fatalf("serverExecutable: %v", err)
+	}
+	if !strings.EqualFold(path, want) {
+		t.Errorf("the entry would start %s, want the installed %s (beside the binary: %s)", path, want, beside)
+	}
+}
+
+func mustExecutable(t *testing.T) string {
+	t.Helper()
+	path, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
 func TestTheStartupEntryIsWrittenWhereWindowsLooksForIt(t *testing.T) {
 	appData := t.TempDir()
 	t.Setenv("APPDATA", appData)

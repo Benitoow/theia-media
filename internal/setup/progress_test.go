@@ -126,6 +126,7 @@ func TestAPipeGetsLinesInsteadOfABar(t *testing.T) {
 	boom := errors.New("the download failed")
 	err := RunProgress(&out, french, func(_ context.Context, report Reporter) error {
 		report.Phase(PhaseChecking, "server")
+		report.Phase(PhaseChecking, "player") // the same fact twice: one line
 		report.Phase(PhaseDownloading, "server")
 		report.Progress(10, 100)
 		report.Phase(PhaseDownloading, "server") // the same phase and program twice

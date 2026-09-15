@@ -251,22 +251,27 @@ func decimal(value float64, places int, language Catalogue) string {
 }
 
 // plainReporter is the Reporter for somewhere that is not a screen: one line per
-// phase, and nothing that would have to be erased.
+// fact, and nothing that would have to be erased.
 type plainReporter struct {
 	out      io.Writer
 	language Catalogue
-	last     Phase
-	detail   string
+	last     string
 }
 
-// Phase prints a line when the phase changes, and also when the program changes
-// within one phase: fetching the server and fetching the player are two facts,
-// and a log that announced only the first would hide half the installation.
+// Phase prints a line when the fact changes. For the phases that are about a
+// program, the program is part of the fact - fetching the server and fetching
+// the player are two lines, because a log that announced only the first would
+// hide half the installation. For the others the detail is not: "checking what is
+// published" happens once, whatever it is looking for.
 func (r *plainReporter) Phase(phase Phase, detail string) {
-	if phase == r.last && detail == r.detail {
+	fact := string(phase)
+	if phase == PhaseDownloading || phase == PhaseExtracting {
+		fact += "/" + detail
+	}
+	if fact == r.last {
 		return
 	}
-	r.last, r.detail = phase, detail
+	r.last = fact
 	model := &progressModel{language: r.language, phase: phase, detail: detail}
 	fmt.Fprintln(r.out, model.sentence())
 }

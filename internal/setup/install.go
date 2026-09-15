@@ -166,8 +166,20 @@ func InstallPrograms(ctx context.Context, plan Plan, source Source, report Repor
 		}
 		plan.InstallDir = dir
 	}
+	// Whether this call created the folder decides whether a failure may remove
+	// it again: an installation that could not fetch anything must not leave an
+	// empty directory where the next person looks for a product.
+	created := !fileExists(plan.InstallDir)
 	if err := os.MkdirAll(plan.InstallDir, 0o755); err != nil {
 		return nil, fmt.Errorf("setup: creating %s: %w", plan.InstallDir, err)
+	}
+	abandon := func(actions []Action, err error) ([]Action, error) {
+		if created {
+			// Only ever succeeds when the folder is empty, which is the case
+			// this exists for: a download that failed before writing anything.
+			os.Remove(plan.InstallDir)
+		}
+		return actions, err
 	}
 
 	if report != nil {
@@ -182,7 +194,7 @@ func InstallPrograms(ctx context.Context, plan Plan, source Source, report Repor
 	for _, want := range programsFor(plan.Role, runtime.GOOS, runtime.GOARCH) {
 		found, origin, err := findProgram(plan, source, want)
 		if err != nil {
-			return actions, err
+			return abandon(actions, err)
 		}
 		if found {
 			actions = append(actions, Action{
@@ -199,25 +211,25 @@ func InstallPrograms(ctx context.Context, plan Plan, source Source, report Repor
 			}
 			rel, err := release.Latest(ctx, source.Client, source.APIBase, source.Repo)
 			if err != nil {
-				return actions, &InstallError{
+				return abandon(actions, &InstallError{
 					Reason: ReasonReleaseUnavailable,
 					Detail: want.Label(),
 					Err:    err,
-				}
+				})
 			}
 			latest = &rel
 		}
 
 		asset, err := latest.Named(want.asset)
 		if err != nil {
-			return actions, &InstallError{
+			return abandon(actions, &InstallError{
 				Reason: ReasonNotPublished,
 				Detail: want.Label(),
 				Err:    err,
-			}
+			})
 		}
 		if err := fetchProgram(ctx, plan, source, want, asset, latest.Tag, report); err != nil {
-			return actions, err
+			return abandon(actions, err)
 		}
 		actions = append(actions, Action{
 			Kind:   "downloaded-program",

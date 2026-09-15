@@ -207,7 +207,7 @@ func runOnce(opts onceOptions) error {
 		return err
 	})
 	if err != nil {
-		return err
+		return installFailure(err, opts.text)
 	}
 	if opts.jsonOutput {
 		return printJSON(result)
