@@ -102,7 +102,14 @@ and that the pointer follows the furniture rather than being hidden by the
 stylesheet for good. The track menu owns the arrows while it is open and gives
 focus back to its button when Escape closes it, and with nothing loaded the
 control bar is not drawn at all - so the language lives in the header for exactly
-those states, and returns to the bar when a film starts.
+those states, and returns to the bar when a film starts. Finding servers is
+asserted for the three answers a network can give: none lists nothing and says so,
+one connects by itself, and several are listed with their names and addresses.
+
+What the discovery assertions cannot prove is mDNS itself: this machine's
+responder refuses an IPv6 multicast bind and answers nothing, so what is checked
+is the OSD's behaviour given an answer, not that an answer arrives. A real server
+on a real network is the other half, and it is not claimed.
 
 **This block is deliberately red while the defects it was written for are still
 open.** It was added in phase 1 and left failing on purpose: a check that is

@@ -179,8 +179,14 @@
 
 	// --- the library -------------------------------------------------------
 
-	async function connect(url) {
-		if (!url || busy) return;
+	// `force` exists for the one caller that is already inside a guarded
+	// operation: findServers() holds `busy` while it asks the network, and then
+	// wants to connect to the single server it found. Without this, that call was
+	// refused by the guard below and the case the comment describes - one server,
+	// nothing to choose between - did nothing at all. Measured in the render
+	// check before it was fixed: player_discover ran, player_connect never did.
+	async function connect(url, { force = false } = {}) {
+		if (!url || (busy && !force)) return;
 		busy = true;
 		errorKey = null;
 		try {
@@ -212,8 +218,9 @@
 		try {
 			discovered = JSON.parse(await invoke('player_discover'));
 			// One server and nothing else to choose between: connect to it, the
-			// same way one profile is not a question.
-			if (discovered.length === 1) await connect(discovered[0].url);
+			// same way one profile is not a question. This call is the reason
+			// `connect` takes a force flag - we are already holding `busy`.
+			if (discovered.length === 1) await connect(discovered[0].url, { force: true });
 		} catch {
 			discovered = [];
 		} finally {

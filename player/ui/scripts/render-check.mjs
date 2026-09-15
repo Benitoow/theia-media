@@ -709,6 +709,55 @@ async function assertNoFilmNoBar(page) {
 	}
 }
 
+// Finding servers: zero, one, and more than one.
+//
+// `findServers()` sets `busy = true` and then calls `connect()`, and `connect()`
+// returns immediately when `busy` is true - so with exactly one server on the
+// network, the case the code has a comment for ("One server and nothing else to
+// choose between: connect to it, the same way one profile is not a question"),
+// did nothing at all. Confirmed by reading the source during the phase-0
+// campaign; asserted here so it cannot come back.
+//
+// What a mock cannot prove: mDNS itself. This machine's responder refuses an
+// IPv6 multicast bind and answers nothing, so what is asserted is the OSD's
+// behaviour given an answer - not that an answer arrives. A real server on a
+// real network is the other half, and it is not claimed here.
+async function assertDiscovery(page, { expect }) {
+	await page.click('button.action--quiet');
+	await page.waitForTimeout(500);
+	const commands = await page.evaluate(() => window.__commands ?? []);
+	const discovered = await page.locator('.servers li button').count();
+	const hue = await page.evaluate(() => ({
+		title: document.querySelector('.library-title')?.textContent?.trim() ?? null,
+		hint: document.querySelector('.hint')?.textContent?.trim() ?? null,
+		busy: !!document.querySelector('button[type=submit][disabled]'),
+	}));
+	if (!commands.includes('player_discover')) {
+		console.error(`"Find a server" issued ${JSON.stringify(commands)} - player_discover was never asked`);
+		failures++;
+	}
+	if (expect === 'one' && !commands.includes('player_connect')) {
+		console.error('one server answered and the OSD did not connect to it - connect() was refused because busy was still true');
+		failures++;
+	}
+	if (expect === 'many' && discovered < 2) {
+		console.error(`two servers answered and the panel lists ${discovered} of them`);
+		failures++;
+	}
+	if (expect === 'none' && discovered !== 0) {
+		console.error(`nothing answered and the panel lists ${discovered} server(s)`);
+		failures++;
+	}
+	if (hue.busy) {
+		console.error('the search button is still disabled after the search finished, so a second try is impossible');
+		failures++;
+	}
+	if (expect === 'none' && !hue.hint) {
+		console.error('nothing answered and no sentence says so');
+		failures++;
+	}
+}
+
 // What the OSD is drawn over.
 //
 // The page is transparent on purpose - the film is the background - and the real
@@ -738,7 +787,7 @@ async function showFilm(page) {
 	}, FRAME);
 }
 
-async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = false } = {}) {
+async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = false, discovered = [] } = {}) {
 	const page = await browser.newPage({ viewport });
 
 	// The artwork is served by a real server the harness does not have. Answering
@@ -752,7 +801,7 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	}
 
 	await page.addInitScript(
-		({ tracks, movies, status }) => {
+		({ tracks, movies, status, discovered }) => {
 			window.__handlers = {};
 			// Every command the OSD asks Rust for is recorded, because "one press
 			// is one command" and "typing is not a shortcut" are counts, not
@@ -765,7 +814,7 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 						window.__commands.push(cmd);
 						if (cmd === 'player_tracks') return JSON.stringify(tracks);
 						if (cmd === 'player_library') return JSON.stringify(movies);
-						if (cmd === 'player_discover') return JSON.stringify([]);
+						if (cmd === 'player_discover') return JSON.stringify(discovered);
 						if (cmd === 'player_connect')
 							return JSON.stringify({
 								url: 'http://127.0.0.1:8395',
@@ -792,7 +841,7 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 			};
 			window.__status = status;
 		},
-		{ tracks, movies, status: STATUS }
+		{ tracks, movies, status: STATUS, discovered }
 	);
 	await page.goto(URL, { waitUntil: 'networkidle' });
 	await page.waitForTimeout(400);
@@ -1043,6 +1092,27 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	const noFilm = await openPage({ width: 1280, height: 720 });
 	await assertNoFilmNoBar(noFilm);
 	await noFilm.close();
+
+	// (i) finding a server: the answer decides what the panel offers.
+	const one = await openPage({ width: 1280, height: 720 }, { discovered: [{ name: 'theia', url: 'http://127.0.0.1:8395', version: 'dev' }] });
+	await assertDiscovery(one, { expect: 'one' });
+	await one.close();
+
+	const many = await openPage(
+		{ width: 1280, height: 720 },
+		{
+			discovered: [
+				{ name: 'salon', url: 'http://192.168.1.20:8395', version: 'dev' },
+				{ name: 'bureau', url: 'http://192.168.1.21:8395', version: 'dev' },
+			],
+		}
+	);
+	await assertDiscovery(many, { expect: 'many' });
+	await many.close();
+
+	const none = await openPage({ width: 1280, height: 720 });
+	await assertDiscovery(none, { expect: 'none' });
+	await none.close();
 }
 
 await browser.close();
