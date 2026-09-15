@@ -3998,10 +3998,22 @@ nothing had told the machine that Theia existed.
   autostart, the registry record and the programs go; `%APPDATA%\Theia` - the
   library, the progress marks, the configuration - stays, and the command says
   where it is. Deleting a folder by hand is one line of instructions; deleting
-  somebody's watch history is unforgivable. Run from the installed copy, the tool
-  cannot remove the executable it is running from: what is left is scheduled for
-  the next Windows start, and the output says so rather than claiming a clean
-  removal.
+  somebody's watch history is unforgivable.
+- **A program cannot delete itself, and cannot ask Windows to do it either.** The
+  uninstall normally runs from the copy inside the installation, and Windows will
+  not remove a running executable. The first version scheduled the file for the
+  next start with `MOVEFILE_DELAY_UNTIL_REBOOT` - which writes under
+  `HKEY_LOCAL_MACHINE`, so it needs exactly the administrator rights decision 120
+  refuses to ask for. The real uninstall then answered "some files could not be
+  removed" about a folder holding nothing but the tool that was running from it.
+  What works unelevated is a small command file in the temporary folder, with a
+  random name, that waits a second - by which time the process asking has exited -
+  and then removes the folder and itself. Verified end to end: after the real
+  uninstall, the folder is gone and no script is left behind.
+  Getting there cost three failed shapes, all recorded in the code because all
+  three fail the same silent way: Go quotes arguments the way a C runtime expects,
+  cmd.exe passes the backslash through literally, and the path arrives mangled
+  with exit status 0.
 - **The entries borrow the product's icon.** A Go executable carries no icon
   resource, so Windows drew the generic application glyph beside Theia Server -
   three Theia entries that looked like three unknown programs. A Tauri build does

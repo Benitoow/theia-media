@@ -142,13 +142,10 @@ func removePrograms(plan Plan, text Catalogue) []Action {
 		return append(actions, Action{Kind: "programs-remaining", Path: dir})
 	}
 
-	if err := scheduleDeletionAtReboot(self); err != nil {
+	_ = self
+	if err := removeAfterExit(dir); err != nil {
 		return append(actions, Action{Kind: "programs-remaining", Path: dir})
 	}
-	// The folder itself goes at the same moment: Windows deletes an empty
-	// directory scheduled this way, and after the file above is gone at start-up
-	// that is what it will be.
-	_ = scheduleDeletionAtReboot(dir)
 	return append(actions, Action{Kind: "removed-program-later", Path: dir})
 }
 

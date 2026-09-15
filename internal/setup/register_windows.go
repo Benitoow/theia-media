@@ -6,10 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"syscall"
 	"time"
 
-	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 )
 
@@ -170,18 +171,67 @@ func directorySizeKB(dir string) int64 {
 	return total / 1024
 }
 
-// scheduleDeletionAtReboot asks Windows to delete a file when it next starts.
+// removeAfterExit starts a command that removes a folder once this process has
+// ended, and returns whether it was started.
 //
-// It is the only way to remove a running executable from its own folder, and the
-// uninstall is normally run from the copy the installation holds. Without this
-// the folder could never be emptied by the tool that lives in it.
-func scheduleDeletionAtReboot(path string) error {
-	wide, err := windows.UTF16PtrFromString(path)
+// Windows will not let a running executable be deleted, and it will not let an
+// **unelevated** process schedule that deletion for the next start either:
+// MOVEFILE_DELAY_UNTIL_REBOOT writes under HKEY_LOCAL_MACHINE, which this
+// installer never has the right to do - decision 120 fixes that it asks for
+// none. The first version of this used it, and the real uninstall answered "some
+// files could not be removed" about a folder holding nothing but the tool that
+// was running from it.
+//
+// So the process that does the work has to outlive the one asking for it: a small
+// command file waits a second, by which time this program has exited, and then
+// removes the folder and itself. Three details are load-bearing, and every one of
+// them came from the test that drives this:
+//
+//   - The command lives in a **file**, not in an argument. Go quotes arguments the
+//     way a C runtime expects - an inner quote escaped with a backslash - which
+//     cmd.exe passes through literally, so a path with a space in it arrives
+//     mangled and rmdir then deletes nothing: silently, with exit status 0. Both
+//     attempts at an argument, and one at standard input, failed exactly that way
+//     before this shape was measured against a real folder.
+//   - The file name is random (`os.CreateTemp`), so nothing can wait at a
+//     predictable path in the temporary folder for a tool that runs commands.
+//   - The wait is a ping rather than `timeout`, because `timeout` needs a console
+//     and this runs with no window.
+func removeAfterExit(dir string) error {
+	script, err := os.CreateTemp("", "theia-uninstall-*.cmd")
 	if err != nil {
-		return fmt.Errorf("setup: %s: %w", path, err)
+		return fmt.Errorf("setup: creating the removal script: %w", err)
 	}
-	if err := windows.MoveFileEx(wide, nil, windows.MOVEFILE_DELAY_UNTIL_REBOOT); err != nil {
-		return fmt.Errorf("setup: scheduling %s for deletion: %w", filepath.Base(path), err)
+	path := script.Name()
+	body := "@echo off\r\n" +
+		"rem Written by theia-setup: removes an installation once the tool that asked has exited.\r\n" +
+		"ping -n 2 127.0.0.1 >nul\r\n" +
+		"rmdir /s /q \"" + dir + "\"\r\n" +
+		"del \"%~f0\"\r\n"
+	if _, err := script.WriteString(body); err != nil {
+		script.Close()
+		os.Remove(path)
+		return fmt.Errorf("setup: writing the removal script: %w", err)
 	}
-	return nil
+	if err := script.Close(); err != nil {
+		os.Remove(path)
+		return fmt.Errorf("setup: closing the removal script: %w", err)
+	}
+
+	command := exec.Command("cmd.exe", "/c", path)
+	command.SysProcAttr = &syscall.SysProcAttr{
+		HideWindow:    true,
+		CreationFlags: createNoWindow,
+	}
+	if err := command.Start(); err != nil {
+		os.Remove(path)
+		return fmt.Errorf("setup: starting the removal of %s: %w", dir, err)
+	}
+	// The child is not waited for: waiting would be waiting for our own deletion,
+	// and it has to outlive us.
+	return command.Process.Release()
 }
+
+// createNoWindow is CREATE_NO_WINDOW: the helper is a detail of an uninstall, and
+// a console flashing up while a program removes itself is alarming.
+const createNoWindow = 0x08000000

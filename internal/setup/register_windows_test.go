@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/sys/windows/registry"
 )
@@ -124,6 +125,31 @@ func TestAnApplicationsEntryNeverNeedsAdministratorRights(t *testing.T) {
 	if strings.Contains(strings.ToUpper(path), "HKEY_LOCAL_MACHINE") || strings.Contains(path, "HKLM") {
 		t.Errorf("the key needs administrator rights: %q", path)
 	}
+}
+
+func TestTheFolderIsRemovedAfterTheProgramExits(t *testing.T) {
+	// The uninstall normally runs from the copy inside the installation, and
+	// Windows will not delete a running executable. The helper that outlives this
+	// process is what finishes the job, so it is driven here rather than assumed:
+	// the first version of this scheduled the deletion for the next start, which
+	// needs administrator rights this installer never asks for, and the real
+	// uninstall reported that some files could not be removed.
+	// A space in the path on purpose: a profile folder is "C:\Users\John Doe" often
+	// enough, and a command built by string concatenation breaks exactly there.
+	dir := filepath.Join(t.TempDir(), "an installation")
+	write(t, filepath.Join(dir, "theia-setup.exe"), "MZ pretending to be the running tool")
+
+	if err := removeAfterExit(dir); err != nil {
+		t.Fatalf("removeAfterExit: %v", err)
+	}
+	deadline := time.Now().Add(20 * time.Second)
+	for time.Now().Before(deadline) {
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			return
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	t.Errorf("%s is still there twenty seconds after the helper was started", dir)
 }
 
 func TestTheRecordedSizeIsWhatIsOnDisk(t *testing.T) {

@@ -36,12 +36,12 @@ func defaultApplication(plan Plan, version, uninstaller string) Application {
 	}
 }
 
-// scheduleDeletionAtReboot has no equivalent here, and does not need one: on a
-// Unix system a running file can be unlinked, so removing an installation never
-// has to wait for a restart. Returning an error rather than nil keeps the caller
-// honest - it reports what is left instead of claiming a clean removal.
-func scheduleDeletionAtReboot(path string) error {
-	return fmt.Errorf("setup: %s cannot be scheduled for deletion; there is no such mechanism here", path)
+// removeAfterExit has no equivalent here, and does not need one: on a Unix system
+// a running file can be unlinked, so os.RemoveAll already emptied the folder and
+// this is never reached. Returning an error rather than nil keeps the caller
+// honest if it ever is.
+func removeAfterExit(dir string) error {
+	return fmt.Errorf("setup: %s could not be removed, and there is no helper to do it here", dir)
 }
 
 func registerApplication(string, Application) error { return nil }
