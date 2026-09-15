@@ -3789,6 +3789,24 @@ names as GitHub actually stores them, and its digests. That needs a real tag, an
 the first V3.3 release is where it happens. The release notes must also say that
 the transitional copies are removed in the following release.
 
+**And one measurement against the real release, which is the point of the whole
+entry.** Asked today, a V3.3 build updating *from* the published `v3.2.0` is
+refused:
+
+```
+Une mise à jour est disponible. 3.1.0 -> v3.2.0
+updater: release v3.2.0 has no binary for windows/amd64
+```
+
+The published v3.2.0 predates the rename, so it carries `theia-windows-amd64.exe`
+and nothing else, and this binary asks for `theia-server-windows-amd64.exe`. The
+installed version was left untouched, which is the updater behaving correctly.
+The consequence is worth stating plainly: **a V3.3 release that did not also
+publish the old names would be unreachable from every existing installation** -
+not because of a bug, but because an installed v3.2 cannot be taught a new asset
+name. That is the mechanism this decision put in the release workflow, and this
+is the run that shows what its absence costs.
+
 ## 120. The installer installs what the shell it runs in can install
 
 Spec §14.1 amends §11.7 to say `theia-setup` installs "a `systemd` service, a

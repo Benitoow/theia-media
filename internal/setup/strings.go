@@ -69,9 +69,21 @@ var french = Catalogue{
 	"updateLatest":    "Version publiée",
 	"updateAvailable": "Une mise à jour est disponible.",
 	"updateNewest":    "Cette installation est à jour.",
+	"updateHeld":      "Rien à installer :",
 	"updateApplied":   "Mise à jour installée. Le serveur la prendra à son prochain démarrage.",
 	"updateFailed":    "La mise à jour a échoué :",
 	"updateChecking":  "Interrogation de GitHub Releases…",
+
+	// The updater answers with codes and the interface owns the sentence
+	// (decision 25). A state that is not "available" is not the same as "up to
+	// date": a development build refuses to update itself, and saying "up to
+	// date" about it would be a lie the user cannot see through.
+	"reasonDevelopmentBuild": "c'est une version de développement, elle ne se met pas à jour elle-même.",
+	"reasonUpToDate":         "la version publiée est la même.",
+	"reasonNoRelease":        "aucune version publiée n'a été trouvée.",
+	"reasonGitHub":           "GitHub n'a pas répondu.",
+	"reasonNoBinary":         "la version publiée n'a pas de binaire pour cette machine.",
+	"reasonOther":            "raison :",
 
 	"serviceInstalled": "Démarrage automatique installé :",
 	"serviceRemoved":   "Démarrage automatique retiré :",
@@ -132,9 +144,17 @@ var english = Catalogue{
 	"updateLatest":    "Published version",
 	"updateAvailable": "An update is available.",
 	"updateNewest":    "This installation is up to date.",
+	"updateHeld":      "Nothing to install:",
 	"updateApplied":   "Update installed. The server will use it at its next start.",
 	"updateFailed":    "The update failed:",
 	"updateChecking":  "Asking GitHub Releases…",
+
+	"reasonDevelopmentBuild": "this is a development build, and it does not update itself.",
+	"reasonUpToDate":         "the published version is the same one.",
+	"reasonNoRelease":        "no published release was found.",
+	"reasonGitHub":           "GitHub did not answer.",
+	"reasonNoBinary":         "the published release has no binary for this machine.",
+	"reasonOther":            "reason:",
 
 	"serviceInstalled": "Autostart installed:",
 	"serviceRemoved":   "Autostart removed:",

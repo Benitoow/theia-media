@@ -34,8 +34,15 @@ import (
 // version is overwritten at build time, exactly like the server's.
 var version = "dev"
 
+// errAlreadyReported means the failure has been explained to the user in their
+// own language, and main must not print the raw error again underneath it.
+var errAlreadyReported = errors.New("already reported")
+
 func main() {
 	if err := run(); err != nil {
+		if errors.Is(err, errAlreadyReported) {
+			os.Exit(1)
+		}
 		language, _ := setup.CatalogueFor("")
 		fmt.Fprintf(os.Stderr, "\n%s %s\n", language["errorPrefix"], err)
 		os.Exit(1)
@@ -52,7 +59,8 @@ func run() error {
 		service     = flag.Bool("service", false, "install an autostart entry for the server")
 		serviceCmd  = flag.String("service-action", "", "install, remove, or status")
 		check       = flag.Bool("check", false, "print what this machine is, changing nothing")
-		update      = flag.Bool("update", false, "check for a new version, and install it")
+		checkUpdate = flag.Bool("check-update", false, "ask GitHub Releases what the latest version is, downloading nothing")
+		update      = flag.Bool("update", false, "install the latest version of the server, verifying its digest")
 		jsonOutput  = flag.Bool("json", false, "print the result as JSON")
 		language    = flag.String("lang", "", "fr or en; French by default")
 		showVersion = flag.Bool("version", false, "print the version and exit")
@@ -74,8 +82,12 @@ func run() error {
 	switch {
 	case *check:
 		return reportStatus(*jsonOutput, text)
+	case *checkUpdate:
+		return updateAction(false, *jsonOutput, text)
 	case *update:
-		return applyUpdate(*jsonOutput, text)
+		// `--update` updates. A flag that only checked would be a flag whose name
+		// lies, which is why `--check-update` exists beside it.
+		return updateAction(true, *jsonOutput, text)
 	case *serviceCmd != "":
 		return serviceAction(*serviceCmd, *jsonOutput, text)
 	case isInteractive(*role, *library):
@@ -276,7 +288,9 @@ func reportStatus(jsonOutput bool, text setup.Catalogue) error {
 	return nil
 }
 
-func applyUpdate(jsonOutput bool, text setup.Catalogue) error {
+// updateAction checks, and installs only when told to. The report is the same
+// either way, so a script can read one shape.
+func updateAction(install bool, jsonOutput bool, text setup.Catalogue) error {
 	target, err := setup.ResolveUpdateTarget()
 	if err != nil {
 		return err
@@ -284,7 +298,6 @@ func applyUpdate(jsonOutput bool, text setup.Catalogue) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	checking := setup.UpdateStatusView{}
 	if !jsonOutput {
 		fmt.Println(text["updateChecking"])
 	}
@@ -292,29 +305,70 @@ func applyUpdate(jsonOutput bool, text setup.Catalogue) error {
 	if err != nil {
 		return err
 	}
-	checking = status
 
-	if !status.Available {
+	if !status.Available || !install {
 		if jsonOutput {
 			return printJSON(status)
 		}
-		fmt.Printf("%s %s (%s)\n", text["updateNewest"], status.Current, status.Latest)
+		switch {
+		case status.Available:
+			fmt.Printf("%s %s -> %s\n", text["updateAvailable"], status.Current, status.Latest)
+		case status.State == "idle" && status.Reason == "up_to_date":
+			fmt.Printf("%s %s (%s)\n", text["updateNewest"], status.Current, status.Latest)
+		default:
+			// Not available is not the same as up to date. The updater refuses to
+			// touch a development build, and reporting that as "up to date" is a
+			// lie the person reading it has no way to see through - the first
+			// version of this printed exactly that.
+			fmt.Printf("%s %s\n", text["updateHeld"], reasonSentence(status, text))
+		}
 		return nil
 	}
-	if jsonOutput {
-		// A check that was asked for as JSON reports; it does not install
-		// anything. Installation is a change, and changes have their own flag.
-		return printJSON(checking)
-	}
-	fmt.Printf("%s %s -> %s\n", text["updateAvailable"], status.Current, status.Latest)
 
+	if !jsonOutput {
+		fmt.Printf("%s %s -> %s\n", text["updateAvailable"], status.Current, status.Latest)
+	}
 	applied, err := setup.ApplyUpdate(ctx, target)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s %s\n", text["updateFailed"], err)
-		return err
+		if jsonOutput {
+			return printJSON(applied)
+		}
+		// The log line first, in English, for whoever has to diagnose it - the
+		// same shape the server logs - and then the sentence, in the user's
+		// language. Printing the Go error at somebody is how a French page once
+		// showed a Windows syscall name (decision 25), and this tool did exactly
+		// that on its first real failure.
+		fmt.Fprintf(os.Stderr, "theia-setup: update failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "%s %s\n", text["updateFailed"], reasonSentence(applied, text))
+		return errAlreadyReported
+	}
+	if jsonOutput {
+		return printJSON(applied)
 	}
 	fmt.Printf("%s %s\n", text["updateApplied"], applied.Latest)
 	return nil
+}
+
+// reasonSentence turns the updater's reason code into a sentence, and admits
+// when it does not know one rather than printing nothing.
+//
+// The updater sends codes because the interface owns every word (decision 25);
+// this is that interface, in two languages, at a terminal.
+func reasonSentence(status setup.UpdateStatusView, text setup.Catalogue) string {
+	known := map[string]string{
+		"development_build":      "reasonDevelopmentBuild",
+		"up_to_date":             "reasonUpToDate",
+		"no_release":             "reasonNoRelease",
+		"github_unreachable":     "reasonGitHub",
+		"no_binary_for_platform": "reasonNoBinary",
+	}
+	if key, ok := known[status.Reason]; ok {
+		return text[key]
+	}
+	if status.Reason != "" {
+		return text["reasonOther"] + " " + status.Reason
+	}
+	return status.Message
 }
 
 func printResult(result setup.Result, text setup.Catalogue) {
