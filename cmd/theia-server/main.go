@@ -54,8 +54,10 @@ var version = "dev"
 // exercised with actual processes rather than a mocked callback.
 var healthExpectationOverride string
 
-// updateRepo is where releases are published and where the updater looks.
-const updateRepo = "Benitoow/theia-media"
+// updateRepo is where releases are published and where the updater looks. The
+// string itself lives in internal/updater, because the setup tool needs the same
+// one to update an installation that is not running.
+const updateRepo = updater.DefaultRepo
 
 // tmdbAPIKey is the key official releases ship with, injected by CI from a
 // repository secret:

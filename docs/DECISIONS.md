@@ -3789,6 +3789,71 @@ names as GitHub actually stores them, and its digests. That needs a real tag, an
 the first V3.3 release is where it happens. The release notes must also say that
 the transitional copies are removed in the following release.
 
+## 120. The installer installs what the shell it runs in can install
+
+Spec §14.1 amends §11.7 to say `theia-setup` installs "a `systemd` service, a
+Windows scheduled task or a `launchd` agent, **on explicit request only**. No
+elevation imposed."
+
+**Measured, on the maintainer's machine, from a non-elevated shell:**
+
+```
+> schtasks /create /tn Theia /tr "..." /sc onlogon /f
+Erreur : Accès refusé.
+```
+
+A scheduled task cannot be created without administrator rights. So "a scheduled
+task" and "no elevation imposed" cannot both hold silently, and a tool that
+tried anyway would fail on the machine of every user who is not already an
+administrator - which is all of them.
+
+**Decided.** On Windows the installer uses what the shell it is running in can
+actually do, and says which:
+
+- **already elevated** - a scheduled task named `Theia`, `onlogon`, which is what
+  the amendment asks for. `onlogon` and not `onstart`: a task that runs before
+  anybody logs in has to run as a system account, and choosing that is an
+  administrator decision about somebody's computer that an installer has no
+  business making on its own.
+- **not elevated** - a `Theia.cmd` in the per-user Startup folder, which needs no
+  rights at all and runs at logon like the task would. The server starts
+  minimised: it is a foreground program that prints where it is listening, so a
+  window appears at logon either way, and a hidden one could not be read when
+  something goes wrong.
+
+Both are reported by name (`AUTOSTART.Kind`) - `scheduled-task` or
+`startup-entry` - and the status carries the reason when a startup entry was used
+instead of a task. Nothing is substituted in silence: the difference between the
+two mechanisms is a fact about the user's machine and not an implementation
+detail.
+
+macOS and Linux get user-level agents for the same reason - a launchd agent in
+`~/Library/LaunchAgents`, a systemd **user** unit in `~/.config/systemd/user` -
+neither of which needs root. They are written and **unverified**: Windows is the
+only platform V3.3 can be validated on.
+
+**What the installer records.** Two files in the data directory, and the split
+matters:
+
+- `config.json`, the server's own configuration, written through
+  `internal/config` so the settings page and the installer cannot disagree about
+  its shape. It is written only for a role that serves, and its library folders
+  are *merged* rather than replaced - an installer run again with one new folder
+  must not empty somebody's library.
+- `setup.json`, this tool's record of the declared role. Deliberately not part of
+  the server's configuration: a server does not behave differently because
+  somebody called the machine "all-in-one", and it has no business reading a file
+  about it. It is also what makes `--check` able to answer "what is this machine
+  for?" on a machine that has been installed and forgotten.
+
+**Verified.** The installer ran against a throwaway directory on Windows and the
+real server then came up on the port, hostname and library folder it had written.
+The Startup entry was created, its content checked (including the quoted path
+with spaces) and removed again, in a **redirected `APPDATA`** so that the test
+never touches the folder Windows actually reads. What that cannot verify is that
+Windows runs the entry at logon: that needs a logoff, and it is reported as
+unverified rather than assumed.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

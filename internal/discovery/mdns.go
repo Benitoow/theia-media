@@ -99,7 +99,7 @@ func Announce(hostname string, port int, version string, log *slog.Logger) (*Ann
 	service, err := mdns.NewMDNSService(
 		hostname, // instance name, as it appears in service browsers
 		ServiceType,
-		"",   // domain, defaults to "local."
+		"", // domain, defaults to "local."
 		fqdn,
 		port,
 		ips,

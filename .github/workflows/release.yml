@@ -95,6 +95,13 @@ jobs:
           if [ "${THEIA_TRANSITIONAL_NAMES}" = "true" ]; then
             cp "dist/${asset}" "dist/theia-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}"
           fi
+          # The installer, on the same platforms. It carries no TMDB key: it
+          # never talks to TMDB, and a key in a binary that gets downloaded by
+          # people who already have a server is a key spent for nothing.
+          go build -buildvcs=false -trimpath \
+            -ldflags "-s -w -X main.version=${version}" \
+            -o "dist/theia-setup-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}" \
+            ./cmd/theia-setup
           ls -l dist
 
       # The binary has to actually run, and report the version it was tagged

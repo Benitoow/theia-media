@@ -142,6 +142,31 @@ real library:
 go run ./scripts/bench -data <a throwaway data dir> -count 250
 ```
 
+## Building the installer
+
+```bash
+go build -trimpath -o theia-setup.exe ./cmd/theia-setup
+```
+
+`theia-setup` is the third artifact: Go and Charm, no CGO, and it crosses the
+same six targets with `CGO_ENABLED=0` (checked by CI, and locally with
+`GOOS`/`GOARCH`). It writes the server's configuration through
+`internal/config` rather than by hand, and its own record of the machine's
+declared role in `setup.json` beside it.
+
+```bash
+go test ./internal/setup/ -v        # roles, plan validation, the form, the entries
+./theia-setup.exe                   # the form
+./theia-setup.exe --check --lang en # what this machine is, changing nothing
+```
+
+The terminal form is checked by driving the real Huh model with key messages,
+which is the only way to test a TUI without a terminal - and it is how the
+confirmation was caught throwing its own answer away. The autostart entry is
+tested against a **redirected `APPDATA`**, so the tests never touch the folder
+Windows actually reads at logon. See decision 120 for the Windows mechanisms and
+why elevation is never requested.
+
 ## Building the native player
 
 `theia-player` is a second toolchain, and the order matters: `tauri-build`

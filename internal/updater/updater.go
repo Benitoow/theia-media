@@ -24,6 +24,12 @@ import (
 )
 
 // State is what the updater is doing, as reported to the interface.
+// DefaultRepo is where releases are published and where the updater looks. It
+// lives here rather than in each command because two artifacts now reach for it
+// - the server updating itself, and the setup tool updating an installation
+// that is not running - and a second copy is a second thing to forget.
+const DefaultRepo = "Benitoow/theia-media"
+
 type State string
 
 const (

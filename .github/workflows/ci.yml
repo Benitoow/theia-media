@@ -57,6 +57,12 @@ jobs:
             -ldflags "-s -w -X main.version=${GITHUB_SHA::7} -X main.tmdbAPIKey=${TMDB_API_KEY}" \
             -o "dist/theia-server-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}" \
             ./cmd/theia-server
+          # The installer crosses the same six targets, for the same reason: it
+          # has to build everywhere the product claims to run, CGO off.
+          go build -buildvcs=false -trimpath \
+            -ldflags "-s -w -X main.version=${GITHUB_SHA::7}" \
+            -o "dist/theia-setup-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}" \
+            ./cmd/theia-setup
 
       # A key baked into a binary that is then published as a build artifact is
       # a key published. Artifacts are only uploaded when no key went in.

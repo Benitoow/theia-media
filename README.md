@@ -103,22 +103,40 @@ you an installation you would later resent.
 
 ## Three-minute setup
 
-1. Download the binary for your operating system and CPU from
-   [GitHub Releases](https://github.com/Benitoow/theia-media/releases/latest).
-2. Run it and keep the terminal open. Theia prints `http://localhost:8395` and
-   the LAN address for your other screens.
-3. Open **Settings**, add one or more media folders, then start the scan.
+1. Download the installer for your operating system and CPU from
+   [GitHub Releases](https://github.com/Benitoow/theia-media/releases/latest)
+   and run it. It asks three questions - what this machine is for, where to keep
+   its data, which folders hold your films - and writes the configuration.
+2. Start the server it installed, or let it start itself: the installer offers an
+   autostart entry, and asks for no administrator rights to put one in place.
+3. Open **Settings**, add or confirm your media folders, then start the scan.
 
 | Platform | First run |
 | --- | --- |
-| Windows x64 | `theia-server-windows-amd64.exe` |
-| Windows on ARM | `theia-server-windows-arm64.exe` |
-| macOS Apple silicon | `chmod +x theia-server-darwin-arm64 && ./theia-server-darwin-arm64` |
-| macOS Intel | `chmod +x theia-server-darwin-amd64 && ./theia-server-darwin-amd64` |
-| Linux x64 | `chmod +x theia-server-linux-amd64 && ./theia-server-linux-amd64` |
-| Linux ARM64 | `chmod +x theia-server-linux-arm64 && ./theia-server-linux-arm64` |
+| Windows x64 | `theia-setup-windows-amd64.exe` |
+| Windows on ARM | `theia-setup-windows-arm64.exe` |
+| macOS Apple silicon | `chmod +x theia-setup-darwin-arm64 && ./theia-setup-darwin-arm64` |
+| macOS Intel | `chmod +x theia-setup-darwin-amd64 && ./theia-setup-darwin-amd64` |
+| Linux x64 | `chmod +x theia-setup-linux-amd64 && ./theia-setup-linux-amd64` |
+| Linux ARM64 | `chmod +x theia-setup-linux-arm64 && ./theia-setup-linux-arm64` |
 
-The first V3.3 release also carries each of these under its pre-V3.3 name
+The server and the player download separately, from the same release: the
+installer expects them beside itself or on `PATH`. `theia-setup --check` prints
+what this machine is configured as and which of the two it found, and
+`theia-setup --update` updates the server through the same digest-verified path
+the server uses on itself. Everything is also available as flags for a script:
+`--role`, `--data-dir`, `--library`, `--port`, `--service`, `--json`.
+
+| Platform | Server | First run |
+| --- | --- | --- |
+| Windows x64 | `theia-server-windows-amd64.exe` | `theia-server-windows-amd64.exe` |
+| Windows on ARM | `theia-server-windows-arm64.exe` | `theia-server-windows-arm64.exe` |
+| macOS Apple silicon | `theia-server-darwin-arm64` | `chmod +x theia-server-darwin-arm64 && ./theia-server-darwin-arm64` |
+| macOS Intel | `theia-server-darwin-amd64` | `chmod +x theia-server-darwin-amd64 && ./theia-server-darwin-amd64` |
+| Linux x64 | `theia-server-linux-amd64` | `chmod +x theia-server-linux-amd64 && ./theia-server-linux-amd64` |
+| Linux ARM64 | `theia-server-linux-arm64` | `chmod +x theia-server-linux-arm64 && ./theia-server-linux-arm64` |
+
+The first V3.3 release also carries each server under its pre-V3.3 name
 (`theia-windows-amd64.exe` and so on), byte for byte. That is not an alternative
 download: it is what lets an installed v3.2 update itself, since it asks for the
 old name through the updater it already has. Those copies disappear in the
