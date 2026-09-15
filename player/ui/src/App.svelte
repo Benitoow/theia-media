@@ -74,21 +74,55 @@
 	let idleTimer;
 	const IDLE_MS = 3000;
 
+	// `overControls` stops the timer from hiding furniture the pointer is resting
+	// on. This is its sibling for the keyboard: hiding while the viewer has
+	// focus on a control leaves focus on something nobody can see, and the next
+	// Enter presses an invisible target. Section 6b forbids exactly that -
+	// "never with focus stranded on a control" - and it was not implemented:
+	// measured on 15 September 2026, the furniture went to opacity 0 with
+	// `button.control--primary` still holding focus.
+	//
+	// A control that has only just been clicked also counts: `:focus-visible` is
+	// false for a mouse, but heuristics can still mark it visible, and a
+	// disappeared button under a pointer is the same problem either way.
+	let focusInFurniture = $state(false);
+	let lastPointerDown = 0;
+	const FOCUS_GRACE_MS = 1500;
+
+	function noteFocus(event) {
+		const target = event.target;
+		focusInFurniture = !!target?.closest?.('.controls, .title-bar, .notice');
+		if (event.type === 'focusin') {
+			// A keyboard user who has just pressed Tab is about to do something:
+			// the clock starts again rather than counting time they never spent
+			// idle.
+			if (event.detail === 0 || performance.now() - lastPointerDown > FOCUS_GRACE_MS) wake();
+		} else {
+			focusInFurniture = false;
+		}
+	}
+
 	function wake() {
 		idle = false;
 		clearTimeout(idleTimer);
-		if (status.pause) return;
+		if (status.pause || !status.ready || !status.media) return;
 		idleTimer = setTimeout(() => {
-			if (!overControls) idle = true;
+			if (!overControls && !focusInFurniture) idle = true;
 		}, IDLE_MS);
 	}
 
-	// Re-armed on every state change, and never armed while paused.
+	// Re-armed on every state change, and never armed while paused, while the
+	// engine is not ready - the spinner is the only thing telling the viewer
+	// anything, and it lives in the furniture - while a menu the viewer opened is
+	// on screen, or while no film is loaded at all. That last one was a real
+	// defect rather than a precaution: with nothing playing, the library panel is
+	// the screen, and the timer was taking it away three seconds after the viewer
+	// stopped moving the mouse. Measured on the built OSD, then asserted.
 	$effect(() => {
-		if (status.pause) {
+		if (status.pause || !status.ready || !status.media || trackMenuOpen) {
 			idle = false;
 			clearTimeout(idleTimer);
-		} else if (status.ready) {
+		} else {
 			wake();
 		}
 	});
@@ -294,7 +328,14 @@
 	}
 </script>
 
-<svelte:window onkeydown={onKey} onmousemove={onPointerMove} onclick={onBackgroundClick} />
+<svelte:window
+	onkeydown={onKey}
+	onmousemove={onPointerMove}
+	onclick={onBackgroundClick}
+	onfocusin={noteFocus}
+	onfocusout={noteFocus}
+	onpointerdown={() => (lastPointerDown = performance.now())}
+/>
 
 <div class="osd" data-idle={idle}>
 	<div class="scrim-top"></div>

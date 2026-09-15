@@ -327,6 +327,43 @@ async function assertIdleTiming(page) {
 		failures++;
 	}
 
+	// And it must come back in under half a second, on the two signs of life a
+	// person actually gives: a key and a pointer move.
+	//
+	// The key is dispatched from a control rather than from the address field:
+	// this page is connected, so the field has correctly been taken away, and a
+	// check that waited for it would time out on a form the product removed on
+	// purpose.
+	await page.focus('button.control--primary');
+	const keyWake = await page.evaluate(async () => {
+		const osd = document.querySelector('.osd');
+		const t0 = performance.now();
+		document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+		while (osd.getAttribute('data-idle') === 'true' && performance.now() - t0 < 2000) {
+			await new Promise((r) => requestAnimationFrame(r));
+		}
+		return Math.round(performance.now() - t0);
+	});
+	if (keyWake > 500) {
+		console.error(`a key took ${keyWake}ms to bring the furniture back; the rule is under 500ms`);
+		failures++;
+	}
+	await page.mouse.move(640, 360);
+	await page.waitForTimeout(250);
+	await page.mouse.move(700, 400);
+	const pointerWake = await page.evaluate(async () => {
+		const osd = document.querySelector('.osd');
+		const t0 = performance.now();
+		while (osd.getAttribute('data-idle') === 'true' && performance.now() - t0 < 2000) {
+			await new Promise((r) => requestAnimationFrame(r));
+		}
+		return Math.round(performance.now() - t0);
+	});
+	if (pointerWake > 500) {
+		console.error(`a pointer move took ${pointerWake}ms to bring the furniture back; the rule is under 500ms`);
+		failures++;
+	}
+
 	// And it must not hide while the film is paused: the controls are the only
 	// way to start it again.
 	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify({ ...status, pause: true }) }), STATUS);
@@ -449,6 +486,81 @@ async function assertCursorFollowsFurniture(page) {
 	const paused = await settled();
 	if (paused.html === 'none' && paused.osd === 'none') {
 		console.error('the pointer is hidden while the film is paused, so nothing on screen can be aimed at');
+		failures++;
+	}
+}
+
+// Every state in which the furniture must stay, whatever the timer thinks.
+//
+// Section 6b: it "never hides while paused, seeking or buffering, and never with
+// focus stranded on a control". The three-second rule is the easy half; these are
+// the exceptions, and each one is a state where hiding would take away the thing
+// the person is using. A picture cannot show them, which is why they are counted
+// and read instead.
+async function assertFurnitureNeverHidesWhenBusy(page) {
+	const sleep = (ms) => page.waitForTimeout(ms);
+	const visible = async () => page.evaluate(() => {
+		const controls = document.querySelector('.controls');
+		const opacity = getComputedStyle(controls).opacity;
+		const box = controls.getBoundingClientRect();
+		return { opacity, visible: Number(opacity) > 0.05 && box.height > 0, hidden: document.querySelector('.osd')?.getAttribute('data-idle') === 'true' };
+	});
+	const playing = { ...STATUS };
+
+	// (a) the track menu is open, and the viewer walks away from the mouse.
+	await page.evaluate((s) => window.__handlers['player-status']?.({ payload: JSON.stringify(s) }), playing);
+	await page.mouse.move(640, 360);
+	await page.click('.menu-anchor button');
+	await sleep(500);
+	if (!(await page.locator('.track-menu').count())) {
+		console.error('could not open the track menu, so its idle behaviour is untested');
+		failures++;
+	} else {
+		await sleep(3600);
+		const state = await visible();
+		if (state.hidden || !state.visible) {
+			console.error(`the furniture hid with the track menu open (data-idle=${state.hidden}, opacity=${state.opacity}) - the menu the viewer opened went with it`);
+			failures++;
+		}
+		await page.keyboard.press('Escape');
+		await sleep(250);
+	}
+
+	// (b) buffering: the film is loaded, the engine is not ready, and the spinner
+	//     is the only thing telling the viewer anything.
+	await page.evaluate((s) => window.__handlers['player-status']?.({ payload: JSON.stringify({ ...s, ready: false }) }), playing);
+	await sleep(3600);
+	const buffering = await visible();
+	if (buffering.hidden || !buffering.visible) {
+		console.error(`the furniture hid while the engine was not ready (data-idle=${buffering.hidden}, opacity=${buffering.opacity}) - the buffering notice went with it`);
+		failures++;
+	}
+
+	// (c) nothing is loaded at all: the library panel is up and there is nothing
+	//     to hide from. This one deliberately passes through a *ready* status -
+	//     the fix for the buffering case returns early on `!status.ready`, so a
+	//     check that leaves ready false here would pass without testing anything.
+	await page.evaluate((s) => window.__handlers['player-status']?.({ payload: JSON.stringify({ ...s, ready: true, media: '' }) }), playing);
+	await page.mouse.move(400, 300);
+	await sleep(3600);
+	const library = await visible();
+	if (library.hidden || !library.visible) {
+		console.error(`the furniture hid while nothing was loaded (data-idle=${library.hidden}, opacity=${library.opacity}) - the library panel went with it`);
+		failures++;
+	}
+
+	// (d) focus is on a control: hiding it would leave focus on something nobody
+	//     can see, and pressing Enter would then act on an invisible target.
+	await page.evaluate((s) => window.__handlers['player-status']?.({ payload: JSON.stringify(s) }), playing);
+	await page.focus('button.control--primary');
+	await page.mouse.move(400, 300);
+	await sleep(3600);
+	const focused = await visible();
+	const stillFocused = await page.evaluate(() => document.activeElement?.className ?? null);
+	if (focused.hidden || !focused.visible) {
+		console.error(
+			`the furniture hid with focus on "${stillFocused}" (opacity=${focused.opacity}) - focus stranded on an invisible control`
+		);
 		failures++;
 	}
 }
@@ -762,6 +874,12 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	await showFilm(cursor);
 	await assertCursorFollowsFurniture(cursor);
 	await cursor.close();
+
+	// (f) the states in which the furniture must not hide at all.
+	const busy = await openPage({ width: 1280, height: 720 }, { frame: true });
+	await showFilm(busy);
+	await assertFurnitureNeverHidesWhenBusy(busy);
+	await busy.close();
 }
 
 await browser.close();

@@ -95,8 +95,11 @@ that the first three passed straight through:
 
 It also asserts the three-second hide on both sides of the boundary (visible at
 2.5 s, hidden by 3.5 s with the pointer over the picture), that the furniture
-never hides while the film is paused, and that the pointer follows the furniture
-rather than being hidden by the stylesheet for good.
+never hides while the film is paused, while the engine is not ready, while a menu
+the viewer opened is on screen, while nothing is loaded at all, or with focus on
+a control, that a key or a pointer move brings it back in under half a second,
+and that the pointer follows the furniture rather than being hidden by the
+stylesheet for good.
 
 **This block is deliberately red while the defects it was written for are still
 open.** It was added in phase 1 and left failing on purpose: a check that is
