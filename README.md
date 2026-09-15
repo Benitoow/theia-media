@@ -112,12 +112,19 @@ you an installation you would later resent.
 2. It fetches what this machine needs - the server, the native player, and the
    media engine the player uses - checking the SHA-256 digest GitHub publishes for
    each file and refusing anything that does not match. The programs are copied
-   into `%LOCALAPPDATA%\Programs\Theia`, and entries appear in the Start Menu under
-   **Theia** and on the Desktop, so the product can be launched by name.
+   into `%LOCALAPPDATA%\Programs\Theia`, entries appear in the Start Menu under
+   **Theia** and on the Desktop, and Theia is registered as an installed
+   application: it can be launched by name from the Start Menu or a launcher such
+   as Flow Launcher, and removed from **Settings → Apps** like anything else.
 3. Start the server from that entry, or let the installer start it automatically:
    it offers an autostart entry, and asks for no administrator rights to put one in
    place.
 4. Open **Settings**, add or confirm your media folders, then start the scan.
+
+To remove it later, `theia-setup --uninstall` takes away the programs, the entries
+and the autostart record, and **keeps your data**: the library, the progress marks
+and the configuration stay in `%APPDATA%\Theia`, and the command says where they
+are. Nothing asks for administrator rights in either direction.
 
 | Platform | The download |
 | --- | --- |

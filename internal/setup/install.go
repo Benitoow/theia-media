@@ -81,6 +81,13 @@ type Source struct {
 	// the installer, then ask the release page.
 	From string
 
+	// Force installs the programs again even when the installation already holds
+	// them. It exists because an installation has no other way to refresh the
+	// player: the server updates itself through the updater and the player has
+	// no such path, so re-running the installer is what a person does - and it
+	// used to do nothing at all.
+	Force bool
+
 	// APIBase points at a mirror instead of GitHub. Tests point it at a stub,
 	// which is the only way to exercise a download without publishing a release.
 	APIBase string
@@ -140,15 +147,6 @@ func bundleFiles(goos string) []string {
 		return []string{executable, "libmpv-2.dll", "LICENSE-libmpv.txt", "NOTICE.md"}
 	}
 	return []string{executable}
-}
-
-// InstallerExecutable is the name the installed copy of this tool would have,
-// used only to avoid copying it over itself.
-func installerExecutable(goos string) string {
-	if goos == "windows" {
-		return "theia-setup.exe"
-	}
-	return "theia-setup"
 }
 
 // InstallPrograms puts every program the role needs into the installation
@@ -255,10 +253,12 @@ func executableName(want program) string {
 //
 // The order is deliberate: the installation directory first (a second run of the
 // installer must not download a hundred megabytes again), then what the person
-// already has, then the network.
+// already has, then the network. --force skips the first step, which is the only
+// way to refresh a program that is already installed - the player has no updater
+// of its own.
 func findProgram(plan Plan, source Source, want program) (bool, string, error) {
 	installed := filepath.Join(plan.InstallDir, executableName(want))
-	if fileExists(installed) {
+	if fileExists(installed) && !source.Force {
 		return true, "already-installed", nil
 	}
 
@@ -548,12 +548,81 @@ func Install(ctx context.Context, plan Plan, source Source, text Catalogue, repo
 	applied.Programs = result.Programs
 	applied.Actions = append(result.Actions, applied.Actions...)
 
-	// The entries come last: they point at the programs, so they can only be
+	// The maintenance tool travels with the installation, before anything names
+	// it: the entry Windows keeps has to point at a command that will still be
+	// there in a year, and the folder somebody downloaded into is not that place.
+	uninstaller := filepath.Join(plan.InstallDir, installerExecutable(runtime.GOOS))
+	if err := copySelf(uninstaller); err != nil {
+		applied.ShortcutsError = err.Error()
+	} else {
+		applied.Actions = append(applied.Actions, Action{Kind: "installed-tool", Path: uninstaller})
+	}
+
+	// The entries come next: they point at the programs, so they can only be
 	// written once those are in place.
-	shortcuts, failure := createShortcuts(plan, installedTargets(), text)
+	shortcuts, failure := createShortcuts(plan, InstalledTargets(), text)
 	applied.Actions = append(applied.Actions, shortcuts...)
-	applied.ShortcutsError = failure
+	if failure != "" {
+		applied.ShortcutsError = joinReasons(applied.ShortcutsError, failure)
+	}
+
+	// And last, the record that makes this an installed application rather than
+	// a folder: without it Windows cannot list Theia, and neither can a launcher
+	// that reads the same list.
+	application := defaultApplication(plan, installedVersion(plan), uninstaller)
+	if err := registerApplication(applicationKeyPath(registeredName), application); err != nil {
+		applied.ShortcutsError = joinReasons(applied.ShortcutsError, err.Error())
+	} else {
+		applied.Actions = append(applied.Actions, Action{
+			Kind:   "registered-application",
+			Path:   applicationKeyPath(registeredName),
+			Detail: application.Version,
+		})
+	}
 	return applied, nil
+}
+
+// firstInstalled returns the first of these programs that is in a folder, which
+// is how a caller finds what was actually installed without guessing at the role.
+// Both published and short names are accepted, the way findArtifact does it.
+func firstInstalled(dir string, bases ...string) string {
+	for _, base := range bases {
+		for _, name := range artifactNames(base) {
+			path := filepath.Join(dir, name)
+			if fileExists(path) {
+				return path
+			}
+		}
+	}
+	return ""
+}
+
+// installedVersion is the version recorded in the applications list.
+//
+// It is asked of the installed server rather than taken from this tool, because
+// the two are not always the same number: an older installer fetches the current
+// release, and a list that said 3.3.0 about a 3.4.0 server would be wrong in the
+// one place somebody looks to find out what they have. Only the server is asked -
+// the player has no way to report a version without opening its window.
+func installedVersion(plan Plan) string {
+	if path := firstInstalled(plan.InstallDir, "theia-server"); path != "" {
+		if reported, err := binaryVersion(path); err == nil && reported != "" {
+			return reported
+		}
+	}
+	if plan.Version != "" {
+		return plan.Version
+	}
+	return "dev"
+}
+
+// joinReasons keeps every reason a non-fatal step failed: they are all worth
+// printing, and the last one is not more important than the first.
+func joinReasons(existing, added string) string {
+	if existing == "" {
+		return added
+	}
+	return existing + "; " + added
 }
 
 // InstallError is a failure with a reason code, so the interface can say what

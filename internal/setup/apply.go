@@ -219,16 +219,22 @@ func mergePaths(existing, added []string) []string {
 
 // Status is what the tool can say about a machine without changing it.
 type Status struct {
-	Role         Role              `json:"role"`
-	DataDir      string            `json:"data_dir"`
-	InstallDir   string            `json:"install_dir,omitempty"`
-	Configured   bool              `json:"configured"`
-	Port         int               `json:"port,omitempty"`
-	Hostname     string            `json:"hostname,omitempty"`
-	LibraryPaths []string          `json:"library_paths"`
-	Artifacts    []Artifact        `json:"artifacts"`
-	Autostart    Autostart         `json:"autostart"`
-	Update       *UpdateStatusView `json:"update,omitempty"`
+	Role         Role       `json:"role"`
+	DataDir      string     `json:"data_dir"`
+	InstallDir   string     `json:"install_dir,omitempty"`
+	Configured   bool       `json:"configured"`
+	Port         int        `json:"port,omitempty"`
+	Hostname     string     `json:"hostname,omitempty"`
+	LibraryPaths []string   `json:"library_paths"`
+	Artifacts    []Artifact `json:"artifacts"`
+	Autostart    Autostart  `json:"autostart"`
+	// Registered says whether Windows lists this installation among the
+	// installed programs. It is false on a platform that has no such list and
+	// false on a machine where the installer has never run - two different
+	// answers this one field cannot tell apart, which is why it is reported as a
+	// yes/no line and not as a sentence about installation.
+	Registered bool              `json:"registered"`
+	Update     *UpdateStatusView `json:"update,omitempty"`
 }
 
 // Inspect reads the machine's current state and changes nothing.
@@ -245,7 +251,13 @@ func Inspect(self string) (Status, error) {
 	}
 	plan := Plan{Role: DefaultRole, DataDir: dir, InstallDir: installDir}.WithDefaults(dir)
 
-	status := Status{DataDir: dir, InstallDir: installDir, Role: DefaultRole, LibraryPaths: []string{}}
+	status := Status{
+		DataDir:      dir,
+		InstallDir:   installDir,
+		Role:         DefaultRole,
+		Registered:   applicationIsRegistered(applicationKeyPath(registeredName)),
+		LibraryPaths: []string{},
+	}
 	record, declared, err := readMachineRecord(dir)
 	if err != nil {
 		return Status{}, err

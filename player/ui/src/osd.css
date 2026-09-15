@@ -572,26 +572,30 @@ button.action:focus-visible {
 	}
 }
 
-/* A phone is not a narrow desktop.
+/* A window too narrow for the whole bar is not always a phone.
    Section 6b forbids the row to wrap - a control bar that reflows moves the play
-   button out from under a thumb mid-press - so at 390px the row has to fit or
-   something has to go. It did not fit: measured at 390px it ran to 636px and
-   painted a third of itself past the right edge.
+   button out from under a thumb mid-press - so when the row does not fit,
+   something has to go. It did not fit: measured, the native row runs to 636px,
+   and with the standard gutter it needs 684px of window. On this machine a
+   1100-pixel window on a 200%-scaled screen is 550 CSS pixels wide, so the bar
+   painted 86px of itself past the right edge and drew a horizontal scrollbar -
+   measured at 550px, in the installed player, and in the harness that now draws
+   this width.
 
    What goes is what the device already does better, which is 6b's own test:
+   - the ten-second pair, because the scrub bar is the seek instrument and a skip
+     button is a remote's affordance;
    - the volume, because a phone has hardware keys;
-   - the language chip, which the web application keeps in its settings rather
-     than in its player bar;
-   - the codec badge, which is a diagnostic and not a control;
-   - the ten-second pair, because on a touch screen the scrub bar is the seek
-     instrument and a skip button is a remote's affordance - the same reason
-     the remote keeps one and the phone does not need one.
+   - the codec badge's neighbour, the PCM/BITSTREAM chip, which is a diagnostic
+     and not a control.
 
    Everything else stays at its 3.25rem floor, and the clock keeps both numbers
-   (6b): dropping the skips rather than the total is what pays for it. The
-   arithmetic is worth writing down, because six targets are 312px of a 342px
-   content box and no arrangement of a two-number clock fits beside them. */
-@media (max-width: 30rem) {
+   (6b): dropping the skips rather than the total is what pays for it.
+
+   44rem is 704px, just above the 684px the measurement asks for, and the
+   threshold is written here rather than guessed: at 30rem - the phone rule -
+   the bar overflowed by 86px on a window nobody would call narrow. */
+@media (max-width: 44rem) {
 	.row {
 		gap: 0.25rem;
 	}
@@ -601,8 +605,20 @@ button.action:focus-visible {
 	   controls stayed exactly where they were. */
 	button.control--skip,
 	button.control--mute,
-	button.control--desktop,
 	span.audio-mode {
+		display: none;
+	}
+}
+
+/* And on a phone the language chip goes too: it is the one remaining control
+   that is not about the film, and it is the last thing that fits. The web
+   application keeps the language in its settings rather than in its player bar
+   for exactly this reason; the native player has no other place to switch it, so
+   it keeps the chip for as long as the arithmetic allows. Six targets are 312px
+   of a 342px content box at 390px, and no arrangement of a two-number clock fits
+   beside them. */
+@media (max-width: 30rem) {
+	button.control--desktop {
 		display: none;
 	}
 }

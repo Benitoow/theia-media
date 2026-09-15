@@ -237,6 +237,40 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	return page;
 }
 
+// 0. The connect screen at the widths a high-DPI window really has.
+//
+// This is the first screen a person sees, and the widths between the phone check
+// (390) and the desktop one (1280) were never drawn. They are not academic: a
+// screen scaled at 200% - which is what the maintainer's machine runs - turns a
+// 1100-pixel window into 550 CSS pixels, so the first screen anybody sees there
+// lands exactly in the gap. It fits today; this is what says so.
+//
+// The measurement that prompted this section was wrong, and the wrongness is
+// worth keeping: a DPI-unaware capture tool asking for a 1100-pixel window got
+// one twice that size, so the picture was clipped by the *screen* while the OSD
+// was laid out correctly all along. The harness disagreed with the photograph,
+// and the harness was right - which is why the picture is not the authority here.
+{
+	for (const width of [550, 700, 900]) {
+		const page = await openPage({ width, height: 700 });
+		await assertFits(page, `the connect screen at ${width}px`);
+
+		// And the control row, which is the other thing this width decides: the
+		// bar never wraps (design system 6b), so a row that does not fit has to
+		// drop controls rather than reflow - and the rule that drops them was
+		// written for 30rem, while a 200%-scaled window lands here.
+		await page.evaluate(
+			(status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }),
+			STATUS
+		);
+		await showFilm(page);
+		await page.waitForTimeout(250);
+		await assertFits(page, `the control row at ${width}px`);
+		if (width === 550) await page.screenshot({ path: join(OUT, '0-controls-550.png') });
+		await page.close();
+	}
+}
+
 // 1. The library panel, connected, films listed as cards.
 {
 	const page = await openPage({ width: 1280, height: 720 });

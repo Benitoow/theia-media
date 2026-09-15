@@ -3968,6 +3968,66 @@ fetched nothing. `--data-dir` was found being ignored on the interactive path
 during this work: the form asked the question and then proposed `%APPDATA%`
 whatever the flag said, which is fixed and tested.
 
+## 123. An installation is an application Windows can list, launch and remove
+
+Decision 122 made the installer install the programs and put entries where a
+person looks. Two things were still missing, and the maintainer's own words named
+both: *"il n'y a pas de ajouter au bureau, ajouter une application Windows et
+tout... quand je recherche, je suis avec mon Flow Launcher, il n'y a pas de TA
+Media, il n'y a pas de TA Server."* Searching for it found nothing, because
+nothing had told the machine that Theia existed.
+
+**Decided.**
+
+- **The installation registers itself** under
+  `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\Theia`, which is the
+  list "Programs and Features", the Settings application page, and a launcher's
+  registry source all read: name, version, publisher, install location, icon,
+  size on disk, install date, and the command that removes it. **Per user, so no
+  administrator rights** - the rule decision 120 already fixed. No modify and no
+  repair button, because there is no such mode.
+- **The recorded version is asked of the installed server**, not taken from the
+  installer that fetched it: an older installer fetches the current release, and
+  a list that said 3.3.0 about a 3.4.0 server would be wrong in the one place
+  somebody looks to find out what they have.
+- **The maintenance tool is copied into the installation** (`theia-setup.exe`),
+  and the registered uninstall command points at that copy. The entry Windows
+  keeps has to name a command that will still exist in a year, and the folder
+  somebody downloaded into is not that place.
+- **`--uninstall` undoes the installation and keeps the data.** The entries, the
+  autostart, the registry record and the programs go; `%APPDATA%\Theia` - the
+  library, the progress marks, the configuration - stays, and the command says
+  where it is. Deleting a folder by hand is one line of instructions; deleting
+  somebody's watch history is unforgivable. Run from the installed copy, the tool
+  cannot remove the executable it is running from: what is left is scheduled for
+  the next Windows start, and the output says so rather than claiming a clean
+  removal.
+- **The entries borrow the product's icon.** A Go executable carries no icon
+  resource, so Windows drew the generic application glyph beside Theia Server -
+  three Theia entries that looked like three unknown programs. A Tauri build does
+  carry the icon, so the server's entries point at the player's executable for
+  theirs. A shortcut's icon does not have to come from its own target.
+- **`--force` reinstalls the programs.** An installation had no way to refresh the
+  player: the server updates itself through the updater, and re-running the
+  installer answered "already in place" and did nothing.
+
+**Verified**, on the maintainer's machine. After a real installation, PowerShell
+reading the registry shows the entry with every value, and an enumeration of the
+two uninstall roots - what the Settings page walks - lists **Theia 3.3.0** with
+its install location. Pressing the Windows key and typing "theia" shows *Theia
+Player* as the best match and *Theia Server* under Applications, both with the
+product's icon. Flow Launcher, opened with its own hotkey and queried with
+"theia", lists **Theia Server** and **Theia Player**: its Program plugin has
+`EnableStartMenuSource` and `EnableRegistrySource` both true, so it reads exactly
+the two places decisions 122 and 123 write to. `theia-setup --check` reports
+`Application : oui`.
+
+Uninstalling is tested against a redirected `APPDATA` and a temporary
+installation, because a test that removed the real entry would uninstall the
+machine it runs on. One of those tests caught the registered command being
+written with Go's `%q`, which escapes every backslash and produces an uninstall
+button that cannot run.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

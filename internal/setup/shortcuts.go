@@ -26,14 +26,16 @@ type shortcutEntry struct {
 	link Shortcut
 }
 
-// shortcutTargets is where an installation puts its entries.
+// ShortcutTargets is where an installation puts its entries.
 //
 // Passed in rather than resolved inside, because a test that writes into the
 // real Start Menu of whoever runs the suite is a test nobody dares run twice.
 // An empty desktop means no desktop entry.
-type shortcutTargets struct {
-	startMenu string
-	desktop   string
+type ShortcutTargets struct {
+	// StartMenu is the folder the entries are written into.
+	StartMenu string
+	// Desktop is empty when no desktop entry is wanted.
+	Desktop string
 }
 
 // entriesFor is what this role's installation adds: the product, which starts
@@ -47,6 +49,14 @@ func entriesFor(plan Plan, text Catalogue) []shortcutEntry {
 		return filepath.Join(installDir, base)
 	}
 
+	// The icon is the player when it is installed, even for the server's entry. A
+	// Tauri build carries the product's icon; a Go executable carries none, and
+	// Windows then draws the generic application glyph - which is what a launcher
+	// puts beside every entry, and what made three Theia entries look like three
+	// unknown programs. A shortcut's icon does not have to come from its own
+	// target.
+	icon := firstInstalled(installDir, "theia-player")
+
 	// The product entry comes first: it is the one somebody looks for by name,
 	// and the only one that also goes on the Desktop.
 	primary := "theia-player"
@@ -55,19 +65,33 @@ func entriesFor(plan Plan, text Catalogue) []shortcutEntry {
 	}
 	entries := []shortcutEntry{{
 		name: text["shortcutTheiaName"],
-		link: Shortcut{Target: executable(primary), WorkingDir: installDir, Description: text["shortcutTheia"]},
+		link: Shortcut{
+			Target:      executable(primary),
+			WorkingDir:  installDir,
+			Description: text["shortcutTheia"],
+			Icon:        icon,
+		},
 	}}
 
 	if plan.Role.WantsServer() {
 		entries = append(entries, shortcutEntry{
 			name: text["shortcutServerName"],
-			link: Shortcut{Target: executable("theia-server"), WorkingDir: installDir, Description: text["shortcutServer"]},
+			link: Shortcut{
+				Target:      executable("theia-server"),
+				WorkingDir:  installDir,
+				Description: text["shortcutServer"],
+				Icon:        icon,
+			},
 		})
 	}
 	if plan.Role.WantsPlayer() {
 		entries = append(entries, shortcutEntry{
 			name: text["shortcutPlayerName"],
-			link: Shortcut{Target: executable("theia-player"), WorkingDir: installDir, Description: text["shortcutPlayer"]},
+			link: Shortcut{
+				Target:      executable("theia-player"),
+				WorkingDir:  installDir,
+				Description: text["shortcutPlayer"],
+			},
 		})
 	}
 	return entries
@@ -80,7 +104,7 @@ func entriesFor(plan Plan, text Catalogue) []shortcutEntry {
 // are installed and they run, and refusing the whole installation because a
 // launcher's folder was read-only would be the installer's convenience winning
 // over the person's. The returned sentence is empty when everything was written.
-func createShortcuts(plan Plan, targets shortcutTargets, text Catalogue) ([]Action, string) {
+func createShortcuts(plan Plan, targets ShortcutTargets, text Catalogue) ([]Action, string) {
 	if runtime.GOOS != "windows" {
 		// Only Windows is verified in V3.3, and a .desktop file written by a
 		// guess would be an unverified claim about somebody's menu. The programs
@@ -88,7 +112,7 @@ func createShortcuts(plan Plan, targets shortcutTargets, text Catalogue) ([]Acti
 		// run, which is the rule the whole project is held to.
 		return nil, ""
 	}
-	if strings.TrimSpace(targets.startMenu) == "" {
+	if strings.TrimSpace(targets.StartMenu) == "" {
 		return nil, ""
 	}
 
@@ -109,7 +133,7 @@ func createShortcuts(plan Plan, targets shortcutTargets, text Catalogue) ([]Acti
 		// the product's name, not the wordmark: "THEIA" is how the header is
 		// drawn, "Theia" is how a folder is spelled.
 		link := entry.link
-		link.Path = filepath.Join(targets.startMenu, text["shortcutTheiaName"], entry.name+".lnk")
+		link.Path = filepath.Join(targets.StartMenu, text["shortcutTheiaName"], entry.name+".lnk")
 		if err := WriteShortcut(link); err != nil {
 			failures = append(failures, err.Error())
 			continue
@@ -118,11 +142,11 @@ func createShortcuts(plan Plan, targets shortcutTargets, text Catalogue) ([]Acti
 
 		// The product alone goes on the Desktop. Three icons for one program is
 		// how a Desktop stops being a place somebody put things.
-		if index != 0 || strings.TrimSpace(targets.desktop) == "" {
+		if index != 0 || strings.TrimSpace(targets.Desktop) == "" {
 			continue
 		}
 		onDesktop := entry.link
-		onDesktop.Path = filepath.Join(targets.desktop, entry.name+".lnk")
+		onDesktop.Path = filepath.Join(targets.Desktop, entry.name+".lnk")
 		if err := WriteShortcut(onDesktop); err != nil {
 			failures = append(failures, err.Error())
 			continue
@@ -136,14 +160,16 @@ func createShortcuts(plan Plan, targets shortcutTargets, text Catalogue) ([]Acti
 	return actions, ""
 }
 
-// installedTargets is where this machine keeps its entries.
-func installedTargets() shortcutTargets {
-	targets := shortcutTargets{}
+// InstalledTargets is where this machine keeps its entries: the Start Menu folder
+// every user has, and the Desktop the shell reports - which is not always
+// %USERPROFILE%\Desktop, since OneDrive moves it.
+func InstalledTargets() ShortcutTargets {
+	targets := ShortcutTargets{}
 	if dir, err := StartMenuDir(); err == nil {
-		targets.startMenu = dir
+		targets.StartMenu = dir
 	}
 	if dir, err := DesktopDir(); err == nil {
-		targets.desktop = dir
+		targets.Desktop = dir
 	}
 	return targets
 }

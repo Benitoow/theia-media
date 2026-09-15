@@ -167,21 +167,32 @@ and deleted. `internal/release` owns the asset names and that rule, because the
 updater asks the same questions.
 
 It then writes Start Menu entries (one folder, named Theia) and one on the Desktop,
-so the product can be found by name - see decision 122.
+registers the installation in the **per-user applications list** so Windows, a
+launcher and *Settings → Apps* can all see and remove it, and copies itself into
+the installation as the maintenance tool the registered uninstall command points
+at. See decisions 122 and 123.
 
 ```bash
 go test ./internal/setup/ -v        # roles, plan validation, the form, the entries
 ./theia-setup.exe                   # the form
 ./theia-setup.exe --check --lang en # what this machine is, changing nothing
 ./theia-setup.exe --role player --install-dir <dir> --data-dir <dir> --yes
+./theia-setup.exe --role all-in-one --from <folder|zip> --force --yes
+./theia-setup.exe --uninstall       # programs and entries out, data kept
 ```
+
+`--force` reinstalls the programs even when they are already there, which is the
+only way to refresh the player: the server updates itself through the updater and
+the player has no such path. `--uninstall` keeps `%APPDATA%\Theia` - that is
+somebody's library and watch history - and prints where it is.
 
 The terminal form is checked by driving the real Huh model with key messages,
 which is the only way to test a TUI without a terminal - and it is how the
-confirmation was caught throwing its own answer away. The autostart entry and the
-shortcuts are tested against a **redirected `APPDATA` and a temporary directory**,
-so the tests never touch the Start Menu, the Desktop or the folder Windows
-actually reads at logon. See decision 120 for the Windows mechanisms and why
+confirmation was caught throwing its own answer away. The autostart entry, the
+shortcuts and the applications-list entry are tested against a **redirected
+`APPDATA`, temporary directories and a registry key the test owns**, so the tests
+never touch the Start Menu, the Desktop, the folder Windows reads at logon, or the
+machine's real entry. See decision 120 for the Windows mechanisms and why
 elevation is never requested.
 
 Two tools exist for looking at the real thing, and they earned their place:
@@ -189,6 +200,7 @@ Two tools exist for looking at the real thing, and they earned their place:
 ```bash
 go run ./scripts/stub-release -dir <folder> -rate 8   # a release page, locally
 ./scripts/capture-tui.ps1 -Probe -Keys @('{ENTER}')   # a screenshot and the colours drawn
+./scripts/capture-window.ps1 -Exe <program.exe>       # a window, DPI-aware
 ```
 
 `stub-release` serves a folder as a release, with each file's real SHA-256, so the
@@ -198,6 +210,18 @@ and reads the console buffer back, which is the only way to tell "the theme aske
 for no colour" from "the terminal refused it". It removes `NO_COLOR` before
 launching, because a capture shell that has it produces a monochrome picture of a
 colourful product, which is exactly the false alarm it was written to settle.
+
+`capture-window.ps1` is the same idea for a program with a window, and it declares
+per-monitor DPI awareness before loading anything that touches one: on this machine
+(200% scaling) a DPI-unaware capture asking for an 1100-pixel window gets one twice
+that size, so the picture is clipped by the screen edge and looks like a layout
+fault that is not there. It prints the DPI it found, and takes the foreground by
+attaching to the thread that holds it, because `SetForegroundWindow` is otherwise
+refused and the picture shows whatever was in front.
+
+**Stop the OSD preview before rebuilding the player.** `npm run preview` holds
+`rollup.win32-x64-msvc.node` and `esbuild.exe` open, and `npm install` then fails
+with EPERM while cleaning up.
 
 ## Building the release archive
 

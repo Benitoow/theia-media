@@ -31,17 +31,33 @@ type Plan struct {
 	Port     int
 	Hostname string
 
+	// Version is the release this installation came from, as the tool carries
+	// it. It is a fallback: what the applications list records is the version
+	// the installed server reports (see installedVersion).
+	Version string
+
 	// Service is whether to install an autostart entry. Off unless asked for:
 	// the founding spec's §11.7 amendment keeps a manually started binary as the
 	// default, and installing a service is a decision about somebody's machine.
 	Service bool
 }
 
+// Version is the release this tool was built from.
+//
+// It is a variable rather than a constant because the linker injects it, the way
+// it does for the server: `-X main.version` lands in main, and main hands it
+// here. Anything that records a version - the applications list - falls back to
+// it, and prefers the version the installed program itself reports.
+var Version = "dev"
+
 // Plan fills in the defaults for anything the caller left empty, so a flag that
 // was not passed and a field a form did not reach behave identically.
 func (p Plan) WithDefaults(defaultDataDir string) Plan {
 	if p.Role == "" {
 		p.Role = DefaultRole
+	}
+	if p.Version == "" {
+		p.Version = Version
 	}
 	if p.DataDir == "" {
 		p.DataDir = defaultDataDir

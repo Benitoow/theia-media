@@ -67,6 +67,11 @@ func run() error {
 		language    = flag.String("lang", "", "fr or en; French by default")
 		showVersion = flag.Bool("version", false, "print the version and exit")
 		yes         = flag.Bool("yes", false, "assume yes where a form would ask")
+		force       = flag.Bool("force", false, "install the programs again even when they are already there")
+		// The name comes from the setup package because the applications list
+		// registers this exact command line: two spellings of one flag is how an
+		// uninstall button stops working.
+		uninstall = flag.Bool(strings.TrimPrefix(setup.UninstallFlag, "--"), false, "remove the installation: its entries, its autostart and its programs")
 	)
 	flag.Parse()
 
@@ -74,6 +79,10 @@ func run() error {
 		fmt.Printf("theia-setup %s\n", version)
 		return nil
 	}
+
+	// The version this tool was built from, handed to the package that records
+	// it. It is the linker's variable, and main is where the linker puts it.
+	setup.Version = version
 
 	text, _ := setup.CatalogueFor(*language)
 	defaultDir, err := config.DataDir()
@@ -89,6 +98,11 @@ func run() error {
 	}
 
 	switch {
+	case *uninstall:
+		// Before anything else, and never interactive: this is the command the
+		// applications list runs, and a command that opened a form inside a
+		// window nobody sees would be an uninstall that appears to do nothing.
+		return runUninstall(*jsonOutput, text)
 	case *check:
 		return reportStatus(*jsonOutput, text)
 	case *checkUpdate:
@@ -106,7 +120,7 @@ func run() error {
 			Language:   *language,
 			DataDir:    defaultDir,
 			InstallDir: *installDir,
-			Source:     releaseSource(*from),
+			Source:     releaseSource(*from, *force),
 			Port:       *port,
 			Hostname:   *hostname,
 			Library:    splitList(*library),
@@ -131,7 +145,7 @@ func run() error {
 		return runOnce(onceOptions{
 			role: *role, dataDir: *dataDir, installDir: *installDir, library: *library,
 			port: *port, hostname: *hostname, service: *service, yes: *yes,
-			jsonOutput: *jsonOutput, defaultDir: defaultDir, source: releaseSource(*from),
+			jsonOutput: *jsonOutput, defaultDir: defaultDir, source: releaseSource(*from, *force),
 			text: text,
 		})
 	}
@@ -142,8 +156,33 @@ func run() error {
 // THEIA_UPDATE_API points at a mirror, and at a stub in the tests: it is the same
 // variable the updater already honours, so a mirror is configured once for both
 // paths rather than twice with two chances to forget.
-func releaseSource(from string) setup.Source {
-	return setup.Source{From: from, APIBase: os.Getenv("THEIA_UPDATE_API")}
+func releaseSource(from string, force bool) setup.Source {
+	return setup.Source{From: from, Force: force, APIBase: os.Getenv("THEIA_UPDATE_API")}
+}
+
+// runUninstall removes the installation and keeps the data.
+//
+// It reads the machine's current state rather than asking questions: this is what
+// the applications list runs, and it has to work with nobody watching. The data
+// directory is printed at the end, because "your library is still there, here" is
+// the one thing somebody removing a program wants to be sure of.
+func runUninstall(jsonOutput bool, text setup.Catalogue) error {
+	plan, err := currentPlan()
+	if err != nil {
+		return err
+	}
+	if plan.InstallDir, err = setup.DefaultInstallDir(); err != nil {
+		return err
+	}
+	result, err := setup.Uninstall(plan, setup.InstalledTargets(), text)
+	if err != nil {
+		return err
+	}
+	if jsonOutput {
+		return printJSON(result)
+	}
+	printResult(result, text)
+	return nil
 }
 
 // isInteractive decides which of the two installation paths runs. A role or a
@@ -316,6 +355,14 @@ func reportStatus(jsonOutput bool, text setup.Catalogue) error {
 		folders = strings.Join(status.LibraryPaths, ", ")
 	}
 	fmt.Printf("  %-18s %s\n", text["statusLibrary"], folders)
+	// Whether Windows lists this installation among the installed programs. It
+	// is the one line that answers "did the installer finish", which a folder of
+	// executables does not.
+	registered := text["statusNo"]
+	if status.Registered {
+		registered = text["statusYes"]
+	}
+	fmt.Printf("  %-18s %s\n", text["statusRegistered"], registered)
 	autostart := text["statusNone"]
 	if status.Autostart.Installed {
 		autostart = status.Autostart.Kind + " (" + status.Autostart.Path + ")"
@@ -488,6 +535,26 @@ func printResult(result setup.Result, text setup.Catalogue) {
 			fmt.Printf("  %s %s (%s)\n", text["actFetch"], action.Path, action.Detail)
 		case "created-shortcut":
 			fmt.Printf("  %s %s\n", text["actShortcut"], action.Path)
+		case "installed-tool":
+			fmt.Printf("  %s %s\n", text["actTool"], action.Path)
+		case "registered-application":
+			fmt.Printf("  %s %s (%s)\n", text["actRegistered"], action.Path, action.Detail)
+		case "removed-shortcut":
+			fmt.Printf("  %s %s\n", text["actShortcutGone"], action.Path)
+		case "unregistered-application":
+			fmt.Printf("  %s\n", text["actUnregistered"])
+		case "removed-service":
+			fmt.Printf("  %s %s\n", text["actServGone"], action.Detail)
+		case "removed-program":
+			fmt.Printf("  %s %s\n", text["actRemoved"], action.Path)
+		case "removed-program-later":
+			fmt.Printf("  %s %s\n", text["actRemovedLater"], action.Path)
+		case "programs-remaining":
+			fmt.Printf("  %s %s\n", text["actRemaining"], action.Path)
+		case "nothing-installed":
+			fmt.Printf("  %s %s\n", text["actNotInstalled"], action.Path)
+		case "kept-data":
+			fmt.Printf("  %s %s\n", text["uninstallKeptData"], action.Path)
 		case "installed-service":
 			fmt.Printf("  %s %s (%s)\n", text["actServ"], action.Detail, text["mechanism"])
 		case "kept-service":

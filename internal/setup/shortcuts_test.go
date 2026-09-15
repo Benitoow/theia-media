@@ -19,7 +19,7 @@ func TestTheEntriesNameEveryProgramTheRoleInstalled(t *testing.T) {
 		write(t, filepath.Join(install, name), "MZ")
 	}
 
-	targets := shortcutTargets{startMenu: t.TempDir(), desktop: t.TempDir()}
+	targets := ShortcutTargets{StartMenu: t.TempDir(), Desktop: t.TempDir()}
 	result, failure := createShortcuts(
 		Plan{Role: RoleAllInOne, InstallDir: install}.WithDefaults(""), targets, french)
 	if failure != "" {
@@ -28,7 +28,7 @@ func TestTheEntriesNameEveryProgramTheRoleInstalled(t *testing.T) {
 
 	// The Start Menu gets one entry per program, in one folder named after the
 	// product - which is the folder a launcher indexes.
-	folder := filepath.Join(targets.startMenu, french["shortcutTheiaName"])
+	folder := filepath.Join(targets.StartMenu, french["shortcutTheiaName"])
 	wanted := []string{
 		french["shortcutTheiaName"] + ".lnk",
 		french["shortcutServerName"] + ".lnk",
@@ -41,7 +41,7 @@ func TestTheEntriesNameEveryProgramTheRoleInstalled(t *testing.T) {
 	}
 	// And the Desktop gets the product alone: three icons for one program is how
 	// a Desktop stops being a place somebody put things.
-	desktop, err := os.ReadDir(targets.desktop)
+	desktop, err := os.ReadDir(targets.Desktop)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,6 +58,40 @@ func TestTheEntriesNameEveryProgramTheRoleInstalled(t *testing.T) {
 	}
 }
 
+func TestTheEntriesCarryTheProductsIconRatherThanAGenericOne(t *testing.T) {
+	// A Go executable has no icon resource, so Windows draws the generic
+	// application glyph beside it - which is how three Theia entries came to look
+	// like three unknown programs in a launcher. The player's build does carry the
+	// icon, so the server's entries borrow it.
+	french, _ := CatalogueFor("fr")
+	install := t.TempDir()
+	write(t, filepath.Join(install, "theia-server.exe"), "MZ")
+	write(t, filepath.Join(install, "theia-player.exe"), "MZ")
+
+	entries := entriesFor(Plan{Role: RoleAllInOne, InstallDir: install}, french)
+	if len(entries) != 3 {
+		t.Fatalf("the role produced %d entries, want 3", len(entries))
+	}
+	player := filepath.Join(install, "theia-player.exe")
+	for _, entry := range entries {
+		if entry.name == french["shortcutTheiaName"] || entry.name == french["shortcutServerName"] {
+			if !strings.EqualFold(entry.link.Icon, player) {
+				t.Errorf("%s would show the generic glyph, icon = %q", entry.name, entry.link.Icon)
+			}
+		}
+	}
+
+	// A server-only machine has no player to borrow from, and no invented path
+	// either: an icon that is not there is worse than the default one.
+	bare := t.TempDir()
+	write(t, filepath.Join(bare, "theia-server.exe"), "MZ")
+	for _, entry := range entriesFor(Plan{Role: RoleServer, InstallDir: bare}, french) {
+		if entry.link.Icon != "" {
+			t.Errorf("%s claims an icon at %q, and there is no player to take one from", entry.name, entry.link.Icon)
+		}
+	}
+}
+
 func TestAPlayerOnlyMachineGetsNoServerEntry(t *testing.T) {
 	// An entry that starts a program this machine does not have is a broken
 	// promise somebody double-clicks. The role decides, and the player-only role
@@ -66,12 +100,12 @@ func TestAPlayerOnlyMachineGetsNoServerEntry(t *testing.T) {
 	install := t.TempDir()
 	write(t, filepath.Join(install, "theia-player.exe"), "MZ")
 
-	targets := shortcutTargets{startMenu: t.TempDir(), desktop: t.TempDir()}
+	targets := ShortcutTargets{StartMenu: t.TempDir(), Desktop: t.TempDir()}
 	if _, failure := createShortcuts(Plan{Role: RolePlayer, InstallDir: install}, targets, french); failure != "" {
 		t.Fatalf("creating the entries failed: %s", failure)
 	}
 
-	entries, err := os.ReadDir(filepath.Join(targets.startMenu, french["shortcutTheiaName"]))
+	entries, err := os.ReadDir(filepath.Join(targets.StartMenu, french["shortcutTheiaName"]))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +125,7 @@ func TestAnEntryIsNotWrittenForAProgramThatIsNotThere(t *testing.T) {
 	// a file that does not exist.
 	french, _ := CatalogueFor("fr")
 	install := t.TempDir() // deliberately empty
-	targets := shortcutTargets{startMenu: t.TempDir(), desktop: t.TempDir()}
+	targets := ShortcutTargets{StartMenu: t.TempDir(), Desktop: t.TempDir()}
 
 	actions, failure := createShortcuts(Plan{Role: RoleServer, InstallDir: install}, targets, french)
 	if failure == "" {
@@ -100,7 +134,7 @@ func TestAnEntryIsNotWrittenForAProgramThatIsNotThere(t *testing.T) {
 	if len(actions) != 0 {
 		t.Errorf("an entry was created for a program that is not installed: %+v", actions)
 	}
-	if entries, err := os.ReadDir(filepath.Join(targets.startMenu, french["shortcutTheiaName"])); err == nil && len(entries) != 0 {
+	if entries, err := os.ReadDir(filepath.Join(targets.StartMenu, french["shortcutTheiaName"])); err == nil && len(entries) != 0 {
 		t.Errorf("the Start Menu folder was created with %d entries in it", len(entries))
 	}
 }
@@ -138,7 +172,7 @@ func TestEntriesAreOnlyWrittenOnWindows(t *testing.T) {
 	french, _ := CatalogueFor("fr")
 	install := t.TempDir()
 	write(t, filepath.Join(install, "theia-server"), "ELF")
-	targets := shortcutTargets{startMenu: t.TempDir(), desktop: t.TempDir()}
+	targets := ShortcutTargets{StartMenu: t.TempDir(), Desktop: t.TempDir()}
 	actions, failure := createShortcuts(Plan{Role: RoleServer, InstallDir: install}, targets, french)
 	if len(actions) != 0 || failure != "" {
 		t.Errorf("a non-Windows platform was given entries: %+v %q", actions, failure)
