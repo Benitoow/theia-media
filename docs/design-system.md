@@ -527,9 +527,14 @@ a player.
   never hides while paused, seeking or buffering, and never with focus stranded
   on a control - focus moves to the dialog first.
 - **The scrub bar shows three things**: played in gold, buffered in a lighter
-  bone, and the rest. The bar itself is 4px because that reads as precision; its
-  hit area is 24px because a thumb is not a mouse. A hover anywhere on it shows
-  the timestamp under the pointer.
+  bone, and the rest. The bar itself is 4px because that reads as precision.
+  **Amended 15 September 2026 (decision D3b): its hit area is 44px, not 24px.**
+  The 24px written here was measured against the web player's own scrub bar -
+  `3rem`, 48px - and against §9, which sets the floor at 44×44 for every
+  interactive target. Two surfaces of one product cannot answer that question
+  differently, and the native player is the one read with a remote or a finger.
+  The painted line is unchanged; only the area that answers a press grew. A hover
+  anywhere on it shows the timestamp under the pointer.
 - **Scrims, not a wash.** Two gradients, top and bottom, so the text has a floor
   without dimming the film.
 - **The OSD is never composed over the desktop.** The player's window is

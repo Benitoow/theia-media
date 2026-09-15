@@ -6,6 +6,12 @@
    wash, as section 6b describes. */
 
 @import '../../../web/src/lib/tokens.css';
+/* The two faces, from the same single declaration the web application uses.
+   Not a copy: the OSD wore Georgia and Segoe UI for want of this line, because
+   tokens.css names the families but never declared them, and app.css - which did
+   - cannot be imported by a document that has no Tailwind. Measured on the built
+   OSD: no @font-face at all, so every title fell through to the system serif. */
+@import '../../../web/src/lib/fonts.css';
 
 html,
 body {
@@ -136,11 +142,19 @@ body {
 }
 
 /* Three things on one rule: played in gold, buffered in bone, the rest quiet.
-   The painted bar is 4px because that reads as precision; the hit area is 24px
-   because a thumb is not a mouse. */
+   The painted bar is 4px because that reads as precision; the target is 44px
+   because a finger is not a mouse.
+
+   Amended 15 September 2026 (decision D3b). The target used to be 24px, which is
+   what section 6b said and what the web player disagreed with: the same control
+   there measures 3rem, and section 9 sets the floor at 44x44 for every
+   interactive target. Two surfaces of one product cannot answer the same
+   question differently, so the painted line keeps its 4px and the hit area takes
+   the floor. Measured before: 1177x24, the only target under 44 in the whole
+   interface, asserted by the render check. */
 .scrub {
 	position: relative;
-	height: 24px;
+	height: 44px;
 	display: flex;
 	align-items: center;
 	cursor: pointer;
