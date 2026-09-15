@@ -53,6 +53,8 @@ func run() error {
 	var (
 		role        = flag.String("role", "", "what this machine is for: all-in-one, server, or player")
 		dataDir     = flag.String("data-dir", "", "directory holding the configuration, database and cache")
+		installDir  = flag.String("install-dir", "", "where to install the programs; empty means this user's standard place")
+		from        = flag.String("from", "", "a folder or .zip holding the programs, instead of downloading them")
 		library     = flag.String("library", "", "folders to scan, separated by the path-list separator")
 		port        = flag.Int("port", 0, "port the server listens on")
 		hostname    = flag.String("hostname", "", "name announced on the network")
@@ -78,6 +80,13 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	// `--data-dir` wins over where the machine would put it, on both paths. The
+	// form used to be handed the machine's directory whatever the flag said, so
+	// the question was asked, the summary proposed somewhere else, and the flag
+	// looked like it had been accepted. It had not.
+	if *dataDir != "" {
+		defaultDir = *dataDir
+	}
 
 	switch {
 	case *check:
@@ -92,27 +101,49 @@ func run() error {
 		return serviceAction(*serviceCmd, *jsonOutput, text)
 	case isInteractive(*role, *library):
 		result, err := setup.RunInteractive(setup.FormOptions{
-			Input:    os.Stdin,
-			Output:   os.Stdout,
-			Language: *language,
-			DataDir:  defaultDir,
+			Input:      os.Stdin,
+			Output:     os.Stdout,
+			Language:   *language,
+			DataDir:    defaultDir,
+			InstallDir: *installDir,
+			Source:     releaseSource(*from),
+			Port:       *port,
+			Hostname:   *hostname,
+			Library:    splitList(*library),
+			Service:    *service,
 		})
 		if errors.Is(err, setup.ErrCancelled) {
 			fmt.Println(text["cancelled"])
 			return nil
 		}
+		if errors.Is(err, setup.ErrInterrupted) {
+			// Not the same sentence as a cancellation: by the time a download is
+			// running, "nothing was written" may no longer be true.
+			fmt.Println(text["interrupted"])
+			return nil
+		}
 		if err != nil {
-			return err
+			return installFailure(err, text)
 		}
 		printResult(result, text)
 		return nil
 	default:
 		return runOnce(onceOptions{
-			role: *role, dataDir: *dataDir, library: *library, port: *port,
-			hostname: *hostname, service: *service, yes: *yes,
-			jsonOutput: *jsonOutput, defaultDir: defaultDir, text: text,
+			role: *role, dataDir: *dataDir, installDir: *installDir, library: *library,
+			port: *port, hostname: *hostname, service: *service, yes: *yes,
+			jsonOutput: *jsonOutput, defaultDir: defaultDir, source: releaseSource(*from),
+			text: text,
 		})
 	}
+}
+
+// releaseSource says where a program that is not on this machine comes from.
+//
+// THEIA_UPDATE_API points at a mirror, and at a stub in the tests: it is the same
+// variable the updater already honours, so a mirror is configured once for both
+// paths rather than twice with two chances to forget.
+func releaseSource(from string) setup.Source {
+	return setup.Source{From: from, APIBase: os.Getenv("THEIA_UPDATE_API")}
 }
 
 // isInteractive decides which of the two installation paths runs. A role or a
@@ -125,6 +156,7 @@ func isInteractive(role, library string) bool {
 type onceOptions struct {
 	role       string
 	dataDir    string
+	installDir string
 	library    string
 	port       int
 	hostname   string
@@ -132,19 +164,27 @@ type onceOptions struct {
 	yes        bool
 	jsonOutput bool
 	defaultDir string
+	source     setup.Source
 	text       setup.Catalogue
 }
 
-// runOnce is the flag path: the same Plan and the same Apply as the form, which
-// is the point - a scripted installation and a typed one cannot diverge.
+// runOnce is the flag path: the same Plan and the same Install as the form,
+// which is the point - a scripted installation and a typed one cannot diverge.
 func runOnce(opts onceOptions) error {
 	parsed, err := setup.ParseRole(opts.role)
 	if err != nil {
 		return err
 	}
+	installDir := opts.installDir
+	if installDir == "" {
+		if installDir, err = setup.DefaultInstallDir(); err != nil {
+			return err
+		}
+	}
 	plan := setup.Plan{
 		Role:         parsed,
 		DataDir:      opts.dataDir,
+		InstallDir:   installDir,
 		LibraryPaths: splitList(opts.library),
 		Port:         opts.port,
 		Hostname:     opts.hostname,
@@ -161,7 +201,11 @@ func runOnce(opts onceOptions) error {
 		return fmt.Errorf("%s --service --yes", opts.text["serviceTitle"])
 	}
 
-	result, err := setup.Apply(plan)
+	var result setup.Result
+	err = setup.RunProgress(os.Stdout, opts.text, func(ctx context.Context, report setup.Reporter) error {
+		result, err = setup.Install(ctx, plan, opts.source, opts.text, report)
+		return err
+	})
 	if err != nil {
 		return err
 	}
@@ -252,6 +296,12 @@ func reportStatus(jsonOutput bool, text setup.Catalogue) error {
 	}
 	fmt.Printf("\n  %s\n\n", text["statusTitle"])
 	fmt.Printf("  %-18s %s\n", text["statusData"], status.DataDir)
+	if status.InstallDir != "" {
+		// Printed even when the folder does not exist yet: "nothing is installed
+		// here" is the answer to a fair question, and an empty line would leave
+		// somebody guessing where an installation would go.
+		fmt.Printf("  %-18s %s\n", text["statusPrograms"], status.InstallDir)
+	}
 	configured := text["statusNo"]
 	if status.Configured {
 		configured = text["statusYes"]
@@ -378,6 +428,50 @@ func reasonSentence(status setup.UpdateStatusView, text setup.Catalogue) string 
 	return status.Message
 }
 
+// installFailure explains an installation that stopped.
+//
+// Same discipline as an update that failed: the English line goes to the log for
+// whoever has to diagnose it, and the sentence goes to the person, from the
+// catalogue. The reason code is the contract; the wording is not.
+func installFailure(err error, text setup.Catalogue) error {
+	var failure *setup.InstallError
+	if !errors.As(err, &failure) {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "theia-setup: installation failed: %v\n", err)
+	known := map[string]string{
+		setup.ReasonReleaseUnavailable: "reasonUnavailable",
+		setup.ReasonNotPublished:       "reasonNotPublished",
+		setup.ReasonDownloadFailed:     "reasonDownload",
+		setup.ReasonIncompleteBundle:   "reasonBundle",
+		setup.ReasonMissingFromSource:  "reasonSource",
+	}
+	sentence, ok := known[failure.Reason]
+	if !ok {
+		fmt.Fprintf(os.Stderr, "%s %v\n", text["errorPrefix"], err)
+		return errAlreadyReported
+	}
+	// The reasons that name something take it as an argument: "this release does
+	// not publish %s" is a different sentence from "the download of %s failed",
+	// and only the catalogue knows which.
+	if strings.Contains(text[sentence], "%s") {
+		fmt.Fprintf(os.Stderr, "%s %s\n", text["errorPrefix"], fmt.Sprintf(text[sentence], programLabel(failure.Detail, text)))
+	} else {
+		fmt.Fprintf(os.Stderr, "%s %s\n", text["errorPrefix"], text[sentence])
+	}
+	return errAlreadyReported
+}
+
+// programLabel turns the detail a reason carries - "server", "player", or a file
+// name - into something a sentence can use, and shows anything it does not know
+// unchanged rather than swallowing it.
+func programLabel(detail string, text setup.Catalogue) string {
+	if label, ok := text["program."+detail]; ok {
+		return label
+	}
+	return detail
+}
+
 func printResult(result setup.Result, text setup.Catalogue) {
 	fmt.Printf("\n%s\n\n", text["done"])
 	for _, action := range result.Actions {
@@ -388,16 +482,41 @@ func printResult(result setup.Result, text setup.Catalogue) {
 			fmt.Printf("  %s %s\n", text["actConfig"], action.Path)
 		case "already-configured":
 			fmt.Printf("  %s %s\n", text["actKnown"], action.Path)
+		case "installed-program":
+			fmt.Printf("  %s %s (%s)\n", text["actProg"], action.Path, originSentence(action.Detail, text))
+		case "downloaded-program":
+			fmt.Printf("  %s %s (%s)\n", text["actFetch"], action.Path, action.Detail)
+		case "created-shortcut":
+			fmt.Printf("  %s %s\n", text["actShortcut"], action.Path)
 		case "installed-service":
 			fmt.Printf("  %s %s (%s)\n", text["actServ"], action.Detail, text["mechanism"])
 		case "kept-service":
 			fmt.Printf("  %s\n", text["actNone"])
 		}
 	}
+	if result.ShortcutsError != "" {
+		fmt.Printf("  %s %s\n", text["shortcutFail"], result.ShortcutsError)
+	}
 	if result.ServiceError != "" {
 		fmt.Printf("  %s %s\n", text["servFail"], result.ServiceError)
 	}
 	fmt.Println()
+}
+
+// originSentence says where an installed program came from. A code the catalogue
+// does not know is printed as it is: a blank space where an explanation belongs
+// is how a missing translation goes unnoticed.
+func originSentence(origin string, text setup.Catalogue) string {
+	known := map[string]string{
+		"already-installed": "originAlreadyInstalled",
+		"beside-installer":  "originBesideInstaller",
+		"folder":            "originFolder",
+		"archive":           "originArchive",
+	}
+	if key, ok := known[origin]; ok {
+		return text[key]
+	}
+	return origin
 }
 
 func printJSON(value any) error {

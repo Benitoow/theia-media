@@ -3911,6 +3911,63 @@ configuration, installed a startup entry, the server came up on a fresh data
 directory and scanned, and the player listed and played a film with its
 sidecar subtitle. On Windows only, as everything else in this generation.
 
+## 122. One executable is the download, and it installs the machine's programs
+
+Decision 121 made the archive the thing a person downloads, and that fixed the
+immediate fault: three files with a README telling you to start with the wrong
+one. It left the shape of the download wrong in a different way. The maintainer's
+words: *"j'aimerais tout simplement faire en sorte qu'il y ait qu'un seul point
+EXE... Et ensuite, c'est lui qui télécharge le player, ou qui le build."* One
+executable on the release page, and it fetches or builds the rest itself.
+
+There was a second fault behind the same sentence, and it was worse than the
+packaging. **The installer installed nothing.** It wrote a configuration and an
+autostart entry, and the programs stayed in whatever folder they had been
+unpacked into. Measured on the maintainer's own machine: after a full
+installation, searching for "Theia" found nothing, the Desktop was empty, and the
+only way to start the product was to remember where the zip had been extracted -
+and deleting that folder quietly broke the installation.
+
+**Decided.**
+
+- **The download is one file.** `theia-setup-<os>-<arch>[.exe]` is the headline of
+  the release, and the only thing a person needs. The archive of decision 121 is
+  still published, and still verified, as the offline path: it needs no network
+  at install time, and the installer finds the programs beside itself.
+- **The installer fetches what the machine is missing**, from GitHub Releases,
+  and copies everything into one directory: `%LOCALAPPDATA%\Programs\Theia` on
+  Windows, per-user, because decision 120 fixes that this installer never asks
+  for administrator rights. Data stays where it was, in `%APPDATA%\Theia`; a data
+  directory is something people back up and move, and programs are not.
+- **Nothing is installed unverified.** GitHub reports a SHA-256 digest per asset,
+  and the installer refuses any release that does not carry one, any download
+  whose digest disagrees, and any file whose size does not match what was
+  announced. A refused download is deleted rather than kept for inspection. The
+  rule is the one the updater already applies to a running installation, and the
+  same reason applies: an installer has no business putting an unverified binary
+  where something will launch it.
+- **The player travels as a bundle.** `theia-player-<os>-<arch>.zip` holds the
+  executable, the engine, the engine's LGPL text and the notice. All four are
+  required: a bundle missing its licence is a breach, not an incomplete download.
+- **Programs are installed, so they can be found.** The installer writes entries
+  into the Start Menu, in one folder named Theia, and one on the Desktop. The
+  names are proper nouns (`Theia`, `Theia Server`, `Theia Player`); the tooltips
+  beside them are catalogue sentences in the user's language, because a tooltip
+  is something somebody reads (decision 25). This is what a launcher such as Flow
+  Launcher indexes, and what makes the product launchable by name.
+
+**Verified**, on Windows, in this order: an empty folder holding only
+`theia-setup.exe` was installed against a stub release page serving the real
+published files - the server (18.5 MB) and the player bundle (45.3 MB) were
+fetched, both digests checked, the installed engine's SHA-256 matched the pin in
+`player/libmpv.json` (`6f059354...`), and the installed server reported
+`theia 3.3.0`. The four Start Menu and Desktop entries were then read back **with
+Windows itself** (`WScript.Shell`), each pointing at the installed program with
+its French tooltip. A second run reported the programs "already in place" and
+fetched nothing. `--data-dir` was found being ignored on the interactive path
+during this work: the form asked the question and then proposed `%APPDATA%`
+whatever the flag said, which is fixed and tested.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

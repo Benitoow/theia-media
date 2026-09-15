@@ -19,6 +19,11 @@ type Plan struct {
 	// DataDir holds config.json, the database and the cache.
 	DataDir string
 
+	// InstallDir holds the programs. Empty means this user's standard place,
+	// resolved by DefaultInstallDir - beside the data rather than inside it,
+	// because a data directory is something people back up and move.
+	InstallDir string
+
 	// LibraryPaths are the folders to scan. Empty is legal: the settings page
 	// adds them later, and a server with no folders is a server waiting.
 	LibraryPaths []string
@@ -73,6 +78,14 @@ func (p *Plan) Validate() error {
 		return fmt.Errorf("data directory %q cannot be resolved: %w", p.DataDir, err)
 	}
 	p.DataDir = absolute
+
+	if strings.TrimSpace(p.InstallDir) != "" {
+		absolute, err := filepath.Abs(p.InstallDir)
+		if err != nil {
+			return fmt.Errorf("installation directory %q cannot be resolved: %w", p.InstallDir, err)
+		}
+		p.InstallDir = absolute
+	}
 
 	if p.Port < 1 || p.Port > 65535 {
 		return fmt.Errorf("port %d is not a port", p.Port)
@@ -130,7 +143,7 @@ type Artifact struct {
 }
 
 // Artifacts lists what the chosen role needs and whether it is present, looking
-// beside the installer first and then on PATH.
+// beside the installer, then in the installation directory, then on PATH.
 //
 // The names it accepts are the ones a person actually has on disk, which for a
 // downloaded release is `theia-server-windows-amd64.exe` and not
@@ -153,6 +166,9 @@ func (p Plan) Artifacts(self string) []Artifact {
 		if beside, err := besideInstallerRelative(self, names); err == nil {
 			artifact.Path = beside
 			artifact.Found = true
+		} else if installed, err := inDirRelative(p.InstallDir, names); err == nil {
+			artifact.Path = installed
+			artifact.Found = true
 		} else if onPath, err := lookPathAny(names); err == nil {
 			artifact.Path = onPath
 			artifact.Found = true
@@ -160,6 +176,22 @@ func (p Plan) Artifacts(self string) []Artifact {
 		found = append(found, artifact)
 	}
 	return found
+}
+
+// inDirRelative looks for one of these names in a given directory, which is how
+// an installed program is found. An empty directory finds nothing rather than
+// searching the working directory by accident.
+func inDirRelative(dir string, names []string) (string, error) {
+	if strings.TrimSpace(dir) == "" {
+		return "", os.ErrNotExist
+	}
+	for _, name := range names {
+		path := filepath.Join(dir, name)
+		if fileExists(path) {
+			return path, nil
+		}
+	}
+	return "", os.ErrNotExist
 }
 
 // besideInstallerRelative is besideInstaller, but against a given installer path

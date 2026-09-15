@@ -104,33 +104,40 @@ you an installation you would later resent.
 ## Three-minute setup
 
 1. Download **one file** for your operating system and CPU from
-   [GitHub Releases](https://github.com/Benitoow/theia-media/releases/latest),
-   unpack it anywhere, and run `theia-setup`. It asks three questions - what this
-   machine is for, where to keep its data, which folders hold your films - and
-   writes the configuration.
-2. Start the server it left beside itself, or let it start itself: the installer
-   offers an autostart entry, and asks for no administrator rights to put one in
+   [GitHub Releases](https://github.com/Benitoow/theia-media/releases/latest) and
+   run it: on Windows x64 that is `theia-setup-windows-amd64.exe`. It asks what
+   this machine is for, where to keep its data, the port it listens on, the name
+   it answers to on the network, and which folders hold your films - then shows
+   the whole plan before writing anything.
+2. It fetches what this machine needs - the server, the native player, and the
+   media engine the player uses - checking the SHA-256 digest GitHub publishes for
+   each file and refusing anything that does not match. The programs are copied
+   into `%LOCALAPPDATA%\Programs\Theia`, and entries appear in the Start Menu under
+   **Theia** and on the Desktop, so the product can be launched by name.
+3. Start the server from that entry, or let the installer start it automatically:
+   it offers an autostart entry, and asks for no administrator rights to put one in
    place.
-3. Open **Settings**, add or confirm your media folders, then start the scan.
+4. Open **Settings**, add or confirm your media folders, then start the scan.
 
 | Platform | The download |
 | --- | --- |
-| Windows x64 | `theia-<version>-windows-amd64.zip` |
+| Windows x64 | `theia-setup-windows-amd64.exe` (one file, ~13 MB) |
 | Windows on ARM, macOS, Linux | not yet - see *what is verified* below |
 
-That archive holds everything: the installer, the server, the player, the media
-engine the player uses, that engine's LGPL licence, and a `START-HERE.txt`. Keep
-the files together; the player needs `libmpv-2.dll` beside it. Nothing is written
-outside the folders you choose, and nothing needs downloading at install time.
+If you would rather install with nothing downloaded, the release also publishes
+`theia-<version>-windows-amd64.zip`, which holds every file. Unpack it and run
+`theia-setup.exe` from inside that folder: it finds the programs **beside itself**,
+copies them, and needs no network at all.
 
 The individual pieces are published as separate assets too, for a script, a
 mirror, or the updater:
 
 | Asset | What it is |
 | --- | --- |
-| `theia-server-<os>-<arch>[.exe]` | The server alone. This is what the updater selects by name. |
-| `theia-setup-<os>-<arch>[.exe]` | The installer alone. It finds a server and a player **beside itself** or on `PATH`, under either their short names (`theia-server.exe`) or their published ones (`theia-server-windows-amd64.exe`). |
-| `theia-player-<os>-<arch>.zip` | The player alone, with its engine and licences. |
+| `theia-server-<os>-<arch>[.exe]` | The server alone. This is what the updater selects by name, and what the installer fetches. |
+| `theia-setup-<os>-<arch>[.exe]` | The installer alone: the one file a person downloads. It fetches the programs above, or copies them from beside itself or from `--from <folder\|zip>`. |
+| `theia-player-<os>-<arch>.zip` | The player and its engine, with the engine's licence and notice. |
+| `theia-<version>-<os>-<arch>.zip` | Everything, for an install with no network. |
 | `theia-<os>-<arch>[.exe]` | The pre-V3.3 name of the server, byte-identical, **in this release only** - it is what lets an installed v3.2 update itself. Gone in the next release, and the notes say so. |
 
 Release binaries are unsigned and run in the foreground. Windows may show a

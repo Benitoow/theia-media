@@ -154,25 +154,50 @@ same six targets with `CGO_ENABLED=0` (checked by CI, and locally with
 `internal/config` rather than by hand, and its own record of the machine's
 declared role in `setup.json` beside it.
 
-It finds the server and the player **beside itself or on `PATH`, under either
-their short names (`theia-server.exe`) or their published ones
-(`theia-server-windows-amd64.exe`)**. Both are real names - the first is what a
-working tree builds, the second is what a release publishes - and looking for
-only the first is how a folder containing every published file reported the
-server as missing.
+**It installs the programs.** `%LOCALAPPDATA%\Programs\Theia` on Windows, per-user
+because elevation is never requested (decision 120). It finds what it needs
+**in the installation, beside itself, or on `PATH`, under either the short names
+(`theia-server.exe`) or the published ones (`theia-server-windows-amd64.exe`)** -
+both are real, the first is what a working tree builds and the second is what a
+release publishes, and looking for only the first is how a folder containing every
+published file reported the server as missing. What is not there is **fetched from
+GitHub Releases, digest first**: a release that advertises no SHA-256, a download
+that disagrees with it, or a file whose size is not what was announced is refused
+and deleted. `internal/release` owns the asset names and that rule, because the
+updater asks the same questions.
+
+It then writes Start Menu entries (one folder, named Theia) and one on the Desktop,
+so the product can be found by name - see decision 122.
 
 ```bash
 go test ./internal/setup/ -v        # roles, plan validation, the form, the entries
 ./theia-setup.exe                   # the form
 ./theia-setup.exe --check --lang en # what this machine is, changing nothing
+./theia-setup.exe --role player --install-dir <dir> --data-dir <dir> --yes
 ```
 
 The terminal form is checked by driving the real Huh model with key messages,
 which is the only way to test a TUI without a terminal - and it is how the
-confirmation was caught throwing its own answer away. The autostart entry is
-tested against a **redirected `APPDATA`**, so the tests never touch the folder
-Windows actually reads at logon. See decision 120 for the Windows mechanisms and
-why elevation is never requested.
+confirmation was caught throwing its own answer away. The autostart entry and the
+shortcuts are tested against a **redirected `APPDATA` and a temporary directory**,
+so the tests never touch the Start Menu, the Desktop or the folder Windows
+actually reads at logon. See decision 120 for the Windows mechanisms and why
+elevation is never requested.
+
+Two tools exist for looking at the real thing, and they earned their place:
+
+```bash
+go run ./scripts/stub-release -dir <folder> -rate 8   # a release page, locally
+./scripts/capture-tui.ps1 -Probe -Keys @('{ENTER}')   # a screenshot and the colours drawn
+```
+
+`stub-release` serves a folder as a release, with each file's real SHA-256, so the
+download path can be driven end to end before anything is published - point
+`THEIA_UPDATE_API` at it. `capture-tui.ps1` photographs the form in a real console
+and reads the console buffer back, which is the only way to tell "the theme asked
+for no colour" from "the terminal refused it". It removes `NO_COLOR` before
+launching, because a capture shell that has it produces a monochrome picture of a
+colourful product, which is exactly the false alarm it was written to settle.
 
 ## Building the release archive
 
@@ -180,14 +205,17 @@ why elevation is never requested.
 ./build-release.ps1 -Version 3.3.0     # -> dist/theia-3.3.0-windows-amd64.zip
 ```
 
-This is **what a person downloads**: one archive with the installer, the server,
-the player, the engine (`libmpv-2.dll`), the LGPL licence and a `START-HERE.txt`.
-It exists because the first version published three separate downloads and told
-the reader to put them together - and somebody who downloaded only the installer,
-which is what the README said to do first, got a configuration and nothing to run
-it. Verified by unzipping the archive into an empty directory and following
-`START-HERE.txt` literally. The individual assets are still published, with their
-platform names, for the updater and for mirrors.
+The archive is **the offline path**: everything in one zip - the installer, the
+server, the player, the engine (`libmpv-2.dll`), the LGPL licence and a
+`START-HERE.txt`. Unpacked and run from inside the folder, the installer finds the
+programs beside itself and copies them with no network at all. It exists because
+the first version published three separate downloads and told the reader to put
+them together - and somebody who downloaded only the installer, which is what the
+README said to do first, got a configuration and nothing to run it.
+
+**What a person downloads is one executable**, `theia-setup-<os>-<arch>.exe`; it
+fetches the rest, verified. The individual assets are published as well, with
+their platform names, for the updater, for mirrors, and for that fetch.
 
 ## Building the native player
 

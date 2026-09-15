@@ -88,19 +88,21 @@ Theia $Version
 ============$(('=' * $Version.Length))
 
 FR - Lancez theia-setup.exe. Il vous demande a quoi sert cette machine, ou
-     garder ses donnees et quels dossiers contiennent vos films. Il installe un
-     demarrage automatique seulement si vous le demandez, et ne reclame jamais
-     de droits administrateur. Ensuite, ouvrez http://localhost:8383 pour
-     administrer la bibliotheque, et lancez theia-player.exe pour regarder un
-     film. Le lecteur a besoin de libmpv-2.dll, qui est dans ce dossier : gardez
-     les fichiers ensemble.
+     garder ses donnees, sur quel port elle ecoute et quels dossiers contiennent
+     vos films - puis il affiche le plan complet avant d'ecrire quoi que ce soit.
+     Il installe les programmes dans %LOCALAPPDATA%\Programs\Theia et pose des
+     raccourcis dans le menu Demarrer et sur le bureau (Theia, Theia Server,
+     Theia Player), pour qu'ils se lancent par leur nom. Rien n'est telecharge :
+     tout est dans ce dossier. Il installe un demarrage automatique seulement si
+     vous le demandez, et ne reclame jamais de droits administrateur.
 
 EN - Run theia-setup.exe. It asks what this machine is for, where to keep its
-     data and which folders hold your films. It installs autostart only if you
-     ask, and never requests administrator rights. Then open
-     http://localhost:8383 to administer the library, and run theia-player.exe
-     to watch a film. The player needs libmpv-2.dll, in this folder: keep the
-     files together.
+     data, which port it listens on and which folders hold your films - then
+     shows the whole plan before writing anything. It installs the programs into
+     %LOCALAPPDATA%\Programs\Theia and creates entries in the Start Menu and on
+     the Desktop (Theia, Theia Server, Theia Player), so they can be launched by
+     name. Nothing is downloaded: everything is in this folder. It installs
+     autostart only if you ask, and never requests administrator rights.
 
 LICENSE-libmpv.txt is the licence of the media engine (libmpv, LGPL-2.1+).
 NOTICE.md names the exact build and its SHA-256.

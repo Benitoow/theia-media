@@ -1,0 +1,369 @@
+package setup
+
+import (
+	"archive/zip"
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
+
+	"github.com/Benitoow/theia-media/internal/release"
+)
+
+// The installation path is where the "one download" promise is kept or broken:
+// a person takes one file from the release page, and everything else has to
+// arrive, verified, or not at all. These tests drive it against a local folder,
+// against an archive, and against a stub release page serving real bytes.
+
+// fakeRelease writes a folder holding what an unpacked archive holds.
+func fakeRelease(t *testing.T, dir string, withPlayer bool) {
+	t.Helper()
+	write(t, filepath.Join(dir, "theia-server.exe"), "MZ the server")
+	if !withPlayer {
+		return
+	}
+	write(t, filepath.Join(dir, "theia-player.exe"), "MZ the player")
+	write(t, filepath.Join(dir, "libmpv-2.dll"), "the engine, a hundred megabytes of it")
+	write(t, filepath.Join(dir, "LICENSE-libmpv.txt"), "LGPL")
+	write(t, filepath.Join(dir, "NOTICE.md"), "where the engine came from")
+}
+
+func write(t *testing.T, path, body string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func read(t *testing.T, path string) string {
+	t.Helper()
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+	return string(body)
+}
+
+// recording is a Reporter that keeps what it was told.
+type recording struct {
+	phases   []Phase
+	details  []string
+	progress int
+	last     int64
+	total    int64
+}
+
+func (r *recording) Phase(phase Phase, detail string) {
+	r.phases = append(r.phases, phase)
+	r.details = append(r.details, detail)
+}
+
+func (r *recording) Progress(done, total int64) {
+	r.progress++
+	r.last, r.total = done, total
+}
+
+func TestAReleaseFolderBesideTheInstallerIsInstalledWhole(t *testing.T) {
+	// What a person has after extracting the archive: every file in one folder.
+	// The installer copies them into the installation and keeps the licences
+	// with the engine, because a player without its notice is a licence breach.
+	source := t.TempDir()
+	fakeRelease(t, source, true)
+	install := t.TempDir()
+
+	plan := Plan{Role: RoleAllInOne, DataDir: t.TempDir(), InstallDir: install, Port: 8395, Hostname: "theia"}
+	report := &recording{}
+	actions, err := InstallPrograms(context.Background(), plan, Source{From: source}, report)
+	if err != nil {
+		t.Fatalf("InstallPrograms: %v", err)
+	}
+	for _, name := range []string{"theia-server.exe", "theia-player.exe", "libmpv-2.dll", "LICENSE-libmpv.txt", "NOTICE.md"} {
+		if _, err := os.Stat(filepath.Join(install, name)); err != nil {
+			t.Errorf("%s was not installed: %v", name, err)
+		}
+	}
+	if read(t, filepath.Join(install, "theia-server.exe")) != "MZ the server" {
+		t.Error("the installed server is not the file that was copied")
+	}
+	if len(actions) != 2 {
+		t.Errorf("the installation reported %d programs, want 2: %+v", len(actions), actions)
+	}
+	if report.phases[0] != PhaseChecking || report.phases[len(report.phases)-1] != PhaseDone {
+		t.Errorf("the phases do not begin and end where they should: %v", report.phases)
+	}
+	// Nothing was downloaded, so nothing needed to say how many bytes.
+	if report.progress != 0 {
+		t.Errorf("a local installation reported %d progress updates", report.progress)
+	}
+}
+
+func TestAReleaseArchiveIsInstalledWithoutUnpackingItFirst(t *testing.T) {
+	// The other thing a person has: the zip itself, untouched, because Windows
+	// opens archives rather than extracting them half the time.
+	archive := filepath.Join(t.TempDir(), "theia-3.3.0-windows-amd64.zip")
+	makeZip(t, archive, map[string]string{
+		"theia-server.exe":   "MZ the server",
+		"theia-player.exe":   "MZ the player",
+		"libmpv-2.dll":       "engine",
+		"LICENSE-libmpv.txt": "LGPL",
+		"NOTICE.md":          "notice",
+		"START-HERE.txt":     "read me first",
+	})
+	install := t.TempDir()
+
+	plan := Plan{Role: RoleAllInOne, DataDir: t.TempDir(), InstallDir: install, Port: 8395, Hostname: "theia"}
+	if _, err := InstallPrograms(context.Background(), plan, Source{From: archive}, nil); err != nil {
+		t.Fatalf("InstallPrograms from an archive: %v", err)
+	}
+	for _, name := range []string{"theia-server.exe", "theia-player.exe", "libmpv-2.dll", "LICENSE-libmpv.txt"} {
+		if _, err := os.Stat(filepath.Join(install, name)); err != nil {
+			t.Errorf("%s was not installed from the archive: %v", name, err)
+		}
+	}
+	// Only what the programs need: the note to the reader is not part of an
+	// installation.
+	if _, err := os.Stat(filepath.Join(install, "START-HERE.txt")); err == nil {
+		t.Error("the archive's reading note was installed as if it were a program")
+	}
+}
+
+func TestAnIncompletePlayerBundleStopsTheInstallation(t *testing.T) {
+	// The player looks installed without its engine and does not start. Half a
+	// bundle is a failure, and the failure names what was missing.
+	source := t.TempDir()
+	write(t, filepath.Join(source, "theia-player.exe"), "MZ the player")
+	install := t.TempDir()
+
+	plan := Plan{Role: RolePlayer, DataDir: t.TempDir(), InstallDir: install, Port: 8395, Hostname: "theia"}
+	_, err := InstallPrograms(context.Background(), plan, Source{From: source}, nil)
+	if err == nil {
+		t.Fatal("an installation with no engine was accepted")
+	}
+	var failure *InstallError
+	if !errors.As(err, &failure) {
+		t.Fatalf("the failure carries no reason: %v", err)
+	}
+	if failure.Reason != ReasonIncompleteBundle {
+		t.Errorf("reason = %q, want %q", failure.Reason, ReasonIncompleteBundle)
+	}
+	if !strings.Contains(failure.Detail, "libmpv") {
+		t.Errorf("the failure does not name the missing file: %q", failure.Detail)
+	}
+}
+
+func TestAnInstalledProgramIsNotDownloadedAgain(t *testing.T) {
+	// Running the installer twice is normal - that is how somebody adds a
+	// folder - and it must not fetch a hundred megabytes a second time. The
+	// release page is not even asked: the stub below fails the test if it is.
+	asked := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		asked = true
+		http.Error(w, "the release page should not have been asked", http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	install := t.TempDir()
+	write(t, filepath.Join(install, "theia-server.exe"), "MZ already here")
+	plan := Plan{Role: RoleServer, DataDir: t.TempDir(), InstallDir: install, Port: 8395, Hostname: "theia"}
+
+	actions, err := InstallPrograms(context.Background(), plan, Source{APIBase: server.URL}, nil)
+	if err != nil {
+		t.Fatalf("InstallPrograms: %v", err)
+	}
+	if asked {
+		t.Error("the installer asked the release page for a program it already had")
+	}
+	if len(actions) != 1 || actions[0].Detail != "already-installed" {
+		t.Errorf("the action does not say the program was already there: %+v", actions)
+	}
+}
+
+func TestTheInstallerFetchesAndVerifiesWhatIsMissing(t *testing.T) {
+	// The single-download promise: the release page publishes the installer, and
+	// the installer fetches the rest itself. Everything here is real bytes with
+	// real digests, served by a stub standing in for GitHub.
+	bundle := filepath.Join(t.TempDir(), "player.zip")
+	makeZip(t, bundle, map[string]string{
+		"theia-player.exe":   "MZ the player",
+		"libmpv-2.dll":       "engine",
+		"LICENSE-libmpv.txt": "LGPL",
+		"NOTICE.md":          "notice",
+	})
+	payloads := map[string][]byte{
+		release.ServerName(runtime.GOOS, runtime.GOARCH): []byte("MZ the server, downloaded"),
+		release.PlayerName(runtime.GOOS, runtime.GOARCH): mustRead(t, bundle),
+	}
+	server := stubReleasePage(t, "v3.3.0", payloads)
+
+	install := t.TempDir()
+	plan := Plan{Role: RoleAllInOne, DataDir: t.TempDir(), InstallDir: install, Port: 8395, Hostname: "theia"}
+	report := &recording{}
+	actions, err := InstallPrograms(context.Background(), plan, Source{APIBase: server.URL, Client: server.Client()}, report)
+	if err != nil {
+		t.Fatalf("InstallPrograms: %v", err)
+	}
+	if read(t, filepath.Join(install, "theia-server.exe")) != "MZ the server, downloaded" {
+		t.Error("the server was not installed from the release")
+	}
+	if read(t, filepath.Join(install, "libmpv-2.dll")) != "engine" {
+		t.Error("the player's engine did not come out of the published bundle")
+	}
+	for _, action := range actions {
+		if action.Kind != "downloaded-program" || action.Detail != "v3.3.0" {
+			t.Errorf("the action does not name the release it came from: %+v", action)
+		}
+	}
+	// The bar is only useful if it is fed, and only during a download.
+	if report.progress == 0 {
+		t.Error("the download reported no progress at all")
+	}
+	if report.total != int64(len(payloads[release.ServerName(runtime.GOOS, runtime.GOARCH)])) && report.total != int64(len(payloads[release.PlayerName(runtime.GOOS, runtime.GOARCH)])) {
+		t.Errorf("progress total = %d, which is neither payload", report.total)
+	}
+	var sawDownload, sawExtract bool
+	for _, phase := range report.phases {
+		sawDownload = sawDownload || phase == PhaseDownloading
+		sawExtract = sawExtract || phase == PhaseExtracting
+	}
+	if !sawDownload || !sawExtract {
+		t.Errorf("the phases say nothing about downloading or extracting: %v", report.phases)
+	}
+	// And nothing of the staging survives in the installation.
+	if leftovers, _ := filepath.Glob(filepath.Join(install, "*.part")); len(leftovers) != 0 {
+		t.Errorf("a partial file was left in the installation: %v", leftovers)
+	}
+}
+
+func TestAFailedDownloadLeavesNothingInstalled(t *testing.T) {
+	// The rule the founding spec states outright: no unverified binary reaches a
+	// disk. A payload that does not match its digest leaves no program behind.
+	server := stubReleasePage(t, "v3.3.0", map[string][]byte{
+		release.ServerName(runtime.GOOS, runtime.GOARCH): []byte("MZ the honest server"),
+	})
+	// The stub advertises the digest of other bytes.
+	corrupt := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/releases/latest") {
+			body := map[string]any{
+				"tag_name": "v3.3.0",
+				"assets": []map[string]any{{
+					"name":                 release.ServerName(runtime.GOOS, runtime.GOARCH),
+					"size":                 len("MZ something else entirely"),
+					"browser_download_url": server.URL + "/asset",
+					"digest":               "sha256:" + strings.Repeat("0", 64),
+				}},
+			}
+			json.NewEncoder(w).Encode(body)
+			return
+		}
+		w.Write([]byte("MZ something else entirely"))
+	}))
+	defer corrupt.Close()
+
+	install := t.TempDir()
+	plan := Plan{Role: RoleServer, DataDir: t.TempDir(), InstallDir: install, Port: 8395, Hostname: "theia"}
+	_, err := InstallPrograms(context.Background(), plan, Source{APIBase: corrupt.URL, Client: corrupt.Client()}, nil)
+	if err == nil {
+		t.Fatal("a download that failed its digest was installed")
+	}
+	entries, _ := os.ReadDir(install)
+	for _, entry := range entries {
+		t.Errorf("a refused installation left %s behind", entry.Name())
+	}
+}
+
+func mustRead(t *testing.T, path string) []byte {
+	t.Helper()
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return body
+}
+
+func makeZip(t *testing.T, path string, files map[string]string) {
+	t.Helper()
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := zip.NewWriter(file)
+	for name, body := range files {
+		entry, err := writer.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := entry.Write([]byte(body)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// stubReleasePage stands in for GitHub: the JSON document naming the assets and
+// their digests, and the bytes at the addresses it gives them.
+func stubReleasePage(t *testing.T, tag string, payloads map[string][]byte) *httptest.Server {
+	t.Helper()
+	var server *httptest.Server
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/releases/latest") {
+			rel := map[string]any{"tag_name": tag, "html_url": server.URL + "/tag"}
+			assets := make([]map[string]any, 0, len(payloads))
+			for name, body := range payloads {
+				sum := sha256.Sum256(body)
+				assets = append(assets, map[string]any{
+					"name":                 name,
+					"size":                 len(body),
+					"browser_download_url": server.URL + "/assets/" + name,
+					"digest":               "sha256:" + hex.EncodeToString(sum[:]),
+				})
+			}
+			rel["assets"] = assets
+			json.NewEncoder(w).Encode(rel)
+			return
+		}
+		name := strings.TrimPrefix(r.URL.Path, "/assets/")
+		body, ok := payloads[name]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		w.Write(body)
+	}))
+	t.Cleanup(server.Close)
+	return server
+}
+
+// TestTheInstallationDirectoryIsPerUser guards the promise that this installer
+// never asks for administrator rights: a machine-wide directory would need them.
+func TestTheInstallationDirectoryIsPerUser(t *testing.T) {
+	dir, err := DefaultInstallDir()
+	if err != nil {
+		t.Skipf("this machine has no per-user directory to speak of: %v", err)
+	}
+	if !filepath.IsAbs(dir) {
+		t.Errorf("the installation directory is not absolute: %q", dir)
+	}
+	if strings.Contains(strings.ToLower(dir), "program files") {
+		t.Errorf("the installation directory needs administrator rights: %q", dir)
+	}
+	if !bytes.Contains([]byte(strings.ToLower(dir)), []byte("theia")) {
+		t.Errorf("the installation directory does not name the product: %q", dir)
+	}
+}

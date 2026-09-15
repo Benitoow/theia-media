@@ -36,6 +36,15 @@ type Result struct {
 	Hostname string   `json:"hostname"`
 	Library  []string `json:"library_paths"`
 	Actions  []Action `json:"actions"`
+	// Programs are the executables this installation put in place. Listed
+	// separately from the actions because the shortcuts and the autostart entry
+	// are about these files, and reading them out of a log of what happened
+	// would be guessing.
+	Programs []string `json:"programs,omitempty"`
+	// ShortcutsError is why an entry could not be written, when one was asked
+	// for. The programs are installed and they run: a read-only launcher folder
+	// is not a reason to refuse an installation.
+	ShortcutsError string `json:"shortcuts_error,omitempty"`
 	// ServiceError is why an autostart entry was not installed, when one was
 	// asked for. The rest of the installation still stands: a machine that
 	// cannot autostart is a machine that starts by hand, which is the default
@@ -212,6 +221,7 @@ func mergePaths(existing, added []string) []string {
 type Status struct {
 	Role         Role              `json:"role"`
 	DataDir      string            `json:"data_dir"`
+	InstallDir   string            `json:"install_dir,omitempty"`
 	Configured   bool              `json:"configured"`
 	Port         int               `json:"port,omitempty"`
 	Hostname     string            `json:"hostname,omitempty"`
@@ -227,9 +237,15 @@ func Inspect(self string) (Status, error) {
 	if err != nil {
 		return Status{}, err
 	}
-	plan := Plan{Role: DefaultRole, DataDir: dir}.WithDefaults(dir)
+	// Where the programs would be. Reported even when the folder does not exist
+	// yet, because "there is nothing installed" is the answer to a fair question.
+	installDir, err := DefaultInstallDir()
+	if err != nil {
+		installDir = ""
+	}
+	plan := Plan{Role: DefaultRole, DataDir: dir, InstallDir: installDir}.WithDefaults(dir)
 
-	status := Status{DataDir: dir, Role: DefaultRole, LibraryPaths: []string{}}
+	status := Status{DataDir: dir, InstallDir: installDir, Role: DefaultRole, LibraryPaths: []string{}}
 	record, declared, err := readMachineRecord(dir)
 	if err != nil {
 		return Status{}, err

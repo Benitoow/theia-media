@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -44,6 +45,15 @@ func pump(t *testing.T, form *huh.Form, msg tea.Msg) tea.Model {
 	model, cmd := form.Update(msg)
 	for steps := 0; cmd != nil && steps < 30; steps++ {
 		next := cmd()
+		if commands := sequence(next); commands != nil {
+			for _, inner := range commands {
+				if inner == nil {
+					continue
+				}
+				model, _ = form.Update(inner())
+			}
+			break
+		}
 		if batch, ok := next.(tea.BatchMsg); ok {
 			for _, inner := range batch {
 				if inner == nil {
@@ -61,23 +71,58 @@ func pump(t *testing.T, form *huh.Form, msg tea.Msg) tea.Model {
 	return model
 }
 
+// sequence unwraps Bubble Tea's multi-command message, which is how Init hands
+// back the work of focusing every field.
+//
+// The message type is unexported, so reflection is the only way in from outside
+// the package. It matters that the commands run: the form focuses its first
+// field during Init, and a test that skips that step is looking at a form whose
+// footer - and whose focus - belong to no page at all.
+func sequence(msg tea.Msg) []tea.Cmd {
+	if msg == nil {
+		return nil
+	}
+	value := reflect.ValueOf(msg)
+	if value.Kind() != reflect.Slice || value.Type().Name() != "sequenceMsg" {
+		return nil
+	}
+	commands := make([]tea.Cmd, 0, value.Len())
+	for index := 0; index < value.Len(); index++ {
+		if cmd, ok := value.Index(index).Interface().(tea.Cmd); ok {
+			commands = append(commands, cmd)
+		}
+	}
+	return commands
+}
+
 // render drives a form to its first real frame.
 func render(t *testing.T, form *huh.Form) string {
 	t.Helper()
 	return pump(t, form, tea.WindowSizeMsg{Width: 80, Height: 40}).View()
 }
 
+// flatten removes every space, tab and newline, so a sentence that has been
+// wrapped by the renderer still compares equal to the sentence in the catalogue.
+func flatten(text string) string {
+	return strings.Join(strings.Fields(text), "")
+}
+
 func TestTheFormDrawsEveryQuestionInTheChosenLanguage(t *testing.T) {
 	// Huh pages the groups, so each question is checked on the page that carries
 	// it. Walking the pages is what proves every question is reachable at all - a
 	// form whose second page never appears is a form nobody can finish.
+	// The count matters too. It was five pages for the same questions because the
+	// role was asked twice - once in a form of its own and again as the first
+	// group of the second one - and that is the step which appeared to need enter
+	// pressed twice. Five pages now, one question each, with the header riding
+	// along with the first instead of being a page of its own.
 	language, _ := CatalogueFor("fr")
-	pages := walkPages(t, buildForm(&FormResult{Role: RoleAllInOne}, language))
+	pages := walkPages(t, buildForm(&FormResult{Role: RoleAllInOne}, language, 76, 14))
 	if len(pages) != 5 {
-		t.Fatalf("the all-in-one form has %d pages, want 5", len(pages))
+		t.Fatalf("the all-in-one form has %d pages, want 5:\n%s", len(pages), strings.Join(pages, "\n---\n"))
 	}
 	wanted := [][]string{
-		{"roleTitle"},
+		{"brand", "intro", "roleTitle"},
 		{"pathsTitle", "portTitle", "hostTitle"},
 		{"libraryTitle"},
 		{"serviceTitle"},
@@ -85,14 +130,27 @@ func TestTheFormDrawsEveryQuestionInTheChosenLanguage(t *testing.T) {
 	}
 	for index, keys := range wanted {
 		for _, key := range keys {
-			if !strings.Contains(pages[index], language[key]) {
+			// Compared without whitespace: a sentence that wraps is still the
+			// same sentence, and asserting on the raw string fails on a narrow
+			// terminal rather than on a bug.
+			if !strings.Contains(flatten(pages[index]), flatten(language[key])) {
 				t.Errorf("page %d does not show %q:\n%s", index+1, language[key], pages[index])
 			}
 		}
 	}
+	// And the role is asked exactly once, which is what "the step repeats" meant.
+	asked := 0
+	for _, page := range pages {
+		if strings.Contains(page, language["roleTitle"]) {
+			asked++
+		}
+	}
+	if asked != 1 {
+		t.Errorf("the role question appears on %d pages, want 1", asked)
+	}
 
 	english, _ := CatalogueFor("en")
-	englishView := render(t, buildForm(&FormResult{Role: RoleAllInOne}, english))
+	englishView := render(t, buildForm(&FormResult{Role: RoleAllInOne}, english, 76, 14))
 	if !strings.Contains(englishView, english["roleTitle"]) {
 		t.Error("the English form did not use the English catalogue")
 	}
@@ -103,7 +161,7 @@ func TestTheFormDrawsEveryQuestionInTheChosenLanguage(t *testing.T) {
 
 func TestTheFormOffersTheRolesInTheOrderSomebodyWantsThem(t *testing.T) {
 	language, _ := CatalogueFor("fr")
-	view := render(t, buildForm(&FormResult{Role: RoleAllInOne}, language))
+	view := render(t, buildForm(&FormResult{Role: RoleAllInOne}, language, 76, 14))
 	allInOne := strings.Index(view, language["roleAllInOne"])
 	server := strings.Index(view, language["roleServer"])
 	player := strings.Index(view, language["rolePlayer"])
@@ -117,7 +175,7 @@ func TestTheFormOffersTheRolesInTheOrderSomebodyWantsThem(t *testing.T) {
 
 func TestAPlayerOnlyMachineIsNotAskedWhereItsDataGoes(t *testing.T) {
 	language, _ := CatalogueFor("fr")
-	pages := walkPages(t, buildForm(&FormResult{Role: RolePlayer}, language))
+	pages := walkPages(t, buildForm(&FormResult{Role: RolePlayer}, language, 76, 14))
 
 	for _, page := range pages {
 		if strings.Contains(page, language["pathsTitle"]) {
@@ -150,7 +208,7 @@ func TestTheConfirmationCarriesTheAnswersSomebodyJustGave(t *testing.T) {
 		LibraryBlob:  "D:\\Films",
 		InstallServi: true,
 	}
-	pages := walkPages(t, buildForm(&result, language))
+	pages := walkPages(t, buildForm(&result, language, 76, 14))
 	confirmation := pages[len(pages)-1]
 
 	// The summary is a function precisely so it reads the live values: built from
@@ -221,7 +279,7 @@ func TestTheFormKeepsRunningWhenAKeyArrives(t *testing.T) {
 	// is the only part of this testable without a terminal.
 	language, _ := CatalogueFor("fr")
 	result := FormResult{Role: DefaultRole}
-	form := buildForm(&result, language).WithWidth(80).WithHeight(40)
+	form := buildForm(&result, language, 76, 14)
 
 	updated, _ := form.Update(tea.KeyMsg{Type: tea.KeyDown})
 	if updated == nil {
@@ -229,5 +287,184 @@ func TestTheFormKeepsRunningWhenAKeyArrives(t *testing.T) {
 	}
 	if strings.TrimSpace(updated.View()) == "" {
 		t.Error("the form drew nothing after a keystroke")
+	}
+}
+
+func TestTheFormStartsWithWhatTheCommandLineSaid(t *testing.T) {
+	// A flag the form then ignores is worse than a flag that does not exist.
+	// `--data-dir` was accepted, the form asked the question anyway, and the
+	// confirmation proposed %APPDATA% - which is how this was found, by reading
+	// the summary page on a screen.
+	seeded, err := formDefaults(FormOptions{
+		DataDir:  `D:\Theia`,
+		Port:     9000,
+		Hostname: " salon ",
+		Library:  []string{`D:\Films`, `D:\Series`},
+		Service:  true,
+	})
+	if err != nil {
+		t.Fatalf("formDefaults: %v", err)
+	}
+	if seeded.DataDir != `D:\Theia` {
+		t.Errorf("data dir = %q, want the one from the command line", seeded.DataDir)
+	}
+	if seeded.Port != "9000" {
+		t.Errorf("port = %q, want 9000", seeded.Port)
+	}
+	if seeded.Hostname != "salon" {
+		t.Errorf("hostname = %q, want it trimmed", seeded.Hostname)
+	}
+	if seeded.LibraryBlob != "D:\\Films\nD:\\Series" {
+		t.Errorf("library blob = %q", seeded.LibraryBlob)
+	}
+	if !seeded.InstallServi {
+		t.Error("the autostart answer from the command line was dropped")
+	}
+	if !seeded.Confirmed {
+		t.Error("the confirmation does not start on install, so a stray enter cancels silently")
+	}
+
+	// With nothing on the command line, the machine's own defaults: the port is
+	// the product's, not zero, and the form proposes a directory rather than an
+	// empty box.
+	plain, err := formDefaults(FormOptions{DataDir: t.TempDir()})
+	if err != nil {
+		t.Fatalf("formDefaults: %v", err)
+	}
+	if plain.Port != "8383" {
+		t.Errorf("port = %q, want the product's default 8383", plain.Port)
+	}
+	if plain.Hostname == "" || plain.DataDir == "" {
+		t.Errorf("the form proposes an empty answer: %+v", plain)
+	}
+	if len(plain.LibraryBlob) != 0 {
+		t.Errorf("a machine with no --library starts with %q", plain.LibraryBlob)
+	}
+}
+
+func TestTheHintSaysWhatThePageAccepts(t *testing.T) {
+	// The line under the form was Huh's, built from the focused field's
+	// bindings, and on a real screen it read
+	// "↑ monter • ↓ descendre • / filtrer • ↓ descendre" - one word twice,
+	// half of it in the wrong language, and never a word about leaving.
+	//
+	// Two things are asserted here: every kind of page has a sentence, and no
+	// sentence repeats a word, which is the fault that was on the screen.
+	for _, code := range []string{"fr", "en"} {
+		language, _ := CatalogueFor(code)
+		hints := map[string]string{
+			"select":  helpLine(&huh.Select[Role]{}, language),
+			"input":   helpLine(&huh.Input{}, language),
+			"text":    helpLine(&huh.Text{}, language),
+			"confirm": helpLine(&huh.Confirm{}, language),
+		}
+		exit := map[string]string{"fr": "échap", "en": "esc"}[code]
+		for kind, hint := range hints {
+			if strings.TrimSpace(hint) == "" {
+				t.Errorf("%s: the %s page has no hint", code, kind)
+				continue
+			}
+			if !strings.Contains(hint, exit) {
+				t.Errorf("%s: the %s hint does not say how to leave: %q", code, kind, hint)
+			}
+			seen := map[string]bool{}
+			for _, word := range strings.Fields(hint) {
+				if word == "·" {
+					continue
+				}
+				if seen[word] {
+					t.Errorf("%s: the %s hint repeats %q: %q", code, kind, word, hint)
+				}
+				seen[word] = true
+			}
+		}
+	}
+	// A field that is none of these - Huh's note, for one - gets no hint rather
+	// than somebody else's.
+	french, _ := CatalogueFor("fr")
+	if hint := helpLine(&huh.Note{}, french); hint != "" {
+		t.Errorf("a note page was given the hint %q", hint)
+	}
+}
+
+func TestTheFooterIsDrawnAndHuhsEnglishHelpIsNot(t *testing.T) {
+	// Huh's help is hidden rather than translated: its strings are English and
+	// come from its own keymap, so a French screen has to draw its own line.
+	language, _ := CatalogueFor("fr")
+	model := &formModel{
+		form:     buildForm(&FormResult{Role: RoleAllInOne}, language, 76, 14),
+		language: language,
+	}
+	// Init is what focuses the first question. Without it the focused field is
+	// still the header note, and the footer would be measured on a page nobody
+	// ever sees.
+	pump(t, model.form, model.Init()())
+
+	view := model.View()
+	if !strings.Contains(flatten(view), flatten(language["helpSelect"])) {
+		t.Errorf("the form did not draw its hint:\n%s", view)
+	}
+	for _, english := range []string{"submit", "toggle", "filter", "new line"} {
+		if strings.Contains(view, english) {
+			t.Errorf("Huh's own English help is still on the screen (%q):\n%s", english, view)
+		}
+	}
+}
+
+func TestEscapeCancelsAndTheEndOfTheFormStopsTheProgram(t *testing.T) {
+	// Huh binds ctrl+c and nothing else, so the key everybody presses to leave a
+	// form did nothing - while the old screen printed "esc quitter" under the
+	// question. And because this installer runs the Bubble Tea program itself
+	// rather than letting Huh run it, the end of the form has to stop the
+	// program: otherwise the last answer would be given and nothing would ever
+	// happen.
+	language, _ := CatalogueFor("fr")
+
+	escape := &formModel{form: buildForm(&FormResult{Role: DefaultRole}, language, 76, 14), language: language}
+	pump(t, escape.form, escape.Init()())
+	_, cmd := escape.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if !escape.aborted {
+		t.Error("escape did not cancel the form")
+	}
+	if cmd == nil {
+		t.Fatal("escape left the program running")
+	}
+	if _, quit := cmd().(tea.QuitMsg); !quit {
+		t.Error("escape did not stop the program")
+	}
+
+	var yes bool
+	confirm := &formModel{
+		form: huh.NewForm(huh.NewGroup(
+			huh.NewConfirm().Title("Installer ?").Affirmative("Oui").Negative("Non").Value(&yes),
+		)),
+		language: language,
+	}
+	confirm.form.SubmitCmd = tea.Quit
+	confirm.form.CancelCmd = tea.Quit
+	pump(t, confirm.form, confirm.Init()())
+
+	// "y" answers the question and produces the message that finishes the form,
+	// which pump follows the way the runtime does.
+	pump(t, confirm.form, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
+	if !yes {
+		t.Error("the answer never reached the field")
+	}
+	if confirm.form.State != huh.StateCompleted {
+		t.Fatalf("the last question left the form in state %v, not completed", confirm.form.State)
+	}
+	// And the wrapper stops the program there. It has to: Huh only issues its
+	// quitting command when it runs the program itself, and here it does not -
+	// so a form that ends without a quit is an installer that hangs after the
+	// last answer.
+	_, cmd = confirm.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("the end of the form left the program running")
+	}
+	if _, quit := cmd().(tea.QuitMsg); !quit {
+		t.Error("the end of the form did not ask the program to stop")
+	}
+	if confirm.aborted {
+		t.Error("answering the last question was recorded as a cancellation")
 	}
 }

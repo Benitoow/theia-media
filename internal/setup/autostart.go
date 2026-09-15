@@ -70,10 +70,20 @@ func artifactNames(base string) []string {
 	}
 }
 
-// findArtifact returns the first of those names that is beside the installer, or
-// failing that on PATH.
+// findArtifact returns the first of those names that is installed, beside the
+// installer, or failing that on PATH.
+//
+// The installation directory comes first because it is what an installation
+// means: the autostart entry and the shortcuts must start the copy this machine
+// installed, not a copy that happens to sit next to the tool somebody ran - and
+// somebody who runs the installer out of their Downloads folder has both.
 func findArtifact(base string) (string, error) {
 	names := artifactNames(base)
+	if installDir, err := DefaultInstallDir(); err == nil {
+		if path, err := inDirRelative(installDir, names); err == nil {
+			return path, nil
+		}
+	}
 	for _, name := range names {
 		if path, err := besideInstaller(name); err == nil {
 			return path, nil
@@ -84,7 +94,7 @@ func findArtifact(base string) (string, error) {
 			return path, nil
 		}
 	}
-	return "", fmt.Errorf("%s was not found beside the installer or on PATH (looked for %s)",
+	return "", fmt.Errorf("%s was not found in the installation, beside the installer or on PATH (looked for %s)",
 		names[0], strings.Join(names, ", "))
 }
 
