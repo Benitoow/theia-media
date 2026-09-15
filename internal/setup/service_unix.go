@@ -192,13 +192,7 @@ func launchAgentPath() (string, error) {
 }
 
 func serverExecutable() (string, error) {
-	if beside, err := besideInstaller("theia-server"); err == nil {
-		return beside, nil
-	}
-	if onPath, err := exec.LookPath("theia-server"); err == nil {
-		return onPath, nil
-	}
-	return "", fmt.Errorf("theia-server was not found beside the installer or on PATH")
+	return findArtifact("theia-server")
 }
 
 func quoteAll(args []string) []string { return args }

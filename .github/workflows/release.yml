@@ -183,6 +183,41 @@ jobs:
           }
           Get-ChildItem $dir | Select-Object Name, Length
 
+      # And the archive a person downloads: decision 121. It is assembled from
+      # the pieces built above, so it cannot drift from them - the server and
+      # installer are rebuilt here at the tagged version, and the player bundle
+      # is the one just checked.
+      - name: Assemble the one-file download
+        shell: pwsh
+        env:
+          CGO_ENABLED: '0'
+        run: |
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          .\build-release.ps1 -Version $version -SkipPlayer
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Check the archive holds everything
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          $dir = "dist\theia-$version-windows-amd64"
+          foreach ($required in 'theia-setup.exe', 'theia-server.exe', 'theia-player.exe',
+                                'libmpv-2.dll', 'LICENSE-libmpv.txt', 'NOTICE.md', 'START-HERE.txt') {
+            if (-not (Test-Path (Join-Path $dir $required))) {
+              Write-Error "the archive is missing $required"
+              exit 1
+            }
+          }
+          # The server inside must report the tag it was built from, or the
+          # archive contains a build nobody can identify.
+          $reported = & (Join-Path $dir 'theia-server.exe') -version
+          Write-Host "archive server reports: $reported"
+          if ($reported -notmatch [regex]::Escape($version)) {
+            Write-Error "the archive's server reports '$reported', expected $version"
+            exit 1
+          }
+          Get-ChildItem $dir | Select-Object Name, Length
+
       # And the player has to run, from the bundle, with the engine it was
       # shipped with. This is the check that would have caught an unpinned
       # download, a truncated DLL, or a build that only worked on the machine
@@ -210,8 +245,12 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: theia-player-windows-amd64
-          path: dist/theia-player-windows-amd64.zip
+          name: theia-release-windows-amd64
+          # Both zips: the archive a person downloads, and the player alone for
+          # anybody who wants only that.
+          path: |
+            dist/theia-*-windows-amd64.zip
+            dist/theia-player-windows-amd64.zip
           retention-days: 1
 
   publish:

@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 )
@@ -120,6 +119,9 @@ func portIsFree(port int) error {
 type Artifact struct {
 	Name string
 	Path string
+	// Names lists every name accepted for this artifact, so a report can say
+	// what it looked for instead of leaving somebody guessing.
+	Names []string
 	// Found is false when the file is not there. A player-only machine does not
 	// need the server, and an all-in-one needs both; what is missing is reported
 	// rather than fetched, because a download is the updater's business and the
@@ -128,36 +130,57 @@ type Artifact struct {
 }
 
 // Artifacts lists what the chosen role needs and whether it is present, looking
-// beside the installer first and then on PATH. It changes nothing.
+// beside the installer first and then on PATH.
+//
+// The names it accepts are the ones a person actually has on disk, which for a
+// downloaded release is `theia-server-windows-amd64.exe` and not
+// `theia-server.exe`. See artifactNames.
 func (p Plan) Artifacts(self string) []Artifact {
 	wanted := []struct {
-		name    string
-		needed  bool
-		purpose string
+		name   string
+		needed bool
 	}{
-		{"theia-server", p.Role.WantsServer(), "serves the library"},
-		{"theia-player", p.Role.WantsPlayer(), "watches films"},
+		{"theia-server", p.Role.WantsServer()},
+		{"theia-player", p.Role.WantsPlayer()},
 	}
 	found := make([]Artifact, 0, len(wanted))
 	for _, want := range wanted {
 		if !want.needed {
 			continue
 		}
-		exe := want.name
-		if runtime.GOOS == "windows" {
-			exe += ".exe"
-		}
-		artifact := Artifact{Name: exe}
-		if beside := filepath.Join(filepath.Dir(self), exe); fileExists(beside) {
+		names := artifactNames(want.name)
+		artifact := Artifact{Name: names[0], Names: names}
+		if beside, err := besideInstallerRelative(self, names); err == nil {
 			artifact.Path = beside
 			artifact.Found = true
-		} else if onPath, err := exec.LookPath(exe); err == nil {
+		} else if onPath, err := lookPathAny(names); err == nil {
 			artifact.Path = onPath
 			artifact.Found = true
 		}
 		found = append(found, artifact)
 	}
 	return found
+}
+
+// besideInstallerRelative is besideInstaller, but against a given installer path
+// so that `--check` can be pointed at one without being that file.
+func besideInstallerRelative(self string, names []string) (string, error) {
+	for _, name := range names {
+		path := filepath.Join(filepath.Dir(self), name)
+		if fileExists(path) {
+			return path, nil
+		}
+	}
+	return "", os.ErrNotExist
+}
+
+func lookPathAny(names []string) (string, error) {
+	for _, name := range names {
+		if path, err := exec.LookPath(name); err == nil {
+			return path, nil
+		}
+	}
+	return "", exec.ErrNotFound
 }
 
 func fileExists(path string) bool {

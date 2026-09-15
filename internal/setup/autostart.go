@@ -1,9 +1,12 @@
 package setup
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 // Autostart is what this machine does about starting the server by itself.
@@ -45,6 +48,44 @@ func RemoveAutostart() (Autostart, error) {
 // be quoted for paths with spaces, which is most of them on Windows.
 func launchCommand(plan Plan, server string) []string {
 	return []string{server, "--data-dir", plan.DataDir}
+}
+
+// artifactNames lists what a binary may be called on disk, most specific first.
+//
+// Two names exist and both are real: `theia-server.exe` is what `build.ps1` and
+// a working tree produce, and `theia-server-windows-amd64.exe` is what the
+// release publishes. **A user only ever has the second one**, and the first
+// version of this looked for the first only - so an installation with every
+// published file sitting in one folder reported the server as missing and could
+// not install its autostart entry. Found by downloading the release assets into
+// an empty directory and running the installer the way a person would.
+func artifactNames(base string) []string {
+	extension := ""
+	if runtime.GOOS == "windows" {
+		extension = ".exe"
+	}
+	return []string{
+		base + extension,
+		fmt.Sprintf("%s-%s-%s%s", base, runtime.GOOS, runtime.GOARCH, extension),
+	}
+}
+
+// findArtifact returns the first of those names that is beside the installer, or
+// failing that on PATH.
+func findArtifact(base string) (string, error) {
+	names := artifactNames(base)
+	for _, name := range names {
+		if path, err := besideInstaller(name); err == nil {
+			return path, nil
+		}
+	}
+	for _, name := range names {
+		if path, err := exec.LookPath(name); err == nil {
+			return path, nil
+		}
+	}
+	return "", fmt.Errorf("%s was not found beside the installer or on PATH (looked for %s)",
+		names[0], strings.Join(names, ", "))
 }
 
 // besideInstaller finds a file sitting next to the running executable, which is

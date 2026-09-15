@@ -3872,6 +3872,45 @@ never touches the folder Windows actually reads. What that cannot verify is that
 Windows runs the entry at logon: that needs a logoff, and it is reported as
 unverified rather than assumed.
 
+## 121. One archive per platform is what a person downloads
+
+V3.3 has three programs, and the first version of its release published them as
+three separate assets with a README that said to download the installer first.
+That is a download page written by somebody who already knows what the three
+programs are.
+
+**Measured, by doing what the README said.** The published installer was put
+alone in an empty directory and run. It wrote a configuration, reported
+`theia-server.exe was not found beside the installer or on PATH`, and left the
+person with no server and no player - a configuration for a product they did not
+have. Reproduced with the real asset names, from a clean folder.
+
+**And a second fault, found by the same run.** With all three published files in
+one folder it *still* reported the server missing: `internal/setup` looked for
+`theia-server.exe`, which is what a working tree and `build.ps1` produce, while
+the release publishes `theia-server-windows-amd64.exe`. Nothing reconciled the
+two names, so **the released installer could never find the released server** -
+including when installing the autostart entry, which is the one thing it does
+with that path. Both names are now accepted, beside the installer and on `PATH`,
+and a test pins it.
+
+**Decided.** Each platform gets one archive - `theia-<version>-<os>-<arch>.zip` -
+containing the installer, the server, the player, the engine, the engine's
+licence and a `START-HERE.txt` that says which file to run. `build-release.ps1`
+assembles it. It needs no network at install time, which is also the honest
+reading of "it runs on my own machine".
+
+The individual assets are published **as well**, with their platform names,
+because two things genuinely need them: the updater, which selects
+`theia-server-<os>-<arch>` by name, and anybody mirroring or scripting an
+install. The archive is for people.
+
+**Verified** by unzipping the archive into an empty directory and following
+`START-HERE.txt` literally: the installer found both programs, wrote the
+configuration, installed a startup entry, the server came up on a fresh data
+directory and scanned, and the player listed and played a film with its
+sidecar subtitle. On Windows only, as everything else in this generation.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

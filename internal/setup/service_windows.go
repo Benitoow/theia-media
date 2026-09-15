@@ -155,13 +155,7 @@ func startupEntryPath() (string, error) {
 // serverExecutable is the binary the entry should start: beside the installer
 // when it is there, otherwise the one on PATH.
 func serverExecutable() (string, error) {
-	if beside, err := besideInstaller("theia-server.exe"); err == nil {
-		return beside, nil
-	}
-	if onPath, err := exec.LookPath("theia-server.exe"); err == nil {
-		return onPath, nil
-	}
-	return "", fmt.Errorf("theia-server.exe was not found beside the installer or on PATH")
+	return findArtifact("theia-server")
 }
 
 // isElevated reports whether this process can do administrator things. The

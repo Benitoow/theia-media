@@ -154,6 +154,13 @@ same six targets with `CGO_ENABLED=0` (checked by CI, and locally with
 `internal/config` rather than by hand, and its own record of the machine's
 declared role in `setup.json` beside it.
 
+It finds the server and the player **beside itself or on `PATH`, under either
+their short names (`theia-server.exe`) or their published ones
+(`theia-server-windows-amd64.exe`)**. Both are real names - the first is what a
+working tree builds, the second is what a release publishes - and looking for
+only the first is how a folder containing every published file reported the
+server as missing.
+
 ```bash
 go test ./internal/setup/ -v        # roles, plan validation, the form, the entries
 ./theia-setup.exe                   # the form
@@ -166,6 +173,21 @@ confirmation was caught throwing its own answer away. The autostart entry is
 tested against a **redirected `APPDATA`**, so the tests never touch the folder
 Windows actually reads at logon. See decision 120 for the Windows mechanisms and
 why elevation is never requested.
+
+## Building the release archive
+
+```bash
+./build-release.ps1 -Version 3.3.0     # -> dist/theia-3.3.0-windows-amd64.zip
+```
+
+This is **what a person downloads**: one archive with the installer, the server,
+the player, the engine (`libmpv-2.dll`), the LGPL licence and a `START-HERE.txt`.
+It exists because the first version published three separate downloads and told
+the reader to put them together - and somebody who downloaded only the installer,
+which is what the README said to do first, got a configuration and nothing to run
+it. Verified by unzipping the archive into an empty directory and following
+`START-HERE.txt` literally. The individual assets are still published, with their
+platform names, for the updater and for mirrors.
 
 ## Building the native player
 

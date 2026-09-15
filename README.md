@@ -103,51 +103,35 @@ you an installation you would later resent.
 
 ## Three-minute setup
 
-1. Download the installer for your operating system and CPU from
-   [GitHub Releases](https://github.com/Benitoow/theia-media/releases/latest)
-   and run it. It asks three questions - what this machine is for, where to keep
-   its data, which folders hold your films - and writes the configuration.
-2. Start the server it installed, or let it start itself: the installer offers an
-   autostart entry, and asks for no administrator rights to put one in place.
+1. Download **one file** for your operating system and CPU from
+   [GitHub Releases](https://github.com/Benitoow/theia-media/releases/latest),
+   unpack it anywhere, and run `theia-setup`. It asks three questions - what this
+   machine is for, where to keep its data, which folders hold your films - and
+   writes the configuration.
+2. Start the server it left beside itself, or let it start itself: the installer
+   offers an autostart entry, and asks for no administrator rights to put one in
+   place.
 3. Open **Settings**, add or confirm your media folders, then start the scan.
 
-| Platform | First run |
+| Platform | The download |
 | --- | --- |
-| Windows x64 | `theia-setup-windows-amd64.exe` |
-| Windows on ARM | `theia-setup-windows-arm64.exe` |
-| macOS Apple silicon | `chmod +x theia-setup-darwin-arm64 && ./theia-setup-darwin-arm64` |
-| macOS Intel | `chmod +x theia-setup-darwin-amd64 && ./theia-setup-darwin-amd64` |
-| Linux x64 | `chmod +x theia-setup-linux-amd64 && ./theia-setup-linux-amd64` |
-| Linux ARM64 | `chmod +x theia-setup-linux-arm64 && ./theia-setup-linux-arm64` |
+| Windows x64 | `theia-<version>-windows-amd64.zip` |
+| Windows on ARM, macOS, Linux | not yet - see *what is verified* below |
 
-The server and the player download separately, from the same release: the
-installer expects them beside itself or on `PATH`. `theia-setup --check` prints
-what this machine is configured as and which of the two it found, and
-`theia-setup --update` updates the server through the same digest-verified path
-the server uses on itself. Everything is also available as flags for a script:
-`--role`, `--data-dir`, `--library`, `--port`, `--service`, `--json`.
+That archive holds everything: the installer, the server, the player, the media
+engine the player uses, that engine's LGPL licence, and a `START-HERE.txt`. Keep
+the files together; the player needs `libmpv-2.dll` beside it. Nothing is written
+outside the folders you choose, and nothing needs downloading at install time.
 
-**The player is a bundle, not a single file.** Download
-`theia-player-windows-amd64.zip` and keep its contents together: the player, the
-media engine it uses (`libmpv-2.dll`), that engine's LGPL licence, and a notice
-naming the exact upstream build and its SHA-256. Unzip it anywhere and run
-`theia-player.exe`; it finds the engine beside itself. Nothing is installed and
-nothing is written outside the folders you choose.
+The individual pieces are published as separate assets too, for a script, a
+mirror, or the updater:
 
-| Platform | Server | First run |
-| --- | --- | --- |
-| Windows x64 | `theia-server-windows-amd64.exe` | `theia-server-windows-amd64.exe` |
-| Windows on ARM | `theia-server-windows-arm64.exe` | `theia-server-windows-arm64.exe` |
-| macOS Apple silicon | `theia-server-darwin-arm64` | `chmod +x theia-server-darwin-arm64 && ./theia-server-darwin-arm64` |
-| macOS Intel | `theia-server-darwin-amd64` | `chmod +x theia-server-darwin-amd64 && ./theia-server-darwin-amd64` |
-| Linux x64 | `theia-server-linux-amd64` | `chmod +x theia-server-linux-amd64 && ./theia-server-linux-amd64` |
-| Linux ARM64 | `theia-server-linux-arm64` | `chmod +x theia-server-linux-arm64 && ./theia-server-linux-arm64` |
-
-The first V3.3 release also carries each server under its pre-V3.3 name
-(`theia-windows-amd64.exe` and so on), byte for byte. That is not an alternative
-download: it is what lets an installed v3.2 update itself, since it asks for the
-old name through the updater it already has. Those copies disappear in the
-release after, and the notes say so.
+| Asset | What it is |
+| --- | --- |
+| `theia-server-<os>-<arch>[.exe]` | The server alone. This is what the updater selects by name. |
+| `theia-setup-<os>-<arch>[.exe]` | The installer alone. It finds a server and a player **beside itself** or on `PATH`, under either their short names (`theia-server.exe`) or their published ones (`theia-server-windows-amd64.exe`). |
+| `theia-player-<os>-<arch>.zip` | The player alone, with its engine and licences. |
+| `theia-<os>-<arch>[.exe]` | The pre-V3.3 name of the server, byte-identical, **in this release only** - it is what lets an installed v3.2 update itself. Gone in the next release, and the notes say so. |
 
 Release binaries are unsigned and run in the foreground. Windows may show a
 reputation warning; macOS may require **Privacy & Security → Open Anyway** after

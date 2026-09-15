@@ -281,7 +281,14 @@ func reportStatus(jsonOutput bool, text setup.Catalogue) error {
 			if artifact.Found {
 				state = artifact.Path
 			}
-			fmt.Printf("    %-20s %s\n", artifact.Name, state)
+			// The name it was found under, not the name looked for first: on a
+			// downloaded release those differ, and showing the wrong one makes a
+			// correct installation look broken.
+			name := artifact.Name
+			if artifact.Found {
+				name = filepath.Base(artifact.Path)
+			}
+			fmt.Printf("    %-34s %s\n", name, state)
 		}
 	}
 	fmt.Println()

@@ -1,0 +1,117 @@
+# Assembles what a person actually downloads: one archive, one file to run.
+#
+#   .\build-release.ps1                     -> dist\theia-<version>-windows-amd64.zip
+#   .\build-release.ps1 -Version 3.3.0
+#
+# Why one archive and not three downloads. The first version of V3.3 published
+# the installer, the server and the player separately and told the reader to put
+# them together. Downloading the installer alone - which is what the README's
+# first instruction says to do - produced a configuration and nothing to run it:
+# a user with one file had no server and no player, and the installer could only
+# report them missing. Measured by putting the release assets in an empty folder
+# and following the instructions literally.
+#
+# This archive closes that: the three programs, the pinned engine, its licence,
+# and a line telling somebody which file to run. It stays a single download that
+# needs no network at install time, which is also what "it works on my own
+# machine" means.
+#
+# The published assets are still published separately, with their platform
+# names, for people who want one piece and for the updater, which selects
+# `theia-server-<os>-<arch>` by name.
+
+param(
+    [string]$Version = 'dev',
+    [switch]$SkipPlayer
+)
+
+$ErrorActionPreference = 'Stop'
+$root = $PSScriptRoot
+
+$go = (Get-Command go -ErrorAction SilentlyContinue).Source
+if (-not $go) {
+    $candidate = Join-Path $env:USERPROFILE 'go-toolchain\go\bin\go.exe'
+    if (Test-Path $candidate) { $go = $candidate }
+}
+if (-not $go) { throw 'Go was not found. Install it, put it on PATH, or unpack it at $env:USERPROFILE/go-toolchain/go.' }
+
+# The player first when it is not already built: it is by far the longest step,
+# and failing there should not happen after the Go builds have run.
+if (-not $SkipPlayer) {
+    Write-Host '==> Building the player and its engine' -ForegroundColor Cyan
+    & (Join-Path $root 'build-player.ps1') -Release -Bundle
+    if ($LASTEXITCODE -ne 0) { throw 'the player build failed' }
+}
+
+$name = "theia-$Version-windows-amd64"
+$stage = Join-Path $root "dist\$name"
+if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
+New-Item -ItemType Directory -Force -Path $stage | Out-Null
+
+Write-Host '==> Building the server and the installer' -ForegroundColor Cyan
+Push-Location $root
+try {
+    $env:CGO_ENABLED = '0'
+    # Short names inside the archive: the archive name already carries the
+    # platform, and `theia-server.exe` is the first name the installer looks for.
+    #
+    # Forward slashes and the `./` prefix: `cmd\theia-server` is a Windows path,
+    # and Go reads it as a standard-library package - "package cmd/theia-server
+    # is not in std" - which is how the first version of this failed.
+    foreach ($target in @(
+        @{ path = './cmd/theia-server'; out = 'theia-server.exe'; key = 'main.tmdbAPIKey' },
+        @{ path = './cmd/theia-setup'; out = 'theia-setup.exe'; key = '' }
+    )) {
+        $ldflags = "-s -w -X main.version=$Version"
+        if ($target.key -and $env:TMDB_API_KEY) { $ldflags += " -X $($target.key)=$($env:TMDB_API_KEY)" }
+        & $go build -buildvcs=false -trimpath -ldflags $ldflags -o (Join-Path $stage $target.out) $target.path
+        if ($LASTEXITCODE -ne 0) { throw "building $($target.out) failed" }
+    }
+}
+finally {
+    Pop-Location
+}
+
+# The player bundle, already assembled with its engine by build-player.ps1.
+$playerBundle = Join-Path $root 'dist\theia-player-windows-amd64'
+if (-not (Test-Path (Join-Path $playerBundle 'theia-player.exe'))) {
+    throw "the player bundle is missing from $playerBundle; build it with .\build-player.ps1 -Release -Bundle"
+}
+foreach ($file in 'theia-player.exe', 'libmpv-2.dll', 'LICENSE-libmpv.txt', 'NOTICE.md') {
+    Copy-Item (Join-Path $playerBundle $file) $stage
+}
+
+# One paragraph in both languages, because somebody who has just unzipped an
+# archive has no other context, and this project speaks French first.
+$readme = @"
+Theia $Version
+============$(('=' * $Version.Length))
+
+FR - Lancez theia-setup.exe. Il vous demande a quoi sert cette machine, ou
+     garder ses donnees et quels dossiers contiennent vos films. Il installe un
+     demarrage automatique seulement si vous le demandez, et ne reclame jamais
+     de droits administrateur. Ensuite, ouvrez http://localhost:8383 pour
+     administrer la bibliotheque, et lancez theia-player.exe pour regarder un
+     film. Le lecteur a besoin de libmpv-2.dll, qui est dans ce dossier : gardez
+     les fichiers ensemble.
+
+EN - Run theia-setup.exe. It asks what this machine is for, where to keep its
+     data and which folders hold your films. It installs autostart only if you
+     ask, and never requests administrator rights. Then open
+     http://localhost:8383 to administer the library, and run theia-player.exe
+     to watch a film. The player needs libmpv-2.dll, in this folder: keep the
+     files together.
+
+LICENSE-libmpv.txt is the licence of the media engine (libmpv, LGPL-2.1+).
+NOTICE.md names the exact build and its SHA-256.
+"@
+Set-Content -Path (Join-Path $stage 'START-HERE.txt') -Value $readme
+
+$archive = Join-Path $root "dist\$name.zip"
+if (Test-Path $archive) { Remove-Item -Force $archive }
+Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $archive
+
+$total = [math]::Round(((Get-ChildItem $stage -File | Measure-Object -Property Length -Sum).Sum) / 1MB, 1)
+$zipped = [math]::Round((Get-Item $archive).Length / 1MB, 1)
+Write-Host "==> $name.zip ready ($zipped MB zipped, $total MB unpacked)" -ForegroundColor Green
+Get-ChildItem $stage | ForEach-Object { Write-Host ("    {0} ({1:N1} MB)" -f $_.Name, ($_.Length / 1MB)) }
