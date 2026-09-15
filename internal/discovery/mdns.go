@@ -51,14 +51,35 @@ func multicastFamilies() (v4, v6 bool) {
 	return v4, v6
 }
 
-// Announce starts answering mDNS queries for "<hostname>.local", pointing at
-// this machine's LAN addresses on the given port.
+// ServiceType is what Theia answers to on the local network.
+//
+// It used to be "_http._tcp", which said "there is a web server here" and
+// nothing more: a client had to resolve the name, fetch the page and read it to
+// discover it was talking to Theia at all. V3.3's player browses for its server
+// instead of asking for an address, so the service names the product and its
+// TXT records carry what a client needs before it makes a single request.
+//
+// The A records for "<hostname>.local" live in the same zone, so changing the
+// service type does not affect reaching the server by name - only browsing.
+const ServiceType = "_theia._tcp"
+
+// TXT records every announcement carries. Short, because each one costs
+// multicast bytes on every query: a client shows the name while it connects,
+// and reports the version so a mismatch is visible rather than mysterious.
+const (
+	txtNameKey    = "name"
+	txtVersionKey = "version"
+)
+
+// Announce starts answering mDNS queries for "<hostname>.local" and advertising
+// a ServiceType service, pointing at this machine's LAN addresses on the given
+// port.
 //
 // Callers are expected to treat a failure as a warning, not a fatal error.
 // Another responder may already own UDP 5353 -- Bonjour ships with iTunes and
 // several Adobe products on Windows -- and Theia is perfectly usable over a
 // plain IP address without it.
-func Announce(hostname string, port int, log *slog.Logger) (*Announcer, error) {
+func Announce(hostname string, port int, version string, log *slog.Logger) (*Announcer, error) {
 	ips, err := LANAddrs()
 	if err != nil {
 		return nil, err
@@ -76,13 +97,16 @@ func Announce(hostname string, port int, log *slog.Logger) (*Announcer, error) {
 	// falls back to net.LookupIP(fqdn) -- which asks the system resolver to look
 	// up the very name we are about to start answering for, and fails.
 	service, err := mdns.NewMDNSService(
-		hostname,     // instance name, as it appears in service browsers
-		"_http._tcp", // Theia is a web server; nothing more specific is warranted
-		"",           // domain, defaults to "local."
+		hostname, // instance name, as it appears in service browsers
+		ServiceType,
+		"",   // domain, defaults to "local."
 		fqdn,
 		port,
 		ips,
-		[]string{"Theia media server"},
+		[]string{
+			txtNameKey + "=Theia",
+			txtVersionKey + "=" + version,
+		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("building mDNS service record: %w", err)
@@ -100,6 +124,8 @@ func Announce(hostname string, port int, log *slog.Logger) (*Announcer, error) {
 
 	log.Info("mDNS announcement started",
 		"hostname", hostname+".local",
+		"service", ServiceType,
+		"version", version,
 		"port", port,
 		"addresses", len(ips),
 		"ipv4", v4,

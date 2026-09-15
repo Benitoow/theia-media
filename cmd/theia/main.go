@@ -346,7 +346,7 @@ func run() (runErr error) {
 		log.Warn("remote access is unavailable; LAN access remains active", "error", err)
 	}
 
-	announcer, err = discovery.Announce(cfg.Hostname, cfg.Port, log)
+	announcer, err = discovery.Announce(cfg.Hostname, cfg.Port, version, log)
 	if err != nil {
 		// Not fatal by design. The QR code and the plain IP address are the
 		// reliable ways in; mDNS is the convenience layered on top.

@@ -13,6 +13,7 @@ passer pour la documentation courante.
 | [`DECISIONS.md`](DECISIONS.md) | Les décisions techniques et produit, avec leur raisonnement |
 | [`design-system.md`](design-system.md) | Les règles visuelles et d'interaction |
 | [`v3.md`](v3.md) | Le périmètre livré et vérifié de la génération V3 |
+| [`v3.3.md`](v3.3.md) | Le périmètre **en cours** et le registre de vérification de la V3.3 (architecture native) |
 | [`field-testing.md`](field-testing.md) | Le protocole de validation dans de vrais foyers |
 
 ## Notes de version

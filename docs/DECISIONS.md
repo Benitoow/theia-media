@@ -3615,6 +3615,153 @@ points. The README does not carry a versioned screenshot gallery. Product proof
 belongs in the running application, release checks and technical records, not
 in a second interface that can drift away from the binary.
 
+## 117. The browser has a ceiling, so the player becomes a native application
+
+The maintainer instructed a V3.3 pivot on 14 September 2026: Theia stops being
+one binary serving a web player and becomes three artifacts. `theia-server`
+stays the Go backend and keeps serving the Svelte interface for administration
+and fallback playback - it is frozen, not deleted. `theia-player` is a native
+desktop application: Tauri 2 wrapping that same Svelte interface as an OSD,
+over libmpv through FFI, and it is where films are now meant to be watched.
+`theia-setup` is a Go/Charm terminal installer that declares the machine's role
+and maintains the installation.
+
+**This decision supersedes three clauses of the founding spec** - §1 and §3's
+"one binary", §3's "no runtime dependency beyond ffmpeg", and §5's exclusion of
+native applications - and it restates a fourth, §11.7's "run it by hand", whose
+opt-in service installation now has a tool that performs it. It supersedes
+decision 97 on the playback axis only.
+Those clauses are amended in place in `docs/spec-fondatrice.md` §14 rather than
+deleted, because the founding document is a record of what was decided and why.
+
+The reason is a platform ceiling, not a preference. These are documented limits
+of the browser platform, not measurements taken here: the Web Audio API exposes
+no HDMI passthrough, so TrueHD/Atmos and DTS-HD MA reach an amplifier only as
+re-encoded PCM; a browser renders the HDR10 base layer of a Dolby Vision profile
+7 stream and ignores its enhancement layer, which is what `v3.md` already
+records when Dune played for 95 continuous seconds in Chromium at 3840px;
+Matroska is not a native browser container, so every MKV is remuxed before it
+plays; and complex ASS subtitles are paid for on the CPU. None of these are
+defects Theia can fix from JavaScript, and V3.2's own release notes already
+asked whether the player had to stay in a browser. It does not.
+
+**The risk is composition, and it is prototyped before anything is designed on
+top of it.** A transparent WebView floating over a native video surface is the
+one part of this architecture that can fail late and expensively. The first
+deliverable of V3.3 is therefore a spike that decides between embedding mpv in a
+child window and driving `mpv_render_context` from Tauri's own window, with both
+the picture and the click-through measured on a running build. The OSD is
+written after that verdict, not before it.
+
+**What does not change.** No CGO in any Go code, ever - `theia-player` is a
+separate Rust artifact, not a Go dependency. No telemetry, no cloud account, and
+no outbound call beyond TMDB and GitHub Releases; remote access stays inbound
+WireGuard with no relay and no control plane. Docker is never required. The
+server still never writes what the user reads (decision 25). No third-party
+binary ships or is downloaded without a pinned source, a SHA-256 and a checked
+licence: libmpv inherits exactly the rule that governed FFmpeg (decisions 103,
+110, 111). The design system remains the reference for the OSD, because two
+identities for one product is one too many.
+
+**The webview is the one runtime that is neither pinned nor shipped.** Tauri 2
+draws the OSD in the platform's own engine - WebView2 on Windows, WKWebView on
+macOS, WebKitGTK on Linux - which Theia does not download, pin or checksum. That
+is a named exception rather than an oversight: it is the same engine the browser
+player already uses on those systems, and on Windows it is a Microsoft-serviced
+runtime that ships with the operating system. It is written here so that no
+future reader mistakes it for a pinned artifact, and so a Linux packager knows
+WebKitGTK is a real requirement and not a suggestion.
+
+**The server keeps its release asset names in V3.3.** An installed v3.2 looks
+for `theia-<os>-<arch>` assets through the updater of decisions 103 and 113;
+renaming them would strand every existing installation on the old line with no
+path forward. The server is therefore documented as `theia-server` while its
+published assets and executable name remain `theia` for this generation. The
+player and the installer ship under new names, which no existing updater reads.
+
+**The machine declares its role; it is never guessed.** A headless mini-PC in a
+network cupboard and an HTPC on a television frequently share the same hardware
+fingerprint, so no probe can tell them apart. `theia-setup` asks: server only,
+player only, or both. The default is both.
+
+**Validation boundary.** Windows is the only platform this work can be verified
+on, and the record says so. macOS, Linux, Android TV, Apple TV and iOS code may
+exist, but none of it is claimed as working until it runs on real hardware.
+Television and mobile applications are deferred to V3.4/V5: they add two
+toolchains and two store pipelines, and the project has one maintainer.
+
+**What this decision does not settle.** Decision 97 asked for evidence from
+roughly ten real household libraries before new features shipped, and that
+evidence never arrived - the field-test issue has no reply. The pivot is
+therefore taken on platform limits and the maintainer's explicit instruction,
+not on field data. Library-facing features stay frozen under decision 97; this
+decision reopens the playback path only.
+
+## 118. libmpv is bundled, from an LGPL build, and its licence travels with it
+
+The native player needs a media engine, and the maintainer chose to ship it
+rather than download it on first use. The build is `zhongfly/mpv-winbuild`
+release `2026-09-14-0b7ed670f7`, asset
+`mpv-dev-lgpl-x86_64-20260914-git-0b7ed670f7.7z`, SHA-256
+`d6df1a133b7d60d30b49efac593fd58ff183c48a6d94bb78cd401430acd96dad`. The GitHub
+release API and the author's own `sha256.txt` agree on that digest, and the
+build reports `-Dgpl=false -Dlibmpv=true` in its own configuration string.
+
+**Why the LGPL build and not the GPL one.** The GPL builds from the same family
+link components whose licence the project cannot vouch for - x265 among the
+candidates - and a GPLv2-only component cannot be combined with this
+repository's GPL-3.0 when the result is *redistributed*. Downloading such a
+build without redistributing it would be defensible; bundling it is not. The
+LGPL variant is built for exactly the case we are in. What it gives up on
+Windows is nothing this player uses: the GPL-only files are X11 and vdpau video
+outputs, OSS audio, DVD/CDDA/DVB and the legacy Direct3D output. D3D11 output,
+`d3d11va` hardware decoding, WASAPI and bitstream passthrough are all present,
+and spike A2a measured them working.
+
+**Why bundled and not downloaded.** The upstream project keeps thirty days of
+builds. A pinned URL is therefore a time bomb: the first installation attempted
+a month later would 404, and a checksum that cannot be fetched cannot be
+verified. `theia-server` keeps the FFmpeg model - downloaded on first need,
+pinned and checked - because that binary must stay small. The player is a
+desktop application that ships its own engine, which is what desktop players do.
+
+**The obligations this accepts, and they are not decorative.** The LGPL licence
+text ships with the player; the exact upstream source and its digest are named
+in the application's diagnostics; the DLL stays a separate, replaceable file
+next to the executable - never statically linked - so a user may substitute
+their own build; and Theia's own source is public under GPL-3.0, which the LGPL
+requires. The player reports the libmpv version it loaded, so a bug report can
+name the engine.
+
+**The risk is accepted knowingly.** The build's author states plainly that he is
+not a lawyer and cannot guarantee every LGPL-incompatible package was disabled.
+The maintainer accepts that residual risk for this generation. If a licence
+review ever finds a GPL-only component linked into the build, the fallback is
+not a different download: it is building libmpv ourselves with `-Dgpl=false` in
+CI, which the upstream project's own documentation describes.
+
+## 119. The server is renamed, and one transitional release carries the old names
+
+The V3.3 artifact is `theia-server` everywhere: the command directory, the
+executable, and the published asset names. The maintainer chose the coherent
+name over the convenient one, knowing what it costs.
+
+**What it costs.** An installed v3.2 looks for `theia-<os>-<arch>` through the
+updater of decisions 103 and 113. Renamed assets are invisible to it, so
+without help every existing installation would sit on the old line forever.
+
+**The mitigation, decided here.** The first V3.3 release publishes the renamed
+assets **and** a transitional copy under the old names, byte-identical and with
+the same published digests. An existing installation updates once, through the
+old name, and the version that lands knows the new ones. The transitional copies
+are removed in the following release, and the release notes say so.
+
+**What phase 3 must verify before this is trusted:** how `internal/updater`
+actually selects an asset and where it reads the expected digest. The rename is
+not finished when the files are renamed; it is finished when a real v3.2.0
+installation has updated into V3.3 through this path and reported the version it
+landed on. Until that run exists, this decision is a plan and not a result.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

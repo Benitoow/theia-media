@@ -532,11 +532,30 @@ a player.
   the timestamp under the pointer.
 - **Scrims, not a wash.** Two gradients, top and bottom, so the text has a floor
   without dimming the film.
+- **The OSD is never composed over the desktop.** The player's window is
+  transparent so the film can be the background, which means an empty player has
+  no background at all unless something paints one. mpv is asked for a window
+  from startup (`force-window`), so the floor is its surface - black - in every
+  state, including the library panel that is up exactly when nothing is loaded.
+  Before that option was set, the window tree with no film loaded contained no
+  video surface at all and the library floated over the desktop icons.
 - **The bar never wraps.** A control row that reflows into two lines moves the
-  play button out from under a thumb mid-press. Below 30rem the volume control
-  and the shortcuts button go instead - a phone has hardware volume keys, and a
-  keyboard-shortcuts panel on a touchscreen is help for a keyboard nobody is
-  holding. Everything that stays keeps its 3.25rem target.
+  play button out from under a thumb mid-press. Below 30rem what goes is what
+  the device already does better: the volume, because a phone has hardware
+  volume keys, and the shortcuts button, because a keyboard-shortcuts panel on a
+  touchscreen is help for a keyboard nobody is holding. The native player's row
+  has no shortcuts button and carries three things the web bar does not - the
+  language chip, which the web application keeps in its settings rather than in
+  its player, the codec badge, which is a diagnostic and not a control, and the
+  ten-second pair, which is a remote's affordance: on a touch screen the scrub
+  bar is the seek instrument. That last one is arithmetic, not taste. Six
+  3.25rem targets are 312px of the 342px content box a 390px window gives at the
+  standard gutter, and no arrangement of a two-number clock fits beside them, so
+  the row either drops a target under the 44px floor or drops a control. Dropping
+  the skips rather than the total is what keeps the clock intact, which the next
+  bullet requires. Measured at 390px: the row ran to 636px before this rule was
+  written and fits with room to spare after it. Everything that stays keeps its
+  3.25rem target.
 - **The clock shows two numbers.** Elapsed in `--bone` at 500, total in
   `--muted`, separated by a drawn hairline rather than a slash glyph, which sits
   at the wrong optical height at this size. A third number for the remaining

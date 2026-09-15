@@ -20,13 +20,20 @@ the document changes first, in the same commit, with the reasoning written down.
 `DECISIONS.md` is append-only in spirit: supersede an entry, do not quietly
 rewrite it.
 
-## Current phase: field testing
+## Current phase: V3.3, playback leaves the browser
 
-V3.1 is the stable feature baseline while Theia is exercised by its first ten
-real households. During this phase, changes are prioritised when they fix a
-security problem, a data-loss risk, blocked playback, a regression or concrete
-platform and codec compatibility. Documentation and test coverage that make a
-report reproducible are also welcome.
+`v3.2.0` is the last release of the single-binary line. V3.3 splits the product
+into `theia-server`, `theia-player` and `theia-setup`; the reasoning, the
+superseded clauses and the validation boundary are in decision 117 and
+`docs/spec-fondatrice.md` §14, and the live record is
+[`docs/v3.3.md`](../docs/v3.3.md). Windows is the only platform the work can be
+verified on today.
+
+Library-facing features stay paused while Theia is exercised by its first ten
+real households (decision 97). During this phase, changes are prioritised when
+they fix a security problem, a data-loss risk, blocked playback, a regression or
+concrete platform and codec compatibility. Documentation and test coverage that
+make a report reproducible are also welcome.
 
 Feature requests remain open and are valuable evidence, but feature pull
 requests may be deferred until the field test has produced enough repeated
@@ -36,18 +43,26 @@ most useful place to start.
 
 ## Constraints that are not preferences
 
-From §3 of the founding spec:
+From §3 of the founding spec, as amended by §14 for V3.3:
 
-- **No CGO, ever.** `modernc.org/sqlite`, never `mattn/go-sqlite3`.
-- **No runtime dependency beyond FFmpeg**, which Theia downloads itself, pinned
-  and checksum-verified.
+- **No CGO, ever.** `modernc.org/sqlite`, never `mattn/go-sqlite3`. This governs
+  the Go code; `theia-player` is a separate Rust artifact.
+- **No runtime dependency beyond FFmpeg** for `theia-server`, which downloads it
+  itself, pinned and checksum-verified. The native player adds **libmpv** under
+  the same discipline - pinned source, SHA-256, checked licence - and uses the
+  platform webview (WebView2, WKWebView, WebKitGTK), which Theia neither ships
+  nor pins. Nothing else gets in without a decision entry.
 - **Docker is never required.**
 - **No telemetry, no cloud account.** The only outbound calls are to TMDB and
   GitHub Releases. Remote access passively accepts WireGuard UDP from configured
   peers; it never contacts a control plane, relay or STUN service.
-- **No unverified image.** This repository is public and GPL-3.0. Do not add
-  decorative imagery from the web; every shipped asset needs its licence checked
-  first. A screen that needs filling gets CSS texture and a note.
+- **No unverified image and no unverified binary.** This repository is public and
+  GPL-3.0. Do not add decorative imagery from the web; every shipped asset needs
+  its licence checked first. A screen that needs filling gets CSS texture and a
+  note. The same rule governs libmpv and FFmpeg builds.
+- **The player declares nothing it cannot observe.** A codec present in a file is
+  never presented as proof that the display, HDMI chain or receiver can reproduce
+  it.
 
 ## Language
 

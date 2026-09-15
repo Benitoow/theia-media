@@ -1,7 +1,21 @@
 # Working on Theia
 
-Theia is a personal media server in a single Go binary: no configuration, no
-account, no paywall. One user, their own films, their own machine.
+Theia is a personal media server: no configuration, no account, no paywall. One
+user, their own films, their own machine.
+
+**V3.3 is in progress and changes the shape of the project.** `v3.2.0` is the
+last single-binary release. V3.3 splits the product into three artifacts:
+`theia-server` (Go, headless, still serving the frozen Svelte interface as
+fallback playback), `theia-player` (Tauri 2 + Rust + libmpv - the native player,
+and where films are now meant to be watched) and `theia-setup` (Go + Charm, the
+installer and maintenance tool). The reason is a platform ceiling: a browser
+cannot pass TrueHD/Atmos or DTS-HD MA to an amplifier, does not carry Dolby
+Vision profile 7, and does not read Matroska natively.
+
+Read decision 117 and `docs/spec-fondatrice.md` §14 before touching anything.
+They record exactly which founding clauses were superseded and which still bind.
+Windows is the only platform V3.3 can be verified on; macOS, Linux, Android TV,
+Apple TV and iOS are unverified until they run on real hardware.
 
 ## Read these first, every session
 
@@ -15,12 +29,17 @@ anything; they answer most questions that would otherwise be asked again.
 | [`docs/design-system.md`](docs/design-system.md) | Colour, type, spacing, motion, focus. §6 - *the card grid is exempt* - is the single most important constraint in the interface. |
 
 **V3 shipped in `v3.0.0`.** Its verified product and playback boundaries are in
-[`docs/v3.md`](docs/v3.md). V3.2 is the current engine baseline; its release
-summary is [`docs/releases/v3.2.0.md`](docs/releases/v3.2.0.md) and the detailed
-campaigns are indexed in [`docs/archive/v3.2/`](docs/archive/v3.2/README.md).
-Field testing still follows decision 97: new features wait for evidence from
-roughly ten real household libraries, while security, data-loss, playback,
-regression and concrete compatibility fixes remain admissible.
+[`docs/v3.md`](docs/v3.md). V3.2 is the engine baseline; its release summary is
+[`docs/releases/v3.2.0.md`](docs/releases/v3.2.0.md) and the detailed campaigns
+are indexed in [`docs/archive/v3.2/`](docs/archive/v3.2/README.md).
+
+**V3.3 is the current generation.** Its scope, its validation boundary and its
+verification record live in [`docs/v3.3.md`](docs/v3.3.md) - update that record
+in the same commit as the work, and state what was measured rather than what
+was intended. Field testing still follows decision 97 for library-facing
+features: they wait for evidence from roughly ten real household libraries,
+while security, data-loss, playback, regression and compatibility fixes remain
+admissible. Decision 117 reopens the playback path only.
 
 Finished coordination notes and measurement campaigns live in
 [`docs/archive/`](docs/archive/README.md). They retain useful reasoning but do
@@ -33,19 +52,34 @@ spirit: supersede an entry, do not quietly rewrite it.
 
 ## Standing constraints
 
-From the founding spec, §3. These are not preferences:
+From the founding spec, §3, as amended by §14 for V3.3. These are not
+preferences:
 
-- **No CGO, ever.** `modernc.org/sqlite`, not `mattn/go-sqlite3`.
-- **No runtime dependency beyond ffmpeg**, which Theia downloads itself, pinned
-  and checksum-verified.
+- **No CGO, ever.** `modernc.org/sqlite`, not `mattn/go-sqlite3`. This governs
+  the Go code; `theia-player` is a separate Rust artifact and is not an excuse
+  to link C into the server.
+- **No runtime dependency beyond ffmpeg** for `theia-server`, which downloads
+  it itself, pinned and checksum-verified. **One written exception:** the native
+  player adds libmpv, with the same discipline - pinned source, SHA-256, checked
+  licence. Nothing else gets in without a decision entry.
 - **Docker is never required.**
 - **No telemetry, no cloud account.** The only internet calls initiated by
-  Theia are to TMDB and GitHub Releases. M4 may passively accept encrypted
-  WireGuard UDP from explicitly configured peers; it never contacts a control
-  plane, relay, STUN service or endpoint-discovery service.
-- **No unverified image.** This repository is public and GPL-3.0. Never fetch
-  decorative imagery from the web; the maintainer supplies licence-checked
-  assets. A screen that needs filling gets CSS texture and a note.
+  Theia are to TMDB and GitHub Releases. Remote access passively accepts
+  encrypted WireGuard UDP from explicitly configured peers; it never contacts a
+  control plane, relay, STUN service or endpoint-discovery service.
+- **No unverified image and no unverified binary.** This repository is public
+  and GPL-3.0. Never fetch decorative imagery from the web; the maintainer
+  supplies licence-checked assets. A screen that needs filling gets CSS texture
+  and a note. The same rule governs libmpv and FFmpeg builds, including the
+  licences of what they link.
+- **The platform webview is the one named exception** to that rule. Tauri draws
+  the OSD in WebView2 on Windows, WKWebView on macOS and WebKitGTK on Linux;
+  Theia neither ships nor pins it. On Windows it is a Microsoft-serviced
+  runtime; on Linux it is a package the user must already have, and the
+  installer says so instead of failing obscurely.
+- **The player declares nothing it cannot observe.** Codec support in a file is
+  never presented as proof that the current display, HDMI chain or receiver can
+  reproduce it.
 
 ## Language
 
@@ -107,6 +141,43 @@ real library:
 ```bash
 go run ./scripts/bench -data <a throwaway data dir> -count 250
 ```
+
+## Building the native player
+
+`theia-player` is a second toolchain, and the order matters: `tauri-build`
+embeds the OSD at compile time, so the frontend has to exist before Rust
+compiles.
+
+```bash
+./build-player.ps1              # or -Release
+```
+
+Underneath it does:
+
+```bash
+cd player/ui && npm install && npm run build   # writes player/ui/dist
+cargo build --manifest-path player/Cargo.toml
+```
+
+`player/target`, `player/ui/dist` and `player/theia-player/gen` are generated and
+ignored. A missing `player/ui/dist` is the intended build order, not an accident.
+The engine is not vendored yet: set `THEIA_LIBMPV`, or put the DLL beside the
+executable. See [`player/README.md`](player/README.md) and decision 118.
+
+The OSD is a web page whose only external dependency is `window.__TAURI__`, so it
+can be looked at without launching the player or playing anything:
+
+```bash
+cd player/ui && npm run build && npm run preview -- --port 5199
+npm run check:render            # in another shell; needs the preview above
+```
+
+It writes pictures to `player/ui/render-check/` and asserts what a picture does
+not settle: how many films the library panel drew, the rows and ticks in the
+track menu, the controls that survive a 390px window, and that no state
+overflows. Run it after touching `player/ui/`; it has already found two faults
+that reading the code did not - the design tokens undefined in the OSD bundle,
+and the phone control row painting a third of itself off-screen.
 
 ## Verifying
 

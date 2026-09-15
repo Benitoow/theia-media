@@ -9,8 +9,12 @@
 ## 1. Vision
 
 Theia est un serveur média personnel, open source, 100% gratuit, pensé comme
-l'anti-Plex : un seul binaire, zéro configuration, zéro compte, zéro paywall.
-On branche la machine, on scanne le réseau, ça marche.
+l'anti-Plex : zéro configuration, zéro compte, zéro paywall. On branche la
+machine, on scanne le réseau, ça marche.
+
+> **Amendé en V3.3 (§14)** : « un seul binaire » devient **trois exécutables**
+> (`theia-server`, `theia-player`, `theia-setup`). Le zéro-configuration, lui,
+> ne bouge pas.
 
 **Philosophie en trois règles :**
 1. Si une feature demande un réglage, elle est mal conçue - sauf le réglage lui-même.
@@ -20,6 +24,10 @@ On branche la machine, on scanne le réseau, ça marche.
 **Pitch en une phrase :** Navidrome a prouvé qu'un serveur média pouvait être
 un seul binaire Go de 50 Mo de RAM avec une UI magnifique. Theia fait pareil,
 pour la vidéo.
+
+> **Amendé en V3.3 (§14)** : le serveur reste ce binaire Go léger et sans
+> dépendance graphique. C'est la **restitution** qui quitte le navigateur, pas
+> le serveur qui grossit.
 
 ---
 
@@ -43,7 +51,7 @@ Mobile natif : **hors scope v1**, prévu plus tard (PWA suffira pour l'instant e
 
 | Composant | Choix | Justification |
 |---|---|---|
-| Langage backend | **Go 1.23+** | Compilation croisée triviale, un seul binaire, excellent pour agents IA, écosystème mature |
+| Langage backend | **Go 1.23+** | Compilation croisée triviale, un seul binaire, excellent pour agents IA, écosystème mature *(§14 : « un seul binaire » vaut désormais pour `theia-server` ; le player est un artefact Rust séparé)* |
 | Driver SQLite | **`modernc.org/sqlite`** (pure Go, sans CGO) | CGO casse la compilation croisée multi-OS - piège n°1 à éviter |
 | Frontend | **SvelteKit**, build statique (`adapter-static`) | Compilé en HTML/JS/CSS statique, embarqué dans le binaire via `go:embed` |
 | Style | Tailwind CSS | Rapide à itérer pour un agent IA, cohérent |
@@ -55,10 +63,14 @@ Mobile natif : **hors scope v1**, prévu plus tard (PWA suffira pour l'instant e
 | Distribution | Un binaire par couple OS/arch (win/linux/darwin × amd64/arm64) via GitHub Actions | Releases GitHub, pas d'installeur complexe requis |
 
 **Interdits techniques (guardrails pour les agents IA) :**
-- Pas de CGO, jamais, sous aucun prétexte.
-- Pas de dépendance runtime au-delà de ffmpeg (auto-géré).
+- Pas de CGO, jamais, sous aucun prétexte. *(§14 : cette règle régit le code Go ;
+  `theia-player` est un artefact Rust distinct, avec sa propre chaîne d'outils.)*
+- Pas de dépendance runtime au-delà de ffmpeg (auto-géré). *(§14 : reste vrai
+  pour `theia-server`. `theia-player` ajoute libmpv, épinglé, SHA-256 vérifié et
+  licence contrôlée - c'est la seule exception, et elle est écrite.)*
 - Pas de Docker requis pour l'usage basique (Docker peut être une option de distribution *en plus*, jamais la seule voie).
-- Pas de télémétrie, pas de compte cloud, pas d'appel réseau externe non essentiel (seul TMDB et GitHub Releases sont autorisés).
+- Pas de télémétrie, pas de compte cloud, pas d'appel réseau externe non essentiel (seul TMDB et GitHub Releases sont autorisés). *(inchangé en V3.3.)*
+- Aucun binaire tiers distribué sans source épinglée, SHA-256 et licence vérifiée. *(§14 : la règle qui régissait FFmpeg régit désormais libmpv.)*
 
 ---
 
@@ -77,6 +89,9 @@ Mobile natif : **hors scope v1**, prévu plus tard (PWA suffira pour l'instant e
 
 - Transcodage matériel GPU (VAAPI / NVENC / QSV) - v2, seulement si direct play + remux CPU s'avèrent insuffisants à l'usage réel.
 - Applications natives (TV, mobile, desktop) - le web/PWA suffit pour l'instant.
+  > **Amendé en V3.3 (§14)** : les applications natives **de bureau** sont
+  > désormais dans le périmètre (`theia-player`). Les applications TV et mobiles
+  > restent hors périmètre et sont renvoyées à une V3.4/V5.
 - Gestion multi-utilisateurs avec permissions.
 - Assistant IA / recherche sémantique (ex: modèle type Gemma local) - idée valable, réservée à un module optionnel téléchargeable séparément, jamais dans le binaire de base.
 - Live TV / DVR.
@@ -111,6 +126,12 @@ theia/
 ├── go.mod
 └── README.md
 ```
+
+> **Amendé en V3.3 (§14)** : cette arborescence décrit le serveur. Deux
+> répertoires s'y ajoutent - `player/` (workspace Rust : `theia-player`, FFI
+> libmpv, OSD Svelte) et `setup/` (`theia-setup`, TUI Charm). `theia-server`
+> reste le module Go de ce document, et `web/` reste son frontend, gelé en
+> lecture de secours.
 
 ---
 
@@ -257,3 +278,60 @@ stable, jamais pendant un jalon de polish/release actif :
   alternative possible au backdrop plat actuel - à évaluer après usage réel.
 - Le dashboard générique violet/pilule (réf. Netflix) est explicitement
   écarté - contredit le choix de l'or et l'identité éditoriale déjà actée.
+
+---
+
+## 14. Amendement V3.3 - architecture native (serveur / player / setup)
+
+> Décision appliquée : [`DECISIONS.md`](DECISIONS.md) 117. **Cet amendement prime
+> sur les clauses qu'il cite.** Les textes d'origine restent en place comme
+> l'histoire du projet, pas comme des contraintes actives.
+
+### 14.1 Le constat, et ce qu'il change
+
+Le plafond de verre du navigateur n'est pas une impression : aucune API Web
+n'expose le passthrough HDMI, donc le TrueHD/Atmos et le DTS-HD MA ne peuvent
+pas atteindre un amplificateur autrement qu'en PCM réencodé ; le profil 7 du
+Dolby Vision n'est pas géré ; le MKV n'est pas un conteneur natif du navigateur ;
+et le rendu ASS complexe se paie en CPU. Ces limites sont des propriétés de la
+plateforme, pas des défauts de Theia.
+
+| Clause amendée | Sens en V3.3 |
+|---|---|
+| §1, §3 et §3 (pitch Navidrome) : « un seul binaire » | **trois exécutables** : `theia-server` (Go, headless), `theia-player` (Tauri 2 + Rust + libmpv), `theia-setup` (Go + Charm). Les **noms d'assets publiés** du serveur restent `theia-<os>-<arch>` : les installations v3.2 se mettent à jour avec ces noms, les renommer les abandonnerait. |
+| §3 : « pas de dépendance runtime au-delà de ffmpeg » | reste vrai **pour `theia-server`**. `theia-player` ajoute **libmpv** : source épinglée, SHA-256 vérifié, licence contrôlée, téléchargée au premier besoin. Il utilise en plus le moteur web de la plateforme (WebView2, WKWebView, WebKitGTK), qui n'est ni téléchargé ni épinglé par Theia - exception nommée, pas oubli. |
+| §5 : « applications natives hors périmètre » | les applications **de bureau** entrent dans le périmètre. Les applications TV et mobiles restent dehors (V3.4/V5). |
+| §2 étape 4 et §10 : « depuis un navigateur, sur la TV, en moins de 3 clics » | le critère de succès V3.3 passe par `theia-player` pour la restitution ; le navigateur reste la voie d'administration et de secours. Le critère lui-même est réécrit dans [`v3.3.md`](v3.3.md). |
+| §11.7 : « binaire lancé manuellement » *(reformulé, pas supprimé)* | `theia-setup` installe un service `systemd`, une tâche planifiée Windows ou un agent `launchd`, **sur demande explicite** uniquement. Aucune élévation imposée. |
+
+Les trois premières lignes **supersèdent** ; la quatrième **reformule** ; tout ce
+qui n'est pas cité ici reste en vigueur, y compris les §1-§13 non contredits.
+
+### 14.2 Ce qui ne change pas
+
+Ces règles restent des interdits, pas des préférences :
+
+- **Pas de CGO dans le Go, jamais.** Cette règle régit le serveur ; le player
+  est un artefact Rust distinct, avec sa propre chaîne d'outils.
+- **Aucune télémétrie, aucun compte cloud.** Les seuls appels sortants restent
+  TMDB et GitHub Releases ; l'accès distant reste du WireGuard entrant, sans
+  relais, sans STUN, sans plan de contrôle.
+- **Docker n'est jamais requis.**
+- **Aucun binaire tiers distribué sans source épinglée, SHA-256 et licence
+  vérifiée.** La règle qui régissait FFmpeg régit désormais libmpv.
+- **Le serveur n'écrit jamais ce que l'utilisateur lit** (décision 25).
+- **Interface en français et en anglais**, catalogues séparés, parité vérifiée.
+- **Le design system reste la référence visuelle**, y compris pour l'OSD du
+  player natif : une seule identité, pas deux.
+- **On rapporte ce qui a été mesuré.** Windows est la seule plateforme de
+  validation réelle de la V3.3. macOS, Linux, Android TV, Apple TV et iOS sont
+  écrits mais **non vérifiés**, et le disent.
+
+### 14.3 La machine ne devine pas son rôle
+
+Un mini-PC sans écran dans un placard réseau et un HTPC branché à un téléviseur
+partagent souvent la même empreinte matérielle. Aucune détection automatique ne
+peut les distinguer de façon fiable. Le rôle est donc **déclaré** au moment de
+l'installation, par `theia-setup` : serveur seul, lecteur seul, ou tout-en-un.
+Le rôle par défaut est `tout-en-un`, parce qu'un utilisateur qui lance
+l'installeur sur son propre PC veut voir un film, pas administrer un serveur.

@@ -1,10 +1,15 @@
-# Theia V3.1 field test
+# Theia field test
 
-V3.1 is Theia's stable feature baseline while the project learns from its first
-ten real household libraries. New product features are paused during this phase.
-Security fixes, data-loss protections, playback blockers, regressions and
-concrete compatibility fixes continue as patch releases: `v3.1.1`, `v3.1.2`,
-`v3.1.3` and so on.
+Theia learns from its first ten real household libraries. **Library-facing**
+features are paused during this phase. Security fixes, data-loss protections,
+playback blockers, regressions and concrete compatibility fixes continue as
+patch releases: `v3.2.1`, `v3.2.2` and so on.
+
+Playback work is the one exception open today: decision 117 takes the player out
+of the browser, because a browser cannot hand TrueHD/Atmos or DTS-HD MA to an
+amplifier. That work is tracked in [`v3.3.md`](v3.3.md). What follows is still
+exactly what the project needs for everything else - and reports about playback
+remain the most valuable thing you can send.
 
 ## Who this is for
 
@@ -47,5 +52,6 @@ not a public issue. Never expose TCP port `8383` directly to the internet.
 Repeated failures and blocked household workflows set the maintenance priority.
 Feature ideas are recorded, but they are not a promise or a queue ordered by
 votes. When roughly ten real households have produced enough evidence, the
-maintainer will decide which problems justify reopening feature development and
-will publish the next roadmap.
+maintainer will decide which library-facing problems justify reopening feature
+development and will publish the next roadmap. Playback already has its answer -
+decision 117 - and the reports from this test will shape what it becomes.
