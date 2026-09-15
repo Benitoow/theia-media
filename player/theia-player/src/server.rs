@@ -163,6 +163,47 @@ impl Movie {
     }
 }
 
+/// What `/api/stream/{id}/files/{file_id}/info` answers, as far as this player
+/// needs it.
+///
+/// The request is not only for the answer: the server refreshes the subtitle
+/// files sitting beside a media file when a player asks how it will be
+/// delivered, which is how a `.srt` dropped into the folder this afternoon is
+/// offered this evening without a rescan. Asking is what makes the sidecar
+/// visible at all, so the player asks on every load.
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct StreamInfo {
+    #[serde(default)]
+    pub subtitle_tracks: Vec<SubtitleTrack>,
+}
+
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct SubtitleTrack {
+    pub id: i64,
+    #[serde(default)]
+    pub language: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub codec: String,
+    /// A `.srt` beside the film rather than a stream inside it. Only these are
+    /// fetched: mpv already reads everything embedded in the container, and it
+    /// reads bitmap subtitles the server deliberately refuses to serve at all
+    /// (decision 3).
+    #[serde(default)]
+    pub is_external: bool,
+    /// "text" or "image".
+    #[serde(default)]
+    pub kind: String,
+}
+
+impl SubtitleTrack {
+    /// Whether this is a track mpv should be handed by URL.
+    pub fn fetchable(&self) -> bool {
+        self.is_external && self.kind == "text"
+    }
+}
+
 #[derive(serde::Deserialize)]
 struct MovieList {
     #[serde(default)]
@@ -301,6 +342,25 @@ impl Client {
         self.url(&format!("/api/stream/{movie_id}/files/{file_id}"))
     }
 
+    /// How the server will deliver one file, and what can be chosen while
+    /// watching it. Also the call that refreshes the sidecar subtitle list.
+    pub fn stream_info(&self, movie_id: i64, file_id: i64) -> Result<StreamInfo, String> {
+        self.get_json(&format!("/api/stream/{movie_id}/files/{file_id}/info"))
+    }
+
+    /// One subtitle track as WebVTT, which is what the server serves and what
+    /// mpv reads.
+    ///
+    /// No `?t=`: the server rebases a track when the stream is a remux whose
+    /// clock restarts at zero on every seek, and it only does that when asked.
+    /// The native player takes the file untouched, so the subtitles have to keep
+    /// the film's own clock.
+    pub fn subtitle_url(&self, movie_id: i64, file_id: i64, track_id: i64) -> String {
+        self.url(&format!(
+            "/api/library/movies/{movie_id}/files/{file_id}/subtitles/{track_id}"
+        ))
+    }
+
     pub fn save_progress(
         &self,
         movie_id: i64,
@@ -381,5 +441,43 @@ mod tests {
         movie.resolve_artwork("http://host:8395");
         assert_eq!(movie.backdrop_url, "");
         assert_eq!(movie.poster_url, "");
+    }
+
+    #[test]
+    fn only_a_text_file_beside_the_film_is_fetched() {
+        // What the server sends for a film with a `.srt` beside it, an embedded
+        // text track, and a bitmap one. The first two carry no `kind` when the
+        // file has never been inspected, which must read as "text".
+        let info: StreamInfo = serde_json::from_str(
+            r#"{"mode":"direct","subtitle_tracks":[
+                 {"id":6,"language":"fra","codec":"srt","is_external":true,"kind":"text"},
+                 {"id":7,"language":"eng","codec":"subrip","is_external":false,"kind":"text"},
+                 {"id":8,"codec":"hdmv_pgs_subtitle","is_external":true,"kind":"image"}]}"#,
+        )
+        .expect("the server's own shape should parse");
+
+        let fetched: Vec<i64> = info
+            .subtitle_tracks
+            .iter()
+            .filter(|track| track.fetchable())
+            .map(|track| track.id)
+            .collect();
+        // The embedded track is already in the container mpv is reading, and a
+        // bitmap one cannot be served at all (decision 3): handing either to mpv
+        // by URL would fetch something worse than what it already has.
+        assert_eq!(fetched, vec![6]);
+    }
+
+    #[test]
+    fn a_sidecar_is_fetched_as_webvtt_and_keeps_the_films_clock() {
+        let client = Client::new("http://host:8395");
+        assert_eq!(
+            client.subtitle_url(4, 9, 6),
+            "http://host:8395/api/library/movies/4/files/9/subtitles/6"
+        );
+        // No `?t=`: the rebase is for a remux whose clock restarts at zero, and
+        // the native player takes the file itself, so a rebased track would sit
+        // as far from the picture as the viewer has travelled into the film.
+        assert!(!client.subtitle_url(4, 9, 6).contains("t="));
     }
 }

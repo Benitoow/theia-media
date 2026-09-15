@@ -39,14 +39,19 @@ const frameCandidates = [
 const FRAME_BYTES = frameCandidates.length ? readFileSync(frameCandidates[0]) : null;
 const FRAME = FRAME_BYTES ? 'data:image/png;base64,' + FRAME_BYTES.toString('base64') : null;
 
-// What mpv reports for a film with two audio tracks and two subtitle tracks,
-// one of them an external file it picked up by itself.
+// What mpv reports for a film with two audio tracks and two subtitle tracks.
+//
+// The external one is what the player itself adds: the server's sidecar for
+// `Multi.Track.2021.fr.srt` arrives as `srt` on disk, is served as WebVTT, and
+// is handed to mpv with the language in the title position as well as its own -
+// because mpv derives a title from the URL when given neither, which put
+// "6?profile=1" in the menu once.
 const TRACKS = [
 	{ id: 1, type: 'video', codec: 'hevc', selected: true },
 	{ id: 1, type: 'audio', title: 'Francais', lang: 'fra', codec: 'ac3', 'demux-channels': 'stereo', selected: true },
 	{ id: 2, type: 'audio', title: 'English', lang: 'eng', codec: 'ac3', 'demux-channels': 'stereo', selected: false },
-	{ id: 1, type: 'sub', lang: 'fra', codec: 'subrip', selected: true },
-	{ id: 2, type: 'sub', title: 'srt', codec: 'subrip', external: true, selected: false },
+	{ id: 1, type: 'sub', lang: 'fra', codec: 'subrip', selected: false },
+	{ id: 2, type: 'sub', title: 'fra', lang: 'fra', codec: 'webvtt', external: true, selected: true },
 ];
 
 const STATUS = {
@@ -310,6 +315,18 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	}
 	if (ticks !== 2) {
 		console.error(`track menu drew ${ticks} ticks, expected 2 (one audio, one subtitle)`);
+		failures++;
+	}
+	// The external track is named by its language, never by its address: given
+	// neither a title nor a language, mpv derives one from the URL, and the menu
+	// read "6?profile=1". Asserted rather than eyeballed.
+	const menuText = await page.locator('.track-menu').innerText();
+	if (menuText.includes('?profile=') || menuText.includes('http')) {
+		console.error(`a track is named after its URL: ${JSON.stringify(menuText.slice(0, 120))}`);
+		failures++;
+	}
+	if (!menuText.includes('FICHIER EXTERNE') && !menuText.includes('EXTERNAL FILE')) {
+		console.error('the added subtitle does not say it came from beside the film');
 		failures++;
 	}
 	await page.close();

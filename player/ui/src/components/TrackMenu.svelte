@@ -21,10 +21,13 @@
 	const subtitles = $derived(tracks.filter((track) => track.type === 'sub'));
 	const subtitlesOff = $derived(subtitles.every((track) => !track.selected));
 
-	/** Language first: that is what the choice is made on. */
+	/** Language first: that is what the choice is made on, and it is the rule the
+	    web player already applies (web/src/lib/track-labels.js). A title only
+	    leads when there is no language to lead with - which is also what keeps a
+	    sidecar from reading "fra" beside an embedded track's "FRA". */
 	function primary(track, index) {
-		if (track.title) return track.title;
 		if (track.lang) return String(track.lang).toUpperCase();
+		if (track.title) return track.title;
 		return `${t('trackNumber')} ${index + 1}`;
 	}
 

@@ -66,6 +66,27 @@ struct Session {
     /// made for.
     aid: Option<i64>,
     sid: Option<i64>,
+    /// The subtitle files sitting beside this film, which mpv cannot find by
+    /// itself: it is handed an HTTP URL and a sidecar is a file on the server's
+    /// disk. Kept here with `start_at` and the track choices, and for the same
+    /// reason - the audio fallback reloads the file, and a reload that dropped
+    /// them would take the subtitles away mid-film.
+    sidecars: Vec<Sidecar>,
+    /// Whether the automatic sidecar choice has been made for this load. Set
+    /// once it has, and by any explicit choice of the viewer's, so a menu
+    /// selection is never undone a second later by the player.
+    sidecar_decided: bool,
+    /// The subtitle files still to be handed to mpv for this load.
+    ///
+    /// A queue rather than a flag, because an add can legitimately fail and
+    /// succeed a moment later. Measured: straight after the audio fallback's
+    /// reload, `sub-add` answers "error running command" - mpv is still
+    /// switching files - and the same command works on the next tick. A boolean
+    /// plus a retry of the whole list would add the successful ones twice.
+    sidecars_pending: Vec<Sidecar>,
+    /// How many ticks have tried. A sidecar the server cannot serve is given up
+    /// on rather than retried for the length of the film.
+    sidecar_tries: u32,
     /// Why the player is not in passthrough, as a code the OSD turns into a
     /// sentence. None while nothing has gone wrong.
     audio_reason: Option<&'static str>,
@@ -77,14 +98,87 @@ impl Session {
     /// does not know about is a stalled film nobody recovers from.
     ///
     /// It also forgets the previous film's track choices, which belonged to
-    /// that film and not to this one.
-    fn mark_loaded(&mut self, source: String, title: Option<String>, start_at: f64) {
+    /// that film and not to this one, and takes the subtitle files that came
+    /// with the new one.
+    fn mark_loaded(
+        &mut self,
+        source: String,
+        title: Option<String>,
+        start_at: f64,
+        sidecars: Vec<Sidecar>,
+    ) {
         self.media = Some(source);
         self.title = title;
         self.start_at = start_at;
         self.aid = None;
         self.sid = None;
+        self.sidecars = sidecars;
+        self.sidecars_pending = self.sidecars.clone();
+        self.sidecar_tries = 0;
+        self.sidecar_decided = false;
         self.loaded_at = Some(Instant::now());
+    }
+
+    /// Hands a file to mpv with everything this session has decided about it:
+    /// where to start, which tracks, and the subtitle files beside the film.
+    ///
+    /// The first load and the audio fallback's reload both come through here.
+    /// They must: a reload that forgot any of it would undo a viewer's choices,
+    /// which the resume point already taught this project once, and would take
+    /// the sidecar subtitles away the moment the endpoint refused a bitstream.
+    fn load(&mut self, url: &str) -> Result<(), String> {
+        let options = self.load_options();
+        let mut args: Vec<&str> = vec!["loadfile", url, "replace", "0"];
+        if let Some(ref options) = options {
+            args.push(options);
+        }
+        self.engine.command(&args)?;
+        // A reload drops everything that was added on top of the file, so the
+        // two automatic steps below start again - from the same film, whose
+        // sidecars this session still holds.
+        self.sidecars_pending = self.sidecars.clone();
+        self.sidecar_tries = 0;
+        self.sidecar_decided = false;
+        Ok(())
+    }
+
+    /// Hands mpv the subtitle files that sit beside the film, keeping back the
+    /// ones it refuses.
+    ///
+    /// They are added rather than passed with the load, because `sub-files=`
+    /// carries no language and the OSD's menu leads with the language: a track
+    /// named after a URL is a menu that cannot answer the only question being
+    /// asked of it. `auto` takes the track only when nothing else is selected,
+    /// so a film carrying its own subtitle keeps it.
+    fn add_sidecars(&mut self) {
+        let mut refused = Vec::new();
+        for sidecar in std::mem::take(&mut self.sidecars_pending) {
+            let mut add: Vec<&str> = vec!["sub-add", &sidecar.url, "auto"];
+            // The language goes in the title position as well as its own,
+            // because mpv fills an empty title by deriving one from the URL -
+            // measured, the menu then read "6?profile=1". The OSD leads with the
+            // language when it has one (the web player's own rule), so a title
+            // that repeats the language is never drawn twice.
+            let name = if sidecar.title.is_empty() {
+                sidecar.language.as_str()
+            } else {
+                sidecar.title.as_str()
+            };
+            if !name.is_empty() {
+                add.push(name);
+                if !sidecar.language.is_empty() {
+                    add.push(&sidecar.language);
+                }
+            }
+            match self.engine.command(&add) {
+                Ok(()) => println!("theia-player: subtitle file added: {}", sidecar.url),
+                Err(e) => {
+                    eprintln!("theia-player: adding {} failed: {e}", sidecar.url);
+                    refused.push(sidecar);
+                }
+            }
+        }
+        self.sidecars_pending = refused;
     }
 
     /// The file-local options this film should be opened with. Used for the
@@ -252,6 +346,89 @@ fn player_seek(seconds: f64, mode: String) -> Result<(), String> {
         .command(&["seek", &format!("{seconds:.3}"), mode])
 }
 
+/// Chooses a subtitle file that was added from beside the film.
+///
+/// mpv selects a sidecar it finds by itself, because it knows where the file
+/// is. Handed one over HTTP it does not: the track arrives after the load and
+/// nothing chooses it, so a film whose only French subtitles are a `.srt` beside
+/// it played with none. Measured over HTTP: four tracks and no selection, where
+/// the same film opened from disk gave five and chose the sidecar.
+///
+/// Decided from what is observed rather than guessed at add time, because at
+/// add time the film is not open yet and "nothing is selected" is not yet an
+/// answer. Three things must all be true: the film is loaded, the sidecar has
+/// arrived, and nothing at all is selected - a film carrying its own default
+/// subtitle keeps it.
+fn supervise_subtitles() {
+    let mut guard = match SESSION.lock() {
+        Ok(g) => g,
+        Err(_) => return,
+    };
+    let Some(session) = guard.as_mut() else { return };
+    if session.sidecars.is_empty() {
+        return;
+    }
+    // `duration` is the load test the audio watchdog already uses: it exists
+    // once the container has been read, and before that `sid` is absent, which
+    // would otherwise be read as "nothing is selected". A file that never
+    // reports a duration still gets its subtitles, via `path`.
+    let open = session.engine.property("duration").is_some() || session.engine.property("path").is_some();
+    if !open {
+        return;
+    }
+    // The tracks themselves first, and the decision on a later tick: adding a
+    // file is a command mpv has to fetch, so the track list a moment later is
+    // the first one that can be read.
+    if !session.sidecars_pending.is_empty() {
+        // Six ticks, about three seconds. A sidecar the server cannot serve is
+        // not worth asking about for the length of a film.
+        const TRIES: u32 = 6;
+        if session.sidecar_tries >= TRIES {
+            session.sidecars_pending.clear();
+            session.sidecar_decided = true;
+            eprintln!("theia-player: gave up on the subtitle files beside this film");
+            return;
+        }
+        session.add_sidecars();
+        session.sidecar_tries += 1;
+        return;
+    }
+    if session.sidecar_decided {
+        return;
+    }
+    match session.engine.property("sid").as_deref() {
+        // Something is chosen, so there is nothing to decide. Recorded rather
+        // than checked again on every tick.
+        Some("no") | None => {}
+        Some(_) => {
+            session.sidecar_decided = true;
+            return;
+        }
+    }
+    let Some(list) = session.engine.property("track-list") else { return };
+    let Ok(tracks) = serde_json::from_str::<Vec<serde_json::Value>>(&list) else { return };
+    let wanted = tracks
+        .iter()
+        .find(|track| {
+            track.get("type").and_then(|v| v.as_str()) == Some("sub")
+                && track.get("external").and_then(|v| v.as_bool()) == Some(true)
+        })
+        .and_then(|track| track.get("id").and_then(|v| v.as_i64()));
+    // The sidecar has not been added yet. Next tick.
+    let Some(id) = wanted else { return };
+
+    session.sidecar_decided = true;
+    // Not remembered in `sid`, deliberately: an id means something only within
+    // one load, and after the audio fallback's reload this decision is made
+    // again from the same evidence. The viewer's own choices are the ones that
+    // travel, because those are the ones a reload must not undo.
+    if let Err(e) = session.engine.set_property("sid", &id.to_string()) {
+        eprintln!("theia-player: choosing a subtitle file failed: {e}");
+    } else {
+        println!("theia-player: reading the subtitle file beside the film (track {id})");
+    }
+}
+
 /// The tracks mpv sees: video, audio and subtitles, embedded or added later,
 /// each with its language, title, codec and which one is playing.
 ///
@@ -294,7 +471,13 @@ fn player_set_track(kind: String, id: i64) -> Result<(), String> {
     let chosen = Some(id);
     match property {
         "aid" => session.aid = chosen,
-        "sid" => session.sid = chosen,
+        "sid" => {
+            session.sid = chosen;
+            // A choice the viewer made is the end of the automatic one, even if
+            // it is "no subtitles": the player brought a sidecar to the menu,
+            // and it does not get to overrule the answer.
+            session.sidecar_decided = true;
+        }
         _ => {}
     }
     Ok(())
@@ -308,7 +491,9 @@ fn player_load(path: String) -> Result<(), String> {
     let mut guard = SESSION.lock().unwrap();
     let session = guard.as_mut().ok_or("the engine is not running")?;
     session.engine.command(&["loadfile", &path])?;
-    session.mark_loaded(path, title, 0.0);
+    // No sidecars to hand over: a local path is one mpv can look beside for
+    // itself, which is exactly what it cannot do with an HTTP URL.
+    session.mark_loaded(path, title, 0.0, Vec::new());
     Ok(())
 }
 
@@ -355,7 +540,7 @@ fn connect_to(url: &str) -> Result<String, String> {
 /// Starts a film. mpv is handed the stream URL and fetches it itself: it does
 /// range requests, buffering and seeking better than anything written here.
 fn play_movie(id: i64) -> Result<String, String> {
-    let (url, movie_id, title, resume_at) = {
+    let (url, movie_id, title, resume_at, sidecars) = {
         let guard = CLIENT.lock().unwrap();
         let client = guard.as_ref().ok_or("no server is connected")?;
         // The list does not carry files; the detail does. One extra request is
@@ -374,11 +559,33 @@ fn play_movie(id: i64) -> Result<String, String> {
         } else {
             movie.progress.position_seconds
         };
+        // Subtitle files beside the film, which mpv cannot find by itself: it is
+        // given an HTTP URL, and a sidecar is a file on the server's disk. A
+        // failure here costs the external tracks and nothing else - the film
+        // still plays, and anything embedded in the container is still there -
+        // so it is not allowed to stop the load.
+        let sidecars = match client.stream_info(movie.id, file.id) {
+            Ok(info) => info
+                .subtitle_tracks
+                .iter()
+                .filter(|track| track.fetchable())
+                .map(|track| Sidecar {
+                    url: client.subtitle_url(movie.id, file.id, track.id),
+                    title: track.title.clone(),
+                    language: track.language.clone(),
+                })
+                .collect(),
+            Err(e) => {
+                eprintln!("theia-player: no external subtitles for this film: {e}");
+                Vec::new()
+            }
+        };
         (
             client.stream_url(movie.id, file.id),
             movie.id,
             movie.title.clone(),
             resume_at,
+            sidecars,
         )
     };
 
@@ -390,13 +597,8 @@ fn play_movie(id: i64) -> Result<String, String> {
         // refused by mpv with "error accessing property", which the first run
         // of this found the honest way. A file-local option belongs to the
         // loadfile command's own argument list, and that is where it goes.
-        session.mark_loaded(url.clone(), Some(title), resume_at);
-        let options = session.load_options();
-        let mut args: Vec<&str> = vec!["loadfile", &url, "replace", "0"];
-        if let Some(ref options) = options {
-            args.push(options);
-        }
-        if let Err(e) = session.engine.command(&args) {
+        session.mark_loaded(url.clone(), Some(title), resume_at, sidecars);
+        if let Err(e) = session.load(&url) {
             // Nothing was loaded, so the watchdog must not act on it.
             session.loaded_at = None;
             return Err(e);
@@ -404,6 +606,14 @@ fn play_movie(id: i64) -> Result<String, String> {
     }
     *CURRENT_MOVIE.lock().unwrap() = Some(movie_id);
     Ok(url)
+}
+
+/// One subtitle file beside a film, waiting to be handed to mpv.
+#[derive(Clone)]
+struct Sidecar {
+    url: String,
+    title: String,
+    language: String,
 }
 
 #[tauri::command]
@@ -508,13 +718,17 @@ fn start_engine(hwnd: isize, media: Option<&str>, silent: bool) -> Result<(), St
         start_at: 0.0,
         aid: None,
         sid: None,
+        sidecars: Vec::new(),
+        sidecars_pending: Vec::new(),
+        sidecar_tries: 0,
+        sidecar_decided: false,
         audio_reason: None,
     };
     if let Some(path) = media {
         let title = std::path::Path::new(path)
             .file_name()
             .map(|n| n.to_string_lossy().into_owned());
-        session.mark_loaded(path.to_string(), title, 0.0);
+        session.mark_loaded(path.to_string(), title, 0.0, Vec::new());
     }
     *SESSION.lock().unwrap() = Some(session);
     Ok(())
@@ -652,6 +866,7 @@ fn main() {
                     std::thread::sleep(Duration::from_millis(500));
                     let _ = emitter.emit("player-status", player_status());
                     supervise_audio(&emitter);
+                    supervise_subtitles();
                     // Every five seconds is often enough for a resume point and
                     // rare enough that an idle player makes no traffic at all.
                     tick += 1;
@@ -755,14 +970,10 @@ fn supervise_audio(app: &tauri::WebviewWindow) {
     }
     let _ = session.engine.command(&["ao-reload"]);
     // Reload so the stalled film starts again now that sound exists - from
-    // where it was asked to start, not from the beginning.
+    // where it was asked to start, not from the beginning, and with the
+    // subtitle files beside it, which are not part of the file being reloaded.
     if let Some(media) = session.media.clone() {
-        let options = session.load_options();
-        let mut args: Vec<&str> = vec!["loadfile", &media, "replace", "0"];
-        if let Some(ref options) = options {
-            args.push(options);
-        }
-        if let Err(e) = session.engine.command(&args) {
+        if let Err(e) = session.load(&media) {
             eprintln!("theia-player: could not restart the film on the PCM path: {e}");
         }
     }

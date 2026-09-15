@@ -101,7 +101,18 @@ Windows 11, AMD Radeon 890M, mpv `v0.41.0-1049-g0b7ed670f`:
   transparent OSD is never composed over the desktop;
 - the whole library is read, not its first page: against a bench of 250 films,
   `--list` returns all 250 in 0.7 s and 107 KB, and both artwork URLs for a
-  TMDB-matched film answer `200 image/jpeg` from the server's own cache.
+  TMDB-matched film answer `200 image/jpeg` from the server's own cache;
+- a `.srt` beside a film reaches the viewer even though mpv is given an HTTP URL
+  and cannot look for one itself: the player asks the server what sits beside the
+  film, hands each text sidecar to mpv as WebVTT with its language, chooses it
+  when the film offers no subtitle of its own - and it survives the audio
+  fallback's reload, which no longer takes the subtitles away with the sound.
+
+One cosmetic difference and one open question, both small and both recorded
+rather than hidden: a sidecar served as WebVTT is reported by mpv as `webvtt` in
+the menu's detail line, where the file on disk is a `.srt`; and serving the
+sidecar untouched would need a server route the API does not have. That belongs
+to the server's own phase.
 
 Not verified anywhere yet: macOS, Linux, television browsers, bitstream
 passthrough reaching an actual amplifier, and the OSD drawn by the real WebView2
