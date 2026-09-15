@@ -99,7 +99,10 @@ never hides while the film is paused, while the engine is not ready, while a men
 the viewer opened is on screen, while nothing is loaded at all, or with focus on
 a control, that a key or a pointer move brings it back in under half a second,
 and that the pointer follows the furniture rather than being hidden by the
-stylesheet for good.
+stylesheet for good. The track menu owns the arrows while it is open and gives
+focus back to its button when Escape closes it, and with nothing loaded the
+control bar is not drawn at all - so the language lives in the header for exactly
+those states, and returns to the bar when a film starts.
 
 **This block is deliberately red while the defects it was written for are still
 open.** It was added in phase 1 and left failing on purpose: a check that is

@@ -85,6 +85,22 @@ body {
 	pointer-events: auto;
 }
 
+/* The language chip, while there is no film to watch.
+   Decision D1 (15 September 2026) hides the control bar until something is
+   loaded, and that bar is where this control lived - section 6b kept it there
+   "because the native player has nowhere else to switch it". The header is that
+   elsewhere, and only while the bar is gone: once a film plays, the bar is back
+   and this copy disappears so one control never appears twice. */
+.title-bar .control--language {
+	margin-left: auto;
+}
+
+/* ...and the library takes the room the bar gave up, including the taller
+   bottom inset it was reserving for the clock and the scrub bar. */
+.osd:has(.controls--hidden) .library {
+	bottom: 1rem;
+}
+
 .film-title {
 	font-family: var(--font-display);
 	font-size: var(--text-title);
@@ -104,6 +120,19 @@ body {
 	flex-direction: column;
 	gap: 0.75rem;
 	pointer-events: auto;
+}
+
+/* Nothing is loaded: the bar has nothing to offer, so it is not drawn at all.
+   A disabled play button and an empty clock are furniture describing a film
+   that does not exist, and on a 550px window they took the space the library
+   needed. Hidden rather than emptied, so no invisible control stays focusable.
+
+   Declared *after* `.controls` on purpose: one class against one class is a tie,
+   and source order is what settles a tie. Written before it first, and the bar
+   stayed exactly where it was - the same trap as `button.control--mute` below,
+   and the same one the web stylesheet documents for `.player-volume`. */
+.controls--hidden {
+	display: none;
 }
 
 /* Three things on one rule: played in gold, buffered in bone, the rest quiet.
@@ -282,9 +311,15 @@ button.control--primary:hover {
 	flex-wrap: wrap;
 }
 
+/* The address and the button that submits it stay on one line together.
+   Wrapping is right for the third control - "Find a server" is an alternative to
+   typing, not part of the sentence - but letting the pair split put the button
+   on a line of its own at 550px, which is the real width of an 1100px window on
+   a 200%-scaled screen. The field is what is allowed to shrink instead; 10rem is
+   still wider than any host name a person types here. */
 .connect input {
-	flex: 1;
-	min-width: 14rem;
+	flex: 1 1 10rem;
+	min-width: 10rem;
 	min-height: var(--target-min);
 	padding: 0 1rem;
 	border-radius: 999px;
@@ -299,6 +334,15 @@ button.control--primary:hover {
 	outline-offset: 2px;
 }
 
+/* Below a narrow window the alternative search is worth less than the pair
+   above it: the address field and its button are the path that always works,
+   and `--data-dir`-style flags aside this screen has nothing else on it. */
+@media (max-width: 40rem) {
+	button.action--quiet {
+		flex: 1 1 100%;
+	}
+}
+
 button.action {
 	min-height: var(--target-min);
 	padding: 0 1.25rem;
@@ -311,6 +355,13 @@ button.action {
 	letter-spacing: var(--text-label--letter-spacing);
 	text-transform: uppercase;
 	cursor: pointer;
+	/* A label that wraps inside its own pill is not a narrower button, it is a
+	   broken one: "SE CONNECTER" drew as two lines and sat on top of the control
+	   below it at 550px, which is the real width of an 1100px window on a
+	   200%-scaled screen. The label never wraps and the button never shrinks
+	   below it - the field beside them gives up its width instead. */
+	white-space: nowrap;
+	flex: none;
 }
 button.action--quiet {
 	border-color: var(--color-line);

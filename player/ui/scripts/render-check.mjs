@@ -540,12 +540,17 @@ async function assertFurnitureNeverHidesWhenBusy(page) {
 	//     to hide from. This one deliberately passes through a *ready* status -
 	//     the fix for the buffering case returns early on `!status.ready`, so a
 	//     check that leaves ready false here would pass without testing anything.
+	//
+	//     Since decision D1 the bar is not drawn at all in this state, so
+	//     "visible" cannot be the question: there is nothing to be visible. What
+	//     is asserted is that the idle timer has not run, because that is what
+	//     would have taken the library away.
 	await page.evaluate((s) => window.__handlers['player-status']?.({ payload: JSON.stringify({ ...s, ready: true, media: '' }) }), playing);
 	await page.mouse.move(400, 300);
 	await sleep(3600);
-	const library = await visible();
-	if (library.hidden || !library.visible) {
-		console.error(`the furniture hid while nothing was loaded (data-idle=${library.hidden}, opacity=${library.opacity}) - the library panel went with it`);
+	const idled = await page.getAttribute('.osd', 'data-idle');
+	if (idled === 'true') {
+		console.error('the idle timer ran while nothing was loaded - the library panel went with it');
 		failures++;
 	}
 
@@ -636,6 +641,70 @@ async function assertMenuOwnsItsKeys(page) {
 	});
 	if (focused.label !== anchorLabel) {
 		console.error(`after Escape focus is on ${JSON.stringify(focused)} instead of the "${anchorLabel}" button that opened the menu`);
+		failures++;
+	}
+}
+
+// Nothing is loaded: the bar is not drawn, and the language is still reachable.
+//
+// Decision D1 (15 September 2026) chose to hide the control bar entirely until
+// something is loaded, against the recommendation, because a disabled play
+// button and an empty clock describe a film that does not exist. That choice
+// takes away the only place the language chip lived - section 6b kept it in the
+// bar "because the native player has nowhere else to switch it" - so the chip
+// moves to the header for exactly the states the bar is gone. Both halves are
+// asserted here, because the decision is only acceptable with the second one.
+async function assertNoFilmNoBar(page) {
+	const read = () =>
+		page.evaluate(() => {
+			const bar = document.querySelector('.controls');
+			const barBox = bar?.getBoundingClientRect();
+			const library = document.querySelector('.library')?.getBoundingClientRect();
+			const chip = document.querySelector('.title-bar .control--language');
+			const inBar = document.querySelector('.controls .control--desktop');
+			return {
+				barDrawn: !!barBox && barBox.height > 0 && getComputedStyle(bar).display !== 'none',
+				barBoxes: [...document.querySelectorAll('.controls button, .controls [role=slider]')].filter(
+					(el) => getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().height > 0
+				).length,
+				libraryHeight: library ? Math.round(library.height) : null,
+				headerChip: chip ? { visible: chip.getBoundingClientRect().height > 0, label: chip.textContent.trim() } : null,
+				barChip: inBar ? getComputedStyle(inBar).display !== 'none' : null,
+			};
+		});
+
+	// (a) nothing loaded.
+	const idle = await read();
+	if (idle.barDrawn || idle.barBoxes > 0) {
+		console.error(`no film is loaded but the control bar is still drawn (${idle.barBoxes} live control(s))`);
+		failures++;
+	}
+	if (!idle.headerChip?.visible) {
+		console.error('no film is loaded, the bar is gone, and the header carries no language control - the language became unreachable');
+		failures++;
+	}
+
+	// (b) a film starts: the bar comes back, and the header chip goes, so one
+	//     control never appears twice.
+	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
+	await page.waitForTimeout(350);
+	const playing = await read();
+	if (!playing.barDrawn || playing.barBoxes === 0) {
+		console.error('a film is playing but the control bar is not drawn');
+		failures++;
+	}
+	if (playing.headerChip?.visible) {
+		console.error('the header language chip is still drawn while the bar is back, so the control appears twice');
+		failures++;
+	}
+	if (!playing.barChip) {
+		console.error('the control bar is back but its own language control is not drawn');
+		failures++;
+	}
+	if (idle.libraryHeight !== null && playing.libraryHeight !== null && playing.libraryHeight >= idle.libraryHeight) {
+		console.error(
+			`the library did not take the room the bar gave up: ${idle.libraryHeight}px without a film, ${playing.libraryHeight}px with one`
+		);
 		failures++;
 	}
 }
@@ -921,7 +990,14 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	await page.click('button[type=submit]');
 	await page.waitForTimeout(600);
 	await assertFontsLoaded(page, 'the library panel');
-	await assertHitTargets(page, 'the library panel');
+
+	// The targets are measured with a film playing, not on the library panel:
+	// since decision D1 the control bar is not drawn without one, so a check that
+	// only looked at the library would stop seeing the timeline altogether and
+	// the 44px rule would look satisfied by an element that is simply absent.
+	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
+	await page.waitForTimeout(350);
+	await assertHitTargets(page, 'the control bar with a film playing');
 	await page.close();
 
 	// (b) typing an address is typing, not a keyboard shortcut. The address is
@@ -962,6 +1038,11 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	await menu.waitForTimeout(300);
 	await assertMenuOwnsItsKeys(menu);
 	await menu.close();
+
+	// (h) no film, no bar - and the language still reachable without it.
+	const noFilm = await openPage({ width: 1280, height: 720 });
+	await assertNoFilmNoBar(noFilm);
+	await noFilm.close();
 }
 
 await browser.close();

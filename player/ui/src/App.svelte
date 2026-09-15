@@ -41,6 +41,10 @@
 	/** @type {Array<Record<string, unknown>>} */
 	let tracks = $state([]);
 	let trackMenuOpen = $state(false);
+	/** The popover, whose arrow handling the window handler borrows. */
+	let trackMenu = $state(null);
+	/** The button that opens it, and where focus returns when Escape closes it. */
+	let trackMenuAnchor = $state(null);
 
 	async function refreshTracks() {
 		try {
@@ -297,9 +301,43 @@
 		document.documentElement.lang = lang;
 	}
 
+	// Where a key press landed decides what it means.
+	//
+	// The shortcuts are declared on the window, so before this they were all live
+	// inside the address field as well. Measured on 15 September 2026: typing
+	// `k` did nothing at all, Space toggled playback instead of separating two
+	// words, and `l` switched the whole interface to English in the middle of an
+	// address. A shortcut is not a text field's problem, and the fix belongs
+	// where the keys arrive rather than in each handler.
+	function isEditable(target) {
+		if (!target?.tagName) return false;
+		if (target.isContentEditable) return true;
+		return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
+	}
+
 	function onKey(event) {
 		const key = event.key;
+
+		// Nothing but the way out reaches an editable field.
+		if (isEditable(event.target)) {
+			if (key === 'Escape') event.target.blur();
+			return;
+		}
+
+		// The scrub bar owns its own axis when it has focus (onScrubKey), and the
+		// menu owns the arrows while it is open. Both sit above the film's keys,
+		// because both are things the viewer is looking at.
+		if (event.target?.closest?.('.scrub')) return;
+		if (trackMenuOpen && key.startsWith('Arrow')) {
+			event.preventDefault();
+			trackMenu?.moveFocus(key === 'ArrowDown' || key === 'ArrowRight' ? 1 : -1);
+			return;
+		}
+
 		if (key === ' ' || key === 'k') {
+			// Space activates a focused button by itself, and stopping that would
+			// break every control in the bar. A press is not a playback command.
+			if (key === ' ' && event.target?.closest?.('button, a, [role=slider]')) return;
 			event.preventDefault();
 			toggle();
 		} else if (key === 'ArrowLeft') {
@@ -314,9 +352,12 @@
 			toggleTrackMenu();
 		} else if (key === 'Escape') {
 			// The menu closes before the player does, so a viewer who opened it
-			// by accident does not lose the film with it.
+			// by accident does not lose the film with it - and focus goes back to
+			// the button that opened it, so the next press is not aimed at
+			// nothing. Measured before this: activeElement was the body.
 			if (trackMenuOpen) {
 				trackMenuOpen = false;
+				trackMenuAnchor?.focus();
 			} else {
 				close();
 			}
@@ -344,6 +385,22 @@
 	<header class="title-bar" data-tauri-drag-region>
 		<span class="label">Theia</span>
 		<span class="film-title">{status.title ?? ''}</span>
+		<!-- The way to change the interface language while there is no film.
+		     Decision D1 (15 September 2026) hides the control bar entirely until
+		     something is loaded, and that bar is where the language chip lives -
+		     section 6b kept it there because the native player has nowhere else to
+		     switch it. So the header carries it for exactly the states the bar is
+		     gone, and hands it back when the film starts. -->
+		{#if !status.media}
+			<button
+				class="control control--language"
+				onclick={switchLanguage}
+				aria-label="Français / English"
+				title="Français / English"
+			>
+				<span class="label">{lang.toUpperCase()}</span>
+			</button>
+		{/if}
 	</header>
 
 	{#if noticeKey}
@@ -421,7 +478,7 @@
 		</section>
 	{/if}
 
-	<div class="controls">
+			<div class="controls" class:controls--hidden={!status.media}>
 		<!-- Three things on one rule: played in gold, and the rest quiet. The
 		     painted bar is 4px, the hit area 24px, because a thumb is not a
 		     mouse (design system 6b). -->
@@ -483,6 +540,7 @@
 				<div class="menu-anchor">
 					<button
 						class="control"
+						bind:this={trackMenuAnchor}
 						onclick={toggleTrackMenu}
 						aria-label={t('tracks')}
 						title={t('tracks')}
@@ -492,7 +550,7 @@
 						<Icon name="settings" />
 					</button>
 					{#if trackMenuOpen}
-						<TrackMenu {tracks} onpick={pickTrack} {t} />
+						<TrackMenu bind:this={trackMenu} {tracks} onpick={pickTrack} {t} />
 					{/if}
 				</div>
 			{/if}

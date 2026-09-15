@@ -570,6 +570,15 @@ a player.
   stays until 30rem** - the native player has nowhere else to switch it, unlike
   the web application, and at 550px there is room for it. At 390px the row is
   unchanged from the measurement above.
+- **Amended 15 September 2026 (decision D1), on the paragraph above.**
+  "The native player has nowhere else to switch it" was true when it was written
+  and is no longer the whole truth. With nothing loaded the control bar is **not
+  drawn at all**: a disabled play button and an empty clock describe a film that
+  does not exist, and on a 550px window they took the space the library needed.
+  The language therefore lives in the **header**, beside the wordmark, for exactly
+  the states the bar is gone, and returns to the bar the moment a film starts -
+  so it is reachable in every state, and it never appears twice. The render check
+  asserts both halves, because hiding the bar is only acceptable with the second.
 - **The clock shows two numbers.** Elapsed in `--bone` at 500, total in
   `--muted`, separated by a drawn hairline rather than a slash glyph, which sits
   at the wrong optical height at this size. A third number for the remaining

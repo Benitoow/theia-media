@@ -42,6 +42,35 @@
 		];
 		return parts.filter(Boolean).join(' · ');
 	}
+
+	// The menu owns its own axis.
+	//
+	// Design system 9: "a vertical list of options owns its own axis, in reading
+	// order, and does not consume the press at either edge". Until 15 September
+	// 2026 this list had no keyboard handling at all, so the arrows fell through
+	// to the player and scrubbed the film while a viewer was reading the tracks -
+	// measured, then asserted in the render check before it was fixed here.
+	//
+	// The first press enters the list rather than moving inside it: the menu is
+	// opened by a button that keeps focus, so a viewer pressing Down expects to
+	// arrive on the first row, not to jump to the second.
+	let rows = $state([]);
+
+	export function moveFocus(direction) {
+		const items = rows.filter(Boolean);
+		if (!items.length) return false;
+		const current = items.indexOf(document.activeElement);
+		const next =
+			direction === 'first'
+				? 0
+				: current === -1
+					? direction > 0
+						? 0
+						: items.length - 1
+					: Math.min(items.length - 1, Math.max(0, current + direction));
+		items[next].focus();
+		return true;
+	}
 </script>
 
 <div class="track-menu">
@@ -49,6 +78,7 @@
 	{#each audio as track, index (track.id)}
 		<button
 			class="track"
+			bind:this={rows[index]}
 			role="menuitemradio"
 			aria-checked={track.selected ? 'true' : 'false'}
 			onclick={() => onpick('audio', track.id)}
@@ -64,6 +94,7 @@
 	<p class="label">{t('subtitleTracks')}</p>
 	<button
 		class="track"
+		bind:this={rows[audio.length]}
 		role="menuitemradio"
 		aria-checked={subtitlesOff ? 'true' : 'false'}
 		onclick={() => onpick('subtitle', 0)}
@@ -74,6 +105,7 @@
 	{#each subtitles as track, index (track.id)}
 		<button
 			class="track"
+			bind:this={rows[audio.length + 1 + index]}
 			role="menuitemradio"
 			aria-checked={track.selected ? 'true' : 'false'}
 			onclick={() => onpick('subtitle', track.id)}
