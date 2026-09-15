@@ -74,6 +74,29 @@ installing a second copy. It has earned its place twice already - it found the
 design tokens undefined in the OSD bundle and the phone control row painting a
 third of itself off-screen, and neither is visible by reading the code.
 
+A fourth block was added on 15 September 2026, and it asserts four more things
+that the first three passed straight through:
+
+- **the faces the OSD actually wears.** The chain, not one link of it: a
+  `@font-face` rule declares the family with a real `src`, a FontFace of that
+  family reached status `loaded`, and the element that should wear it resolves to
+  it. `document.fonts.check()` is deliberately **not** the check — measured with
+  no `@font-face` in the document at all, it answered `true` for `Cinzel
+  Variable`, which is how a release can ship in Georgia and look fine;
+- **every target clears 44×44** (design system section 9). The timeline is
+  included rather than exempted: section 6b says 24px and section 9 says 44px,
+  and the contradiction was settled in favour of 44px around the 4px line;
+- **typing an address is typing.** The OSD listens for keys on the window, so
+  every shortcut it owns is also live in a text field. The check types an address
+  made of the letters the OSD has claimed and reads the field back;
+- **one press is one command**, counted rather than eyeballed, because a
+  double-handled click is invisible in a picture and obvious in a film that
+  toggles twice.
+
+It also asserts the three-second hide on both sides of the boundary (visible at
+2.5 s, hidden by 3.5 s with the pointer over the picture) and that the furniture
+never hides while the film is paused.
+
 ## Running
 
 ```bash
@@ -177,6 +200,7 @@ which is decision 25 applied to a second interface.
 | `ui/src/components/FilmCard.svelte` | One film as the card grid draws it, with section 6.1's artwork fallbacks. |
 | `ui/src/osd.css` | Only what a player adds to the design system. |
 | `ui/scripts/render-check.mjs` | Renders the OSD in a real browser and asserts its layout. |
+| `PROTOCOL.md` | The numbered gestures the player is accepted against, and which of them a machine can prove. |
 
 The OSD imports `web/src/lib/tokens.css` and
 `web/src/lib/components/Icon.svelte` directly. Two palettes is how two

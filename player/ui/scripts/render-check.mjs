@@ -151,6 +151,217 @@ async function assertFits(page, state) {
 	failures++;
 }
 
+// The faces the OSD is supposed to wear, and the two it must never be caught
+// without.
+//
+// `document.fonts.check()` cannot answer this question. Measured on 15 September
+// 2026: with no `@font-face` in the document at all, it answered `true` for
+// `Cinzel Variable` and for `Jost Variable` - so a check that passes on a face
+// nobody declared is a check that would have let the shipped release go out in
+// Georgia. `web/tests/layout.spec.js` carries the same lesson for the web
+// application (decision 79). What is asserted here is the chain instead:
+//
+//   1. a `@font-face` rule declares the family, and its `src` is a real URL;
+//   2. a FontFace of that family reached status `loaded` - which browsers only
+//      set once the file was fetched and parsed, so a 404 leaves it `error`;
+//   3. the stylesheet actually uses the family, and the element that should wear
+//      it does not resolve past it.
+const OSD_FACES = [
+	{ family: 'Cinzel Variable', used: '.library-title' },
+	{ family: 'Jost Variable', used: '.label' },
+];
+
+async function assertFontsLoaded(page, state) {
+	const measured = await page.evaluate((faces) => {
+		const declared = [];
+		for (const sheet of document.styleSheets) {
+			let rules;
+			try {
+				rules = sheet.cssRules;
+			} catch {
+				continue; // a cross-origin sheet cannot be read, and is not ours
+			}
+			for (const rule of rules) {
+				if (!(rule instanceof CSSFontFaceRule)) continue;
+				declared.push({
+					family: rule.style.getPropertyValue('font-family').replace(/^["']|["']$/g, '').trim(),
+					src: rule.style.getPropertyValue('src'),
+					weight: rule.style.getPropertyValue('font-weight').trim(),
+				});
+			}
+		}
+		const loaded = [...document.fonts].map((f) => ({ family: f.family.replace(/^["']|["']$/g, ''), status: f.status, weight: f.weight }));
+		return {
+			declared,
+			loaded,
+			fontsSize: document.fonts.size,
+			used: faces.map(({ family, used }) => {
+				const el = document.querySelector(used);
+				return {
+					family,
+					used,
+					elementFound: !!el,
+					resolved: el ? getComputedStyle(el).fontFamily : null,
+				};
+			}),
+		};
+	}, OSD_FACES);
+
+	for (const { family, used } of OSD_FACES) {
+		const rule = measured.declared.find((d) => d.family === family);
+		if (!rule || !/url\(/.test(rule.src)) {
+			console.error(`${state}: no @font-face declares "${family}", so the OSD falls back to whatever the system has`);
+			failures++;
+		}
+		const face = measured.loaded.find((f) => f.family === family);
+		if (!face) {
+			console.error(`${state}: "${family}" is declared in the stylesheet but no FontFace reached document.fonts (size=${measured.fontsSize})`);
+			failures++;
+		} else if (face.status !== 'loaded') {
+			console.error(`${state}: "${family}" is ${face.status}, not loaded - the file was refused or never fetched`);
+			failures++;
+		}
+		const use = measured.used.find((u) => u.family === family);
+		if (!use?.elementFound) {
+			console.error(`${state}: "${family}" cannot be verified as used: ${used} is not on screen`);
+			failures++;
+		} else if (!use.resolved.includes(family)) {
+			console.error(`${state}: ${used} resolves to "${use.resolved}", which never reaches "${family}"`);
+			failures++;
+		}
+	}
+}
+
+// Every target a finger can land on clears 44x44 (design system section 9).
+//
+// The exception is written into the check rather than left implicit: `.scrub`
+// carries `role="slider"`, and the design system is genuinely of two minds about
+// it - section 6b says its hit area is 24px, section 9 says "every interactive
+// target is at least 44x44px". D3b was answered on 15 September 2026: 44px
+// around a 4px painted line. So it is asserted like the rest, and the message
+// says which rule it answers to.
+async function assertHitTargets(page, state) {
+	const measured = await page.evaluate(() => {
+		const out = [];
+		for (const el of document.querySelectorAll('button, a, input, [role=slider], select, textarea')) {
+			const cs = getComputedStyle(el);
+			if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+			const r = el.getBoundingClientRect();
+			if (r.width === 0 && r.height === 0) continue;
+			out.push({
+				what: el.tagName.toLowerCase() + (el.getAttribute('class') ? '.' + el.getAttribute('class').trim().split(/\s+/).join('.') : ''),
+				label: (el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 40),
+				w: Math.round(r.width * 100) / 100,
+				h: Math.round(r.height * 100) / 100,
+			});
+		}
+		return out;
+	});
+	for (const target of measured) {
+		if (target.w >= 44 - 0.01 && target.h >= 44 - 0.01) continue;
+		console.error(
+			`${state}: ${target.what} "${target.label}" is ${target.w}x${target.h}, under the 44x44 floor of section 9` +
+				(target.what.includes('scrub') ? ' (section 6b says 24px; D3b chose 44px around the 4px line)' : '')
+		);
+		failures++;
+	}
+}
+
+// A keyboard shortcut is not a text field's problem.
+//
+// The OSD listens for keys on the window (App.svelte, `<svelte:window
+// onkeydown={onKey}>`), so every shortcut it owns is also live while somebody is
+// typing a server address. Measured on 15 September 2026 with the real build:
+// `k` and Space never reached the field, and `l` switched the whole interface to
+// English mid-address. This asserts the user's gesture instead - type the
+// address, then read what happened - rather than the handler's shape, so it
+// still fails if the chord is moved rather than guarded.
+async function assertTypingIsNotShortcuts(page, address) {
+	await page.evaluate(() => {
+		window.__commands = [];
+	});
+	await page.fill('#theia-address', '');
+	await page.locator('#theia-address').pressSequentially(address, { delay: 15 });
+	const typed = await page.inputValue('#theia-address');
+	if (typed !== address) {
+		console.error(
+			`typing the address: the field holds ${JSON.stringify(typed)} instead of ${JSON.stringify(address)} - a shortcut ate the difference`
+		);
+		failures++;
+	}
+	const commands = await page.evaluate(() => window.__commands ?? []);
+	const playback = commands.filter((c) => c !== 'player_library' && c !== 'player_tracks');
+	if (playback.length) {
+		console.error(`typing the address issued ${playback.length} playback command(s): ${playback.join(', ')}`);
+		failures++;
+	}
+	const lang = await page.evaluate(() => document.documentElement.lang);
+	if (lang !== 'fr') {
+		console.error(`typing the address changed the interface language to "${lang}"`);
+		failures++;
+	}
+}
+
+// The furniture hides after three seconds of nothing, and never while paused.
+//
+// The three seconds are asserted as the two facts a person can see: still there
+// at 2.5s, gone by 3.5s. A window of one second either side of the boundary is
+// what makes this a behaviour rather than a timer implementation.
+async function assertIdleTiming(page) {
+	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
+	// A pointer move over the *picture* is a sign of life and nothing else. It is
+	// deliberately not (10, 10): that lands on the title bar, the OSD correctly
+	// keeps the furniture up for a pointer resting on its own controls, and the
+	// first version of this check reported that correct behaviour as a fault.
+	await page.mouse.move(640, 360);
+	await page.waitForTimeout(2500);
+	const at25 = await page.getAttribute('.osd', 'data-idle');
+	await page.waitForTimeout(1000);
+	const at35 = await page.getAttribute('.osd', 'data-idle');
+	if (at25 === 'true') {
+		console.error('the furniture was already hidden 2.5s after the last sign of life; the rule is three seconds');
+		failures++;
+	}
+	if (at35 !== 'true') {
+		console.error('the furniture was still up 3.5s after the last sign of life over the picture; it should have hidden');
+		failures++;
+	}
+
+	// And it must not hide while the film is paused: the controls are the only
+	// way to start it again.
+	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify({ ...status, pause: true }) }), STATUS);
+	await page.waitForTimeout(3500);
+	const paused = await page.getAttribute('.osd', 'data-idle');
+	if (paused === 'true') {
+		console.error('the furniture hid while the film was paused, taking the only way to resume it');
+		failures++;
+	}
+}
+
+// One press is one command.
+//
+// A double-handled click is invisible in a screenshot and obvious in a film that
+// toggles twice. Every control is pressed once and the commands it issued are
+// counted.
+async function assertOnePressOneCommand(page) {
+	const controls = await page.locator('.row button.control:visible').count();
+	for (let i = 0; i < controls; i++) {
+		const button = page.locator('.row button.control:visible').nth(i);
+		const label = await button.getAttribute('aria-label');
+		await page.evaluate(() => {
+			window.__commands = [];
+		});
+		await button.click();
+		await page.waitForTimeout(150);
+		const commands = await page.evaluate(() => window.__commands ?? []);
+		const stateChanging = commands.filter((c) => c !== 'player_tracks' && c !== 'player_library');
+		if (stateChanging.length > 1) {
+			console.error(`pressing "${label}" issued ${stateChanging.length} commands: ${stateChanging.join(', ')}`);
+			failures++;
+		}
+	}
+}
+
 // What the OSD is drawn over.
 //
 // The page is transparent on purpose - the film is the background - and the real
@@ -196,9 +407,15 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	await page.addInitScript(
 		({ tracks, movies, status }) => {
 			window.__handlers = {};
+			// Every command the OSD asks Rust for is recorded, because "one press
+			// is one command" and "typing is not a shortcut" are counts, not
+			// opinions. A failure that says only "the click did something" would
+			// send the next person hunting with a debugger.
+			window.__commands = [];
 			window.__TAURI__ = {
 				core: {
 					invoke: async (cmd) => {
+						window.__commands.push(cmd);
 						if (cmd === 'player_tracks') return JSON.stringify(tracks);
 						if (cmd === 'player_library') return JSON.stringify(movies);
 						if (cmd === 'player_discover') return JSON.stringify([]);
@@ -404,6 +621,50 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 		failures++;
 	}
 	await page.close();
+}
+
+// 4. What the first four blocks could not see: the faces the OSD actually wears,
+//    the size of every target a finger can land on, and whether the keyboard
+//    still belongs to the person typing.
+//
+// These were added on 15 September 2026, after a phase-0 campaign measured the
+// shipped build and found the OSD declaring no `@font-face` at all (titles in
+// Georgia, labels in Segoe UI), its timeline 24px tall against section 9's
+// 44x44 floor, and the window-level shortcuts swallowing `k` and Space while
+// somebody typed a server address and switching the interface to English on `l`.
+// Every one of them is a defect the previous four blocks passed straight
+// through, which is the whole argument for this block existing.
+{
+	// (a) the faces - measured in the library state, the one a person sees first
+	//     and the one whose title carries the display face.
+	const page = await openPage({ width: 1280, height: 720 });
+	await assertFontsLoaded(page, 'the connect screen');
+	await page.fill('#theia-address', 'http://127.0.0.1:8395');
+	await page.click('button[type=submit]');
+	await page.waitForTimeout(600);
+	await assertFontsLoaded(page, 'the library panel');
+	await assertHitTargets(page, 'the library panel');
+	await page.close();
+
+	// (b) typing an address is typing, not a keyboard shortcut. The address is
+	//     deliberately made of the letters the OSD has claimed: k, l, f, m, c.
+	const typing = await openPage({ width: 1280, height: 720 });
+	await assertTypingIsNotShortcuts(typing, 'http://127.0.0.1:8395/klfmc');
+	await typing.close();
+
+	// (c) the three-second hide, on both sides of the boundary, and its pause
+	//     exception.
+	const idle = await openPage({ width: 1280, height: 720 }, { frame: true });
+	await showFilm(idle);
+	await assertIdleTiming(idle);
+	await idle.close();
+
+	// (d) one press, one command.
+	const presses = await openPage({ width: 1280, height: 720 }, { frame: true });
+	await presses.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
+	await presses.waitForTimeout(300);
+	await assertOnePressOneCommand(presses);
+	await presses.close();
 }
 
 await browser.close();
