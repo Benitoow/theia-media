@@ -1,0 +1,20 @@
+{
+	"name": "theia-player-osd",
+	"private": true,
+	"version": "0.3.3",
+	"type": "module",
+	"description": "Theia's native player OSD. Shares the web interface's tokens and components.",
+	"scripts": {
+		"dev": "vite",
+		"check:i18n": "node scripts/check-locales.mjs",
+		"check:render": "node scripts/render-check.mjs",
+		"prebuild": "npm run check:i18n",
+		"build": "vite build",
+		"preview": "vite preview"
+	},
+	"devDependencies": {
+		"@sveltejs/vite-plugin-svelte": "^5.1.1",
+		"svelte": "^5.56.8",
+		"vite": "^6.4.3"
+	}
+}

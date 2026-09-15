@@ -1,0 +1,29 @@
+[package]
+name = "theia-player"
+description = "Theia's native player: a Tauri window with an OSD over libmpv."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+libloading = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# No TLS: the server is plain HTTP on the local network and inside the WireGuard
+# tunnel, so linking a TLS stack would add a dependency nothing uses.
+ureq = { version = "2", default-features = false, features = ["json"] }
+mdns-sd = "0.13"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_System_LibraryLoader",
+    "Win32_UI_WindowsAndMessaging",
+] }

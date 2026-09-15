@@ -20,6 +20,24 @@ node_modules/
 web/.svelte-kit/
 web/build/
 
+# Rust and the native player.
+#
+# A Tauri debug build is measured in gigabytes and belongs to the machine that
+# made it. The release bundle is produced in CI from a clean tree, so none of it
+# is committed. Cargo.lock is deliberately *not* ignored: this is a binary, and
+# the lockfile is what makes a build reproducible.
+/player/target/
+/player/theia-player/gen/
+
+# The OSD bundle. tauri-build embeds it, so it has to exist before `cargo
+# build` -- but it is generated, by `npm install && npm run build` in player/ui/.
+# The player's README states that order.
+/player/ui/dist/
+
+# What the OSD render check draws. Pictures of a run, not sources: they belong
+# to the run that produced them, exactly like the browser guard's traces.
+/player/ui/render-check/
+
 # Local runtime data
 *.db
 *.db-shm

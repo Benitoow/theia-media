@@ -1,0 +1,622 @@
+/* The OSD's stylesheet.
+   The tokens are imported from the web application, never copied: one identity,
+   one source of truth (docs/design-system.md, and the extraction note in
+   web/src/lib/tokens.css). What follows is only what a player adds to that
+   language -- a transparent stage, floating furniture, and scrims instead of a
+   wash, as section 6b describes. */
+
+@import '../../../web/src/lib/tokens.css';
+
+html,
+body {
+	margin: 0;
+	height: 100%;
+	overflow: hidden;
+	/* The film is the background. Nothing in this document may paint over it
+	   except the furniture the viewer asked for. */
+	background: transparent !important;
+	color: var(--color-bone);
+	font-family: var(--font-ui);
+	user-select: none;
+	cursor: none;
+}
+
+/* The document itself is the click-through layer: the OSD below carries
+   pointer-events: none except on its controls, so a click on the picture lands
+   on the page. There is nothing to draw here - only a rule worth stating. */
+
+.osd {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	opacity: 1;
+	transition: opacity var(--duration-base) var(--ease-cine);
+}
+.osd[data-idle='true'] {
+	opacity: 0;
+}
+.osd[data-idle='true'] button {
+	pointer-events: none;
+}
+
+.scrim-top,
+.scrim-bottom {
+	position: absolute;
+	left: 0;
+	right: 0;
+	pointer-events: none;
+}
+.scrim-top {
+	top: 0;
+	height: 8rem;
+	background: linear-gradient(rgb(var(--channel-ink) / 0.82), transparent);
+}
+.scrim-bottom {
+	bottom: 0;
+	height: 11rem;
+	background: linear-gradient(transparent, rgb(var(--channel-ink) / 0.92));
+}
+
+.title-bar {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 4rem;
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 0 var(--page-gutter);
+	pointer-events: auto;
+}
+
+.film-title {
+	font-family: var(--font-display);
+	font-size: var(--text-title);
+	letter-spacing: var(--text-title--letter-spacing);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.controls {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	padding: 0 var(--page-gutter) 1.25rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	pointer-events: auto;
+}
+
+/* Three things on one rule: played in gold, buffered in bone, the rest quiet.
+   The painted bar is 4px because that reads as precision; the hit area is 24px
+   because a thumb is not a mouse. */
+.scrub {
+	position: relative;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+}
+.scrub-track {
+	position: relative;
+	height: 4px;
+	width: 100%;
+	border-radius: 999px;
+	background: rgb(var(--channel-bone) / 0.22);
+	overflow: hidden;
+}
+.scrub-played {
+	position: absolute;
+	inset: 0 auto 0 0;
+	background: var(--color-accent);
+}
+.scrub-buffered {
+	position: absolute;
+	inset: 0 auto 0 0;
+	background: rgb(var(--channel-bone) / 0.34);
+}
+.scrub-thumb {
+	position: absolute;
+	top: 50%;
+	width: 0.875rem;
+	height: 0.875rem;
+	margin-left: -0.4375rem;
+	border-radius: 999px;
+	background: var(--color-accent-bright);
+	transform: translateY(-50%);
+	opacity: 0;
+	transition: opacity var(--duration-fast) var(--ease-cine);
+}
+.scrub:hover .scrub-thumb,
+.scrub:focus-visible .scrub-thumb {
+	opacity: 1;
+}
+
+.row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+button.control {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 3.25rem;
+	min-height: 3.25rem;
+	padding: 0;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--color-bone);
+	cursor: pointer;
+	transition: background var(--duration-fast) var(--ease-cine);
+}
+button.control:hover {
+	background: rgb(var(--channel-bone) / 0.12);
+}
+button.control:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+}
+/* The one filled control is play, in bone rather than gold: the accent still
+   has to mean "look here" everywhere else on the screen. */
+button.control--primary {
+	background: var(--color-bone);
+	color: var(--color-ink);
+}
+button.control--primary:hover {
+	background: #fff;
+}
+
+.clock {
+	display: flex;
+	align-items: baseline;
+	gap: 0.5rem;
+	font-variant-numeric: tabular-nums;
+	font-size: var(--text-small);
+	margin-left: 0.5rem;
+}
+.clock .elapsed {
+	color: var(--color-bone);
+	font-weight: 500;
+}
+.clock .total {
+	color: var(--color-muted);
+}
+/* A drawn hairline rather than a slash glyph, which sits at the wrong optical
+   height at this size. */
+.clock .rule {
+	width: 1px;
+	height: 0.875rem;
+	background: rgb(var(--channel-bone) / 0.28);
+	align-self: center;
+}
+
+.spacer {
+	flex: 1;
+}
+
+/* A notice is information, not decoration: parchment on a raised surface, the
+   accent left alone. */
+.notice {
+	position: absolute;
+	left: var(--page-gutter);
+	bottom: 8.5rem;
+	max-width: 32rem;
+	padding: 0.75rem 1rem;
+	border: 1px solid var(--color-line);
+	border-radius: var(--radius-nested);
+	background: var(--glass-strong);
+	color: var(--color-parchment);
+	font-size: var(--text-small);
+	line-height: var(--text-small--line-height);
+}
+.notice .label {
+	display: block;
+	margin-bottom: 0.25rem;
+	color: var(--color-muted);
+}
+
+.label {
+	font-family: var(--font-label);
+	font-size: var(--text-label);
+	letter-spacing: var(--text-label--letter-spacing);
+	text-transform: uppercase;
+	color: var(--color-muted);
+}
+
+/* --- the library ---------------------------------------------------------
+   Chrome, so it carries the editorial treatment: a display title, tracked
+   labels, and the accent spent on nothing but focus and the one action. The
+   film rows stay dense and plain, because a list is read, not admired. */
+
+.library {
+	position: absolute;
+	inset: 4rem 0 11rem 0;
+	padding: 0 var(--page-gutter);
+	overflow-y: auto;
+	pointer-events: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.library-title {
+	font-family: var(--font-display);
+	font-size: var(--text-display);
+	line-height: var(--text-display--line-height);
+	letter-spacing: var(--text-display--letter-spacing);
+	margin: 0;
+}
+
+.connect {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	max-width: 46rem;
+}
+
+.connect-row {
+	display: flex;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.connect input {
+	flex: 1;
+	min-width: 14rem;
+	min-height: var(--target-min);
+	padding: 0 1rem;
+	border-radius: 999px;
+	border: 1px solid var(--color-line);
+	background: var(--glass-strong);
+	color: var(--color-bone);
+	font-family: var(--font-ui);
+	font-size: var(--text-body);
+}
+.connect input:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+}
+
+button.action {
+	min-height: var(--target-min);
+	padding: 0 1.25rem;
+	border-radius: 999px;
+	border: 1px solid var(--color-accent);
+	background: var(--color-accent);
+	color: var(--color-ink);
+	font-family: var(--font-label);
+	font-size: var(--text-label);
+	letter-spacing: var(--text-label--letter-spacing);
+	text-transform: uppercase;
+	cursor: pointer;
+}
+button.action--quiet {
+	border-color: var(--color-line);
+	background: transparent;
+	color: var(--color-parchment);
+}
+button.action:disabled {
+	opacity: 0.55;
+	cursor: default;
+}
+button.action:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+}
+
+.servers {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	align-items: flex-start;
+}
+
+.hint {
+	margin: 0;
+	max-width: 38rem;
+	color: var(--color-parchment);
+	font-size: var(--text-small);
+	line-height: var(--text-small--line-height);
+}
+.hint--error {
+	color: var(--color-error);
+}
+
+/* --- the library grid ----------------------------------------------------
+   Section 6, which is the most important constraint in the design system: the
+   chrome rules do not govern the card grid, because cover art arrives with its
+   own typography and colour and the grid's job is density and speed. 6.1 fixes
+   the frame, 6.2 the behaviour, and both are copied here rather than
+   reinvented - an OSD that drew films as a list of names would be a second
+   identity for the one thing this product is.
+
+   The grid floor is 12rem, not the 22rem this used to carry: that figure came
+   from a text row's comfortable measure, and a card is a picture. Below 36rem
+   it is two fixed columns, as 6.1 requires - `auto-fill` against a 12rem
+   minimum resolves to exactly one column at 390px, and one card per row is a
+   screen and a half of library at a time. */
+.films {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: clamp(0.9rem, 1.6vw, 1.5rem);
+	grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+}
+
+@media (max-width: 36rem) {
+	.films {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.film {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.4rem;
+	width: 100%;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--color-bone);
+	text-align: left;
+	cursor: pointer;
+}
+
+/* The frame. 16/9 on every card, artwork covering it, `--radius-card` - the
+   second of the interface's two ways of rounding, for anything you look at
+   rather than press. The hairline is 1px in every state, including the
+   transparent ones, so gaining the gold border on hover never reflows the card
+   by a pixel. */
+.film-art {
+	position: relative;
+	display: block;
+	width: 100%;
+	aspect-ratio: 16 / 9;
+	overflow: hidden;
+	border: 1px solid rgb(var(--channel-bone) / 0.06);
+	border-radius: var(--radius-card);
+	background: var(--color-surface);
+	box-shadow: 0 1px 2px rgb(var(--channel-ink) / 0.4);
+	transition:
+		border-color var(--duration-fast) var(--ease-cine),
+		box-shadow var(--duration-fast) var(--ease-cine),
+		transform var(--duration-base) var(--ease-cine);
+}
+.film-art img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+/* A poster in a landscape frame is *contained*, never cropped to fill: a 2:3
+   image cropped to 16/9 loses its title off the top and bottom (6.1). */
+.film-art img.film-art--poster {
+	object-fit: contain;
+}
+.film-art-title {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	padding: 0.75rem;
+	font-size: var(--text-small);
+	line-height: var(--text-small--line-height);
+	color: var(--color-parchment);
+}
+
+/* On hover and on keyboard focus the frame lifts, scales and draws the mark.
+   Radial rather than a bottom-up gradient, because the title sits *under* the
+   card: weighting the bottom would darken artwork to protect text that is not
+   there. Suppressed entirely on touch pointers, where a hover state would hide
+   the affordance from the device most likely to be holding it (6.2). */
+.film-mark {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 0;
+	color: var(--color-bone);
+	background: radial-gradient(circle at 50% 50%, rgb(var(--channel-ink) / 0.55), transparent 70%);
+	transition: opacity var(--duration-fast) var(--ease-cine);
+}
+@media (hover: hover) {
+	.film:hover .film-art,
+	.film:focus-visible .film-art {
+		border-color: var(--color-accent);
+		box-shadow: 0 12px 28px rgb(var(--channel-ink) / 0.55);
+		transform: translateY(-0.5rem) scale(1.015);
+	}
+	.film:hover .film-mark,
+	.film:focus-visible .film-mark {
+		opacity: 1;
+	}
+}
+/* Focus is navigation state, not card chrome: a one-pixel border alone
+   disappears from a sofa, so the global 2px ring stays (6.2). */
+.film:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+	border-radius: var(--radius-card);
+}
+
+/* The grid's one exemption from 6.2's rules, and it is information rather than
+   decoration: a 3px gold rule across the bottom of a part-watched card. Drawn
+   only for films actually part-watched - never at zero, never on a finished
+   film. */
+.film-watched {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	height: 3px;
+	background: var(--color-accent);
+}
+
+/* Card titles are the UI face at reading size, never the display serif: this is
+   still the small register, not a card-specific heading (6.2). */
+.film-name {
+	font-size: var(--text-small);
+	line-height: var(--text-small--line-height);
+}
+.film-legend {
+	display: flex;
+	gap: 0.4rem;
+}
+
+/* --- the track menu ------------------------------------------------------
+   Section 6b: a popover, not a panel. It is a child of its own button, so it
+   is anchored by construction; positioned against the frame it read as a slab
+   that happened to appear. */
+
+.menu-anchor {
+	position: relative;
+	display: inline-flex;
+}
+
+.track-menu {
+	position: absolute;
+	right: 0;
+	bottom: calc(100% + 0.5rem);
+	width: 21rem;
+	max-height: 22rem;
+	overflow-y: auto;
+	padding: 0.75rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	border: 1px solid var(--color-line);
+	border-radius: var(--radius-panel);
+	background: var(--glass-strong);
+	/* Held at one value and never animated: a backdrop blur reads back
+	   everything behind it, and transitioning one asks for that work on every
+	   frame (design system section 8). */
+	backdrop-filter: blur(20px);
+	pointer-events: auto;
+	text-align: left;
+}
+
+.track-menu .label {
+	margin: 0.5rem 0 0.25rem;
+}
+.track-menu .label:first-child {
+	margin-top: 0;
+}
+
+.track {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	width: 100%;
+	min-height: 2.75rem;
+	padding: 0.4rem 0.5rem;
+	border: 0;
+	border-radius: var(--radius-nested);
+	background: transparent;
+	color: var(--color-bone);
+	text-align: left;
+	cursor: pointer;
+}
+.track:hover {
+	background: rgb(var(--channel-bone) / 0.08);
+}
+.track:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: -2px;
+}
+
+/* The tick's column is reserved whether or not a tick is drawn, so choosing a
+   track never shuffles the labels sideways. */
+.tick {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.25rem;
+	flex: none;
+	color: var(--color-accent);
+}
+
+.track-text {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+	min-width: 0;
+}
+.track-primary {
+	font-size: var(--text-small);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Below 30rem, a panel aligned to a button 60px from the right edge starts off
+   the left of a phone screen, so it pins to the frame instead (section 6b). */
+@media (max-width: 30rem) {
+	.track-menu {
+		position: fixed;
+		left: 1rem;
+		right: 1rem;
+		width: auto;
+		bottom: 7.5rem;
+	}
+}
+
+/* A phone is not a narrow desktop.
+   Section 6b forbids the row to wrap - a control bar that reflows moves the play
+   button out from under a thumb mid-press - so at 390px the row has to fit or
+   something has to go. It did not fit: measured at 390px it ran to 636px and
+   painted a third of itself past the right edge.
+
+   What goes is what the device already does better, which is 6b's own test:
+   - the volume, because a phone has hardware keys;
+   - the language chip, which the web application keeps in its settings rather
+     than in its player bar;
+   - the codec badge, which is a diagnostic and not a control;
+   - the ten-second pair, because on a touch screen the scrub bar is the seek
+     instrument and a skip button is a remote's affordance - the same reason
+     the remote keeps one and the phone does not need one.
+
+   Everything else stays at its 3.25rem floor, and the clock keeps both numbers
+   (6b): dropping the skips rather than the total is what pays for it. The
+   arithmetic is worth writing down, because six targets are 312px of a 342px
+   content box and no arrangement of a two-number clock fits beside them. */
+@media (max-width: 30rem) {
+	.row {
+		gap: 0.25rem;
+	}
+	/* `button.` on the front is load-bearing, not decoration: `button.control`
+	   above is one element and one class, so a bare `.control--mute` would lose
+	   the tie whatever the source order. Written without it first, and the three
+	   controls stayed exactly where they were. */
+	button.control--skip,
+	button.control--mute,
+	button.control--desktop,
+	span.audio-mode {
+		display: none;
+	}
+}
+
+/* Design system section 8: every animation is wrapped in a reduced-motion
+   guard, and an entrance needs a fill mode so collapsing it cannot blank the
+   page. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		animation-delay: 0ms !important;
+		transition-duration: 0.01ms !important;
+	}
+}
