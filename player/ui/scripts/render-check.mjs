@@ -1010,6 +1010,104 @@ async function assertLanguages(page, url) {
 	}
 }
 
+// A failure is a sentence in the viewer's language, never a code and never
+// silence.
+//
+// Decision 25 on a second interface: Rust sends codes, the catalogue owns every
+// word. The fallback in `t()` is `?? key`, which means a sentence missing from a
+// catalogue shows the key itself - "connectionFailed" in the middle of a French
+// screen. That is exactly the shape of fault decision 25 was written for, so the
+// check asserts the visible text is a sentence and not an identifier, in both
+// languages.
+//
+// The three failures a person can actually meet are covered: a server that
+// answers nothing, a library that cannot be read, and an engine that will not
+// start. The audio fallback is a notice rather than an error - nothing is broken
+// - and is asserted as one.
+async function assertFailuresAreReadable(page) {
+	const readHint = () =>
+		page.evaluate(() => {
+			const el = document.querySelector('.hint');
+			if (!el) return null;
+			const box = el.getBoundingClientRect();
+			const cs = getComputedStyle(el);
+			return {
+				text: el.textContent.trim(),
+				isError: el.classList.contains('hint--error'),
+				colour: cs.color,
+				visible: box.height > 0 && cs.visibility !== 'hidden' && Number(cs.opacity) > 0.05,
+			};
+		});
+	const readNotice = () =>
+		page.evaluate(() => {
+			const el = document.querySelector('.notice');
+			if (!el) return null;
+			const box = el.getBoundingClientRect();
+			return { text: el.textContent.trim(), role: el.getAttribute('role'), visible: box.height > 0 };
+		});
+	const looksLikeAnIdentifier = (text) => /^[a-z]+[A-Z][A-Za-z]*$/.test(text) || text === '';
+
+	// (a) a server that answers nothing.
+	await page.evaluate(() => {
+		window.__connectFails = true;
+	});
+	await page.fill('#theia-address', 'http://127.0.0.1:9');
+	await page.click('button[type=submit]');
+	await page.waitForTimeout(600);
+	const failed = await readHint();
+	if (!failed) {
+		console.error('a failed connection left no message on screen at all');
+		failures++;
+	} else {
+		if (!failed.isError) {
+			console.error('a failed connection is shown without the error treatment');
+			failures++;
+		}
+		if (looksLikeAnIdentifier(failed.text)) {
+			console.error(`a failed connection shows the key itself instead of a sentence: "${failed.text}"`);
+			failures++;
+		}
+		if (!failed.visible) {
+			console.error('a failed connection message is not visible on screen');
+			failures++;
+		}
+	}
+
+	// (b) the same failure in English: parity is not enough, the sentence has to
+	//     exist.
+	await page.click('.control--language');
+	await page.waitForTimeout(300);
+	await page.click('button[type=submit]');
+	await page.waitForTimeout(600);
+	const failedEn = await readHint();
+	if (!failedEn || looksLikeAnIdentifier(failedEn.text) || failedEn.text === failed?.text) {
+		console.error(`the failure message did not change with the language: "${failedEn?.text}"`);
+		failures++;
+	}
+	await page.click('.control--language');
+	await page.waitForTimeout(300);
+
+	// (c) the engine cannot start: a notice, because the player is still there.
+	await page.evaluate(() =>
+		window.__handlers['player-event']?.({ payload: JSON.stringify({ kind: 'engine', state: 'unavailable' }) })
+	);
+	await page.waitForTimeout(250);
+	const engineNotice = await readNotice();
+	if (!engineNotice) {
+		console.error('an unavailable engine said nothing at all');
+		failures++;
+	} else {
+		if (engineNotice.role !== 'status') {
+			console.error(`the engine notice is not announced (role=${engineNotice.role})`);
+			failures++;
+		}
+		if (looksLikeAnIdentifier(engineNotice.text)) {
+			console.error(`the engine notice shows a key instead of a sentence: "${engineNotice.text}"`);
+			failures++;
+		}
+	}
+}
+
 // What the OSD is drawn over.
 //
 // The page is transparent on purpose - the film is the background - and the real
@@ -1072,13 +1170,18 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 						if (cmd === 'player_tracks') return JSON.stringify(tracks);
 						if (cmd === 'player_library') return JSON.stringify(movies);
 						if (cmd === 'player_discover') return JSON.stringify(discovered);
-						if (cmd === 'player_connect')
+						if (cmd === 'player_connect') {
+							// A failure has to be reachable on demand: the sentences a
+							// person reads when something is wrong are as much a part of
+							// the interface as the ones they read when it works.
+							if (window.__connectFails) throw new Error('the mock was told to fail');
 							return JSON.stringify({
 								url: 'http://127.0.0.1:8395',
 								health: { status: 'ok', version: 'dev', uptime_seconds: 12 },
 								profile: 1,
 								profiles: [{ id: 1, name: '', is_default: true }],
 							});
+						}
 						return '{}';
 					},
 				},
@@ -1390,6 +1493,11 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	const languages = await openPage({ width: 1280, height: 720 });
 	await assertLanguages(languages, URL);
 	await languages.close();
+
+	// (m) what a person reads when something goes wrong, in both languages.
+	const failuresPage = await openPage({ width: 1280, height: 720 });
+	await assertFailuresAreReadable(failuresPage);
+	await failuresPage.close();
 }
 
 await browser.close();

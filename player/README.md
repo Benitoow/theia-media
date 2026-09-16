@@ -127,6 +127,14 @@ fresh load with English stored drew every sentence in English and left the
 document claiming to be French, which is what a screen reader and the browser's
 own hyphenation read.
 
+Failures are asserted too, because the sentences a person reads when something is
+wrong are as much of the interface as the ones they read when it works. A server
+that answers nothing, an engine that will not start and the audio fallback each
+have to say something - in the active language, announced rather than decorative,
+and never the catalogue key itself. The fallback in `t()` is `?? key`, so a
+sentence missing from a catalogue shows `connectionFailed` in the middle of a
+French screen; the check refuses an identifier, in both languages.
+
 ## Running
 
 ```bash
@@ -167,6 +175,13 @@ Windows 11, AMD Radeon 890M, mpv `v0.41.0-1049-g0b7ed670f`:
 - the engine loads through FFI and reports its version;
 - HEVC Main 10 in Matroska decodes with `d3d11va` and renders through
   `vo=gpu-next` on a D3D11 context, flip model, 10-bit swapchain;
+- **a 60-second playback was measured rather than watched**, on 16 September
+  2026, with a 180-second H.264 fixture and the debug build: the position
+  advanced from 3.6 s to 63.8 s across six samples, `ao=wasapi` on the
+  passthrough path, `hwdec=d3d11va`, `vo=gpu-next`, **3.59 seconds of CPU over
+  the whole minute** - about 6% of one core, which is what hardware decoding is
+  for - a working set that never moved off 189 MB, no line on stderr, and a
+  window close that ended the process on its own;
 - the OSD's WebView sits above mpv's surface with no z-order forcing;
 - the film advances to the end and stops there (`keep-open`);
 - the player connects to a real server, lists its library, resolves a film to
