@@ -913,6 +913,103 @@ async function assertClock(page) {
 	}
 }
 
+// The two languages, changed while the film plays and remembered afterwards.
+//
+// Decision 25 applied to a second interface: Rust sends codes, the catalogue owns
+// every sentence. What is asserted here is that the choice is live - no reload -
+// that `document.lang` follows it, which is what tells a screen reader and the
+// browser's own hyphenation what they are reading, and that the choice survives a
+// restart, because a player that forgets it every time is a player somebody has
+// to correct every time.
+//
+// French is the default and English ships complete; `check:i18n` guards parity,
+// and this guards that either catalogue is actually reachable.
+async function assertLanguages(page, url) {
+	const readingOf = () =>
+		page.evaluate(() => ({
+			htmlLang: document.documentElement.lang,
+			title: document.querySelector('.library-title')?.textContent?.trim() ?? null,
+			addressLabel: document.querySelector('label[for="theia-address"]')?.textContent?.trim() ?? null,
+			connect: document.querySelector('button[type=submit]')?.textContent?.trim() ?? null,
+			chip: document.querySelector('.control--language .label')?.textContent?.trim() ?? null,
+			stored: (() => {
+				try {
+					return localStorage.getItem('theia.player.language');
+				} catch {
+					return 'unavailable';
+				}
+			})(),
+		}));
+
+	const fr = await readingOf();
+	if (fr.htmlLang !== 'fr') {
+		console.error(`the OSD starts in "${fr.htmlLang}" instead of French, which is the default`);
+		failures++;
+	}
+	if (fr.chip !== 'FR') {
+		console.error(`the language chip reads "${fr.chip}" in French, expected "FR"`);
+		failures++;
+	}
+
+	// The switch itself, from the header control, with no reload.
+	await page.click('.control--language');
+	await page.waitForTimeout(300);
+	const en = await readingOf();
+	if (en.htmlLang !== 'en') {
+		console.error(`switching to English left document.lang at "${en.htmlLang}"`);
+		failures++;
+	}
+	if (en.title === fr.title) {
+		console.error(`the visible copy did not change with the language: still "${en.title}"`);
+		failures++;
+	}
+	if (en.chip !== 'EN') {
+		console.error(`the language chip reads "${en.chip}" after switching, expected "EN"`);
+		failures++;
+	}
+	if (en.stored !== 'en') {
+		console.error(`the chosen language was not stored (localStorage holds "${en.stored}"), so it will not survive a restart`);
+		failures++;
+	}
+	if (!en.title || !en.connect || !en.addressLabel) {
+		console.error('a sentence is missing in English: the catalogue is not complete on screen');
+		failures++;
+	}
+
+	// And back, so the default is reachable in both directions.
+	await page.click('.control--language');
+	await page.waitForTimeout(300);
+	const back = await readingOf();
+	if (back.htmlLang !== 'fr' || back.title !== fr.title) {
+		console.error(`switching back to French did not restore it: lang=${back.htmlLang} title="${back.title}"`);
+		failures++;
+	}
+
+	// A restart is the page loading again with a choice already stored. It is a
+	// reload and not a new browser context: a context has its own empty storage,
+	// and the first version of this asked a brand-new context to remember
+	// something it had never been told. The reload happens while the interface is
+	// French and the store says English, so only reading the store at startup can
+	// produce an English page.
+	await page.evaluate(() => {
+		localStorage.setItem('theia.player.language', 'en');
+	});
+	await page.reload({ waitUntil: 'networkidle' });
+	await page.waitForTimeout(400);
+	const restarted = await page.evaluate(() => ({
+		htmlLang: document.documentElement.lang,
+		title: document.querySelector('.library-title')?.textContent?.trim() ?? null,
+	}));
+	if (restarted.htmlLang !== 'en') {
+		console.error(`the stored language was not honoured on a fresh load: document.lang is "${restarted.htmlLang}"`);
+		failures++;
+	}
+	if (!restarted.title || restarted.title === fr.title) {
+		console.error(`a fresh load with English stored still draws French: "${restarted.title}"`);
+		failures++;
+	}
+}
+
 // What the OSD is drawn over.
 //
 // The page is transparent on purpose - the film is the background - and the real
@@ -1288,6 +1385,11 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	await clock.waitForTimeout(300);
 	await assertClock(clock);
 	await clock.close();
+
+	// (l) the two languages, live and remembered.
+	const languages = await openPage({ width: 1280, height: 720 });
+	await assertLanguages(languages, URL);
+	await languages.close();
 }
 
 await browser.close();

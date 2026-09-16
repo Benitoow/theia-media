@@ -111,13 +111,21 @@ responder refuses an IPv6 multicast bind and answers nothing, so what is checked
 is the OSD's behaviour given an answer, not that an answer arrives. A real server
 on a real network is the other half, and it is not claimed.
 
-**This block is deliberately red while the defects it was written for are still
-open.** It was added in phase 1 and left failing on purpose: a check that is
-written green against the code it is meant to catch proves nothing. The failures
-it reports today are the phase-0 findings, and each one goes green in the unit
-that fixes it - the pointer with the cursor work, the faces and the keyboard with
-the OSD pass, the timeline with the target rule. A run is read by counting
-failures, not by looking for the word "passed".
+**That block was deliberately red while the defects it was written for were
+open.** It was added in phase 1 and left failing on purpose: a check written green
+against the code it is meant to catch proves nothing. Each finding went green in
+the unit that fixed it - the pointer with the cursor work, the faces and the
+keyboard with the OSD pass, the timeline with the target rule - and the run is
+green today. A run is still read by counting failures, not by looking for the
+word "passed".
+
+The languages are asserted as well: the chip switches French and English live,
+the catalogue's copy changes with it, the choice is stored and honoured on the
+next load, and `document.documentElement.lang` follows the active language from
+the first paint. That last one was a real defect until 16 September 2026 - a
+fresh load with English stored drew every sentence in English and left the
+document claiming to be French, which is what a screen reader and the browser's
+own hyphenation read.
 
 ## Running
 

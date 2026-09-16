@@ -363,8 +363,24 @@
 		} catch {
 			// Storage disabled: the choice lasts for the session, which is fine.
 		}
-		document.documentElement.lang = lang;
 	}
+
+	// The document says which language it is in, and it says so from the first
+	// paint - not only when somebody presses the chip.
+	//
+	// Measured on 16 September 2026: with English stored, a fresh load drew the
+	// English catalogue and left `document.documentElement.lang` at "fr". Every
+	// sentence on screen was English and the document claimed to be French, which
+	// is what a screen reader and the browser's own hyphenation read. The
+	// attribute was only ever set inside `switchLanguage`, so the default and the
+	// stored choice never reached it.
+	//
+	// Design system section 9 asks for `<html lang>`, visible copy, accessible
+	// names and locale-sensitive formatters to follow the active language
+	// immediately. This is the one of those four that was not wired up.
+	$effect(() => {
+		if (typeof document !== 'undefined') document.documentElement.lang = lang;
+	});
 
 	// Where a key press landed decides what it means.
 	//
