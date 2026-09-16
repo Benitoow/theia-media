@@ -59,11 +59,12 @@ would read.
 
 | # | Class | Gesture | Timing | Expected |
 |---|---|---|---|---|
-| G1 | Manual | Open the player with no server running, so the connect screen is up. Move the pointer across the window without clicking. | immediately | **The pointer is visible and moves.** Today the stylesheet sets `cursor: none` on `html, body` unconditionally, so this is the first gesture expected to fail. |
+| G1 | Manual | Open the player with no server running, so the connect screen is up. Move the pointer across the window without clicking. | immediately | **The pointer is visible and moves.** |
 | G2 | Manual | Rest the pointer on the address field, then on each of the visible buttons. | immediately | The pointer is an I-beam over the field and a hand over every button. |
 | G3 | Manual | Start a film, let the furniture hide, then move the pointer. | within 0.5 s | The pointer and the furniture come back together — one sign of life, one result. |
 | G4 | Manual | With the furniture hidden, click once on the picture. | immediately | Playback toggles **once**; the pointer reappears with the furniture. |
 | G5 | Manual | Pause the film, then leave the pointer still for 5 s. | 5 s | The pointer stays visible. A paused player with an invisible pointer is a player nobody can restart. |
+| G5b | Manual | Play a film long enough that it does not reach its end, move the pointer once, then leave it still and watch for 30 s. | 30 s | **The pointer stays hidden for the whole idle period.** Measured on 16 September 2026 and **not achieved**: the native hide is called with the right arguments — traced in the player's own stderr — and the pointer was reported hidden during the idle window, but it does not stay hidden. Traces show hide and restore cycling, and `GetCursorInfo` read "showing" in 19 samples out of 20. The mechanism works; its persistence does not, and the cause is not established. |
 
 ### The furniture's three seconds
 
@@ -81,8 +82,8 @@ would read.
 
 | # | Class | Gesture | Timing | Expected |
 |---|---|---|---|---|
-| G13 | Simulation + Manual | Put the caret in the address field and type `http://127.0.0.1:8395/klfmc` at reading speed. | — | **The field holds exactly that string.** Measured today: it holds `…/lfmc` — `k` was swallowed — and the interface switched to English on `l`. |
-| G14 | Simulation | Type the same address and watch the commands the OSD issues. | — | No playback command is issued while typing. Measured today: `player_toggle_pause` and `player_set_muted`. |
+| G13 | Simulation + Manual | Put the caret in the address field and type `http://127.0.0.1:8395/klfmc` at reading speed. | — | **The field holds exactly that string.** Fixed on 15 September 2026, when it held `…/lfmc` — `k` was swallowed — and the interface switched to English on `l`. Asserted by the render check. |
+| G14 | Simulation | Type the same address and watch the commands the OSD issues. | — | No playback command is issued while typing. Fixed at the same time, when typing issued `player_toggle_pause` and `player_set_muted`. Asserted. |
 | G15 | Simulation | With a film playing, click each visible control exactly once. | 150 ms between | **One press, one command.** No control issues two state changes. |
 | G16 | Simulation + Manual | Open the track menu, then press the arrow keys. | — | The menu stays open and **no seek happens** — the film does not move. |
 | G17 | Simulation + Manual | Press `Échap` with the menu open, then again. | — | First press closes the menu and returns focus to the button that opened it (D2 = A: the menu closes before the player does). Second closes the player. |
@@ -93,7 +94,7 @@ would read.
 | # | Class | Gesture | Timing | Expected |
 |---|---|---|---|---|
 | G19 | Automation | Start with **no** server on the network. Press "Chercher un serveur". | within 10 s | An empty list and the sentence that says so. No error, no spinner left running. |
-| G20 | Automation | Start with **exactly one** server announcing itself. Press "Chercher un serveur". | within 10 s | It connects. **Expected to fail today**: `findServers()` sets `busy = true` and then calls `connect()`, which returns immediately when `busy` is true — so the one-server case does nothing at all. |
+| G20 | Automation | Start with **exactly one** server announcing itself. Press "Chercher un serveur". | within 10 s | It connects. |
 | G21 | Automation | Start with **two or more** servers. Press "Chercher un serveur". | within 10 s | Both are listed with a name and an address, and choosing one connects. |
 | G22 | Automation | Type an address that answers nothing (a closed port, a wrong host). | within 10 s | A catalogued sentence, in the active language, that says the connection failed. No raw syscall name, no English in the French interface. |
 
@@ -110,6 +111,7 @@ announcement, and says so.
 | G23 | Manual | Press the full-screen control. | — | The window fills the screen, and the picture with it. |
 | G24 | Manual | In full screen, press `Échap`. | — | Leaves full screen **first**; the player stays open. A second `Échap` closes it. This sequence is the one D2 asked the maintainer to validate. |
 | G25 | Manual | Play a film and look at the OSD over moving picture. | 30 s | The film is visible through the OSD, the scrims carry the text, and **the desktop never shows through** — the failure `force-window` was added for. |
+| G25b | Manual | Let a film play to its end and wait. | 30 s | Something says the film is over and offers a way on. Measured on 16 September 2026: the engine keeps the last frame with `keep-open` and reports `pause: true`, so the furniture stays up and the picture freezes. Whether that is the intended end-of-film state, or a dead end that needs a sentence or a return to the library, is a decision rather than a defect, and it is recorded here as one. |
 | G26 | Manual | With a film playing, look at the whole frame at 550×350 CSS. | — | Nothing is cut off: the whole control row and the clock are inside the window. At 320×180 CSS the row is measured to overflow today, cutting the close control. |
 
 ### What this machine cannot decide

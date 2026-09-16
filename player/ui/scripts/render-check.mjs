@@ -814,6 +814,105 @@ async function assertIdleSurvivesStatusFrames(page) {
 	}
 }
 
+// The clock, which has to hold two numbers and survive a film longer than an hour.
+//
+// Section 6b: elapsed in `--bone` at 500, total in `--muted`, separated by a
+// drawn hairline rather than a slash glyph. The three states a real library
+// produces are checked together, because the one that breaks is the long film:
+// a 2h20 film is where a clock that pads wrong shows "2:8:03" or drops the hour.
+async function assertClock(page) {
+	const read = () =>
+		page.evaluate(() => {
+			const box = document.querySelector('.clock');
+			if (!box) return null;
+			const rule = box.querySelector('.rule');
+			return {
+				elapsed: box.querySelector('.elapsed')?.textContent.trim() ?? null,
+				total: box.querySelector('.total')?.textContent.trim() ?? null,
+				elapsedWeight: box.querySelector('.elapsed') ? getComputedStyle(box.querySelector('.elapsed')).fontWeight : null,
+				elapsedColour: box.querySelector('.elapsed') ? getComputedStyle(box.querySelector('.elapsed')).color : null,
+				totalColour: box.querySelector('.total') ? getComputedStyle(box.querySelector('.total')).color : null,
+				separatorDrawn: !!rule && rule.getBoundingClientRect().width > 0,
+				separatorIsGlyph: rule ? rule.textContent.trim().length > 0 : null,
+			};
+		});
+
+	const cases = [
+		{ name: 'a film of 10 minutes', pos: 128.4, duration: 600, elapsed: '2:08', total: '10:00' },
+		{ name: 'a film of 2h20', pos: 5138.4, duration: 8408, elapsed: '1:25:38', total: '2:20:08' },
+		{ name: 'a film whose length is unknown', pos: 12, duration: 0, elapsed: '0:12', total: '--:--' },
+	];
+
+	for (const item of cases) {
+		await page.evaluate(
+			({ pos, duration }) =>
+				window.__handlers['player-status']?.({ payload: JSON.stringify({ ...window.__status, pos, duration }) }),
+			{ pos: item.pos, duration: item.duration }
+		);
+		await page.waitForTimeout(250);
+		const clock = await read();
+		if (!clock) {
+			console.error(`${item.name}: the clock is not on screen`);
+			failures++;
+			continue;
+		}
+		if (clock.elapsed !== item.elapsed) {
+			console.error(`${item.name}: elapsed reads "${clock.elapsed}", expected "${item.elapsed}"`);
+			failures++;
+		}
+		if (clock.total !== item.total) {
+			console.error(`${item.name}: total reads "${clock.total}", expected "${item.total}"`);
+			failures++;
+		}
+		if (!clock.separatorDrawn) {
+			console.error(`${item.name}: the separator between the two numbers is not drawn`);
+			failures++;
+		}
+		if (clock.separatorIsGlyph) {
+			console.error(`${item.name}: the separator is a typed glyph rather than a drawn rule`);
+			failures++;
+		}
+		if (item.duration > 0 && clock.elapsedColour === clock.totalColour) {
+			console.error(`${item.name}: both numbers are the same colour, so nothing says which is which`);
+			failures++;
+		}
+	}
+
+	// A long title must be truncated rather than push the controls around.
+	const longTitle = 'Un titre de film remarquablement long qui doit etre tronque proprement sans rien pousser';
+	await page.evaluate(
+		(title) => window.__handlers['player-status']?.({ payload: JSON.stringify({ ...window.__status, title }) }),
+		longTitle
+	);
+	await page.waitForTimeout(250);
+	const title = await page.evaluate(() => {
+		const el = document.querySelector('.film-title');
+		if (!el) return null;
+		const box = el.getBoundingClientRect();
+		return {
+			scrollWidth: el.scrollWidth,
+			clientWidth: el.clientWidth,
+			right: box.right,
+			innerWidth: window.innerWidth,
+			overflow: getComputedStyle(el).textOverflow,
+			wraps: getComputedStyle(el).whiteSpace,
+		};
+	});
+	if (!title) {
+		console.error('the film title is not on screen, so a long one cannot be judged');
+		failures++;
+	} else {
+		if (title.overflow !== 'ellipsis' || title.wraps !== 'nowrap') {
+			console.error(`a long title is not truncated: text-overflow=${title.overflow} white-space=${title.wraps}`);
+			failures++;
+		}
+		if (title.right > title.innerWidth + 0.5) {
+			console.error(`a long title runs past the window: right=${title.right} in ${title.innerWidth}px`);
+			failures++;
+		}
+	}
+}
+
 // What the OSD is drawn over.
 //
 // The page is transparent on purpose - the film is the background - and the real
@@ -1181,6 +1280,14 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	await showFilm(cadence);
 	await assertIdleSurvivesStatusFrames(cadence);
 	await cadence.close();
+
+	// (k) the clock, on a short film, a two-hour film and an unknown one, plus a
+	//     title long enough to need truncating.
+	const clock = await openPage({ width: 1280, height: 720 }, { frame: true });
+	await clock.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
+	await clock.waitForTimeout(300);
+	await assertClock(clock);
+	await clock.close();
 }
 
 await browser.close();
