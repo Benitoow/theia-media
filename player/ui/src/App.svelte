@@ -75,16 +75,6 @@
 	const listen = window.__TAURI__?.event?.listen ?? (async () => () => {});
 	const currentWindow = window.__TAURI__?.window?.getCurrentWindow?.();
 
-	/** Hide or restore the pointer at the window level. See player_set_cursor. */
-	async function setNativeCursor(hidden) {
-		try {
-			await invoke('player_set_cursor', { hidden });
-		} catch {
-			// A page without the native command - the browser harness - keeps the
-			// CSS rule and loses nothing else.
-		}
-	}
-
 	let idleTimer;
 	const IDLE_MS = 3000;
 	// `overControls` stops the timer from hiding furniture the pointer is resting
@@ -177,7 +167,7 @@
 		}
 	});
 
-	// The pointer, and why the rule is not on this element.
+	// The pointer is the stylesheet's business, and only the stylesheet's.
 	//
 	// `cursor: none` on `.osd[data-idle='true']` was the first shape of this, and it
 	// never reached the pointer. Measured on 16 September 2026 with the furniture
@@ -185,15 +175,15 @@
 	// element Chromium actually resolved the cursor against was `body`, which
 	// answered `auto` - because `.osd` carries `pointer-events: none`, so the
 	// document is what is under the mouse. A rule on an element that cannot be
-	// hovered is a rule that never applies.
+	// hovered is a rule that never applies. The stylesheet now puts it on the root,
+	// where the resolution ends up.
 	//
-	// The stylesheet puts it on the root instead, where the resolution ends up, and
-	// the native hide stays as the backstop it has always been. Both are stated in
-	// osd.css beside the rule.
-	$effect(() => {
-		setNativeCursor(idle);
-		return () => setNativeCursor(false);
-	});
+	// There used to be a native half as well - `player_set_cursor`, which called
+	// `ShowCursor` - and decision 125 removed it. What it did was move a
+	// thread-local counter, which `GetCursorInfo` contradicted in 59 samples out of
+	// 59 while the counter read -1, and it left a mechanism able to hide the
+	// pointer on a desktop it did not restore it to. The measured work is done by
+	// the rule in osd.css.
 
 	$effect(() => {
 		const pending = [];

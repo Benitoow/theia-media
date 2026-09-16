@@ -55,7 +55,19 @@ body {
    `!important` is load-bearing: `cursor: pointer` is set on every control further
    down this file, and three buttons are children of `.osd`. They are inert while
    idle anyway - `pointer-events: none` is set on them two rules down - so no
-   cursor a person can reach is taken away. */
+   cursor a person can reach is taken away.
+
+   **This is the only mechanism, since decision 125.** There used to be a native
+   half - `ShowCursor` behind a Tauri command - and it was removed on measurement
+   rather than preference: moving the rule here took the pointer from 2 hidden
+   samples of 37 to 15 of 48, while the native counter read -1 in a run where
+   Windows reported the pointer showing in 59 samples of 59. A mechanism that
+   contradicts the instrument, and that can hide a pointer on a desktop it does not
+   restore it to, is worse than the flicker it was there to remove. What remains
+   above the CSS - the pointer coming back on a four-to-five-second cadence - is a
+   WebView2 behaviour this repository cannot reach: the window that decides the
+   cursor belongs to the WebView2 process, and a process cannot subclass another
+   process's window. */
 html:has(.osd[data-idle='true']) body,
 html:has(.osd[data-idle='true']) {
 	cursor: none !important;

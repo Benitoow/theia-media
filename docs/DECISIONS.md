@@ -4077,6 +4077,55 @@ are all present, which stops "it fits" from being satisfied by hiding the bar;
 and the clock draws neither the total nor the orphaned hairline while keeping its
 elapsed time.
 
+## 125. The native pointer hide is removed, and the CSS rule is the whole mechanism
+
+**Decided 17 September 2026**, on the maintainer's instruction, after the
+`WM_SETCURSOR` approach of the previous decision was built, installed and measured.
+
+**What the hook did.** A window procedure was subclassed on the Tauri window to
+answer `WM_SETCURSOR` with `SetCursor(NULL)` while the furniture was idle. It
+installed correctly. It then received **fifteen messages during a whole playback
+and not one `WM_SETCURSOR`**. A recursive hook over the entire child tree found no
+children at all - `EnumChildWindows` from inside the process returns nothing -
+and a `WM_PARENTNOTIFY` handler for windows created later changed nothing.
+
+**Why it cannot work, which is the finding worth keeping.** Enumerated from
+outside the process, the tree is a chain of children: `Tauri Window` ->
+`WebView2` -> `Chrome_WidgetWin_0` -> and the window the pointer is actually over
+is **`Chrome_WidgetWin_1`, owned by the WebView2 process**, not by the player.
+A process cannot subclass another process's window, and `WM_SETCURSOR` is not
+propagated up to the root window on this arrangement. The option was sound Win32
+and wrong for this host.
+
+**What the measurements actually say.** The same probe, run repeatedly on the
+same build with the pointer parked and never moved:
+
+| Build | Pointer hidden |
+|---|---|
+| native `ShowCursor` + rule on `.osd` | 2 of 37, then 19 of 20 in an earlier run |
+| native `ShowCursor` + rule on the root | 15 of 48 - **not reproduced** |
+| `WM_SETCURSOR` hook + rule on the root | 4 of 48 |
+| **rule on the root only** (this decision) | **5, 4 and 6 of 48** across three runs |
+
+Three consecutive runs of the final build agree with each other, which is what
+makes them a measurement rather than a reading; the 15-of-48 figure that
+motivated the previous step did not survive repetition.
+
+**So the native half goes.** It moved a thread-local counter that the instrument
+contradicted - `ShowCursor(FALSE)` returned -1 in a run where `GetCursorInfo`
+reported the pointer showing in 59 samples of 59 - and it could hide a pointer on
+a desktop it did not restore it to, which is a worse fault than the flicker it
+existed to remove. The Tauri command, the counter, the unpacking of the pointer's
+position, the OSD's call and the assertion that watched for it are all gone.
+
+**What remains, stated plainly.** The rule lives on the root element, where
+Chromium resolves the cursor, and the render check asserts the element under the
+pointer resolves to `none` while the furniture is idle - an assertion proven to
+fail on the old shape. In the real WebView2 window the pointer is nevertheless
+hidden in only about a tenth of the samples: **the platform redraws a pointer over
+a page that asks for none, and this repository cannot reach the window that
+decides it.** That is recorded as an open fault, not as a fix.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
