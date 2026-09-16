@@ -480,6 +480,35 @@ async function assertCursorFollowsFurniture(page) {
 		failures++;
 	}
 
+	// A click on the picture is how a person pauses, and it also focuses whatever
+	// the browser decides to focus. If that counts as "focus inside the
+	// furniture", the bar then stays on screen for the rest of the film: section
+	// 6b hides it after three seconds of no sign of life, and a click is one
+	// gesture, not a permanent one. Measured on the real window on 16 September
+	// 2026: after a click, the furniture was still up eleven seconds later.
+	//
+	// The click is made with the mouse rather than through a locator: the OSD
+	// layer carries `pointer-events: none` on purpose, so a real press lands on
+	// the page behind it and arrives at the window handler - which is exactly what
+	// happens to a person.
+	await page.mouse.click(400, 200);
+	const afterClick = await page.evaluate(() => {
+		const el = document.activeElement;
+		const inFurniture = !!el?.closest?.('.controls, .title-bar, .notice');
+		return {
+			active: el ? el.tagName.toLowerCase() + (el.getAttribute('class') ? '.' + el.getAttribute('class').trim().split(/\s+/).join('.') : '') : null,
+			inFurniture,
+		};
+	});
+	await page.waitForTimeout(3800);
+	const clickIdle = await page.getAttribute('.osd', 'data-idle');
+	if (clickIdle !== 'true') {
+		console.error(
+			`the furniture stayed up after a click on the picture: activeElement=${afterClick.active} inFurniture=${afterClick.inFurniture}, data-idle=${clickIdle}`
+		);
+		failures++;
+	}
+
 	// (e) paused: the pointer stays, exactly as the furniture does.
 	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify({ ...status, pause: true }) }), STATUS);
 	await page.waitForTimeout(3500);
