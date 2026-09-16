@@ -408,10 +408,23 @@ async function assertOnePressOneCommand(page) {
 // unconditionally, so a viewer who had not started a film yet had no pointer at
 // all, and the library panel was unusable with a mouse.
 //
-// A simulation can only answer the CSS half: it reads the computed cursor of the
-// element under the pointer. Whether WebView2 honours it over a real film is the
-// maintainer's look, and it is recorded as unverified until somebody takes it.
+// A simulation answers the CSS half: whether the element a person is actually
+// pointing at resolves to `none`, which is the only form of the question that can
+// be answered without a WebView2. Whether the platform draws a pointer on top of
+// that anyway is a Windows question, and a probe measures it outside this file:
+// after the rule moved to the root, the pointer was read hidden in 15 samples of
+// 48 over a real film, against 2 of 37 before. The flicker that remains is
+// recorded in docs/v3.3.md as an open fault rather than described as solved.
 async function assertCursorFollowsFurniture(page) {
+	// The pointer sits in the middle of the picture for the whole of this check,
+	// because that is where a viewer leaves it. `underPointer` is the question a
+	// person experiences - the cursor of the element the browser would resolve -
+	// and it is the one the original version of this assertion never asked.
+	//
+	// Measured on 16 September 2026: `.osd` declared `cursor: none` and answered
+	// `none` from getComputedStyle while the element under the pointer was `body`,
+	// which answered `auto`. A rule on an element with `pointer-events: none` never
+	// applies, and the check below passed anyway because it asked `html || osd`.
 	const settled = async () => {
 		await page.waitForTimeout(250);
 		return page.evaluate(() => {
@@ -420,6 +433,12 @@ async function assertCursorFollowsFurniture(page) {
 				const el = document.querySelector(sel);
 				return el ? getComputedStyle(el).cursor : null;
 			};
+			const under = document.elementFromPoint(640, 360);
+			const describe = (el) =>
+				el
+					? el.tagName.toLowerCase() +
+						(el.getAttribute('class') ? '.' + el.getAttribute('class').trim().split(/\s+/).join('.') : '')
+					: null;
 			return {
 				idle,
 				html: resolve('html'),
@@ -428,6 +447,8 @@ async function assertCursorFollowsFurniture(page) {
 				primary: resolve('button.control--primary'),
 				scrub: resolve('.scrub'),
 				field: resolve('#theia-address'),
+				underPointer: describe(under),
+				underPointerCursor: under ? getComputedStyle(under).cursor : null,
 			};
 		});
 	};
@@ -437,6 +458,12 @@ async function assertCursorFollowsFurniture(page) {
 	if (connect.html === 'none' || connect.body === 'none' || connect.osd === 'none') {
 		console.error(
 			`the connect screen hides the pointer (html=${connect.html} body=${connect.body} osd=${connect.osd}) - with no film playing, the field and the buttons are the only way forward`
+		);
+		failures++;
+	}
+	if (connect.underPointerCursor === 'none') {
+		console.error(
+			`the connect screen resolves the pointer to none over ${connect.underPointer} - that is the cursor a person actually sees`
 		);
 		failures++;
 	}
@@ -467,6 +494,13 @@ async function assertCursorFollowsFurniture(page) {
 	} else if (hidden.html !== 'none' && hidden.osd !== 'none') {
 		console.error(`the furniture hid but the pointer stayed (html=${hidden.html} osd=${hidden.osd})`);
 		failures++;
+	} else if (hidden.underPointerCursor !== 'none') {
+		// The half that was missing. The furniture hid, some element declared
+		// `none`, and the element a person is actually pointing at did not.
+		console.error(
+			`the furniture hid but the element under the pointer (${hidden.underPointer}) resolves "${hidden.underPointerCursor}" - declared none: html=${hidden.html} body=${hidden.body} osd=${hidden.osd}`
+		);
+		failures++;
 	}
 
 	// (d) and a sign of life brings both back.
@@ -475,8 +509,8 @@ async function assertCursorFollowsFurniture(page) {
 	if (awake.idle === 'true') {
 		console.error('the furniture did not come back on a pointer move');
 		failures++;
-	} else if (awake.html === 'none' && awake.osd === 'none') {
-		console.error('the furniture came back but the pointer is still hidden');
+	} else if (awake.underPointerCursor === 'none') {
+		console.error(`the furniture came back but the pointer is still hidden over ${awake.underPointer}`);
 		failures++;
 	}
 

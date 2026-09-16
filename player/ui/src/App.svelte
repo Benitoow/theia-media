@@ -177,13 +177,19 @@
 		}
 	});
 
-	// The CSS rule `cursor: none` is not enough on WebView2, and that was measured
-	// rather than assumed: with the furniture demonstrably gone and the film the
-	// only thing on screen, Windows reported the pointer showing in 15 samples out
-	// of 15. Chromium honours the rule; WebView2 draws its own pointer over the
-	// video surface. The window therefore hides it natively, and asks for it back
-	// the moment the furniture returns - and on teardown, so a player that closes
-	// while hidden cannot leave a desktop without a pointer.
+	// The pointer, and why the rule is not on this element.
+	//
+	// `cursor: none` on `.osd[data-idle='true']` was the first shape of this, and it
+	// never reached the pointer. Measured on 16 September 2026 with the furniture
+	// demonstrably gone: `.osd` answered `none` from `getComputedStyle` while the
+	// element Chromium actually resolved the cursor against was `body`, which
+	// answered `auto` - because `.osd` carries `pointer-events: none`, so the
+	// document is what is under the mouse. A rule on an element that cannot be
+	// hovered is a rule that never applies.
+	//
+	// The stylesheet puts it on the root instead, where the resolution ends up, and
+	// the native hide stays as the backstop it has always been. Both are stated in
+	// osd.css beside the rule.
 	$effect(() => {
 		setNativeCursor(idle);
 		return () => setNativeCursor(false);

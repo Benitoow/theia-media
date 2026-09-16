@@ -37,9 +37,28 @@ body {
    document: the furniture hides after three seconds of nothing "and takes the
    cursor with it". So the pointer goes when, and only when, the furniture has
    deliberately gone - which `data-idle` already states on this element. Every
-   control inside the OSD sets its own cursor and is unaffected. */
-.osd[data-idle='true'] {
-	cursor: none;
+   control inside the OSD sets its own cursor and is unaffected.
+
+   **And it has to be declared on the root, not here - measured 16 September 2026.**
+   `.osd` carries `pointer-events: none`, so with the furniture hidden the element
+   Chromium resolves the cursor against is `body`, not `.osd`. The rule below was
+   on `.osd`, which answered `none` from `getComputedStyle` the whole time while
+   the pointer stayed visible in 35 of 37 samples taken from Windows: a cursor rule
+   on an element that cannot be hovered is a rule that never applies. The chain,
+   read at 1280x720 with a film playing, was `body` -> `html`, both `auto`.
+
+   So the rule goes where the resolution ends up. It is scoped by `data-idle` and
+   not by a class of its own, so nothing new can disagree with the element that
+   already states the state - and it is written as `html:has(...)` because this
+   stylesheet is a plain `.css` file imported by the component, so Svelte's
+   selector scoping does not touch it and `:global()` would not compile here.
+   `!important` is load-bearing: `cursor: pointer` is set on every control further
+   down this file, and three buttons are children of `.osd`. They are inert while
+   idle anyway - `pointer-events: none` is set on them two rules down - so no
+   cursor a person can reach is taken away. */
+html:has(.osd[data-idle='true']) body,
+html:has(.osd[data-idle='true']) {
+	cursor: none !important;
 }
 
 /* The document itself is the click-through layer: the OSD below carries
