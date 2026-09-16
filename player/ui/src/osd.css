@@ -670,7 +670,9 @@ button.action:focus-visible {
      and not a control.
 
    Everything else stays at its 3.25rem floor, and the clock keeps both numbers
-   (6b): dropping the skips rather than the total is what pays for it.
+   (6b) down to 30rem: dropping the skips rather than the total is what pays for
+   it. Below 30rem the total goes too - see decision 124 and the rule at the end
+   of this file, where the arithmetic that forced it is written down.
 
    44rem is 704px, just above the 684px the measurement asks for, and the
    threshold is written here rather than guessed: at 30rem - the phone rule -
@@ -699,6 +701,30 @@ button.action:focus-visible {
    beside them. */
 @media (max-width: 30rem) {
 	button.control--desktop {
+		display: none;
+	}
+}
+
+/* At the window's own minimum, the clock gives up its second number.
+   ---------------------------------------------------------------------------
+   Measured at 320x180 - which is `minWidth: 640` and `minHeight: 360` in the
+   window's own units, halved by the 200% scaling this machine runs at - the row
+   asks for 314px of a 272px content box: play 52, clock 106, tracks 52,
+   fullscreen 52, close 52. The five controls are at their 3.25rem floor already,
+   and section 6b forbids both wrapping the row and dropping a target, so the only
+   thing left to give is information.
+
+   The elapsed time is what a viewer looks at while watching; the total is what
+   they looked at before pressing play, and it is still there at every width above
+   this one. Dropping the hairline with it is not a detail: a divider with nothing
+   on one side of it is a rule drawn for no reason.
+
+   The threshold is the same 30rem as the phone rule rather than a number invented
+   for it - the two are the same statement, that below this width the bar is
+   showing what it can and no more. */
+@media (max-width: 30rem) {
+	.clock .rule,
+	.clock .total {
 		display: none;
 	}
 }

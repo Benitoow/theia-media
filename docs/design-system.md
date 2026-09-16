@@ -588,6 +588,16 @@ a player.
   `--muted`, separated by a drawn hairline rather than a slash glyph, which sits
   at the wrong optical height at this size. A third number for the remaining
   time is the other two subtracted, and it was printed in `--faint`.
+- **Amended 16 September 2026 (decision 124): below 30rem it shows one.** The
+  window's declared minimum of `minWidth: 640` is **320x180 CSS pixels** at this
+  machine's 200% scaling, and there the row asks for **314px of a 272px content
+  box** - play 52, clock 106, tracks 52, fullscreen 52, close 52, with every
+  control already at the 3.25rem floor. Section 6b forbids wrapping the row and
+  section 9 forbids dropping a target under 44px, so what gives is information:
+  the total and its hairline are not drawn below 30rem, and the elapsed time is.
+  The total is what somebody read before pressing play and it is present at every
+  width above this one. Measured at 320x180 with a film playing: nothing
+  overflows, four controls are visible, and the clock reads `2:08` alone.
 - **Audio and subtitles are a popover, not a panel.** It is a child of the
   button that opens it, so it is anchored by construction: `right: 0` against
   the button's own box rather than a measured offset from the frame. Positioned

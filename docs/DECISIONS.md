@@ -4040,6 +4040,43 @@ machine it runs on. One of those tests caught the registered command being
 written with Go's `%q`, which escapes every backslash and produces an uninstall
 button that cannot run.
 
+## 124. The clock gives up its total at the window's own minimum
+
+**Decided 16 September 2026**, on the maintainer's instruction, after the phase-0
+campaign measured the one remaining overflow in the native player.
+
+The measurement, because the decision is arithmetic and not taste. The window's
+declared minimum is `minWidth: 640` and `minHeight: 360` in the window's own
+units, which this machine's 200% scaling turns into **320x180 CSS pixels**. At
+that size the control row has a 272-pixel content box and asked for **314
+pixels**: play 52, clock 106, tracks 52, fullscreen 52, close 52. The five
+controls were already at the 3.25rem floor section 9 sets, and section 6b forbids
+two things at once - wrapping the row, and dropping a target or a number from the
+clock.
+
+**What gives is information, not a control.** Below 30rem the clock draws its
+elapsed time and not its total, and the hairline that separated them goes with it
+- a divider with nothing on one side of it is a rule drawn for no reason. The
+elapsed time is what a viewer watches by; the total is what they read before
+pressing play, and it is still there at every width above this one, including the
+390-pixel phone width the layout suite already covered.
+
+The alternatives were measured and rejected rather than dismissed: taking the
+gutter would have recovered about 42 pixels but put the row against the window
+edge, and shrinking the targets would have broken section 9's 44-pixel floor on
+the one window where a finger is least likely to be used anyway.
+
+**The threshold is the existing 30rem**, the same one that drops the language chip,
+because the two statements are the same statement: below this width the bar shows
+what it can and no more. It is not a number invented for this case.
+
+**Verified.** `npm run check:render` now draws 320x180 and asserts three things
+rather than one: nothing overflows, which is the assertion the earlier campaign
+could not make at this size; the bar, the play button and four visible controls
+are all present, which stops "it fits" from being satisfied by hiding the bar;
+and the clock draws neither the total nor the orphaned hairline while keeping its
+elapsed time.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

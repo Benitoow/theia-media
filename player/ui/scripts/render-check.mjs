@@ -1408,6 +1408,90 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	await page.close();
 }
 
+// 3b. The window's own minimum, which is the one width this campaign measured an
+//     overflow at and the one nobody had asserted.
+//
+// At 320x180 the row asked for 314px of a 272px content box, with the five
+// controls already at their 3.25rem floor and both clock numbers drawn. Section
+// 6b forbids wrapping the row and dropping a target, so the decision was that the
+// clock gives up its second number below 30rem: what a viewer watches by is the
+// elapsed time, and the total is what they read before pressing play - still
+// there at every width above this one.
+//
+// The assertion is written as three statements rather than one, because "it fits"
+// would also pass if the whole bar had been hidden: the bar is present, its five
+// controls are present, and only then does the clock read one number.
+{
+	const page = await openPage({ width: 320, height: 180 }, { frame: true });
+	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
+	await showFilm(page);
+	await page.waitForTimeout(300);
+	await page.screenshot({ path: join(OUT, '7-minimum-window.png') });
+
+	// (a) nothing sticks out. This is the assertion the earlier campaign could not
+	//     make at this size.
+	await assertFits(page, 'the minimum window, film playing');
+
+	// (b) the bar is really there - the play button is the one without which
+	//     nothing else matters.
+	const present = await page.evaluate(() => {
+		// `:visible` is a Playwright selector extension and does not exist inside
+		// page.evaluate, where this runs: the check is a measured box instead.
+		const visible = [...document.querySelectorAll('.row button.control')].filter((b) => {
+			const r = b.getBoundingClientRect();
+			return r.width > 0 && r.height > 0;
+		}).length;
+		return {
+			bar: !!document.querySelector('.controls'),
+			play: !!document.querySelector('button.control--primary'),
+			controls: visible,
+		};
+	});
+	if (!present.bar) {
+		console.error('the minimum window: the control bar is not drawn at all');
+		failures++;
+	}
+	if (!present.play) {
+		console.error('the minimum window: no play button, so the film cannot be started');
+		failures++;
+	}
+	if (present.controls !== 4) {
+		console.error(`the minimum window drew ${present.controls} visible controls, expected 4 (play, tracks, fullscreen, close)`);
+		failures++;
+	}
+
+	// (c) and the clock reads one number, with no orphaned hairline beside it.
+	const clock = await page.evaluate(() => {
+		const box = document.querySelector('.clock');
+		if (!box) return null;
+		const rule = box.querySelector('.rule');
+		const total = box.querySelector('.total');
+		return {
+			elapsed: box.querySelector('.elapsed')?.textContent.trim() ?? null,
+			totalDrawn: !!total && total.getBoundingClientRect().width > 0,
+			ruleDrawn: !!rule && rule.getBoundingClientRect().width > 0,
+		};
+	});
+	if (!clock) {
+		console.error('the minimum window: the clock is not on screen');
+		failures++;
+	} else {
+		if (clock.totalDrawn) {
+			console.error('the minimum window: the clock still draws its total, which is what overflowed');
+			failures++;
+		}
+		if (clock.ruleDrawn) {
+			console.error('the minimum window: the hairline is drawn with nothing on one side of it');
+			failures++;
+		}
+		if (!clock.elapsed) {
+			console.error('the minimum window: the clock lost its elapsed time as well');
+			failures++;
+		}
+	}
+	await page.close();
+}
+
 // 4. What the first four blocks could not see: the faces the OSD actually wears,
 //    the size of every target a finger can land on, and whether the keyboard
 //    still belongs to the person typing.
