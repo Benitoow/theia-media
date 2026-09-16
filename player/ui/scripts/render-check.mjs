@@ -719,6 +719,104 @@ async function assertMenuOwnsItsKeys(page) {
 	}
 }
 
+// Escape leaves fullscreen before it leaves the film, and the order is asserted.
+//
+// Measured on 17 September 2026 in the real window with `probes/fullscreen-escape.ps1`:
+// fullscreen 1440x900, one Escape, and the player was gone. The handler went
+// straight from "is the track menu open" to `close()`, so the one key every viewer
+// presses to leave fullscreen ended the film instead. Decision D2 asks for this
+// exact sequence to be proposed and validated.
+//
+// The state reaches the OSD through `tauri://resize`, which is the only signal this
+// Tauri version emits for a fullscreen change, so the simulation sends that event
+// the way the runtime does. Without it the check would be testing a state the
+// product never reaches.
+async function assertEscapeLeavesFullscreenFirst(page) {
+	const state = () =>
+		page.evaluate(() => ({
+			fullscreen: window.__fullscreen === true,
+			closed: window.__windowClosed === true,
+			calls: [...(window.__fullscreenCalls ?? [])],
+			menu: !!document.querySelector('.track-menu'),
+		}));
+
+	// (a) the product's own binding takes the window fullscreen.
+	await page.keyboard.press('f');
+	await page.evaluate(() => window.__handlers['tauri://resize']?.({ payload: null }));
+	await page.waitForTimeout(250);
+	let now = await state();
+	if (!now.fullscreen) {
+		console.error(`"f" did not take the window fullscreen: ${JSON.stringify(now)}`);
+		failures++;
+		return;
+	}
+
+	// (b) one Escape gives the window back and keeps the film.
+	await page.keyboard.press('Escape');
+	await page.evaluate(() => window.__handlers['tauri://resize']?.({ payload: null }));
+	await page.waitForTimeout(300);
+	now = await state();
+	if (now.closed) {
+		console.error('Escape in fullscreen closed the player instead of leaving fullscreen - this is the fault D2 names');
+		failures++;
+	}
+	if (now.fullscreen) {
+		console.error(`Escape did not leave fullscreen: ${JSON.stringify(now)}`);
+		failures++;
+	}
+
+	// (c) and the next Escape closes the player, so the sequence ends where a
+	//     viewer expects rather than leaving a window nothing can close.
+	await page.keyboard.press('Escape');
+	await page.waitForTimeout(300);
+	now = await state();
+	if (!now.closed) {
+		console.error(`the second Escape did not close the player: ${JSON.stringify(now)}`);
+		failures++;
+	}
+
+	// (d) fullscreen does not jump the queue: a menu the viewer opened is still the
+	//     first thing Escape undoes, and the window stays fullscreen while it does.
+	//     This is the order, not just the outcome - the first version of the rule
+	//     checked fullscreen first, and this assertion is what caught it.
+	await page.evaluate(() => {
+		window.__fullscreen = true;
+		window.__windowClosed = false;
+	});
+	await page.evaluate(() => window.__handlers['tauri://resize']?.({ payload: null }));
+	await page.waitForTimeout(200);
+	await page.locator('button[aria-haspopup=menu]').click();
+	await page.waitForTimeout(300);
+	await page.keyboard.press('Escape');
+	await page.waitForTimeout(300);
+	now = await state();
+	if (now.menu) {
+		console.error('Escape did not close the open track menu while fullscreen');
+		failures++;
+	}
+	if (now.closed) {
+		console.error('Escape closed the player while a track menu was open in fullscreen');
+		failures++;
+	}
+	if (!now.fullscreen) {
+		console.error('Escape left fullscreen while a track menu was open; the menu is the most recent thing opened');
+		failures++;
+	}
+
+	// (e) and once the menu is gone, the same key leaves fullscreen.
+	await page.keyboard.press('Escape');
+	await page.evaluate(() => window.__handlers['tauri://resize']?.({ payload: null }));
+	await page.waitForTimeout(300);
+	now = await state();
+	if (now.fullscreen || now.closed) {
+		console.error(`after the menu, Escape did not simply leave fullscreen: ${JSON.stringify(now)}`);
+		failures++;
+	}
+	await page.evaluate(() => {
+		window.__fullscreen = false;
+	});
+}
+
 // Nothing is loaded: the bar is not drawn, and the language is still reachable.
 //
 // Decision D1 (15 September 2026) chose to hide the control bar entirely until
@@ -1210,6 +1308,12 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 			// opinions. A failure that says only "the click did something" would
 			// send the next person hunting with a debugger.
 			window.__commands = [];
+			// The window's own state, so the Escape rule can be asserted rather than
+			// described: fullscreen is a real flag, `close()` leaves a trace, and
+			// every `setFullscreen` call is recorded.
+			window.__fullscreen = false;
+			window.__fullscreenCalls = [];
+			window.__windowClosed = false;
 			window.__TAURI__ = {
 				core: {
 					invoke: async (cmd, args) => {
@@ -1240,9 +1344,18 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 				},
 				window: {
 					getCurrentWindow: () => ({
-						close() {},
-						isFullscreen: async () => false,
-						setFullscreen: async () => {},
+						close() {
+							window.__windowClosed = true;
+						},
+						// A real state rather than a constant `false`, because the OSD
+						// now decides what Escape does from it: a mock that always
+						// answered false could not tell "Escape left fullscreen" from
+						// "Escape closed the player", which is the fault this asserts.
+						isFullscreen: async () => window.__fullscreen === true,
+						setFullscreen: async (value) => {
+							window.__fullscreen = value === true;
+							window.__fullscreenCalls.push(value === true);
+						},
 					}),
 				},
 			};
@@ -1629,6 +1742,16 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	const failuresPage = await openPage({ width: 1280, height: 720 });
 	await assertFailuresAreReadable(failuresPage);
 	await failuresPage.close();
+
+	// (n) Escape in fullscreen, which is what D2 asked to have proposed and
+	//     validated rather than assumed. A film is playing because the menu half of
+	//     the assertion needs something to open a menu about.
+	const escaping = await openPage({ width: 1280, height: 720 }, { frame: true });
+	await escaping.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
+	await showFilm(escaping);
+	await escaping.waitForTimeout(300);
+	await assertEscapeLeavesFullscreenFirst(escaping);
+	await escaping.close();
 }
 
 await browser.close();

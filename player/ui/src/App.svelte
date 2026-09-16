@@ -20,6 +20,9 @@
 	/** @type {string | null} */
 	let noticeKey = $state(null);
 	let idle = $state(false);
+	// Whether the window is fullscreen, so Escape can leave that state before it
+	// leaves the film. Kept from the resize event; see `leaveFullscreen`.
+	let fullscreen = $state(false);
 	let overControls = $state(false);
 
 	// The library panel. It is shown while nothing is playing, which is the
@@ -206,6 +209,31 @@
 		return () => pending.forEach((un) => un());
 	});
 
+	// The window tells us when it changed size, and a fullscreen change is a size
+	// change: entering takes the whole screen, leaving gives the old rectangle
+	// back. `isFullscreen` is then asked rather than assumed, so a viewer who left
+	// fullscreen with F11 or a window button is still tracked - which matters,
+	// because Escape must close the player for them and leave fullscreen for
+	// everybody else.
+	$effect(() => {
+		let unlisten = null;
+		let dropped = false;
+		listen('tauri://resize', async () => {
+			try {
+				fullscreen = await currentWindow.isFullscreen();
+			} catch {
+				// A window that cannot answer keeps the value it had.
+			}
+		}).then((un) => {
+			if (dropped) un();
+			else unlisten = un;
+		});
+		return () => {
+			dropped = true;
+			unlisten?.();
+		};
+	});
+
 	const seconds = $derived(Number(status.pos) || 0);
 	const duration = $derived(Number(status.duration) || 0);
 	const progress = $derived(duration > 0 ? Math.min(1, seconds / duration) : 0);
@@ -346,6 +374,34 @@
 		if (!currentWindow) return;
 		const isFull = await currentWindow.isFullscreen();
 		await currentWindow.setFullscreen(!isFull);
+		// Set rather than re-read: the call above has already answered, and asking
+		// the window again would be a second round trip for a value it just took.
+		fullscreen = !isFull;
+	}
+
+	// Escape leaves fullscreen before it leaves the film.
+	//
+	// A real fault, measured on 17 September 2026 with `probes/fullscreen-escape.ps1`
+	// against the real window: fullscreen 1440x900, one Escape, and the player was
+	// gone - `running=False`. The handler went straight from "is the track menu
+	// open" to `close()`, so the one key every viewer presses to leave fullscreen
+	// ended the film instead. Decision D2 asks for exactly this: "en plein ecran,
+	// proposer d'abord sa sortie et faire valider la sequence complete".
+	//
+	// The state is kept from `tauri://resize`, which is the only signal this version
+	// of Tauri emits for a fullscreen change - `onResized` is not exported by the
+	// global API the OSD uses, and the OSD's single dependency is `window.__TAURI__`.
+	// A window that cannot answer keeps the value it had and loses nothing: the
+	// check below is `if (fullscreen)`, so an unknown state means Escape closes the
+	// player, which is what it did before.
+	async function leaveFullscreen() {
+		if (!currentWindow) return;
+		try {
+			await currentWindow.setFullscreen(false);
+		} catch {
+			// A window without the call - the browser harness - has no fullscreen to
+			// leave, and the next Escape closes the player as it always did.
+		}
 	}
 
 	function close() {
@@ -428,13 +484,26 @@
 		} else if (key === 'c') {
 			toggleTrackMenu();
 		} else if (key === 'Escape') {
-			// The menu closes before the player does, so a viewer who opened it
-			// by accident does not lose the film with it - and focus goes back to
-			// the button that opened it, so the next press is not aimed at
-			// nothing. Measured before this: activeElement was the body.
+			// The menu first, then fullscreen, then the film - each press undoes the
+			// most recent thing the viewer opened, and only the last one closes the
+			// player. The menu closes before the player does so a viewer who opened
+			// it by accident does not lose the film with it, and focus goes back to
+			// the button that opened it, so the next press is not aimed at nothing.
+			// Measured before that: activeElement was the body.
+			//
+			// The menu is checked before fullscreen rather than after, and the reason
+			// is not taste: `fullscreen` is a copy kept from the resize event, and a
+			// viewer who left fullscreen with F11 a moment ago would have Escape
+			// swallowed by a stale `true` - once to "leave" a fullscreen they are
+			// already out of, and the menu would need a third press. Checking the
+			// menu first costs nothing and cannot be stale: it is the state of the
+			// DOM. The render check asserts this order, which is how the first
+			// version of it - fullscreen first - was caught.
 			if (trackMenuOpen) {
 				trackMenuOpen = false;
 				trackMenuAnchor?.focus();
+			} else if (fullscreen) {
+				leaveFullscreen();
 			} else {
 				close();
 			}

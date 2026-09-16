@@ -4126,6 +4126,57 @@ hidden in only about a tenth of the samples: **the platform redraws a pointer ov
 a page that asks for none, and this repository cannot reach the window that
 decides it.** That is recorded as an open fault, not as a fix.
 
+## 126. Escape leaves fullscreen before it leaves the film, and the menu before both
+
+**Decided 17 September 2026**, from a measurement the plan asked for and nobody had
+taken: decision D2 says "en plein écran, proposer d'abord sa sortie et faire
+valider la séquence complète". The windowed half had been verified - Escape closes
+the player - and the fullscreen half had not been driven at all.
+
+**The fault, measured.** `probes/fullscreen-escape.ps1` against the real window:
+1280x720 windowed, `f` takes it to 1440x900 - the whole panel - and **one Escape
+left `running=False`**. The player was gone. The handler went straight from "is the
+track menu open" to `close()`, so the key every viewer presses to leave fullscreen
+ended the film instead. On a television that is a lost film, and the position is
+only saved every few seconds.
+
+**The order is menu, then fullscreen, then film.** Each press undoes the most
+recent thing the viewer opened, and only the last one closes the player. The menu
+is checked **before** fullscreen, and that is not a style choice: `fullscreen` is a
+copy kept from the `tauri://resize` event, so a viewer who left fullscreen with
+F11 a moment earlier would have Escape swallowed by a stale `true` - one press to
+"leave" a fullscreen they are already out of, and the menu would need a third.
+The menu's state is the DOM's, and cannot be stale. The first version of this
+change checked fullscreen first, and the render check caught it: *"Escape did not
+close the open track menu while fullscreen"*.
+
+**Why `tauri://resize`.** A fullscreen change is a size change - entering takes the
+whole screen, leaving gives the old rectangle back - and `tauri://resize` is the
+only signal Tauri 2.11 emits for it: `onResized` is not exported by the
+`window.__TAURI__` global the OSD uses, and the OSD's single external dependency is
+that global. The listener then **asks** `isFullscreen()` rather than assuming, so a
+viewer who left fullscreen with F11 or a window button is still tracked. A window
+that cannot answer keeps the value it had, and the check is `else if (fullscreen)`,
+so an unknown state means Escape closes the player - what it did before.
+
+**Verified, before and after, same probe, same fixture, same machine:**
+
+| | before | after |
+|---|---|---|
+| 1280x720 windowed, `f` | 1440x900, whole panel | 1440x900, whole panel |
+| after one Escape | **player gone** (`running=False`) | **running, back to 1280x720** |
+| second Escape | not reachable | closes the player |
+| the film | unreadable - it was gone | `pos 0.58 -> 4.63`, `pause=false`, `d3d11va`/`gpu-next` |
+
+The picture taken after the first Escape shows the window back at 1280x720 with the
+fixture's own timecode at frame 262, so the film did not merely survive the process
+list - it kept playing.
+
+**The render check asserts the order**, in four steps, so this cannot come back:
+`f` takes the window fullscreen, one Escape leaves it and does not close, the next
+Escape closes, and with a menu open Escape closes the menu while leaving the window
+fullscreen.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
