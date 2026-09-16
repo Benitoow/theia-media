@@ -64,7 +64,7 @@ would read.
 | G3 | Manual | Start a film, let the furniture hide, then move the pointer. | within 0.5 s | The pointer and the furniture come back together — one sign of life, one result. |
 | G4 | Manual | With the furniture hidden, click once on the picture. | immediately | Playback toggles **once**; the pointer reappears with the furniture. |
 | G5 | Manual | Pause the film, then leave the pointer still for 5 s. | 5 s | The pointer stays visible. A paused player with an invisible pointer is a player nobody can restart. |
-| G5b | Manual | Play a film long enough that it does not reach its end, move the pointer once, then leave it still and watch for 30 s. | 30 s | **The pointer stays hidden for the whole idle period.** Measured on 16 September 2026 and **not achieved**: the native hide is called with the right arguments — traced in the player's own stderr — and the pointer was reported hidden during the idle window, but it does not stay hidden. Traces show hide and restore cycling, and `GetCursorInfo` read "showing" in 19 samples out of 20. The mechanism works; its persistence does not, and the cause is not established. |
+| G5b | Manual | Play a film long enough that it does not reach its end, move the pointer once, then leave it still and watch for 30 s. | 30 s | **The pointer stays hidden for the whole idle period.** Measured on 16 September 2026 and **not achieved.** The mechanism works: with the committed code, a 180 s film still playing, the window in the foreground and the pointer over the picture, `GetCursorInfo` reported the pointer hidden in the last samples of a six-second window. Over a longer window it blinks — in 49 samples across 20 s, four read hidden and forty-five read shown, in short runs rather than one long absence. So the hide is applied and something returns the pointer while the OSD is still idle. The traces show the native command called with the right arguments each time; the cause of the return is not established, and it is the one thing this protocol leaves open about the pointer. |
 
 ### The furniture's three seconds
 
@@ -77,6 +77,7 @@ would read.
 | G10 | Manual | Drag the scrub bar, hold still mid-drag for 5 s, then release. | 5 s during | Furniture up throughout the drag. |
 | G11 | Manual | Open the track menu, then wait 5 s without moving. | 5 s | Menu up. Nothing hides while a menu the viewer opened is on screen. |
 | G12 | Manual | Trigger the audio-fallback notice (a film whose bitstream the endpoint refuses), then wait. | 5 s | The notice stays long enough to read; it is not swept away by the idle timer. |
+| G12b | Simulation | Switch languages with the chip, then reload the page with the choice stored. | — | Copy changes live with no reload, the choice survives the reload, and `document.documentElement.lang` follows the active language from the first paint. Fixed on 16 September 2026, when a fresh load with English stored drew English and claimed `lang="fr"`. Asserted. |
 
 ### Keyboard and input
 
