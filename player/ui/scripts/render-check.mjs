@@ -488,6 +488,28 @@ async function assertCursorFollowsFurniture(page) {
 		console.error('the pointer is hidden while the film is paused, so nothing on screen can be aimed at');
 		failures++;
 	}
+
+	// The CSS half is all a browser can see, and on the real window it was not
+	// enough: WebView2 drew its own pointer over the video surface and ignored
+	// `cursor: none` - measured on 16 September 2026, with the furniture
+	// demonstrably gone and Windows still reporting the pointer drawn in 15
+	// samples out of 15. The window hides it natively through
+	// `player_set_cursor`, and what is asserted here is the OSD's half of that
+	// contract: the request is made when the furniture hides and unmade when it
+	// returns. Chromium cannot observe a Win32 cursor, so this is a weaker claim
+	// than "the pointer is hidden", and it is written down as one.
+	const asked = await page.evaluate(() => window.__cursorRequests ?? []);
+	const lastAsked = asked.length ? asked[asked.length - 1] : null;
+	if (lastAsked === true) {
+		console.error(
+			`the film is paused and the OSD is still asking for the pointer to be hidden: ${JSON.stringify(asked)}`
+		);
+		failures++;
+	}
+	if (!asked.includes(true)) {
+		console.error(`the furniture hid at some point and the pointer was never asked to hide: ${JSON.stringify(asked)}`);
+		failures++;
+	}
 }
 
 // Every state in which the furniture must stay, whatever the timer thinks.
@@ -842,10 +864,15 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 			// opinions. A failure that says only "the click did something" would
 			// send the next person hunting with a debugger.
 			window.__commands = [];
+			// The native cursor command is recorded too: the OSD's half of the
+			// pointer rule is "ask for it at the right moment", and that is all a
+			// browser can check about a Win32 cursor.
+			window.__cursorRequests = [];
 			window.__TAURI__ = {
 				core: {
-					invoke: async (cmd) => {
+					invoke: async (cmd, args) => {
 						window.__commands.push(cmd);
+						if (cmd === 'player_set_cursor') window.__cursorRequests.push(args?.hidden === true);
 						if (cmd === 'player_tracks') return JSON.stringify(tracks);
 						if (cmd === 'player_library') return JSON.stringify(movies);
 						if (cmd === 'player_discover') return JSON.stringify(discovered);

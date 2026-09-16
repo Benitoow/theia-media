@@ -75,9 +75,18 @@
 	const listen = window.__TAURI__?.event?.listen ?? (async () => () => {});
 	const currentWindow = window.__TAURI__?.window?.getCurrentWindow?.();
 
+	/** Hide or restore the pointer at the window level. See player_set_cursor. */
+	async function setNativeCursor(hidden) {
+		try {
+			await invoke('player_set_cursor', { hidden });
+		} catch {
+			// A page without the native command - the browser harness - keeps the
+			// CSS rule and loses nothing else.
+		}
+	}
+
 	let idleTimer;
 	const IDLE_MS = 3000;
-
 	// `overControls` stops the timer from hiding furniture the pointer is resting
 	// on. This is its sibling for the keyboard: hiding while the viewer has
 	// focus on a control leaves focus on something nobody can see, and the next
@@ -109,8 +118,9 @@
 	// One timer, and it is the idle window.
 	//
 	// `idleTimer` doubles as the "a window is already running" flag, and that is
-	// the whole fix for a defect no simulation had seen. The session sends a
-	// status frame about once a second; this function is called from the effect
+	// the whole fix for a defect no simulation had seen. The session emits a
+	// status frame every **500 ms** - measured in the player's own source, not
+	// assumed - and this function is called from the effect
 	// below, and it used to clear and re-arm on every one of those calls - so the
 	// three-second window restarted before it could ever expire and the furniture
 	// stayed on screen over the whole film. Seen on the real window at thirteen
@@ -165,6 +175,18 @@
 		} else {
 			wake();
 		}
+	});
+
+	// The CSS rule `cursor: none` is not enough on WebView2, and that was measured
+	// rather than assumed: with the furniture demonstrably gone and the film the
+	// only thing on screen, Windows reported the pointer showing in 15 samples out
+	// of 15. Chromium honours the rule; WebView2 draws its own pointer over the
+	// video surface. The window therefore hides it natively, and asks for it back
+	// the moment the furniture returns - and on teardown, so a player that closes
+	// while hidden cannot leave a desktop without a pointer.
+	$effect(() => {
+		setNativeCursor(idle);
+		return () => setNativeCursor(false);
 	});
 
 	$effect(() => {

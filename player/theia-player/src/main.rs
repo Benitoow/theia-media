@@ -205,6 +205,77 @@ impl Session {
 
 static SESSION: Mutex<Option<Session>> = Mutex::new(None);
 
+/// Whether this process has asked Windows to hide the pointer, so the request is
+/// never made twice without being undone.
+///
+/// `ShowCursor` is a counter, not a flag: hiding twice needs two shows, and a
+/// player that loses count leaves somebody with no pointer anywhere on their
+/// desktop. One boolean, checked before every call, is what keeps that from
+/// happening.
+static CURSOR_HIDDEN: Mutex<bool> = Mutex::new(false);
+
+/// Hides or restores the pointer, but only while it is over this window.
+///
+/// Why this exists at all: design system 6b says the furniture "takes the cursor
+/// with it" when it hides, and the OSD asks for that with `cursor: none`. On the
+/// real WebView2 window that rule does not reach the pointer - measured on
+/// 16 September 2026, with the furniture demonstrably gone and the film the only
+/// thing on screen, `GetCursorInfo` reported the pointer showing in 15 samples
+/// out of 15. Chromium honours the rule; WebView2 draws its own pointer over the
+/// video surface and does not.
+///
+/// The pointer is hidden only while it is inside the player's own monitor: the
+/// hide is global, and leaving somebody's whole desktop without a pointer because
+/// they moved the mouse off a film is a worse fault than the one being fixed.
+#[tauri::command]
+fn player_set_cursor(window: tauri::WebviewWindow, hidden: bool) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::Foundation::{POINT, RECT};
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            GetCursorPos, GetWindowRect, ShowCursor,
+        };
+
+        let hwnd = window.hwnd().map_err(|e| e.to_string())?.0 as *mut core::ffi::c_void;
+
+        let mut wanted = hidden;
+        if hidden {
+            let mut point = POINT { x: 0, y: 0 };
+            let mut rect = RECT { left: 0, top: 0, right: 0, bottom: 0 };
+            unsafe {
+                if GetCursorPos(&mut point) != 0 && GetWindowRect(hwnd, &mut rect) != 0 {
+                    let inside = point.x >= rect.left
+                        && point.x <= rect.right
+                        && point.y >= rect.top
+                        && point.y <= rect.bottom;
+                    // Moving the pointer out of the player must put it back: the
+                    // hide is process-wide, and a desktop with no pointer is a
+                    // worse fault than the one being fixed.
+                    if !inside {
+                        wanted = false;
+                    }
+                }
+            }
+        }
+
+        let mut current = CURSOR_HIDDEN.lock().unwrap();
+        if wanted == *current {
+            return Ok(());
+        }
+        unsafe {
+            // One call per transition, and this is the only place either
+            // direction happens, so the counter cannot drift.
+            ShowCursor(if wanted { 0 } else { 1 });
+        }
+        *current = wanted;
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = hidden;
+    }
+    Ok(())
+}
+
 /// The connected server, kept apart from the session because browsing a library
 /// must work even when the engine could not start: a player that shows nothing
 /// at all because a DLL is missing is worse than one that says so.
@@ -883,7 +954,8 @@ fn main() {
             player_connect,
             player_set_profile,
             player_library,
-            player_play
+            player_play,
+            player_set_cursor
         ])
         .setup(move |app| {
             let window = app.get_webview_window("main").expect("the main window");
