@@ -758,6 +758,40 @@ async function assertDiscovery(page, { expect }) {
 	}
 }
 
+// The real status arrives about once a second, and the furniture must still hide.
+//
+// This is the case the simulation could not see until it was made to imitate the
+// engine. The idle timer is re-armed whenever the session state changes, and the
+// session state is a fresh object on every status frame - so a status arriving
+// every second cleared the three-second timer before it could ever expire, and
+// the furniture stayed on screen over the whole film. Chromium with one injected
+// status frame could not reproduce it; the real player, watched for thirteen
+// seconds, showed the bar still up.
+//
+// The frames are sent on the engine's own cadence and the furniture is read after
+// more than the timeout has elapsed.
+async function assertIdleSurvivesStatusFrames(page) {
+	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
+	await page.mouse.move(640, 360);
+	// Five frames, one second apart - the cadence `--diagnostics` reports.
+	for (let i = 0; i < 5; i++) {
+		await page.waitForTimeout(1000);
+		await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), {
+			...STATUS,
+			pos: STATUS.pos + i + 1,
+		});
+	}
+	// The last frame was 0 s ago; the timer needs its three seconds from there.
+	await page.waitForTimeout(3500);
+	const idle = await page.getAttribute('.osd', 'data-idle');
+	if (idle !== 'true') {
+		console.error(
+			`a status frame every second kept the furniture up (data-idle=${idle}) - the idle timer is re-armed by every session frame instead of by a state change`
+		);
+		failures++;
+	}
+}
+
 // What the OSD is drawn over.
 //
 // The page is transparent on purpose - the film is the background - and the real
@@ -1113,6 +1147,13 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	const none = await openPage({ width: 1280, height: 720 });
 	await assertDiscovery(none, { expect: 'none' });
 	await none.close();
+
+	// (j) the cadence the real engine sends, which is what the earlier idle
+	//     assertions could not imitate with a single injected frame.
+	const cadence = await openPage({ width: 1280, height: 720 }, { frame: true });
+	await showFilm(cadence);
+	await assertIdleSurvivesStatusFrames(cadence);
+	await cadence.close();
 }
 
 await browser.close();

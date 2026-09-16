@@ -55,7 +55,7 @@
 	}
 
 	async function toggleTrackMenu() {
-		wake();
+		wakeFromStart();
 		trackMenuOpen = !trackMenuOpen;
 		if (trackMenuOpen) await refreshTracks();
 	}
@@ -100,19 +100,48 @@
 			// A keyboard user who has just pressed Tab is about to do something:
 			// the clock starts again rather than counting time they never spent
 			// idle.
-			if (event.detail === 0 || performance.now() - lastPointerDown > FOCUS_GRACE_MS) wake();
+			if (event.detail === 0 || performance.now() - lastPointerDown > FOCUS_GRACE_MS) wakeFromStart();
 		} else {
 			focusInFurniture = false;
 		}
 	}
 
+	// One timer, and it is the idle window.
+	//
+	// `idleTimer` doubles as the "a window is already running" flag, and that is
+	// the whole fix for a defect no simulation had seen. The session sends a
+	// status frame about once a second; this function is called from the effect
+	// below, and it used to clear and re-arm on every one of those calls - so the
+	// three-second window restarted before it could ever expire and the furniture
+	// stayed on screen over the whole film. Seen on the real window at thirteen
+	// seconds of playback, with the bar still up; then measured in the built OSD
+	// with a temporary counter, which read `wake=1001` in the first second and
+	// `data-idle` never leaving false.
+	//
+	// Returning early while a window is running makes this idempotent, and
+	// idempotence is what stops the effect feeding itself. A real sign of life
+	// goes through wakeFromStart, so its window starts again from that moment.
+	//
+	// The callback re-checks the state it was armed for. An armed timer outlives
+	// the state that justified it - a film reaching its end, a menu opening - and
+	// without this guard it hid the library panel a moment after the film
+	// stopped, which one of the checks caught the first time the timer was
+	// allowed to run at all.
 	function wake() {
+		if (idleTimer) return;
 		idle = false;
-		clearTimeout(idleTimer);
-		if (status.pause || !status.ready || !status.media) return;
 		idleTimer = setTimeout(() => {
+			idleTimer = null;
+			if (status.pause || !status.ready || !status.media || trackMenuOpen) return;
 			if (!overControls && !focusInFurniture) idle = true;
 		}, IDLE_MS);
+	}
+
+	/** Any sign of life: the window starts again, from now. */
+	function wakeFromStart() {
+		clearTimeout(idleTimer);
+		idleTimer = null;
+		wake();
 	}
 
 	// Re-armed on every state change, and never armed while paused, while the
@@ -122,10 +151,17 @@
 	// defect rather than a precaution: with nothing playing, the library panel is
 	// the screen, and the timer was taking it away three seconds after the viewer
 	// stopped moving the mouse. Measured on the built OSD, then asserted.
+	// The effect keeps the window *possible*; it never restarts it. That
+	// distinction is the defect this unit fixed: restarting on every state change
+	// meant restarting on every status frame, and the session sends one a second.
+	// Since a window already running is left alone, and a window is only started
+	// when the state allows one, this effect settles after its first run whatever
+	// the engine's cadence is.
 	$effect(() => {
 		if (status.pause || !status.ready || !status.media || trackMenuOpen) {
 			idle = false;
 			clearTimeout(idleTimer);
+			idleTimer = null;
 		} else {
 			wake();
 		}
@@ -168,12 +204,12 @@
 	}
 
 	function toggle() {
-		wake();
+		wakeFromStart();
 		invoke('player_toggle_pause');
 	}
 
 	function toggleMute() {
-		wake();
+		wakeFromStart();
 		invoke('player_set_muted', { muted: !status.mute });
 	}
 
@@ -237,12 +273,12 @@
 	}
 
 	function seek(offset) {
-		wake();
+		wakeFromStart();
 		invoke('player_seek', { seconds: offset, mode: 'relative' });
 	}
 
 	function seekTo(event) {
-		wake();
+		wakeFromStart();
 		if (duration <= 0) return;
 		const rect = event.currentTarget.getBoundingClientRect();
 		const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
@@ -284,11 +320,11 @@
 	// static element interactive and is what the a11y linter rightly objects to.
 	function onPointerMove(event) {
 		overControls = !!event.target.closest?.('.controls, .title-bar, .notice');
-		wake();
+		wakeFromStart();
 	}
 
 	async function toggleFullscreen() {
-		wake();
+		wakeFromStart();
 		if (!currentWindow) return;
 		const isFull = await currentWindow.isFullscreen();
 		await currentWindow.setFullscreen(!isFull);
@@ -371,7 +407,7 @@
 		} else if (key === 'l') {
 			switchLanguage();
 		} else {
-			wake();
+			wakeFromStart();
 		}
 	}
 </script>
