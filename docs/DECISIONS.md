@@ -4711,6 +4711,22 @@ parameters `?reprendre`, `?gerer`, `?profil` became `/welcome`, `/profiles`,
 `?manage`, `?profile`. No alias and no redirect: the old paths 404 like any other
 address that never existed, and the browser walk of all six pages passes.
 
+**What this does not cover, on the maintainer's own word.** The founding spec
+stays in French: "laisse la spec fondatrice en français car JE suis français, aka
+le CEO, le créateur de theia". English is the base of the *product* - what a
+customer reads on a screen - not of the founding document, which is the
+maintainer's own record of what this project is and was written in their
+language on purpose. An agent that reads this decision and proposes translating
+it has misread the scope.
+
+The native shell's own route vocabulary keeps `films` (`player/ui/src/App.tsx`
+maps `/films` to the section whose catalogue key is `filmSingular`), and the
+maintainer confirmed it: "oui le /films c'est mon répertoire, donc c'est pas très
+grave". The shell's namespace is its own - the web interface has no `/home`
+either - and "films" is an English word, so this is a vocabulary preference
+rather than an address left in the wrong language. It is written down so the next
+language pass does not spend an afternoon unifying it.
+
 **Verified at decision time.** `go test ./...` 24 packages green, `go vet` clean;
 the setup package's new test drives the language page with key messages and fails
 if the first question is anything else; the install test round-trips `fr` through
