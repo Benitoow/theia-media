@@ -512,14 +512,16 @@ grew a box over the grid; both are gone.
   `backdrop-filter` on a masked layer, so the picture itself is what softens
   rather than being covered; the same gradient at low strength darkens it,
   because a blur alone is invisible on a dark frame and a smudge on a bright one.
-  **Every composited layer rounds itself.** An ancestor's `overflow: hidden` and
-  `border-radius` do not clip one - not the blurred band, and not a playing video
-  either, which is the layer that actually escaped: the maintainer's screen
-  showed the film's own dark corner outside the card while Chromium, where the
-  harness runs, clipped it correctly. So the still and the video take
-  `clip-path: inset(0 round var(--radius-card))` and the blurred fill takes the
-  same clip scaled into its own box, `inset(9.02% round calc(var(--radius-card) /
-  1.22))`, because its transform makes that box 1.22 times the frame's.
+  **Every composited layer rounds itself, with `border-radius`.** An ancestor's
+  `overflow: hidden` and `border-radius` do not clip one, and `clip-path` is not
+  a substitute on WebView2: a layer carrying a `backdrop-filter` keeps a square
+  corner with `clip-path` and loses it with `border-radius`, measured on the same
+  build in the same state. Chromium honours both, so the harness cannot see this
+  - it asserts the mechanism instead, and names the layer that is missing one. The
+  still and the video therefore take `border-radius: inherit` and the band
+  `border-radius: var(--radius-card)`; the blurred fill keeps a clip, because its
+  box is deliberately larger than the frame and a radius on it would round the
+  wrong rectangle.
 - **A clip is cropped to the film, never shown with its own bars.** Most films
   are wider than the frame their file stores them in, so the picture arrives with
   black bars *in* it - 122 rows of 480 on the maintainer's own remux - and no

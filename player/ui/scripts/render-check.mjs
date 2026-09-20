@@ -1925,19 +1925,23 @@ async function assertSeriesJourney(page) {
 		return {
 			fill: before.backgroundImage,
 			blur: before.filter,
-			scale: before.transform,
+			// The fill is oversized by a negative inset rather than by a
+			// transform, because a transformed box put its own rounded clip in
+			// the wrong place.
+			overscan: before.top,
 			fade: after.backgroundImage,
 			blurBand: after.backdropFilter,
 			mask: after.maskImage,
-			clip: after.clipPath,
+			bandRadius: after.borderRadius,
+			bandClip: after.clipPath,
 			fillClip: before.clipPath,
-			stillClip: [...el.querySelectorAll('img, video')].map(
-				(child) => getComputedStyle(child).clipPath
+			mediaRadius: [...el.querySelectorAll('img, video')].map(
+				(child) => getComputedStyle(child).borderRadius
 			),
 			media: getComputedStyle(el.querySelector('img')).zIndex,
 		};
 	});
-	if (!layers.fill.startsWith('url(') || !layers.blur.includes('blur(') || !layers.scale.includes('matrix')) {
+	if (!layers.fill.startsWith('url(') || !layers.blur.includes('blur(') || !layers.overscan.startsWith('-')) {
 		console.error(`the card has no blurred fill behind its artwork: ${JSON.stringify(layers)}`);
 		failures++;
 	}
@@ -1964,22 +1968,27 @@ async function assertSeriesJourney(page) {
 	// under WebView2, so the band also rounds its own corner and that is
 	// asserted here. The pixel probe is the behaviour; this is the belt that
 	// holds on the engine the product actually ships.
-	// Every layer that can be composited must round itself, not just the band.
-	// This is not the same rule as Chromium's: Chromium clips a playing video
-	// through the card's own radius and WebView2 does not - the maintainer's
-	// screen had the film's dark corner outside the card while this harness
-	// passed on the same bundle. So the guard reads the four clips, and the
-	// pixel probe below is the behaviour for the engine it can measure.
-	const clips = {
-		band: layers.clip,
+	// Every layer that can be composited must round itself, and the *mechanism*
+	// is asserted because this harness cannot see the failure: Chromium clips a
+	// playing video and a blurred band through the card's own radius, while
+	// WebView2 drops `clip-path` on a layer carrying a `backdrop-filter` - and
+	// only WebView2 showed the maintainer a square corner, three times. Measured
+	// on the running window with the page painted green: `clip-path` on the band
+	// left a dark square corner, `border-radius` on the same band did not. So the
+	// band and the media take a radius, the blurred fill keeps its clip (its box
+	// is oversized, so a radius would round the wrong rectangle), and the reading
+	// names whichever layer is missing.
+	const rounded = {
+		band: layers.bandRadius,
 		fill: layers.fillClip,
-		still: layers.stillClip,
+		media: layers.mediaRadius,
 	};
-	const missing = Object.entries(clips).filter(([, value]) =>
-		Array.isArray(value) ? value.some((v) => !v.includes('round')) : !String(value).includes('round')
+	const zero = /^(0px|none)\s*$/;
+	const missing = Object.entries(rounded).filter(([, value]) =>
+		Array.isArray(value) ? value.some((v) => v === '' || zero.test(v)) : zero.test(String(value))
 	);
 	if (missing.length > 0) {
-		console.error(`a layer would draw outside the card's corner: ${JSON.stringify(clips)}`);
+		console.error(`a layer would draw outside the card's corner: ${JSON.stringify(rounded)}`);
 		failures++;
 	}
 	const probe = await assertBandRounded(page);

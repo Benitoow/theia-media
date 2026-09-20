@@ -808,16 +808,20 @@ button.action:focus-visible {
 	background-image: var(--card-art, none);
 	background-position: center;
 	background-size: cover;
-	/* Scaled past the frame so the blur has no visible edge to fade from. */
-	transform: scale(1.22);
+	/* Past the frame so the blur has no visible edge to fade from - and *by
+	   percentage*, not by `transform: scale`. That is not a preference: with the
+	   transform, this layer's clip did not land on the frame's corner and the
+	   blurred artwork drew a square corner outside the card, which is the third
+	   thing the maintainer photographed. Percentages keep the clip in the same
+	   coordinate space as the box, so the geometry is exact: -11% on every side
+	   makes the box 1.22 times the frame, the frame is therefore 9.016% inside
+	   it, and the radius needs no correction at all because nothing is scaled. */
+	inset: -11%;
 	filter: blur(22px) saturate(1.15) brightness(0.92);
 	opacity: 0.62;
-	/* Rounded in its *own* box, because the frame's radius does not clip a
-	   filtered layer and this one is 1.22x the frame. The arithmetic: the wanted
-	   rectangle is the frame's, which this box covers after scaling by 1.22
-	   about its centre, so the rectangle is 1/1.22 of the box - 9.02% in from
-	   each edge - with a radius of frame-radius/1.22. */
-	clip-path: inset(9.02% round calc(var(--radius-card) / 1.22));
+	/* Rounded in its own box, because an ancestor does not clip a filtered
+	   layer. 9.016% = (1 - 1/1.22) / 2, and the value is the frame's own. */
+	clip-path: inset(9.016% round var(--radius-card));
 }
 
 /* The bandeau: a dark blur from the left, gone before the middle.
@@ -842,12 +846,14 @@ button.action:focus-visible {
 	backdrop-filter: blur(8px) saturate(1.05);
 	-webkit-mask-image: linear-gradient(to right, #000 0%, rgb(0 0 0 / 0.45) 36%, transparent 66%);
 	mask-image: linear-gradient(to right, #000 0%, rgb(0 0 0 / 0.45) 36%, transparent 66%);
-	/* Its own rounded clip, and it is not belt and braces: `backdrop-filter` is
-	   painted by the compositor and is **not** clipped by an ancestor's
-	   `overflow: hidden` or `border-radius`, so the band's square corner drew
-	   outside the card's - the maintainer's screenshot, 20 September 2026. The
-	   clip works on the element's own output, blur included. */
-	clip-path: inset(0 round var(--radius-card));
+	/* Its own radius, and it has to be this property rather than `clip-path`.
+	   Measured on the running window with the page and the card painted green: a
+	   band with `clip-path: inset(0 round var(--radius-card))` still drew a
+	   square dark corner over the green, and the same band with
+	   `border-radius: var(--radius-card)` did not. WebView2 drops `clip-path` on
+	   a layer that carries a `backdrop-filter`. The maintainer's three
+	   photographs are the reason this is written down. */
+	border-radius: var(--radius-card);
 	pointer-events: none;
 }
 
@@ -860,15 +866,12 @@ button.action:focus-visible {
 	z-index: 1;
 }
 /* A playing preview is a composited video layer, and the frame's `overflow` and
-   radius do **not** clip one: the maintainer photographed the film's own dark
-   corner outside the card's rounded one, on a hovered card, which is where the
-   video is. Measured with the band repainted magenta: the band's corner was
-   round (it clips itself) while the picture's was square. So every layer that
-   can be composited rounds itself, and `inset(0 round ...)` matches the frame
-   exactly because these fill it. */
+   radius do not reliably clip one. Every layer that can be composited therefore
+   carries the radius itself, and `border-radius` rather than `clip-path`
+   because that is the one WebView2 honours on such a layer. */
 .film-art img,
 .film-art video {
-	clip-path: inset(0 round var(--radius-card));
+	border-radius: inherit;
 }
 .film-art video {
 	z-index: 1;

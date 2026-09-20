@@ -4544,6 +4544,35 @@ without an edge of its own. The first version was a bottom gradient; the
 maintainer corrected it by name, and the section that had argued against a
 gradient was arguing against something else.
 
+**Corrected three times, and the third is the mechanism.** The maintainer looked
+again and photographed the same square corner. Two diagnoses had been wrong, and
+both were wrong in the same way: they reasoned from the stylesheet instead of
+from the screen. What settled it was painting the page and the card's own
+background green with a temporary rule and hiding one layer at a time - a
+measurement that cannot be misread, unlike a dark band on a dark page.
+
+The band was the culprit. With the page green, the corner was a dark translucent
+square: the band's ink over the green, painted in a region its clip should have
+cut. With the band hidden, the corner was green to the curve. The blurred fill -
+which the first two corrections had blamed and rewritten - was innocent all
+along.
+
+**And the mechanism matters, not just the geometry.** The same band with
+`clip-path: inset(0 round var(--radius-card))` drew the square corner; with
+`border-radius: var(--radius-card)` it did not, on the same build, in the same
+state. WebView2 drops `clip-path` on a layer that carries a `backdrop-filter`.
+Chromium honours it, which is why `check:render` had passed on the very bundle
+the maintainer photographed - so the harness now asserts the mechanism for the
+band and the media (a radius) and for the blurred fill (its clip, kept because
+that layer's box is oversized and a radius would round the wrong rectangle). The
+guard names the layer it finds unrounded; deleting the band's radius makes it fail
+with `{"band":"0px", ...}`.
+
+Verified on the real window afterwards: with the page still painted green, the
+left edge of the card's content runs from x=297 at the top row to x=269 fourteen
+rows later, and the mirror image at the bottom - a quarter-circle at each corner,
+measured, not looked at.
+
 **Corrected twice, and the second correction is the one that mattered.** The
 first took the band's square corner for a clipping bug in the band and gave it
 `clip-path`; measured on the running player with the band repainted magenta, the
