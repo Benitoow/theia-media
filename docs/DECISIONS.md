@@ -4778,6 +4778,13 @@ existing installations already speak that protocol. A later move to a separate
 component channel needs its own compatibility bridge; deleting the files first
 would make a tidy page and a dead updater.
 
+**Published result, 21 September 2026.** Release run `35545212058` completed
+successfully and the public release contains exactly the nine files above, each
+with a GitHub SHA-256 digest. A fresh download of the Windows x64 setup matched
+digest `7a66e6190b2ebec1a1b0ebbd52372c1d30c47d286a6edb61936249653cdf00a6`
+and reported `theia-setup v3.3.1`. This closes the release boundary with public
+evidence rather than treating a green upload step as proof.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
