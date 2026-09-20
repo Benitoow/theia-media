@@ -1,0 +1,9 @@
+This directory is filled by `npm run build` in web/ and embedded into the Go
+binary via //go:embed. It is intentionally empty in version control -- the file
+you are reading only exists so that the embed directive resolves on a fresh
+clone, before the frontend has been built.
+
+The SvelteKit static adapter wipes this directory on every build, so
+web/scripts/keep-webdist.mjs recreates this file afterwards from npm's postbuild
+hook. If it goes missing, `go build` still works locally but fails on a fresh
+clone.

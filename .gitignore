@@ -61,6 +61,13 @@ secrets/
 .DS_Store
 Thumbs.db
 
+# The built web interface. `npm run build` writes the site into web-dist, and the
+# directory has to exist in a fresh clone for the Go build to embed it - which is
+# what .gitkeep is for. Without this pair every build dirtied the tree, and one
+# `git add -A` deleted the .gitkeep instead of ignoring the output.
+/web-dist/*
+!/web-dist/.gitkeep
+
 # Playwright's own output. The guard writes traces and screenshots only when
 # something fails, and those belong to the run that produced them.
 web/test-results/
