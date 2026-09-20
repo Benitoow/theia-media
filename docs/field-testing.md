@@ -21,7 +21,7 @@ messy libraries are as useful as large ones.
 ## The one-week pass
 
 1. Download the latest release and record the exact version shown by
-   `theia -version` or Settings.
+   `theia-server -version` or Settings.
 2. Add a disposable folder first if you want to understand the scan. Then add
    the real folders you intend to use.
 3. Browse from every screen that matters: desktop, phone, tablet or television.

@@ -9,14 +9,17 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+
+	"github.com/Benitoow/theia-media/internal/release"
 )
 
 // ErrNoRelease means the repository has published nothing yet, which is an
 // ordinary state for a young project rather than a failure.
 var ErrNoRelease = errors.New("updater: the repository has no published release")
 
-// release is the part of the GitHub API response Theia uses.
-type release struct {
+// githubRelease is the part of the GitHub API response Theia uses. Named
+// for what it is so the release package can keep its own name.
+type githubRelease struct {
 	TagName    string  `json:"tag_name"`
 	Name       string  `json:"name"`
 	HTMLURL    string  `json:"html_url"`
@@ -36,27 +39,8 @@ type asset struct {
 	Digest string `json:"digest"`
 }
 
-// assetName is what the release workflow names the binary for a platform. It
-// has to match the CI build step exactly; a mismatch means an update that can
-// never find itself.
-//
-// V3.3 renamed it: the artifact is `theia-server`, and the published asset says
-// so (decision 119). An installed v3.2 looks for `theia-<os>-<arch>` through
-// the updater it already carries, and cannot be taught otherwise - which is why
-// the first V3.3 release also publishes a transitional copy under the old name,
-// byte for byte. See the release workflow's own step, and the transitional
-// scenario in scripts/verify-update, which drives a real v3.2.0 binary through
-// this path.
-func assetName(goos, goarch string) string {
-	name := fmt.Sprintf("theia-server-%s-%s", goos, goarch)
-	if goos == "windows" {
-		name += ".exe"
-	}
-	return name
-}
-
 // latestRelease fetches the most recent published release.
-func (u *Updater) latestRelease(ctx context.Context) (*release, error) {
+func (u *Updater) latestRelease(ctx context.Context) (*githubRelease, error) {
 	url := fmt.Sprintf("%s/repos/%s/releases/latest", u.apiBase, u.repo)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -86,7 +70,7 @@ func (u *Updater) latestRelease(ctx context.Context) (*release, error) {
 		return nil, fmt.Errorf("updater: GitHub returned %d", res.StatusCode)
 	}
 
-	var rel release
+	var rel githubRelease
 	if err := json.NewDecoder(io.LimitReader(res.Body, 4<<20)).Decode(&rel); err != nil {
 		return nil, fmt.Errorf("updater: reading the release: %w", err)
 	}
@@ -101,8 +85,8 @@ func (u *Updater) latestRelease(ctx context.Context) (*release, error) {
 // A release with no digest for its asset is refused outright. Installing an
 // unverified binary is exactly the failure this whole milestone is supposed to
 // avoid, and "we could not check it" is not a reason to proceed.
-func assetFor(rel *release, goos, goarch string) (asset, string, error) {
-	want := assetName(goos, goarch)
+func assetFor(rel *githubRelease, goos, goarch string) (asset, string, error) {
+	want := release.ServerName(goos, goarch)
 
 	for _, a := range rel.Assets {
 		if a.Name != want {

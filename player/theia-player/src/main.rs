@@ -1283,29 +1283,6 @@ fn fit_initial_window(window: &tauri::WebviewWindow) {
     let _ = window.center();
 }
 
-#[cfg(test)]
-mod player_window_tests {
-    use super::fitted_window_size;
-
-    #[test]
-    fn high_dpi_small_logical_monitor_stays_on_screen() {
-        let (width, height) = fitted_window_size(720.0, 450.0);
-        assert_eq!((width, height), (640.0, 360.0));
-    }
-
-    #[test]
-    fn ordinary_desktop_keeps_the_designed_player_size() {
-        let (width, height) = fitted_window_size(1920.0, 1080.0);
-        assert_eq!((width, height), (1280.0, 720.0));
-    }
-
-    #[test]
-    fn short_monitor_reduces_both_axes_without_distortion() {
-        let (width, height) = fitted_window_size(1366.0, 768.0);
-        assert!(width <= 1286.0 && height <= 688.0);
-        assert!((width / height - 16.0 / 9.0).abs() < 0.001);
-    }
-}
 
 /// Writes the playhead back to the server. Deliberately the same call the
 /// browser player makes, so a film started in one is resumable in the other.
@@ -1715,4 +1692,28 @@ fn supervise_audio(app: &tauri::WebviewWindow) {
         "{\"kind\":\"audio\",\"mode\":\"pcm\",\"reason\":\"endpoint-refused-bitstream\"}",
     );
     println!("theia-player: passthrough refused by the endpoint, fell back to PCM");
+}
+
+#[cfg(test)]
+mod player_window_tests {
+    use super::fitted_window_size;
+
+    #[test]
+    fn high_dpi_small_logical_monitor_stays_on_screen() {
+        let (width, height) = fitted_window_size(720.0, 450.0);
+        assert_eq!((width, height), (640.0, 360.0));
+    }
+
+    #[test]
+    fn ordinary_desktop_keeps_the_designed_player_size() {
+        let (width, height) = fitted_window_size(1920.0, 1080.0);
+        assert_eq!((width, height), (1280.0, 720.0));
+    }
+
+    #[test]
+    fn short_monitor_reduces_both_axes_without_distortion() {
+        let (width, height) = fitted_window_size(1366.0, 768.0);
+        assert!(width <= 1286.0 && height <= 688.0);
+        assert!((width / height - 16.0 / 9.0).abs() < 0.001);
+    }
 }

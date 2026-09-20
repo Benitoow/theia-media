@@ -1798,10 +1798,6 @@
 		padding: 0;
 	}
 
-	.file-choice-audio {
-		margin-top: 2rem;
-	}
-
 	/* One file per row: the option itself takes the space, its action sits beside
 	   it. See the comment in FileChoice.svelte -- an action stacked underneath
 	   captured every downward D-pad press and made the options unreachable.
@@ -1861,13 +1857,7 @@
 		background: var(--color-raised);
 	}
 
-	.file-option--compact {
-		min-block-size: var(--target-min);
-		flex-direction: row;
-		align-items: center;
-	}
-
-	.file-option-head {
+		.file-option-head {
 		display: flex;
 		width: 100%;
 		flex-wrap: wrap;

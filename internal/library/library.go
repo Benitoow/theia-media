@@ -70,19 +70,6 @@ type upsertResult struct {
 	inserted bool
 }
 
-// Upsert records a file, inserting it or refreshing what is already there.
-// movie_files owns path identity; conservative association decides whether a
-// new path belongs under an existing film.
-func (s *Store) Upsert(ctx context.Context, m Movie, generation int64) (upsertResult, error) {
-	return s.upsertFile(ctx, m, generation)
-}
-
-// DeleteNotSeenIn removes rows the given scan did not touch, which is how a
-// deleted or moved file leaves the library.
-func (s *Store) DeleteNotSeenIn(ctx context.Context, generation int64) (int, error) {
-	return s.deleteFilesNotSeenIn(ctx, generation)
-}
-
 // Count returns how many films are in the library.
 func (s *Store) Count(ctx context.Context) (int, error) {
 	var n int

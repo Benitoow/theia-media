@@ -64,7 +64,7 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 	const timer = useRef<number | null>(null);
 	const view = useMemo(() => describe(kind, item, actionLabel, kindLabel, heading, seriesLabel, t), [kind, item, actionLabel, kindLabel, heading, seriesLabel, t]);
 	const artwork = view.art.find((url) => !failed.includes(url));
-	// The not-found plate, never the demo art: demo items always carry their
+	// The not-found plate, never generated art: an item that carries its
 	// own artwork, so this only answers when TMDB/IMDb provided nothing or
 	// every candidate failed to load.
 	const artSrc = artwork ?? notFoundArt;

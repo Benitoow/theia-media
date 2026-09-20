@@ -977,9 +977,11 @@ rather than here:
 - `--faint` and `--accent-dim` fail normal-text contrast. They are for disabled
   states, decorative rules and borders. This is written down because it is the
   rule most likely to be broken by accident.
-- The interface defaults to French and also ships in English. `<html lang>`,
-  visible copy, accessible names and locale-sensitive formatters follow the
-  active browser language immediately; none of them waits for a reload.
+- The interface opens in English and also ships in French. `<html lang>`, visible
+  copy, accessible names and locale-sensitive formatters follow the active
+  catalogue immediately; none of them waits for a reload. "Active" means the
+  browser's own choice when it made one, and otherwise the language the
+  installation was set up in, which the server sends with its identity.
 
 ## 10. Fonts, as shipped
 
@@ -1125,10 +1127,12 @@ dock and no *Tout voir* links** (all of those point at filtered library views -
 by progress, sort or duration - that the player's library does not have yet;
 copy without the machinery is worse than its absence). See decision 130.
 
-**The interface language layer.** French is the default
-and English ships as a second complete catalogue. The choice is local to each
-browser, and changing it updates copy, accessible names, `<html lang>` and
-formatters without replacing the current page or losing focus. Catalogue parity
+**The interface language layer.** English is the base and French
+ships as a second complete catalogue (decision 137). An installation is set up in
+one of them - `theia-setup` asks, and the answer is what the server hands both
+interfaces - and a choice made in a browser is local to that browser and wins
+over it. Changing it updates copy, accessible names, `<html lang>` and formatters
+without replacing the current page or losing focus. Catalogue parity
 is a frontend build check. TMDB titles, synopses, genres and credits already
 cached as `fr-FR` do not change and are not fetched again: they are film data,
 not interface chrome.

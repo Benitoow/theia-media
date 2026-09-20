@@ -137,6 +137,7 @@ var french = Catalogue{
 	"statusData":       "Dossier de données",
 	"statusPrograms":   "Programmes",
 	"statusRegistered": "Application",
+	"statusInstalled":  "Installé le",
 	"statusConfig":     "Configuré",
 	"statusPort":       "Port",
 	"statusHost":       "Nom réseau",
@@ -274,6 +275,7 @@ var english = Catalogue{
 	"statusData":       "Data directory",
 	"statusPrograms":   "Programs",
 	"statusRegistered": "Application",
+	"statusInstalled":  "Installed",
 	"statusConfig":     "Configured",
 	"statusPort":       "Port",
 	"statusHost":       "Network name",
@@ -313,6 +315,20 @@ var english = Catalogue{
 	"reasonSource":       "%s was not found where it was looked for.",
 
 	"errorPrefix": "Error:",
+}
+
+// roleCatalogueKey names the sentence that describes a role. One table, because
+// the form's options, the summary and the label all have to agree on it.
+func roleCatalogueKey(role Role) string {
+	switch role {
+	case RoleAllInOne:
+		return "roleAllInOne"
+	case RoleServer:
+		return "roleServer"
+	case RolePlayer:
+		return "rolePlayer"
+	}
+	return ""
 }
 
 // roleLabel is the short name of a role, read off the option it came from: each

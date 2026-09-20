@@ -16,8 +16,6 @@ export function formatDecimal(value) {
 
 export const strings = {
 	v3: {
-  "collection": "Votre collection, à votre rythme.",
-  "collectionBody": "Un film en tête, ou simplement une soirée devant vous.",
   "homeLabel": "Au programme",
   "featured": "À l’affiche",
   "myList": "Ma liste",
@@ -36,7 +34,6 @@ export const strings = {
   "retry": "Réessayer",
   "compatible": "Essayer en 1080p",
   "transcode": "Vidéo adaptée",
-  "direct": "Lecture directe"
 },
 	appName: 'Theia',
 	tagline: 'Serveur média personnel',
@@ -117,7 +114,6 @@ export const strings = {
 		ratingLegend: (rating) => `${formatDecimal(rating)} / 10`,
 		ratingScale: '/ 10',
 		ratingAria: (rating) => `Note : ${formatDecimal(rating)} sur 10`,
-		unwatchedBadge: 'Jamais lu',
 		finishedBadge: 'Vu'
 	},
 
@@ -258,7 +254,6 @@ export const strings = {
 		continueWatching: 'Continuer à regarder',
 
 		buffering: 'Mise en mémoire tampon…',
-		seeking: 'Repositionnement…',
 		remuxBadge: 'Réencapsulé à la volée',
 		adaptiveQuality: (height) => `Adapté en ${height}p`,
 		preparing:
@@ -376,7 +371,6 @@ export const strings = {
 	credits: {
 		heading: 'Générique',
 		originalTitle: 'Titre original',
-		direction: 'Réalisation',
 		writing: 'Scénario',
 		music: 'Musique',
 		cinematography: 'Image',
@@ -385,7 +379,6 @@ export const strings = {
 		certification: 'Classification',
 		certificationFull: (value, country) => `Classification ${value}, ${country}`,
 		collection: (name) => `Fait partie de « ${name} »`,
-		collectionCount: (n) => (n === 1 ? '1 autre film' : `${n} autres films`),
 		airStatus: {
 			ended: 'Terminée',
 			returning: 'En cours',
@@ -490,12 +483,7 @@ export const strings = {
 			caveat: '« Déclaré par le navigateur » est un indice. Seule une lecture réelle en fait une preuve.'
 		},
 		notFound: 'Ce film est introuvable.',
-		overview: 'Synopsis',
 		cast: 'Distribution',
-		director: 'Réalisation',
-		genres: 'Genres',
-		runtime: 'Durée',
-		year: 'Année',
 		progress: 'Progression dans le film',
 		files: {
 			one: 'Fichier',
@@ -517,13 +505,8 @@ export const strings = {
 		},
 		audio: {
 			title: 'Piste audio',
-			choose: 'Choisir la piste audio',
 			auto: 'Piste par défaut du fichier',
-			isDefault: 'par défaut',
 			unnamed: (index) => `Piste ${index}`,
-			remuxNote:
-				'Choisir une piste explicitement passe par un réencapsulage, seul moyen de garantir ' +
-				"celle que le navigateur jouera."
 		},
 		moreByDirector: (director) => `Voir les autres films de ${director}`,
 		noOverview: "Aucun synopsis n'est disponible pour ce film.",
@@ -635,8 +618,6 @@ export const strings = {
 
 		remoteBadge: 'Accès distant',
 		remoteContext: (name) => 'Connecté depuis ' + name,
-		remoteRestricted:
-			'Les réglages, l’analyse et les mises à jour ne sont accessibles que depuis le réseau local.',
 
 		codes: {
 			invalid_remote_access_payload: 'La demande n’a pas pu être lue.',
@@ -830,7 +811,6 @@ export const strings = {
 		empty: (query) => `Rien ne correspond à « ${query} ».`,
 		recent: 'Recherches récentes',
 		forget: 'Oublier',
-		forgetAll: 'Tout oublier',
 		truncated: 'Seuls les premiers résultats sont affichés. Précisez la recherche.',
 		failed: 'La recherche n’a pas abouti.',
 		results: (n) => (n === 1 ? '1 résultat' : `${n} résultats`)
@@ -840,10 +820,6 @@ export const strings = {
 		mark: 'Marquer comme vu',
 		unmark: 'Marquer comme non vu',
 		marking: 'Enregistrement…',
-		badge: 'Vu',
-		hint:
-			'Un film laissé en route quitte la rangée « Reprendre » ; un film vu ailleurs se note ici ' +
-			'sans avoir à le relancer.',
 		failed: 'L’état n’a pas pu être enregistré.'
 	},
 

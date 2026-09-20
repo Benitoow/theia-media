@@ -99,9 +99,15 @@ preferences:
 ## Language
 
 Code, comments, commit messages and internal error strings are **English**, for
-contributors. The user interface ships in **French and English**, with French as
-the default. User-facing copy and locale-specific formatters live in
-`web/src/lib/i18n/locales/fr.js` and `web/src/lib/i18n/locales/en.js`. A new
+contributors. The user interface ships in **French and English**, with
+**English as the base** (decision 137): it is what answers a browser that has
+never chosen, and what an unknown language code means. The language an
+installation was set up in is asked by `theia-setup`, written to the
+configuration and handed to both interfaces by the server; a choice made in a
+browser wins over it, and nothing overwrites that choice. The founding spec
+stays French on purpose - English is the base of the product, not of the
+maintainer's own documents. User-facing copy and locale-specific formatters live
+in `web/src/lib/i18n/locales/fr.js` and `web/src/lib/i18n/locales/en.js`. A new
 language is a new catalogue, not a hunt through Svelte markup.
 
 **The server never writes what the user reads** (decision 25). The API sends

@@ -15,8 +15,9 @@ import (
 // interface owns every word shown (decision 25), and this tool has two
 // interfaces - a terminal form and flags - so neither may invent its own.
 type Action struct {
-	// Kind is "created-dir", "wrote-config", "installed-service",
-	// "removed-service", "already-configured" or "kept-service".
+	// Kind is a code, never a sentence: the two interfaces turn it into words.
+	// They are emitted here and in install.go, and cmd/theia-setup's printResult
+	// is the consumer that has to know every one of them - "wrote-role" too.
 	Kind string `json:"kind"`
 
 	// Path is what the action was about, when a path is what it was about.
@@ -64,9 +65,9 @@ type machineRecord struct {
 	Role Role `json:"role"`
 	// Language is what this machine was set up to speak.
 	Language string `json:"language,omitempty"`
-	// InstalledAt is when the role was last declared. Not used for anything yet;
-	// it is the one fact that makes a support conversation possible ("when did
-	// you last run the installer?").
+	// InstalledAt is when the role was last declared. It is the one fact that
+	// makes a support conversation possible ("when did you last run the
+	// installer?"), and Status carries it so --check answers that question.
 	InstalledAt time.Time `json:"installed_at"`
 }
 
@@ -239,8 +240,12 @@ type Status struct {
 	// false on a machine where the installer has never run - two different
 	// answers this one field cannot tell apart, which is why it is reported as a
 	// yes/no line and not as a sentence about installation.
-	Registered bool              `json:"registered"`
-	Update     *UpdateStatusView `json:"update,omitempty"`
+	Registered bool `json:"registered"`
+	// InstalledAt is when this machine's role was last declared. It answers the
+	// first question of a support conversation - "when did you last run the
+	// installer?" - and until now it was recorded and never read.
+	InstalledAt *time.Time        `json:"installed_at,omitempty"`
+	Update      *UpdateStatusView `json:"update,omitempty"`
 }
 
 // Inspect reads the machine's current state and changes nothing.
@@ -271,6 +276,8 @@ func Inspect(self string) (Status, error) {
 	if declared {
 		status.Role = record.Role
 		status.Configured = true
+		when := record.InstalledAt
+		status.InstalledAt = &when
 	}
 	if _, err := os.Stat(filepath.Join(dir, "config.json")); err == nil {
 		cfg, err := config.Load(dir)
@@ -287,15 +294,4 @@ func Inspect(self string) (Status, error) {
 	status.Artifacts = plan.Artifacts(self)
 	status.Autostart = autostartStatus()
 	return status, nil
-}
-
-// Encode writes a result or a status as the JSON a script can read. The tool
-// prints JSON rather than prose when asked for it, for the same reason the API
-// sends codes: something else may be reading.
-func Encode(value any) (string, error) {
-	data, err := json.MarshalIndent(value, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
 }

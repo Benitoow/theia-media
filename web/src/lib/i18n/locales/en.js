@@ -16,8 +16,6 @@ export function formatDecimal(value) {
 
 export const strings = {
 	v3: {
-  "collection": "Your collection, at your pace.",
-  "collectionBody": "A film in mind, or simply an evening ahead.",
   "homeLabel": "On the programme",
   "featured": "Now showing",
   "myList": "My list",
@@ -36,7 +34,6 @@ export const strings = {
   "retry": "Try again",
   "compatible": "Try in 1080p",
   "transcode": "Adapted video",
-  "direct": "Direct playback"
 },
 	appName: 'Theia',
 	tagline: 'Personal media server',
@@ -116,7 +113,6 @@ export const strings = {
 		ratingLegend: (rating) => `${formatDecimal(rating)} / 10`,
 		ratingScale: '/ 10',
 		ratingAria: (rating) => `Rating: ${formatDecimal(rating)} out of 10`,
-		unwatchedBadge: 'Not watched',
 		finishedBadge: 'Watched'
 	},
 
@@ -257,7 +253,6 @@ export const strings = {
 		continueWatching: 'Continue watching',
 
 		buffering: 'Buffering…',
-		seeking: 'Seeking…',
 		remuxBadge: 'Remuxed on the fly',
 		adaptiveQuality: (height) => `Adapted to ${height}p`,
 		preparing:
@@ -373,7 +368,6 @@ export const strings = {
 	credits: {
 		heading: 'Credits',
 		originalTitle: 'Original title',
-		direction: 'Directed by',
 		writing: 'Written by',
 		music: 'Music',
 		cinematography: 'Cinematography',
@@ -382,7 +376,6 @@ export const strings = {
 		certification: 'Rating',
 		certificationFull: (value, country) => `Rated ${value}, ${country}`,
 		collection: (name) => `Part of ${name}`,
-		collectionCount: (n) => (n === 1 ? '1 other film' : `${n} other films`),
 		airStatus: {
 			ended: 'Ended',
 			returning: 'Ongoing',
@@ -486,12 +479,7 @@ export const strings = {
 			caveat: '“Browser-reported” is a clue. Only real playback can turn it into evidence.'
 		},
 		notFound: 'This movie could not be found.',
-		overview: 'Overview',
 		cast: 'Cast',
-		director: 'Director',
-		genres: 'Genres',
-		runtime: 'Runtime',
-		year: 'Year',
 		progress: 'Movie progress',
 		files: {
 			one: 'File',
@@ -513,13 +501,8 @@ export const strings = {
 		},
 		audio: {
 			title: 'Audio track',
-			choose: 'Choose the audio track',
 			auto: "The file's default track",
-			isDefault: 'default',
 			unnamed: (index) => `Track ${index}`,
-			remuxNote:
-				'Choosing a track explicitly goes through a remux, the only way to guarantee which ' +
-				'one the browser will play.'
 		},
 		moreByDirector: (director) => `See more movies by ${director}`,
 		noOverview: 'No overview is available for this movie.',
@@ -630,8 +613,6 @@ export const strings = {
 
 		remoteBadge: 'Remote access',
 		remoteContext: (name) => 'Connected from ' + name,
-		remoteRestricted:
-			'Settings, scanning and updates are only available from the local network.',
 
 		codes: {
 			invalid_remote_access_payload: 'The request could not be read.',
@@ -825,7 +806,6 @@ export const strings = {
 		empty: (query) => `Nothing matches “${query}”.`,
 		recent: 'Recent searches',
 		forget: 'Forget',
-		forgetAll: 'Forget all',
 		truncated: 'Only the first results are shown. Narrow the search.',
 		failed: 'The search did not complete.',
 		results: (n) => (n === 1 ? '1 result' : `${n} results`)
@@ -835,10 +815,6 @@ export const strings = {
 		mark: 'Mark as watched',
 		unmark: 'Mark as unwatched',
 		marking: 'Saving…',
-		badge: 'Watched',
-		hint:
-			'A film left half-finished leaves the “Continue” row; a film watched elsewhere can be ' +
-			'recorded here without playing it again.',
 		failed: 'That could not be saved.'
 	},
 

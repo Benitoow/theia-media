@@ -23,7 +23,7 @@ func (s *Server) handleMovieFileSubtitle(w http.ResponseWriter, r *http.Request)
 	if !ok {
 		return
 	}
-	trackID, ok := pathID(w, r, "track_id", "invalid_subtitle_track_id")
+	trackID, ok := positivePathID(w, r, "track_id", "invalid_subtitle_track_id")
 	if !ok {
 		return
 	}
@@ -40,7 +40,7 @@ func (s *Server) handleEpisodeFileSubtitle(w http.ResponseWriter, r *http.Reques
 	if !ok {
 		return
 	}
-	trackID, ok := pathID(w, r, "track_id", "invalid_subtitle_track_id")
+	trackID, ok := positivePathID(w, r, "track_id", "invalid_subtitle_track_id")
 	if !ok {
 		return
 	}

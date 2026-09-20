@@ -234,21 +234,12 @@ func (s *Service) SetEpisodeWatched(ctx context.Context, profileID, id int64) (P
 	return s.store.SetEpisodeWatched(ctx, profileID, id, time.Now())
 }
 
-// SaveDuration records a duration learned from probing a file.
-func (s *Service) SaveDuration(ctx context.Context, id int64, seconds float64) error {
-	return s.store.SaveDuration(ctx, id, seconds)
-}
-
 func (s *Service) SaveEpisodeProgress(ctx context.Context, profileID, id int64, position, duration float64) (Progress, error) {
 	return s.store.SaveEpisodeProgress(ctx, profileID, id, position, duration, time.Now())
 }
 
 func (s *Service) ResetEpisodeProgress(ctx context.Context, profileID, id int64) error {
 	return s.store.ResetEpisodeProgress(ctx, profileID, id)
-}
-
-func (s *Service) SaveEpisodeDuration(ctx context.Context, id int64, seconds float64) error {
-	return s.store.SaveEpisodeDuration(ctx, id, seconds)
 }
 
 // Row kinds. The server names what a row *is*; the interface writes what it is
@@ -488,7 +479,7 @@ func (s *Service) scanResult(ctx context.Context, roots []string, cutoff time.Ti
 
 		report.MovieFiles++
 		parsed := ParseFileName(file.Name)
-		res, err := s.store.Upsert(ctx, Movie{
+		res, err := s.store.upsertFile(ctx, Movie{
 			Path:       file.Path,
 			FileName:   file.Name,
 			SizeBytes:  file.SizeBytes,
@@ -514,7 +505,7 @@ func (s *Service) scanResult(ctx context.Context, roots []string, cutoff time.Ti
 	// trouble. A disconnected drive or a rejected row looks like a missing file
 	// from here; turning either into deletions would compound a recoverable error.
 	if !hasBlockingScanProblem(report.Problems) {
-		removed, err := s.store.DeleteNotSeenIn(ctx, generation)
+		removed, err := s.store.deleteFilesNotSeenIn(ctx, generation)
 		if err != nil {
 			return nil, err
 		}

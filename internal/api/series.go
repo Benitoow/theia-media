@@ -174,12 +174,3 @@ func (s *Server) handleResetEpisodeProgress(w http.ResponseWriter, r *http.Reque
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
-
-func positivePathID(w http.ResponseWriter, r *http.Request, name, code string) (int64, bool) {
-	id, err := strconv.ParseInt(r.PathValue(name), 10, 64)
-	if err != nil || id <= 0 {
-		writeJSONError(w, http.StatusBadRequest, code)
-		return 0, false
-	}
-	return id, true
-}

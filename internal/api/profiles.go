@@ -92,7 +92,7 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusServiceUnavailable, "profile_unavailable")
 		return
 	}
-	id, ok := pathID(w, r, "id", "invalid_profile_id")
+	id, ok := positivePathID(w, r, "id", "invalid_profile_id")
 	if !ok {
 		return
 	}
@@ -129,7 +129,7 @@ func (s *Server) handleRenameProfile(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusServiceUnavailable, "profile_unavailable")
 		return
 	}
-	id, ok := pathID(w, r, "id", "invalid_profile_id")
+	id, ok := positivePathID(w, r, "id", "invalid_profile_id")
 	if !ok {
 		return
 	}
@@ -150,7 +150,7 @@ func (s *Server) handleDeleteProfile(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusServiceUnavailable, "profile_unavailable")
 		return
 	}
-	id, ok := pathID(w, r, "id", "invalid_profile_id")
+	id, ok := positivePathID(w, r, "id", "invalid_profile_id")
 	if !ok {
 		return
 	}
@@ -168,7 +168,7 @@ func (s *Server) handleSetProfileAvatar(w http.ResponseWriter, r *http.Request) 
 		writeJSONError(w, http.StatusServiceUnavailable, "profile_unavailable")
 		return
 	}
-	id, ok := pathID(w, r, "id", "invalid_profile_id")
+	id, ok := positivePathID(w, r, "id", "invalid_profile_id")
 	if !ok {
 		return
 	}
@@ -200,7 +200,7 @@ func (s *Server) handleDeleteProfileAvatar(w http.ResponseWriter, r *http.Reques
 		writeJSONError(w, http.StatusServiceUnavailable, "profile_unavailable")
 		return
 	}
-	id, ok := pathID(w, r, "id", "invalid_profile_id")
+	id, ok := positivePathID(w, r, "id", "invalid_profile_id")
 	if !ok {
 		return
 	}
@@ -216,7 +216,7 @@ func (s *Server) handleProfileAvatar(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusServiceUnavailable, "profile_unavailable")
 		return
 	}
-	id, ok := pathID(w, r, "id", "invalid_profile_id")
+	id, ok := positivePathID(w, r, "id", "invalid_profile_id")
 	if !ok {
 		return
 	}
@@ -280,13 +280,4 @@ func (s *Server) writeProfileError(w http.ResponseWriter, err error) bool {
 		writeJSONError(w, http.StatusInternalServerError, "profile_unavailable")
 	}
 	return true
-}
-
-func pathID(w http.ResponseWriter, r *http.Request, name, code string) (int64, bool) {
-	id, err := strconv.ParseInt(r.PathValue(name), 10, 64)
-	if err != nil || id <= 0 {
-		writeJSONError(w, http.StatusBadRequest, code)
-		return 0, false
-	}
-	return id, true
 }

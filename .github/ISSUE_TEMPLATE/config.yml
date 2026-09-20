@@ -1,6 +1,6 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Join the V3.1 field test
+  - name: Join the field test
     url: https://github.com/Benitoow/theia-media/issues/new?template=field_test.yml
     about: Use Theia on a real library for a week and report what worked, what failed and on which screens.
   - name: Theia Discord

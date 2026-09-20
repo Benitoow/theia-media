@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/Benitoow/theia-media/internal/library"
 )
@@ -188,12 +187,9 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := strings.TrimSpace(r.URL.Query().Get("q"))
-	// A ceiling on the query itself, not on the work: nothing sensible is this
-	// long, and the folding walks every rune it is given.
-	if len(query) > 200 {
-		query = query[:200]
-	}
+	// One home for the trimming and the ceiling: the search room and the
+	// candidate list must agree on what a query is (see searchQuery).
+	query := searchQuery(r)
 
 	results, err := s.lib.Search(r.Context(), profileID, query)
 	if err != nil {

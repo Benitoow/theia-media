@@ -20,7 +20,7 @@ func TestAuditPlaybackStartsDuringDownload(t *testing.T) {
 	var end func()
 	u.http.Transport = auditRoundTrip(func(r *http.Request) (*http.Response, error) {
 		if end == nil {
-			end = tracker.Begin()
+			end, _ = tracker.TryBegin()
 		}
 		return http.DefaultTransport.RoundTrip(r)
 	})

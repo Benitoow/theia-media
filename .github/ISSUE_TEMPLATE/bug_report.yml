@@ -24,8 +24,8 @@ body:
     id: version
     attributes:
       label: Theia version
-      description: From Settings, or `theia -version`.
-      placeholder: v3.1.0
+      description: From Settings, or `theia-server -version`.
+      placeholder: v3.2.0
     validations:
       required: true
 

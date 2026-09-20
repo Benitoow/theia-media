@@ -34,10 +34,6 @@ func (h *Head) Write(p []byte) (int, error) {
 // Bytes answers the prefix that was kept.
 func (h *Head) Bytes() []byte { return h.data }
 
-// String answers the prefix that was kept, as text.
-func (h *Head) String() string { return string(h.data) }
-
-// Overflowed says more came than was kept. A caller either stops here or
 // switches to streaming what remains; keeping a document that outgrew the
 // ceiling is not an option Head offers.
 func (h *Head) Overflowed() bool { return h.overflow }

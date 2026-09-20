@@ -199,20 +199,6 @@ func mirrorLegacyMovieProgress(ctx context.Context, tx *sql.Tx, profileID, movie
 	return nil
 }
 
-// SaveDuration records a duration learned from probing a file, without
-// touching the viewing position.
-func (s *Store) SaveDuration(ctx context.Context, id int64, seconds float64) error {
-	if seconds <= 0 {
-		return nil
-	}
-	_, err := s.db.ExecContext(ctx,
-		`UPDATE movies SET duration_seconds = ? WHERE id = ?`, seconds, id)
-	if err != nil {
-		return fmt.Errorf("saving the duration of film %d: %w", id, err)
-	}
-	return nil
-}
-
 // ContinueWatching returns films that were started and not finished, most
 // recently watched first.
 func (s *Store) ContinueWatching(ctx context.Context, profileID int64, limit int) ([]Movie, error) {

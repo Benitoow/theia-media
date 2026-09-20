@@ -81,28 +81,36 @@ foreach ($file in 'theia-player.exe', 'libmpv-2.dll', 'LICENSE-libmpv.txt', 'NOT
     Copy-Item (Join-Path $playerBundle $file) $stage
 }
 
-# One paragraph in both languages, because somebody who has just unzipped an
-# archive has no other context, and this project speaks French first.
+# Two paragraphs, one in each language, because somebody who has just unzipped an
+# archive has no other context. English leads and French follows: English is the
+# base of the product (decision 137), and this file is the product's first
+# surface - the only thing a person reads before anything runs.
 $readme = @"
 Theia $Version
 ============$(('=' * $Version.Length))
 
-FR - Lancez theia-setup.exe. Il vous demande a quoi sert cette machine, ou
-     garder ses donnees, sur quel port elle ecoute et quels dossiers contiennent
-     vos films - puis il affiche le plan complet avant d'ecrire quoi que ce soit.
-     Il installe les programmes dans %LOCALAPPDATA%\Programs\Theia et pose des
-     raccourcis dans le menu Demarrer et sur le bureau (Theia, Theia Server,
-     Theia Player), pour qu'ils se lancent par leur nom. Rien n'est telecharge :
-     tout est dans ce dossier. Il installe un demarrage automatique seulement si
-     vous le demandez, et ne reclame jamais de droits administrateur.
+EN - Run theia-setup.exe. Its first question is which language Theia should
+     speak - English and French ship, and the answer is what both interfaces and
+     the film metadata open in. Then it asks what this machine is for, where to
+     keep its data, which port it listens on and which folders hold your films,
+     and it shows the whole plan before writing anything. It installs the
+     programs into %LOCALAPPDATA%\Programs\Theia and creates entries in the
+     Start Menu and on the Desktop (Theia, Theia Server, Theia Player), so they
+     can be launched by name. Nothing is downloaded: everything is in this
+     folder. It installs autostart only if you ask, and never requests
+     administrator rights.
 
-EN - Run theia-setup.exe. It asks what this machine is for, where to keep its
-     data, which port it listens on and which folders hold your films - then
-     shows the whole plan before writing anything. It installs the programs into
-     %LOCALAPPDATA%\Programs\Theia and creates entries in the Start Menu and on
-     the Desktop (Theia, Theia Server, Theia Player), so they can be launched by
-     name. Nothing is downloaded: everything is in this folder. It installs
-     autostart only if you ask, and never requests administrator rights.
+FR - Lancez theia-setup.exe. Sa premiere question est la langue que Theia doit
+     parler - l'anglais et le francais sont livres, et la reponse est celle dans
+     laquelle s'ouvrent les deux interfaces comme les fiches des films. Il
+     demande ensuite a quoi sert cette machine, ou garder ses donnees, sur quel
+     port elle ecoute et quels dossiers contiennent vos films, puis il affiche
+     le plan complet avant d'ecrire quoi que ce soit. Il installe les programmes
+     dans %LOCALAPPDATA%\Programs\Theia et pose des raccourcis dans le menu
+     Demarrer et sur le bureau (Theia, Theia Server, Theia Player), pour qu'ils
+     se lancent par leur nom. Rien n'est telecharge : tout est dans ce dossier.
+     Il installe un demarrage automatique seulement si vous le demandez, et ne
+     reclame jamais de droits administrateur.
 
 LICENSE-libmpv.txt is the licence of the media engine (libmpv, LGPL-2.1+).
 NOTICE.md names the exact build and its SHA-256.

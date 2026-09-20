@@ -274,11 +274,15 @@ func buildForm(result *FormResult, language Catalogue, width, height int) *huh.F
 	role := huh.NewSelect[Role]().
 		Title(language["roleTitle"]).
 		Description(language["roleDescription"]).
-		Options(
-			huh.NewOption(language["roleAllInOne"], RoleAllInOne),
-			huh.NewOption(language["roleServer"], RoleServer),
-			huh.NewOption(language["rolePlayer"], RolePlayer),
-		).
+		OptionsFunc(func() []huh.Option[Role] {
+			// Built from Roles(), which documents itself as the order the
+			// interface offers: a second list here is how the two drift.
+			options := make([]huh.Option[Role], 0, len(Roles()))
+			for _, role := range Roles() {
+				options = append(options, huh.NewOption(language[roleCatalogueKey(role)], role))
+			}
+			return options
+		}, &result.Language).
 		Value(&result.Role)
 
 	where := huh.NewInput().

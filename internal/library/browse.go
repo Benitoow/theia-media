@@ -27,7 +27,7 @@ const movieColumns = `
 
 // movieListColumns produces the same JSON that collectMovies has always
 // returned, without first reading detail-only cast, crew and collection blobs
-// that forList would immediately discard.
+// that a list read has no use for. See decision 92.
 const movieListColumns = `
 	m.id, m.path, m.file_name, m.size_bytes, m.modified_at, m.title, m.year,
 	m.added_at, m.updated_at,

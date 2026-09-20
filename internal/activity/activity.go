@@ -30,13 +30,6 @@ type Tracker struct {
 // New returns a tracker with nothing in progress.
 func New() *Tracker { return &Tracker{} }
 
-// Begin records the start of a stream request and returns the function to call
-// when it ends.
-func (t *Tracker) Begin() func() {
-	end, _ := t.TryBegin()
-	return end
-}
-
 // TryBegin and TryInstall share one lock: no playback can slip between the
 // installer's idle check and its replacement of the running executable.
 func (t *Tracker) TryBegin() (func(), bool) {

@@ -240,13 +240,13 @@ which is decision 25 applied to a second interface.
 |---|---|
 | `theia-player/src/mpv.rs` | The whole FFI surface, on one page. Nothing above it touches a raw pointer. |
 | `theia-player/src/main.rs` | Window, session, IPC commands, the audio watchdog. |
-| `ui/src/App.svelte` | The OSD: transport, clock, notices, keyboard. |
+| `ui/src/App.tsx` | The OSD: transport, clock, notices, keyboard. |
 | `ui/src/lib/catalogues.js` | French and English sentences. The Rust side sends codes. |
-| `ui/src/components/FilmCard.svelte` | One film as the card grid draws it, with section 6.1's artwork fallbacks. |
+| `ui/src/components/MediaCard.tsx` | One film as the card grid draws it, with section 6.1's artwork fallbacks. |
 | `ui/src/osd.css` | Only what a player adds to the design system. |
 | `ui/scripts/render-check.mjs` | Renders the OSD in a real browser and asserts its layout. |
 | `PROTOCOL.md` | The numbered gestures the player is accepted against, and which of them a machine can prove. |
 
 The OSD imports `web/src/lib/tokens.css` and
-`web/src/lib/components/Icon.svelte` directly. Two palettes is how two
+`web/src/lib/fonts.css` directly, and draws its icons with lucide-react. Two palettes is how two
 identities start, and this product has one.

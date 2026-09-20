@@ -1,6 +1,10 @@
 package updater
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/Benitoow/theia-media/internal/release"
+)
 
 func TestIsNewer(t *testing.T) {
 	tests := []struct {
@@ -77,8 +81,8 @@ func TestAssetName(t *testing.T) {
 				break
 			}
 		}
-		if got := assetName(goos, goarch); got != want {
-			t.Errorf("assetName(%s) = %q, want %q", platform, got, want)
+		if got := release.ServerName(goos, goarch); got != want {
+			t.Errorf("release.ServerName(%s) = %q, want %q", platform, got, want)
 		}
 	}
 }
@@ -88,12 +92,12 @@ func TestAssetForRejectsAnUnverifiableRelease(t *testing.T) {
 	// these cases kept passing after the rename - for the wrong reason, since
 	// the asset is now missing as well as unverifiable, which would have hidden
 	// a digest check that had stopped running.
-	rel := &release{
+	rel := &githubRelease{
 		TagName: "v1.1.0",
 		Assets: []asset{
-			{Name: assetName("linux", "amd64"), Digest: ""},
-			{Name: assetName("linux", "arm64"), Digest: "sha256:notlongenough"},
-			{Name: assetName("darwin", "arm64"), Digest: "md5:" + string(make([]byte, 64))},
+			{Name: release.ServerName("linux", "amd64"), Digest: ""},
+			{Name: release.ServerName("linux", "arm64"), Digest: "sha256:notlongenough"},
+			{Name: release.ServerName("darwin", "arm64"), Digest: "md5:" + string(make([]byte, 64))},
 		},
 	}
 
@@ -104,8 +108,8 @@ func TestAssetForRejectsAnUnverifiableRelease(t *testing.T) {
 	}
 
 	// And one that is fine.
-	good := &release{TagName: "v1.1.0", Assets: []asset{{
-		Name:   assetName("linux", "amd64"),
+	good := &githubRelease{TagName: "v1.1.0", Assets: []asset{{
+		Name:   release.ServerName("linux", "amd64"),
 		Digest: "sha256:e7e7fb30477f717e6f55f9180a70386c62677ef8a4d4d1a5d948f4098aa3eb99",
 	}}}
 	_, digest, err := assetFor(good, "linux", "amd64")
@@ -118,7 +122,7 @@ func TestAssetForRejectsAnUnverifiableRelease(t *testing.T) {
 }
 
 func TestAssetForReportsAMissingPlatform(t *testing.T) {
-	rel := &release{TagName: "v1.1.0", Assets: []asset{{Name: assetName("linux", "amd64")}}}
+	rel := &githubRelease{TagName: "v1.1.0", Assets: []asset{{Name: release.ServerName("linux", "amd64")}}}
 	if _, _, err := assetFor(rel, "openbsd", "riscv64"); err == nil {
 		t.Error("assetFor found a binary for a platform the release does not ship")
 	}
@@ -130,7 +134,7 @@ func TestAssetForReportsAMissingPlatform(t *testing.T) {
 // release and then stop finding anything.
 func TestAssetForPrefersTheRenamedAsset(t *testing.T) {
 	const digest = "sha256:e7e7fb30477f717e6f55f9180a70386c62677ef8a4d4d1a5d948f4098aa3eb99"
-	rel := &release{TagName: "v3.3.0", Assets: []asset{
+	rel := &githubRelease{TagName: "v3.3.0", Assets: []asset{
 		{Name: "theia-linux-amd64", BrowserDownloadURL: "https://example.invalid/old", Digest: digest},
 		{Name: "theia-server-linux-amd64", BrowserDownloadURL: "https://example.invalid/new", Digest: digest},
 	}}

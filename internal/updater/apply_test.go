@@ -16,6 +16,8 @@ import (
 	"testing"
 
 	"github.com/Benitoow/theia-media/internal/activity"
+
+	"github.com/Benitoow/theia-media/internal/release"
 )
 
 // helperSource is a stand-in for Theia itself: something that really is an
@@ -83,11 +85,11 @@ func stubGitHub(t *testing.T, tag, binaryPath, advertisedDigest string) *httptes
 	var server *httptest.Server
 
 	mux.HandleFunc("/repos/", func(w http.ResponseWriter, r *http.Request) {
-		rel := release{
+		rel := githubRelease{
 			TagName: tag,
 			HTMLURL: "https://example.invalid/releases/" + tag,
 			Assets: []asset{{
-				Name:               assetName(runtime.GOOS, runtime.GOARCH),
+				Name:               release.ServerName(runtime.GOOS, runtime.GOARCH),
 				BrowserDownloadURL: server.URL + "/download",
 				Digest:             "sha256:" + advertisedDigest,
 			}},
@@ -282,10 +284,10 @@ func TestApplyLeavesTheBinaryIntactWhenTheDownloadFails(t *testing.T) {
 	mux := http.NewServeMux()
 	var server *httptest.Server
 	mux.HandleFunc("/repos/", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(release{
+		json.NewEncoder(w).Encode(githubRelease{
 			TagName: "v1.1.0",
 			Assets: []asset{{
-				Name:               assetName(runtime.GOOS, runtime.GOARCH),
+				Name:               release.ServerName(runtime.GOOS, runtime.GOARCH),
 				BrowserDownloadURL: server.URL + "/gone",
 				Digest:             "sha256:" + digestOf(t, newBinary),
 			}},
@@ -312,7 +314,7 @@ func TestApplyRefusesWhileSomethingIsPlaying(t *testing.T) {
 	server := stubGitHub(t, "v1.1.0", newBinary, digestOf(t, newBinary))
 
 	tracker := activity.New()
-	done := tracker.Begin() // a stream is open
+	done, _ := tracker.TryBegin() // a stream is open
 	defer done()
 
 	u := newUpdater(t, inst, server.URL, tracker, func() {

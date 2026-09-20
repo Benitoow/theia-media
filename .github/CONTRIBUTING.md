@@ -69,8 +69,9 @@ From §3 of the founding spec, as amended by §14 for V3.3:
 Code, comments, commit messages and internal error strings are **English**, for
 contributors.
 
-The interface ships in **French and English**, with French as the default. Every
-user-facing string lives in `web/src/lib/i18n/locales/fr.js` and `en.js`. A new
+The interface ships in **French and English**, with **English as the base**
+(decision 137). Every user-facing string lives in
+`web/src/lib/i18n/locales/fr.js` and `en.js`. A new
 language is a new catalogue, not a hunt through Svelte markup, and
 `web/scripts/check-locales.mjs` fails the build if the two drift apart.
 

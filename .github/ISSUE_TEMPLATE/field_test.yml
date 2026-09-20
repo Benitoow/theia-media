@@ -1,11 +1,11 @@
-name: V3.1 field-test report
+name: Field-test report
 description: Tell us how Theia behaved on a real library, including when it worked
 labels: ["help wanted"]
 body:
   - type: markdown
     attributes:
       value: |
-        Theia V3.1 is being tested by its first ten real households before new
+        The v3.2 single-binary line is in the field while V3.3 is in progress, and
         features resume. Use it for about a week if you can. A calm report where
         everything worked is evidence too.
 
@@ -17,8 +17,8 @@ body:
     id: version
     attributes:
       label: Theia version
-      description: From Settings, or `theia -version`.
-      placeholder: v3.1.0
+      description: From Settings, or `theia-server -version`.
+      placeholder: v3.2.0
     validations:
       required: true
 

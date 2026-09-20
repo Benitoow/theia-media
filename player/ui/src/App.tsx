@@ -45,18 +45,16 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { Switch } from './components/ui/switch';
 import notFoundArt from './assets/media-not-found.png';
 import { catalogues, initialLanguage, storedLanguage } from './lib/catalogues.js';
-import { demoInvoke, demoListen, isDemoLibrary } from './lib/demo';
 import { artworkCandidates, displayTitle, displayYear } from './lib/tmdb';
 import { formatRuntime } from './lib/utils';
 import type { DiscoveredServer, Home, HomeRow, Movie, PlayerStatus, Profile, Season, Series, SeriesHome, Server, Track, UpdateStatus } from './types';
 
 const invoke = async <T,>(command: string, args?: Record<string, unknown>): Promise<T> => {
-	if (isDemoLibrary) return demoInvoke<T>(command, args);
 	const call = window.__TAURI__?.core?.invoke;
 	if (!call) return undefined as T;
 	return call<T>(command, args);
 };
-const listen = isDemoLibrary ? demoListen : (window.__TAURI__?.event?.listen ?? (async () => () => {}));
+const listen = window.__TAURI__?.event?.listen ?? (async () => () => {});
 const getAppWindow = () => window.__TAURI__?.window?.getCurrentWindow?.();
 const IDLE_MS = 3000;
 
@@ -902,7 +900,7 @@ function HomeHero({ movie, resuming, language, t, onPlay }: { movie: Movie; resu
 	const [heroFailed, setHeroFailed] = useState(false);
 	useEffect(() => setHeroFailed(false), [movie.id]);
 	// The not-found plate answers when no artwork exists or the picture
-	// failed; demo items always carry their own art, so demo is untouched.
+	// failed; an item that has its own artwork keeps it.
 	const heroArt = heroFailed ? notFoundArt : (artworkCandidates(movie, 'w1280')[0] ?? notFoundArt);
 	const position = movie.progress?.position_seconds ?? 0;
 	const duration = movie.progress?.duration_seconds ?? 0;

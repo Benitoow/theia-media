@@ -98,22 +98,6 @@ func (s *Store) ResetEpisodeProgress(ctx context.Context, profileID, id int64) e
 	return nil
 }
 
-func (s *Store) SaveEpisodeDuration(ctx context.Context, id int64, seconds float64) error {
-	if seconds <= 0 {
-		return nil
-	}
-	res, err := s.db.ExecContext(ctx, `
-		UPDATE episode_items SET duration_seconds = ?, updated_at = ? WHERE id = ?`,
-		seconds, time.Now().Unix(), id)
-	if err != nil {
-		return fmt.Errorf("saving the duration of episode %d: %w", id, err)
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return ErrNoSuchEpisodeItem
-	}
-	return nil
-}
-
 // SetEpisodeWatched marks one episode watched. See Store.SetWatched for why
 // this is a statement rather than a position at the end of the file.
 func (s *Store) SetEpisodeWatched(ctx context.Context, profileID, id int64, now time.Time) (Progress, error) {

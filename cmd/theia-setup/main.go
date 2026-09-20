@@ -348,6 +348,9 @@ func reportStatus(jsonOutput bool, text setup.Catalogue) error {
 		fmt.Printf("  %-18s %d\n", text["statusPort"], status.Port)
 		fmt.Printf("  %-18s %s\n", text["statusHost"], status.Hostname)
 	}
+	if status.InstalledAt != nil {
+		fmt.Printf("  %-18s %s\n", text["statusInstalled"], status.InstalledAt.Local().Format("2006-01-02"))
+	}
 	folders := text["statusNone"]
 	if len(status.LibraryPaths) > 0 {
 		folders = strings.Join(status.LibraryPaths, ", ")
