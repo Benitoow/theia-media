@@ -4544,6 +4544,25 @@ without an edge of its own. The first version was a bottom gradient; the
 maintainer corrected it by name, and the section that had argued against a
 gradient was arguing against something else.
 
+**Corrected twice, and the second correction is the one that mattered.** The
+first took the band's square corner for a clipping bug in the band and gave it
+`clip-path`; measured on the running player with the band repainted magenta, the
+band's corner was already round, and the square thing outside it was the
+**playing video**. A preview is a composited video layer, and the frame's
+`overflow: hidden` and `border-radius` do not clip one - on WebView2. Chromium
+does clip it: the harness passed on the same bundle while the maintainer's screen
+did not, which is a reminder that this check cannot be run in Chromium and
+conclude anything about the engine the product ships.
+
+So every layer that can be composited rounds itself: the still and the video with
+`inset(0 round var(--radius-card))`, which matches the frame because they fill it,
+and the blurred fill with `inset(9.02% round calc(var(--radius-card) / 1.22))` -
+its own box is 1.22 times the frame's after its transform, so the frame's rounded
+rectangle is 1/1.22 of it with a radius of 1/1.22, and the harness prints the
+resolved values (20.48px against 16.79px) as the arithmetic's receipt. Verified
+on the real window with the band magenta and a preview playing: the page's own
+luminance right up to the curve, nothing outside it.
+
 **Corrected the same day, and the corner is the lesson.** The maintainer's next
 screenshot showed the band's square corner drawn *outside* the card's rounded
 one. `backdrop-filter` is composited: an ancestor's `overflow: hidden` and

@@ -211,6 +211,33 @@ let failures = 0;
 
 // A failure that names only a scrollWidth sends the next person hunting through
 // the DOM with a ruler, so the report names the state and what sticks out.
+
+// Repaints the band magenta and compares two crops: one in the corner square the
+// card's radius cuts away, one in the band itself. A clipped band is invisible in
+// the first and obvious in the second.
+async function assertBandRounded(page) {
+	const card = page.locator('.film-art').first();
+	// Hovered, because that is where the fault was: a playing preview is a
+	// composited video layer and it is the one that drew outside the frame. A
+	// check on the still would have passed while the maintainer's screen did not.
+	await card.hover();
+	await page.waitForTimeout(1200);
+	const box = await card.boundingBox();
+	if (box == null) return { cornerChanged: true, insideChanged: true };
+	const corner = { x: box.x + 1, y: box.y + box.height - 4, width: 3, height: 3 };
+	const inside = { x: box.x + 10, y: box.y + Math.round(box.height / 2), width: 3, height: 3 };
+	const beforeCorner = await page.screenshot({ clip: corner });
+	const beforeInside = await page.screenshot({ clip: inside });
+	const tag = await page.addStyleTag({ content: '.film-art::after { background: #ff00ff !important; }' });
+	const afterCorner = await page.screenshot({ clip: corner });
+	const afterInside = await page.screenshot({ clip: inside });
+	await tag.evaluate((el) => el.remove());
+	return {
+		cornerChanged: !beforeCorner.equals(afterCorner),
+		insideChanged: !beforeInside.equals(afterInside),
+	};
+}
+
 async function assertFits(page, state) {
 	const measured = await page.evaluate(() => {
 		const culprits = [];
@@ -1903,6 +1930,10 @@ async function assertSeriesJourney(page) {
 			blurBand: after.backdropFilter,
 			mask: after.maskImage,
 			clip: after.clipPath,
+			fillClip: before.clipPath,
+			stillClip: [...el.querySelectorAll('img, video')].map(
+				(child) => getComputedStyle(child).clipPath
+			),
 			media: getComputedStyle(el.querySelector('img')).zIndex,
 		};
 	});
@@ -1918,11 +1949,46 @@ async function assertSeriesJourney(page) {
 		console.error(`the card has no blur band: ${JSON.stringify({ band: layers.blurBand, mask: layers.mask })}`);
 		failures++;
 	}
-	// The band rounds its own corner, because a blur is composited and an
-	// ancestor's radius does not clip it: without this its square corner draws
-	// outside the card, which is the fault the maintainer photographed.
-	if (!layers.clip.includes('round')) {
-		console.error(`the blur band does not round its own corner: ${JSON.stringify(layers.clip)}`);
+	// The band must not paint outside the card's rounded corner, and this is
+	// checked in pixels rather than in styles: the first version of this guard
+	// read `clip-path` and passed while the maintainer was looking at a square
+	// corner. The method needs no knowledge of the page's own colours - it
+	// repaints the band magenta and compares two crops of the two places. The
+	// corner crop must not change (the band is not there); the mid-left crop
+	// must (the band is), which is also what proves the probe can see anything
+	// at all.
+	// Two guards, and the second is not redundant: Chromium already clips the
+	// band through the card's own `overflow: hidden` and radius - measured, with
+	// the clip-path removed the pixel probe below still passes - but the
+	// maintainer photographed a square corner on a build of this bundle running
+	// under WebView2, so the band also rounds its own corner and that is
+	// asserted here. The pixel probe is the behaviour; this is the belt that
+	// holds on the engine the product actually ships.
+	// Every layer that can be composited must round itself, not just the band.
+	// This is not the same rule as Chromium's: Chromium clips a playing video
+	// through the card's own radius and WebView2 does not - the maintainer's
+	// screen had the film's dark corner outside the card while this harness
+	// passed on the same bundle. So the guard reads the four clips, and the
+	// pixel probe below is the behaviour for the engine it can measure.
+	const clips = {
+		band: layers.clip,
+		fill: layers.fillClip,
+		still: layers.stillClip,
+	};
+	const missing = Object.entries(clips).filter(([, value]) =>
+		Array.isArray(value) ? value.some((v) => !v.includes('round')) : !String(value).includes('round')
+	);
+	if (missing.length > 0) {
+		console.error(`a layer would draw outside the card's corner: ${JSON.stringify(clips)}`);
+		failures++;
+	}
+	const probe = await assertBandRounded(page);
+	if (probe.cornerChanged) {
+		console.error(`the band paints outside the card's corner: ${JSON.stringify(probe)}`);
+		failures++;
+	}
+	if (!probe.insideChanged) {
+		console.error(`the corner probe found no band to compare against: ${JSON.stringify(probe)}`);
 		failures++;
 	}
 	if (Number(layers.media) < 1) {

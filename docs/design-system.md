@@ -512,10 +512,14 @@ grew a box over the grid; both are gone.
   `backdrop-filter` on a masked layer, so the picture itself is what softens
   rather than being covered; the same gradient at low strength darkens it,
   because a blur alone is invisible on a dark frame and a smudge on a bright one.
-  **It rounds its own corner.** A blurred layer is composited, and an ancestor's
-  `overflow: hidden` and `border-radius` do not clip it - without
-  `clip-path: inset(0 round var(--radius-card))` the band's square corner draws
-  outside the card, which is exactly what happened.
+  **Every composited layer rounds itself.** An ancestor's `overflow: hidden` and
+  `border-radius` do not clip one - not the blurred band, and not a playing video
+  either, which is the layer that actually escaped: the maintainer's screen
+  showed the film's own dark corner outside the card while Chromium, where the
+  harness runs, clipped it correctly. So the still and the video take
+  `clip-path: inset(0 round var(--radius-card))` and the blurred fill takes the
+  same clip scaled into its own box, `inset(9.02% round calc(var(--radius-card) /
+  1.22))`, because its transform makes that box 1.22 times the frame's.
 - **A clip is cropped to the film, never shown with its own bars.** Most films
   are wider than the frame their file stores them in, so the picture arrives with
   black bars *in* it - 122 rows of 480 on the maintainer's own remux - and no

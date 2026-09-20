@@ -812,6 +812,12 @@ button.action:focus-visible {
 	transform: scale(1.22);
 	filter: blur(22px) saturate(1.15) brightness(0.92);
 	opacity: 0.62;
+	/* Rounded in its *own* box, because the frame's radius does not clip a
+	   filtered layer and this one is 1.22x the frame. The arithmetic: the wanted
+	   rectangle is the frame's, which this box covers after scaling by 1.22
+	   about its centre, so the rectangle is 1/1.22 of the box - 9.02% in from
+	   each edge - with a radius of frame-radius/1.22. */
+	clip-path: inset(9.02% round calc(var(--radius-card) / 1.22));
 }
 
 /* The bandeau: a dark blur from the left, gone before the middle.
@@ -852,6 +858,17 @@ button.action:focus-visible {
 .film-art img {
 	position: relative;
 	z-index: 1;
+}
+/* A playing preview is a composited video layer, and the frame's `overflow` and
+   radius do **not** clip one: the maintainer photographed the film's own dark
+   corner outside the card's rounded one, on a hovered card, which is where the
+   video is. Measured with the band repainted magenta: the band's corner was
+   round (it clips itself) while the picture's was square. So every layer that
+   can be composited rounds itself, and `inset(0 round ...)` matches the frame
+   exactly because these fill it. */
+.film-art img,
+.film-art video {
+	clip-path: inset(0 round var(--radius-card));
 }
 .film-art video {
 	z-index: 1;
