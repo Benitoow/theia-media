@@ -20,6 +20,9 @@ const available = Object.freeze(
 class I18n {
 	current = $state(defaultLocale);
 	ready = $state(false);
+	// chosen records that this browser answered for itself, so the server's
+	// preference cannot overwrite a decision somebody made here.
+	chosen = false;
 
 	get locale() {
 		return this.current;
@@ -50,9 +53,14 @@ class I18n {
 		if (browser) {
 			try {
 				const stored = localStorage.getItem(storageKey);
-				if (stored && hasLocale(stored)) this.current = stored;
+				if (stored && hasLocale(stored)) {
+					this.current = stored;
+					// An explicit choice is the whole answer: the installation's own
+					// language is a starting point, and this browser has left it.
+					this.chosen = true;
+				}
 			} catch {
-				// Some privacy modes deny local storage. French remains the
+				// Some privacy modes deny local storage. English remains the
 				// default and language switching still works for this page.
 			}
 		}
@@ -66,6 +74,9 @@ class I18n {
 		if (!hasLocale(code)) return false;
 
 		this.current = code;
+		// Somebody chose here, so the installation's own language steps back for
+		// good - including across reloads, where this is read back from storage.
+		this.chosen = true;
 		this.syncDocumentLanguage();
 
 		if (browser) {
@@ -94,6 +105,17 @@ class I18n {
 
 	formatRuntime(minutes) {
 		return catalogs[this.current].formatRuntime(minutes);
+	}
+
+	// adoptServerLanguage takes the language this installation was set up in,
+	// which the server sends with its identity. It is only ever a starting point:
+	// a browser that has already answered keeps its answer, and an installation
+	// that was never asked answers in English like everything else.
+	adoptServerLanguage(code) {
+		if (this.chosen || !code || !hasLocale(code) || code === this.current) return this.current;
+		this.current = code;
+		this.syncDocumentLanguage();
+		return this.current;
 	}
 
 	syncDocumentLanguage() {

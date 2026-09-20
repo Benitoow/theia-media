@@ -77,7 +77,7 @@ func TestRemoteProtectionUsesPeerHostRouteAndOrigin(t *testing.T) {
 		code       string
 	}{
 		{name: "catalogue", method: http.MethodGet, path: "/api/library/movies", remoteAddr: "10.77.0.2:4000", host: "10.77.0.1:8383", status: 204},
-		{name: "static", method: http.MethodGet, path: "/films/12", remoteAddr: "10.77.0.2:4000", host: "10.77.0.1:8383", status: 204},
+		{name: "static", method: http.MethodGet, path: "/movies/12", remoteAddr: "10.77.0.2:4000", host: "10.77.0.1:8383", status: 204},
 		{name: "same origin progress", method: http.MethodPut, path: "/api/library/movies/12/progress", remoteAddr: "10.77.0.2:4000", host: "10.77.0.1:8383", origin: "http://10.77.0.1:8383", status: 204},
 		{name: "native progress", method: http.MethodPut, path: "/api/library/episodes/4/progress", remoteAddr: "10.77.0.2:4000", host: "10.77.0.1:8383", status: 204},
 		{name: "settings forbidden", method: http.MethodGet, path: "/api/settings", remoteAddr: "10.77.0.2:4000", host: "10.77.0.1:8383", status: 403, code: "remote_access_forbidden"},
@@ -88,7 +88,7 @@ func TestRemoteProtectionUsesPeerHostRouteAndOrigin(t *testing.T) {
 		{name: "cross site", method: http.MethodPut, path: "/api/library/movies/12/progress", remoteAddr: "10.77.0.2:4000", host: "10.77.0.1:8383", origin: "http://10.77.0.1:8383", fetchSite: "cross-site", status: 403, code: "remote_origin_forbidden"},
 		{name: "cross site video", method: http.MethodGet, path: "/api/stream/12", remoteAddr: "10.77.0.2:4000", host: "10.77.0.1:8383", fetchSite: "cross-site", fetchMode: "no-cors", status: 403, code: "remote_origin_forbidden"},
 		{name: "cross origin catalogue", method: http.MethodGet, path: "/api/library/movies", remoteAddr: "10.77.0.2:4000", host: "10.77.0.1:8383", origin: "https://evil.example", status: 403, code: "remote_origin_forbidden"},
-		{name: "cross site top-level navigation", method: http.MethodGet, path: "/films", remoteAddr: "10.77.0.2:4000", host: "10.77.0.1:8383", fetchSite: "cross-site", fetchMode: "navigate", status: 204},
+		{name: "cross site top-level navigation", method: http.MethodGet, path: "/movies", remoteAddr: "10.77.0.2:4000", host: "10.77.0.1:8383", fetchSite: "cross-site", fetchMode: "navigate", status: 204},
 		{name: "dns rebinding", method: http.MethodGet, path: "/api/library/movies", remoteAddr: "10.77.0.2:4000", host: "evil.example", status: 421, code: "remote_host_invalid"},
 		{name: "unknown peer", method: http.MethodGet, path: "/api/library/movies", remoteAddr: "10.77.0.3:4000", host: "10.77.0.1:8383", status: 403, code: "remote_peer_unknown"},
 	}

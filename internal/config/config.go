@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strings"
 )
 
 const (
@@ -39,6 +40,42 @@ const (
 	localFileName = "config.local.json"
 )
 
+// The languages Theia ships. English is the base: it is what an absent, empty
+// or unrecognised value means, here and in both interfaces (decision 137).
+const (
+	LanguageEnglish = "en"
+	LanguageFrench  = "fr"
+
+	// DefaultLanguage is what a machine that was never asked answers.
+	DefaultLanguage = LanguageEnglish
+)
+
+// NormalizeLanguage turns anything a person, a file or an argv entry might say
+// into one of the two codes. This is the only place that decides, so the
+// interface, the metadata and the installer cannot drift apart:
+//
+//	"fr", "FR", "fr-FR", "fr_FR" -> "fr"
+//	"en", "en-GB", "" , "klingon" -> "en"
+func NormalizeLanguage(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	if index := strings.IndexAny(value, "-_"); index > 0 {
+		value = value[:index]
+	}
+	if value == LanguageFrench {
+		return LanguageFrench
+	}
+	return LanguageEnglish
+}
+
+// MetadataLanguage is the same choice in the vocabulary TMDB uses for the
+// titles and synopses it returns.
+func MetadataLanguage(code string) string {
+	if NormalizeLanguage(code) == LanguageFrench {
+		return "fr-FR"
+	}
+	return "en-US"
+}
+
 // Config is the full on-disk configuration. Every field is optional: zero
 // values are replaced by defaults when the file is loaded, so a hand-edited
 // file that is missing keys -- or is just "{}" -- still starts a working server.
@@ -52,6 +89,11 @@ type Config struct {
 
 	// LibraryPaths are the directories scanned for media files.
 	LibraryPaths []string `json:"library_paths"`
+
+	// Language is the language the interface opens in and the one metadata is
+	// fetched in. The installer asks for it explicitly; English is the base, so
+	// an absent or unrecognised value means English rather than an error.
+	Language string `json:"language"`
 
 	// TMDBAPIKey overrides the key compiled into the binary. Empty means "use
 	// the built-in key", which is the case for nearly every user -- this exists
@@ -75,6 +117,7 @@ func Default() Config {
 		Port:         DefaultPort,
 		Hostname:     DefaultHostname,
 		LibraryPaths: []string{},
+		Language:     DefaultLanguage,
 	}
 }
 
@@ -143,6 +186,9 @@ func (c *Config) applyDefaults() {
 	if c.LibraryPaths == nil {
 		c.LibraryPaths = []string{}
 	}
+	// Normalised rather than merely defaulted: a hand-edited "fr-FR" or a value
+	// from a future release has to land on a language this build ships.
+	c.Language = NormalizeLanguage(c.Language)
 }
 
 // overlay mirrors Config with pointers, so that "absent from the file" is
@@ -151,6 +197,7 @@ type overlay struct {
 	Port         *int      `json:"port"`
 	Hostname     *string   `json:"hostname"`
 	LibraryPaths *[]string `json:"library_paths"`
+	Language     *string   `json:"language"`
 	TMDBAPIKey   *string   `json:"tmdb_api_key"`
 }
 
@@ -195,6 +242,10 @@ func (c *Config) applyLocalOverrides(path string) error {
 	if over.TMDBAPIKey != nil {
 		c.TMDBAPIKey = *over.TMDBAPIKey
 		c.overridden["tmdb_api_key"] = true
+	}
+	if over.Language != nil {
+		c.Language = NormalizeLanguage(*over.Language)
+		c.overridden["language"] = true
 	}
 	return nil
 }
@@ -305,6 +356,9 @@ func (c *Config) Save() error {
 		}
 		if c.overridden["library_paths"] {
 			out.LibraryPaths = slices.Clone(c.persisted.LibraryPaths)
+		}
+		if c.overridden["language"] {
+			out.Language = c.persisted.Language
 		}
 		if c.overridden["tmdb_api_key"] {
 			out.TMDBAPIKey = c.persisted.TMDBAPIKey

@@ -1,7 +1,7 @@
 <script>
 	// One search, over both catalogues.
 	//
-	// /films already searches films and /series already searches series, each by
+	// /movies already searches films and /series already searches series, each by
 	// filtering a catalogue it had downloaded. Both are good pages; between them
 	// they made you decide whether the thing you half-remembered was a film or a
 	// series before you were allowed to look for it.
@@ -250,7 +250,7 @@
 					{#each results.series as item (item.id)}
 						<PosterCard
 							movie={item}
-							href="/serie/{item.id}"
+							href="/show/{item.id}"
 							fluid
 							playable={false}
 							legend={item.metadata?.first_air_date?.slice(0, 4) ?? ''}

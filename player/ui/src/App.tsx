@@ -44,7 +44,7 @@ import { Button } from './components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from './components/ui/dialog';
 import { Switch } from './components/ui/switch';
 import notFoundArt from './assets/media-not-found.png';
-import { catalogues, initialLanguage } from './lib/catalogues.js';
+import { catalogues, initialLanguage, storedLanguage } from './lib/catalogues.js';
 import { demoInvoke, demoListen, isDemoLibrary } from './lib/demo';
 import { artworkCandidates, displayTitle, displayYear } from './lib/tmdb';
 import { formatRuntime } from './lib/utils';
@@ -218,6 +218,13 @@ export default function App() {
 					// The server-selected profile remains authoritative when storage is unavailable.
 				}
 				setServer(connected);
+				// The language this installation was set up in, which travels with
+				// the server's identity. It is a starting point and never a
+				// decision: a viewer who has chosen here keeps their choice.
+				const served = connected.health?.language;
+				if (!storedLanguage() && served && (catalogues as Record<string, unknown>)[served]) {
+					setLanguage(served);
+				}
 				setAddress(connected.url);
 				try {
 					localStorage.setItem('theia.player.server', connected.url);
@@ -768,7 +775,7 @@ function Library(props: LibraryProps) {
 				) : selectedSeries ? (
 					<motion.div key={`series-${selectedSeries.id}`} className="contents" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
 						<div className="season-tabs">{selectedSeries.seasons?.map((season) => <button key={season.id} className={`season-tab label ${selectedSeason?.season_number === season.season_number ? 'season-tab--active' : ''}`} onClick={() => props.onSeason(season.season_number)}>{season.metadata?.name || `${t('season')} ${season.season_number}`}</button>)}</div>
-						{selectedSeason?.episodes?.length ? <CardGrid>{selectedSeason.episodes.map((episode) => <MediaCard key={episode.id} kind="episode" item={episode} seriesLabel={displayTitle(selectedSeries)} onOpen={props.onEpisode} resumeLabel={t('resumeAt')} actionLabel={t('playEpisode')} kindLabel={t('episodeUntitled')} reducedMotion={props.reducedMotion} />)}</CardGrid> : <p className="hint">{t('emptySeason')}</p>}
+						{selectedSeason?.episodes?.length ? <CardGrid>{selectedSeason.episodes.map((episode) => <MediaCard key={episode.id} kind="episode" item={episode} seriesLabel={displayTitle(selectedSeries)} onOpen={props.onEpisode} resumeLabel={t('resumeAt')} actionLabel={t('playEpisode')} kindLabel={t('episodeUntitled')} reducedMotion={props.reducedMotion} t={props.t} />)}</CardGrid> : <p className="hint">{t('emptySeason')}</p>}
 					</motion.div>
 				) : section === 'home' ? (
 					<motion.div key="home" className="home-view" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}>
@@ -784,7 +791,7 @@ function Library(props: LibraryProps) {
 					<SearchResults {...props} />
 				) : (
 					<motion.div key={section} className="contents" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}>
-						{section === 'series' ? (props.series.length ? <CardGrid>{props.series.map((item) => <MediaCard key={item.id} kind="series" item={item} onOpen={props.onSeries} resumeLabel={t('resumeAt')} actionLabel={t('openSeries')} kindLabel={t('seriesLabel')} reducedMotion={props.reducedMotion} />)}</CardGrid> : <p className="hint">{t('emptySeries')}</p>) : (props.movies.length ? <CardGrid>{props.movies.map((movie) => <MediaCard key={movie.id} kind="movie" item={movie} onOpen={props.onMovie} resumeLabel={t('resumeAt')} actionLabel={t('playMovie')} kindLabel={t('filmSingular')} reducedMotion={props.reducedMotion} />)}</CardGrid> : <p className="hint">{t('emptyLibrary')}</p>)}
+						{section === 'series' ? (props.series.length ? <CardGrid>{props.series.map((item) => <MediaCard key={item.id} kind="series" item={item} onOpen={props.onSeries} resumeLabel={t('resumeAt')} actionLabel={t('openSeries')} kindLabel={t('seriesLabel')} reducedMotion={props.reducedMotion} t={props.t} />)}</CardGrid> : <p className="hint">{t('emptySeries')}</p>) : (props.movies.length ? <CardGrid>{props.movies.map((movie) => <MediaCard key={movie.id} kind="movie" item={movie} onOpen={props.onMovie} resumeLabel={t('resumeAt')} actionLabel={t('playMovie')} kindLabel={t('filmSingular')} reducedMotion={props.reducedMotion} t={props.t} />)}</CardGrid> : <p className="hint">{t('emptyLibrary')}</p>)}
 						{props.errorKey && <p className="hint hint--error">{t(props.errorKey)}</p>}
 					</motion.div>
 				)}
@@ -806,8 +813,8 @@ function SearchResults(props: LibraryProps) {
 			</label>
 			{!query ? <p className="hint">{props.t('searchHint')}</p> : matchingMovies.length + matchingSeries.length === 0 ? <p className="hint">{props.t('noSearchResults')}</p> : (
 				<div className="search-results">
-					{matchingMovies.length > 0 && <section><h2 className="search-result-title label">{props.t('filmResults')} · {matchingMovies.length}</h2><CardGrid>{matchingMovies.map((movie) => <MediaCard key={movie.id} kind="movie" item={movie} onOpen={props.onMovie} resumeLabel={props.t('resumeAt')} actionLabel={props.t('playMovie')} kindLabel={props.t('filmSingular')} reducedMotion={props.reducedMotion} />)}</CardGrid></section>}
-					{matchingSeries.length > 0 && <section><h2 className="search-result-title label">{props.t('seriesResults')} · {matchingSeries.length}</h2><CardGrid>{matchingSeries.map((item) => <MediaCard key={item.id} kind="series" item={item} onOpen={props.onSeries} resumeLabel={props.t('resumeAt')} actionLabel={props.t('openSeries')} kindLabel={props.t('seriesLabel')} reducedMotion={props.reducedMotion} />)}</CardGrid></section>}
+					{matchingMovies.length > 0 && <section><h2 className="search-result-title label">{props.t('filmResults')} · {matchingMovies.length}</h2><CardGrid>{matchingMovies.map((movie) => <MediaCard key={movie.id} kind="movie" item={movie} onOpen={props.onMovie} resumeLabel={props.t('resumeAt')} actionLabel={props.t('playMovie')} kindLabel={props.t('filmSingular')} reducedMotion={props.reducedMotion} t={props.t} />)}</CardGrid></section>}
+					{matchingSeries.length > 0 && <section><h2 className="search-result-title label">{props.t('seriesResults')} · {matchingSeries.length}</h2><CardGrid>{matchingSeries.map((item) => <MediaCard key={item.id} kind="series" item={item} onOpen={props.onSeries} resumeLabel={props.t('resumeAt')} actionLabel={props.t('openSeries')} kindLabel={props.t('seriesLabel')} reducedMotion={props.reducedMotion} t={props.t} />)}</CardGrid></section>}
 				</div>
 			)}
 		</motion.div>
@@ -842,7 +849,7 @@ function HomeView({ home, seriesHome, language, reducedMotion, t, onMovie, onSer
 			kind: row.kind,
 			hint: row.kind === 'tonight' ? t('rowTonightHint') : null,
 			cards: row.movies.map((movie) => (
-				<MediaCard key={movie.id} kind="movie" item={movie} onOpen={onMovie} resumeLabel={t('resumeAt')} actionLabel={t('playMovie')} kindLabel={t('filmSingular')} reducedMotion={reducedMotion} />
+				<MediaCard key={movie.id} kind="movie" item={movie} onOpen={onMovie} resumeLabel={t('resumeAt')} actionLabel={t('playMovie')} kindLabel={t('filmSingular')} reducedMotion={reducedMotion} t={t} />
 			)),
 		});
 	}
@@ -851,7 +858,7 @@ function HomeView({ home, seriesHome, language, reducedMotion, t, onMovie, onSer
 			kind: 'series_continue',
 			hint: null,
 			cards: seriesHome.continue_watching.map((episode) => (
-				<MediaCard key={episode.id} kind="episode" item={episode} heading={episode.series_title} onOpen={onEpisode} resumeLabel={t('resumeAt')} actionLabel={t('playEpisode')} kindLabel={t('episodeUntitled')} reducedMotion={reducedMotion} />
+				<MediaCard key={episode.id} kind="episode" item={episode} heading={episode.series_title} onOpen={onEpisode} resumeLabel={t('resumeAt')} actionLabel={t('playEpisode')} kindLabel={t('episodeUntitled')} reducedMotion={reducedMotion} t={t} />
 			)),
 		});
 	}
@@ -860,7 +867,7 @@ function HomeView({ home, seriesHome, language, reducedMotion, t, onMovie, onSer
 			kind: 'series_recent',
 			hint: null,
 			cards: seriesHome.recent_series.map((series) => (
-				<MediaCard key={series.id} kind="series" item={series} onOpen={onSeries} resumeLabel={t('resumeAt')} actionLabel={t('openSeries')} kindLabel={t('seriesLabel')} reducedMotion={reducedMotion} />
+				<MediaCard key={series.id} kind="series" item={series} onOpen={onSeries} resumeLabel={t('resumeAt')} actionLabel={t('openSeries')} kindLabel={t('seriesLabel')} reducedMotion={reducedMotion} t={t} />
 			)),
 		});
 	}

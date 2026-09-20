@@ -79,7 +79,7 @@
 	backdrop at 16/9, with corners from the same family as every other panel.
 -->
 <a
-	href={href ?? `/film/${movie.id}`}
+	href={href ?? `/movie/${movie.id}`}
 	class="poster-card group"
 	class:poster-card--fluid={fluid}
 	title={title}

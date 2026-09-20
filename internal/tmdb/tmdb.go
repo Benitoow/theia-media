@@ -37,9 +37,10 @@ const (
 	defaultBaseURL  = "https://api.themoviedb.org/3"
 	defaultImageURL = "https://image.tmdb.org/t/p"
 
-	// The interface is French, so ask TMDB for French titles and synopses. It
-	// falls back to English on its own when a translation is missing.
-	language = "fr-FR"
+	// DefaultLanguage is what a client that was not told a language asks for.
+	// English is the base of the product, and TMDB falls back to it on its own
+	// when a translation is missing.
+	DefaultLanguage = "en-US"
 
 	// TMDB tolerates around 50 requests a second. Staying well under that
 	// costs nothing on a library scan and keeps us a long way from a 429.
@@ -57,6 +58,11 @@ type Client struct {
 	baseURL  string
 	imageURL string
 	limiter  *limiter
+
+	// language is the TMDB locale every request asks for. It follows the
+	// language this installation was set up in, so the titles and synopses agree
+	// with the interface that draws them (decision 137).
+	language string
 }
 
 // Option customises a Client. Only tests are expected to use these.
@@ -67,6 +73,17 @@ func WithBaseURL(u string) Option { return func(c *Client) { c.baseURL = u } }
 
 // WithImageBaseURL points the client at a different image host.
 func WithImageBaseURL(u string) Option { return func(c *Client) { c.imageURL = u } }
+
+// WithLanguage sets the TMDB locale, in TMDB's own vocabulary: "en-US", "fr-FR".
+// An empty value leaves the default, so a caller with nothing to say cannot
+// silently ask for a language nobody chose.
+func WithLanguage(code string) Option {
+	return func(c *Client) {
+		if code != "" {
+			c.language = code
+		}
+	}
+}
 
 // WithHTTPClient replaces the underlying HTTP client.
 func WithHTTPClient(h *http.Client) Option { return func(c *Client) { c.http = h } }
@@ -85,6 +102,7 @@ func New(token string, opts ...Option) *Client {
 		token:    token,
 		baseURL:  defaultBaseURL,
 		imageURL: defaultImageURL,
+		language: DefaultLanguage,
 		limiter:  &limiter{interval: requestInterval},
 	}
 	for _, opt := range opts {
@@ -209,7 +227,7 @@ func (c *Client) search(ctx context.Context, title string, year int) (int, error
 
 	params := url.Values{}
 	params.Set("query", title)
-	params.Set("language", language)
+	params.Set("language", c.language)
 	params.Set("include_adult", "false")
 	if year != 0 {
 		params.Set("primary_release_year", strconv.Itoa(year))
@@ -315,7 +333,7 @@ type releaseDateEntry struct {
 // rate limit again. Everything the film page shows comes from this one call.
 func (c *Client) Details(ctx context.Context, id int) (*Film, error) {
 	var body detailsResponse
-	path := fmt.Sprintf("/movie/%d?language=%s&append_to_response=credits,release_dates", id, language)
+	path := fmt.Sprintf("/movie/%d?language=%s&append_to_response=credits,release_dates", id, c.language)
 	if err := c.get(ctx, path, &body); err != nil {
 		return nil, err
 	}

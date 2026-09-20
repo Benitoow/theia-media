@@ -130,15 +130,15 @@ export const strings = {
 	rows: {
 		continue: {
 			title: 'Continue watching',
-			href: '/films?status=progress'
+			href: '/movies?status=progress'
 		},
 		recent: {
 			title: 'Recently added',
-			href: '/films?sort=added'
+			href: '/movies?sort=added'
 		},
 		top_rated: {
 			title: 'Top rated',
-			href: '/films?sort=rating'
+			href: '/movies?sort=rating'
 		},
 		series_continue: {
 			title: 'Continue a series',
@@ -343,7 +343,7 @@ export const strings = {
 			offsetValue: (seconds) =>
 				seconds === 0
 					? 'in sync'
-					: `${seconds > 0 ? '+' : '−'}${Math.abs(seconds).toLocaleString('en-GB', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s`
+					: `${seconds > 0 ? '+' : '−'}${Math.abs(seconds).toLocaleString(metadata.localeTag, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s`
 		},
 
 		shortcuts: {

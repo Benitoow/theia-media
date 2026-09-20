@@ -8,25 +8,26 @@
 	import { profiles } from '$lib/profiles.svelte.js';
 	import { remote } from '$lib/remote.svelte.js';
 	import { reportDiagnostic } from '$lib/diagnostic-events.js';
+	import { getJSON } from '$lib/api.js';
 	import ProfileMark from '$lib/components/ProfileMark.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 
 	let { children } = $props();
 
-	// Which link is lit. `/film/<id>` deliberately lights nothing: it is reached
+	// Which link is lit. `/movie/<id>` deliberately lights nothing: it is reached
 	// as readily from the home rows as from the library, and claiming one of
 	// them would be a guess dressed as a fact.
 	const path = $derived($page.url.pathname);
 	const atHome = $derived(path === '/');
-	const inLibrary = $derived(path === '/films' || path.startsWith('/films/'));
+	const inLibrary = $derived(path === '/movies' || path.startsWith('/movies/'));
 	const inSeries = $derived(
-		path === '/series' || path.startsWith('/serie/') || path.startsWith('/episode/')
+		path === '/series' || path.startsWith('/show/') || path.startsWith('/episode/')
 	);
-	const inSearch = $derived(path === '/recherche');
-	const inSettings = $derived(path === '/reglages' || path.startsWith('/reglages/'));
+	const inSearch = $derived(path === '/search');
+	const inSettings = $derived(path === '/settings' || path.startsWith('/settings/'));
 	// The chooser owns the whole viewport: the navigation is suppressed for that
 	// route only, so the first arrow key lands on a profile rather than on a link.
-	const inProfiles = $derived(path === '/profils' || path.startsWith('/profils/'));
+	const inProfiles = $derived(path === '/profiles' || path.startsWith('/profiles/'));
 
 	// The pill keeps a light scrim over arbitrary hero artwork, then strengthens
 	// once the page moves so it never becomes a hard opaque band.
@@ -34,6 +35,20 @@
 
 	onMount(async () => {
 		i18n.bootstrap();
+		// The language this installation was set up in travels with the server's
+		// identity, and it is a starting point rather than a decision: a browser
+		// that has already answered for itself is not asked again, and one
+		// request is skipped entirely in that case. English holds if it cannot be
+		// reached.
+		if (!i18n.chosen) {
+			try {
+				const health = await getJSON('/api/health');
+				i18n.adoptServerLanguage(health.language);
+			} catch {
+				// A server that cannot be reached is the connect screen's problem,
+				// not the language's.
+			}
+		}
 		// Asked first: what follows depends on which side of the tunnel this is.
 		await remote.load();
 		try {
@@ -42,7 +57,7 @@
 			await profiles.ready();
 			// The application opens by asking who is watching, whenever this
 			// browser has no answer -- or has one that was deleted elsewhere.
-			if (profiles.needsSelection && !inProfiles) goto('/profils');
+			if (profiles.needsSelection && !inProfiles) goto('/profiles');
 		} catch {
 			// A server without profiles still serves the library. The chooser is
 			// not worth blocking a film over.
@@ -217,7 +232,7 @@
 		     destinations do not fit on one line beside the mark. -->
 		<div class="site-nav-links flex items-center">
 			<a
-				href="/films"
+				href="/movies"
 				class="nav-target nav-link label"
 				aria-current={inLibrary ? 'page' : undefined}
 			>
@@ -236,7 +251,7 @@
 			     press away from the library (decision 35 measured the same thing
 			     for the profile control). -->
 			<a
-				href="/recherche"
+				href="/search"
 				class="nav-target nav-link label"
 				aria-current={inSearch ? 'page' : undefined}
 			>
@@ -247,7 +262,7 @@
 			     worse than no link (decision 44). -->
 			{#if !remote.isRemote}
 				<a
-					href="/reglages"
+					href="/settings"
 					class="nav-target nav-link label"
 					aria-current={inSettings ? 'page' : undefined}
 				>
@@ -261,7 +276,7 @@
 			     and steals the first D-pad press. -->
 			{#if profiles.active}
 				<a
-					href="/profils"
+					href="/profiles"
 					class="nav-target nav-profile"
 					aria-label={t.profiles.switch}
 					title={t.profiles.current(profiles.active.name || t.profiles.defaultName)}
@@ -285,7 +300,7 @@
 
 <!-- Detail pages load by identity; client-side navigation must remount them.
      Search owns its query string while typing, so it keeps its local state. -->
-{#key $page.url.pathname + ($page.url.pathname === '/recherche' ? '' : $page.url.search)}
+{#key $page.url.pathname + ($page.url.pathname === '/search' ? '' : $page.url.search)}
 	{@render children()}
 {/key}
 
@@ -313,7 +328,7 @@
 			<Icon name="home" size={22} />
 			<span class="tab-label">{t.nav.home}</span>
 		</a>
-		<a href="/films" class="tab" aria-current={inLibrary ? 'page' : undefined}>
+		<a href="/movies" class="tab" aria-current={inLibrary ? 'page' : undefined}>
 			<Icon name="film" size={22} />
 			<span class="tab-label">{t.nav.library}</span>
 		</a>
@@ -321,12 +336,12 @@
 			<Icon name="series" size={22} />
 			<span class="tab-label">{t.series.title}</span>
 		</a>
-		<a href="/recherche" class="tab" aria-current={inSearch ? 'page' : undefined}>
+		<a href="/search" class="tab" aria-current={inSearch ? 'page' : undefined}>
 			<Icon name="search" size={22} />
 			<span class="tab-label">{t.nav.search}</span>
 		</a>
 		{#if !remote.isRemote}
-			<a href="/reglages" class="tab" aria-current={inSettings ? 'page' : undefined}>
+			<a href="/settings" class="tab" aria-current={inSettings ? 'page' : undefined}>
 				<Icon name="settings" size={22} />
 				<span class="tab-label">{t.nav.settings}</span>
 			</a>

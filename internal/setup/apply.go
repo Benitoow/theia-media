@@ -62,6 +62,8 @@ const machineFile = "setup.json"
 // machineRecord is what the installer remembers about this machine.
 type machineRecord struct {
 	Role Role `json:"role"`
+	// Language is what this machine was set up to speak.
+	Language string `json:"language,omitempty"`
 	// InstalledAt is when the role was last declared. Not used for anything yet;
 	// it is the one fact that makes a support conversation possible ("when did
 	// you last run the installer?").
@@ -117,6 +119,7 @@ func Apply(plan Plan) (Result, error) {
 		}
 		cfg.Port = plan.Port
 		cfg.Hostname = plan.Hostname
+		cfg.Language = plan.Language
 		// The folders are added, not replaced: an installation that already has
 		// a library must not lose it because somebody ran the installer again
 		// with one new folder.
@@ -149,7 +152,10 @@ func Apply(plan Plan) (Result, error) {
 }
 
 func writeMachineRecord(plan Plan) error {
-	record := machineRecord{Role: plan.Role, InstalledAt: time.Now().UTC()}
+	// The language is recorded here as well as in the server's configuration,
+	// because a player-only machine never writes one and its answer would
+	// otherwise be thrown away the moment the form closed.
+	record := machineRecord{Role: plan.Role, Language: plan.Language, InstalledAt: time.Now().UTC()}
 	data, err := json.MarshalIndent(record, "", "  ")
 	if err != nil {
 		return err

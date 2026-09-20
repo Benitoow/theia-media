@@ -140,7 +140,7 @@ func TestAnAbortedRunLeavesTheDiskAlone(t *testing.T) {
 		t.Fatal("the form no longer starts on yes, so this test would prove nothing")
 	}
 
-	model := &formModel{form: buildForm(&result, language, maxFormWidth, 14), language: language}
+	model := &formModel{form: buildForm(&result, language, maxFormWidth, 14), text: func(key string) string { return language[key] }}
 	if _, _ = model.Update(tea.KeyMsg{Type: tea.KeyEsc}); !model.aborted {
 		t.Fatal("escape did not abort the form")
 	}

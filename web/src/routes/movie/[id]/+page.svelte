@@ -144,7 +144,7 @@
 			// opening a player it does not own. The player still asks whether to
 			// resume or start over; what this skips is the detour through a page
 			// nobody wanted to read on the way back to a film already half seen.
-			if ($page.url.searchParams.has('reprendre')) playing = true;
+			if ($page.url.searchParams.has('resume')) playing = true;
 		} catch {
 			loadState = 'missing';
 		}
@@ -308,7 +308,7 @@
 						<Certificate value={meta.certification} country={meta.certification_country} />
 						{#if meta.director}
 							<a
-								href="/films?q={encodeURIComponent(meta.director)}"
+								href="/movies?q={encodeURIComponent(meta.director)}"
 								class="film-director-link label"
 								aria-label={t.film.moreByDirector(meta.director)}
 							>

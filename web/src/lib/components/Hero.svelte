@@ -104,16 +104,16 @@
 					     the beginning; this saves the trip through the detail page,
 					     which was the whole complaint about the old home screen. -->
 					<a
-						href="/film/{movie.id}?reprendre=1"
+						href="/movie/{movie.id}?resume=1"
 						class="tv-action tv-action--primary"
 						data-remote-default
 					>
 						<span>{t.hero.resume}</span>
 						<span aria-hidden="true">→</span>
 					</a>
-					<a href="/film/{movie.id}" class="tv-action">{t.hero.details}</a>
+					<a href="/movie/{movie.id}" class="tv-action">{t.hero.details}</a>
 				{:else}
-					<a href="/film/{movie.id}" class="tv-action tv-action--primary" data-remote-default>
+					<a href="/movie/{movie.id}" class="tv-action tv-action--primary" data-remote-default>
 						<span>{t.hero.details}</span>
 						<span aria-hidden="true">→</span>
 					</a>

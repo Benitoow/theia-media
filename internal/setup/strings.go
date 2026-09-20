@@ -1,21 +1,40 @@
 package setup
 
 import (
+	"github.com/Benitoow/theia-media/internal/config"
 	"os"
 	"strings"
 )
 
-// The installer's own words, in French and English.
+// The installer's own words, in English and French.
 //
-// The interface ships in both languages with French as the default (founding
-// spec §3), and that rule does not stop at the browser: the installer is the
-// first thing anybody sees of this product, and it is the one screen a person
-// reads before anything works. A terminal is not an excuse for English.
+// English is the base of the product, and the installer is where that is
+// decided rather than assumed: it asks which language this machine should speak,
+// as its first question, and writes the answer into the configuration for both
+// interfaces to read (decision 137). Until that answer exists there is no
+// catalogue to draw from, which is why the question itself is the only bilingual
+// sentence here - see languageQuestionTitle.
 //
 // The catalogue is a map rather than a struct so that a missing key is visible
 // in one place - and TestEverySentenceExistsInBothLanguages fails when one is
 // added to a single language.
 type Catalogue map[string]string
+
+// The language question is asked before a language has been chosen, so its two
+// labels cannot come from a catalogue. They are endonyms, each written in its own
+// language - "English" and "Français" are what those languages call themselves,
+// and Translating them is what makes a language picker unreadable to the person
+// who needs it. The line under them says the same thing twice for the same
+// reason.
+const (
+	languageQuestionTitle = "Language / Langue"
+	languageQuestionBody  = "Theia speaks English and French. · Theia parle anglais et français."
+	languageQuestionHint  = "↑↓ · enter · esc"
+
+	// The two answers are endonyms: a language is named in itself.
+	languageNameEnglish = "English"
+	languageNameFrench  = "Français"
+)
 
 var french = Catalogue{
 	"brand":           "THEIA",
@@ -317,29 +336,28 @@ func roleLabel(role Role, language Catalogue) string {
 	return label
 }
 
-// CatalogueFor picks a language from an explicit choice, then from the locale
-// environment, and falls back to French - the product's default, not the
-// terminal's guess.
-func CatalogueFor(language string) (Catalogue, string) {
-	switch strings.ToLower(strings.TrimSpace(language)) {
-	case "fr", "fr-fr", "fra", "french", "français":
-		return french, "fr"
-	case "en", "en-us", "en-gb", "eng", "english":
-		return english, "en"
-	case "":
-		return fromEnvironment(), fromEnvironmentLanguage()
-	default:
-		return french, "fr"
-	}
-}
-
-func fromEnvironment() Catalogue {
-	switch fromEnvironmentLanguage() {
-	case "en":
-		return english
-	default:
+// Lookup turns a code into the words to draw. It is pure, because the form asks
+// it again every time somebody changes the language answer: a catalogue chosen
+// once at startup could not follow that.
+func Lookup(code string) Catalogue {
+	if config.NormalizeLanguage(code) == config.LanguageFrench {
 		return french
 	}
+	return english
+}
+
+// CatalogueFor picks a language from an explicit choice, then from the locale
+// environment, and answers English when neither says anything. That last part is
+// the point: English is the base of the product, so an unrecognised code, an
+// empty string and a machine whose locale is neither language all land on the
+// same catalogue rather than on a guess (decision 137).
+func CatalogueFor(language string) (Catalogue, string) {
+	if strings.TrimSpace(language) == "" {
+		code := fromEnvironmentLanguage()
+		return Lookup(code), code
+	}
+	code := config.NormalizeLanguage(language)
+	return Lookup(code), code
 }
 
 // fromEnvironmentLanguage reads the locale variables the platforms actually set.
@@ -358,5 +376,7 @@ func fromEnvironmentLanguage() string {
 			return "fr"
 		}
 	}
-	return "fr"
+	// A terminal that says nothing, or says something this build does not ship,
+	// is answered in English - the product's base, not its guess.
+	return config.LanguageEnglish
 }

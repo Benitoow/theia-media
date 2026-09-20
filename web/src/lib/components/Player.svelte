@@ -33,7 +33,7 @@
 	// fileId and audioTrackId come from the chooser on the film page. When they
 	// are absent the player falls back to the v1 routes, which the server still
 	// binds to the primary file -- that is the compatibility net for the home
-	// hero's "reprendre", not a path M1 should build on.
+	// hero's "resume", not a path M1 should build on.
 	// streamBase and progressPath let an episode reuse this player: its routes
 	// live under /api/library/episodes/{id}/... rather than /api/stream/{id}/...,
 	// but the shapes below them are identical -- info, the bare path, /remux.

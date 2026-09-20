@@ -556,7 +556,7 @@ screen chooses.**
 
 Until now the home screen carried a hero, continue-watching, recently added and
 then **a row per genre** - eight of them, twenty films each. That made sense when
-it was the only way to reach anything. It stopped making sense the moment `/films`
+it was the only way to reach anything. It stopped making sense the moment `/movies`
 arrived with search across title, director, genre and year, five sorts and two
 filters over the whole library.
 
@@ -564,7 +564,7 @@ Two screens were answering the same question, and the worse one was the front
 door. So the home screen now answers a narrower one: *what were you watching,
 what is new, and what should you put on tonight.* The genre rows are gone; genre
 browsing belongs to the page built for it, and the rows that remain are short -
-twelve rather than twenty - with a link through to `/films` pre-filtered to match.
+twelve rather than twenty - with a link through to `/movies` pre-filtered to match.
 
 Three consequences worth stating:
 
@@ -754,8 +754,8 @@ followed since M6:
   control nobody could reach. Removing it left three targets, which fit once
   their horizontal padding is tightened below 26rem.
 
-So `/profils` is now a full screen with the nav suppressed for that route only.
-It appears on arrival when a profile is needed - the existing `needsSelection`
+So the chooser became a full screen, with the nav suppressed there and nowhere
+else. It appears on arrival when a profile is needed - the existing `needsSelection`
 guard, untouched - and is reached from a new **Profils** section in settings the
 rest of the time. Profile management (add, rename, photo, delete) stays behind
 the same "Gérer les profils" toggle on that screen rather than moving to
@@ -1206,7 +1206,7 @@ Two things were found by looking at the built screens rather than the code:
   answered "the last profile cannot be deleted" whenever one remained - a true
   sentence about the wrong subject. Existence is checked first.
 
-A profile's page is addressable as `/profils?gerer=1&profil=<id>` so a reload
+A profile's page is addressable as `/profiles?manage=1&profile=<id>` so a reload
 does not throw the viewer back to the row they came from.
 
 ## 51. The wordmark is set, not placed
@@ -1968,14 +1968,14 @@ Decision 44's line is at managing the household and the server; it does not move
 
 ## 69. One search, answered by the server, over both catalogues
 
-`/films` searched films and `/series` searched series, each by filtering a
+`/movies` searched films and `/series` searched series, each by filtering a
 catalogue it had already downloaded. Both are good pages. Between them they made
 you decide whether the thing you half-remembered was a film or a series before
 you were allowed to look for it.
 
 **The server answers, which is what makes it work from outside the house.** A
 phone on the WireGuard listener asks a question and gets twenty rows back,
-instead of pulling the whole library down to filter it locally. `/films` keeps
+instead of pulling the whole library down to filter it locally. `/movies` keeps
 its client-side filtering: its sorts, genres and watch-state filters are instant
 and that trade still holds at household scale.
 
@@ -2549,7 +2549,7 @@ is below the fold on every screen this runs on.
 
 **The catalogue got lighter, not heavier.** Sending the record with every film in
 a list would have been the obvious cost of this change, and it was: measured on
-250 films, the cast, crew, taglines and certificates were 31% of the `/films`
+250 films, the cast, crew, taglines and certificates were 31% of the `/movies`
 response, for fields no list view reads - the library page draws cards showing a
 title and a year, filters on genre and sorts on rating. So `collectMovies`, which
 every list read goes through and no single-film read does, drops what only a
@@ -2559,7 +2559,7 @@ the column list and the scan order are already paired by hand, and a third
 pairing is a shifted field waiting to happen. Reading a few extra columns out of a
 local SQLite file costs nothing; the wire is what decision 74 is about.
 
-Measured on the bench, same server, before and after the slimming: `/films` at
+Measured on the bench, same server, before and after the slimming: `/movies` at
 250 films went from 450 KB to 194 KB uncompressed and 45.3 KB to 23.9 KB gzipped,
 and the home screen from 8.0 KB to 4.3 KB gzipped. Against what the response
 carried *before this whole change* - cast names, no portraits - it is roughly 36%
@@ -2906,7 +2906,7 @@ default does not. Anything genuinely exempt is named in the script with its
 reason, the way `contrast.mjs` carries the role of every token.
 
 **It was proved to fail before it was trusted.** The fault was reintroduced on
-the film page: the script exits 1 naming `src/routes/film/[id]/+page.svelte:207`,
+the film page: the script exits 1 naming `src/routes/movie/[id]/+page.svelte:207`,
 and `npm run prebuild` exits 1 with it. That step is not ceremony - the interface
 guard's fifth assertion, added one release earlier, was tested the same way and
 turned out **not** to catch the fault it was written for.
@@ -4648,6 +4648,75 @@ beside MOVIES, SERIES, SEARCH and SETTINGS.
 browser's viewport; the player is a Tauri window, which on this machine is a
 1440x900 CSS viewport. That size is now one of the viewports the harness checks
 and `assertFits` names what sticks out of it.
+
+## 137. English is the base, and the installer asks which language to speak
+
+**Decided 20 September 2026** on the maintainer's instruction: "tout doit se
+faire en anglais de base", and "la langue favorite doit être explicitement
+demandée dans le launcher de configuration".
+
+**What was wrong.** Three surfaces disagreed about what "default" meant. The
+player opened in English with nothing stored (decision 131), the web catalogue
+opened in French (`defaultLocale = 'fr'`) and the installer fell back to French
+for an empty or unrecognised code. The language a household actually reads was
+never asked: `theia-setup` accepted `--lang` and the form never mentioned it, so
+the answer existed only for somebody scripting an unattended install. And the
+metadata was French by construction - `internal/tmdb` carried
+`language = "fr-FR"` as a constant, so a machine set up in English drew English
+chrome around French titles.
+
+**English is the base.** One rule, one place per surface: `config.NormalizeLanguage`
+accepts a code, its region (`fr-FR`, `fr_CA`, `EN`) and nothing else, and answers
+English for anything else - including the empty string and a language written out
+as a word. The web's `defaultLocale` is `en`, `app.html` is served as `lang="en"`,
+and the installer's catalogue falls back to English rather than to the terminal's
+guess. An explicit choice still wins everywhere; that has not changed.
+
+**The launcher asks.** `theia-setup`'s first page is the language, on its own and
+before anything else can be said, because a form's labels are fixed when it is
+built: asking inside the main form would draw the rest of the installer in
+whichever language was presumed, which is precisely the guess this question
+exists to remove. Its two sentences are the only ones in the installer that are
+not drawn from a catalogue, and both answers are endonyms - "English" and
+"Français", each written in its own language. Two stages is not the fault
+`tui.go` already carries a lesson about: that one rebuilt a form whose first
+group asked the role twice, and nothing here is asked twice.
+
+The answer reaches `config.json` as `language`, and, for a player-only machine
+that never writes one, the installer's own record of the machine. `--lang` seeds
+the question rather than replacing it, so a scripted install and a typed one
+still agree.
+
+**The server hands it to both interfaces, with its identity.** `GET /api/health`
+carries `language`, not `/api/settings`: the settings endpoint is behind a
+LAN-only guard a remote television cannot pass, and both clients need the answer
+before they draw a word. The OSD reads it from the connection it already makes,
+the browser from one request it now makes only when nothing is stored. Neither
+lets it overwrite a choice somebody made: the web marks that choice `chosen`, the
+player reads it back from storage first.
+
+**And the metadata follows the same language.** `tmdb.Client` takes the locale
+instead of carrying a constant, and the server builds it from the configuration
+in TMDB's own vocabulary (`en-US`, `fr-FR`). The cache is keyed by film, not by
+language, so a change of language would otherwise leave the old one's titles on
+screen forever: the language the metadata was fetched in is remembered in
+`app_state`, compared once at startup, and a mismatch puts every fetched record
+back in the queue the enrichment pass already drains. Artwork is not
+language-bound and is deliberately left alone.
+
+**The interface's addresses are English.** `/bienvenue`, `/profils`,
+`/reglages`, `/recherche`, `/films`, `/film/[id]`, `serie/[id]` and the query
+parameters `?reprendre`, `?gerer`, `?profil` became `/welcome`, `/profiles`,
+`/settings`, `/search`, `/movies`, `/movie/[id]`, `/show/[id]`, `?resume`,
+`?manage`, `?profile`. No alias and no redirect: the old paths 404 like any other
+address that never existed, and the browser walk of all six pages passes.
+
+**Verified at decision time.** `go test ./...` 24 packages green, `go vet` clean;
+the setup package's new test drives the language page with key messages and fails
+if the first question is anything else; the install test round-trips `fr` through
+`config.json`; the player's locale guard reports 137 strings in each catalogue;
+the OSD, the web build and the server all build; `check:render` passes with the
+player's own 1440x900 window among its viewports.
 
 ## 8. Logistics
 

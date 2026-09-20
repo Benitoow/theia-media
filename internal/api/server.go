@@ -244,6 +244,13 @@ type healthResponse struct {
 	Status        string `json:"status"`
 	Version       string `json:"version"`
 	UptimeSeconds int64  `json:"uptime_seconds"`
+
+	// Language is the language this installation was set up in, and it travels
+	// with the identity rather than in the settings because both interfaces need
+	// it before they draw a word: the OSD reads it from the connection, the
+	// browser from this endpoint, and the settings room is behind a LAN-only
+	// guard a remote television cannot pass. It is a preference, not a secret.
+	Language string `json:"language"`
 }
 
 // handleHealth is what the frontend polls to confirm it is talking to a live
@@ -253,6 +260,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		Status:        "ok",
 		Version:       s.version,
 		UptimeSeconds: int64(time.Since(s.started).Seconds()),
+		Language:      s.currentConfig().Language,
 	})
 }
 

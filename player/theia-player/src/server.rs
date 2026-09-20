@@ -83,6 +83,11 @@ pub struct Health {
     pub version: String,
     #[serde(default)]
     pub uptime_seconds: u64,
+    /// The language this installation was set up in, which the OSD opens in
+    /// unless this machine's viewer has already chosen for itself. Absent from
+    /// a server older than decision 137, and English answers then.
+    #[serde(default)]
+    pub language: String,
 }
 
 /// A household profile, the identity viewing history belongs to.

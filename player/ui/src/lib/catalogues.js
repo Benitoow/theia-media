@@ -32,8 +32,6 @@ export const catalogues = {
 		audioFallbackLabel: 'Son',
 		audioFallback:
 			"Le convertisseur HDMI a refusé le flux audio brut : le film est lu en PCM décodé. Rien n'est cassé, mais le son n'arrive pas tel quel à l'amplificateur.",
-		unknownDuration: '--:--',
-
 		chooseFilm: 'Choisir un film',
 
 		// The home screen. Row titles mirror the web application's word for
@@ -82,6 +80,13 @@ export const catalogues = {
 		filmPlural: 'films',
 		seriesSingular: 'série',
 		seriesPlural: 'séries',
+		// The counts on a series card, lowercase because they sit inside a
+		// legend. Four words rather than a formatter: the cards ask for the one
+		// that matches the number they are about to print.
+		seasonSingular: 'saison',
+		seasonPlural: 'saisons',
+		episodeSingular: 'épisode',
+		episodePlural: 'épisodes',
 		connected: 'Connecté',
 		playMovie: 'Lire le film',
 		openSeries: 'Ouvrir la série',
@@ -177,7 +182,6 @@ export const catalogues = {
 		audioFallbackLabel: 'Sound',
 		audioFallback:
 			'The HDMI endpoint refused the raw audio stream, so the film is playing as decoded PCM. Nothing is broken, but the sound is not reaching the amplifier untouched.',
-		unknownDuration: '--:--',
 
 		chooseFilm: 'Choose a film',
 
@@ -224,6 +228,10 @@ export const catalogues = {
 		filmPlural: 'movies',
 		seriesSingular: 'series',
 		seriesPlural: 'series',
+		seasonSingular: 'season',
+		seasonPlural: 'seasons',
+		episodeSingular: 'episode',
+		episodePlural: 'episodes',
 		connected: 'Connected',
 		playMovie: 'Play movie',
 		openSeries: 'Open series',
@@ -300,15 +308,24 @@ export const catalogues = {
 	},
 };
 
-/** The interface language: the stored choice wins, and English is the
- * default — the player opens in English on every machine until the viewer
- * picks another language, and the choice then survives restarts. */
-export function initialLanguage() {
+/** The language this machine's viewer chose here, or null when nobody has.
+ *
+ * Kept apart from the language to open in, because the two answer different
+ * questions: this one says whether the server's preference still has a say. */
+export function storedLanguage() {
 	try {
 		const stored = localStorage.getItem('theia.player.language');
 		if (stored && catalogues[stored]) return stored;
 	} catch {
-		// A WebView with storage disabled still gets a working player.
+		// A WebView with storage disabled has no memory to read.
 	}
-	return 'en';
+	return null;
+}
+
+/** The interface language to open in: the stored choice wins, then the language
+ * the installation was set up in arrives from the server (see App's connect),
+ * and English is the base of the product — the player opens in English on every
+ * machine until somebody picks another language, French systems included. */
+export function initialLanguage() {
+	return storedLanguage() ?? 'en';
 }

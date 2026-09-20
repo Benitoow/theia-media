@@ -22,7 +22,7 @@ function mp4Box(type,payload=Buffer.alloc(0)) {
 const unsupportedHEVCInitialization=()=>mp4Box('moov',mp4Box('hvcC',Buffer.from([1,2,0x20,0,0,0,0xB0,0,0,0,0,0,153,0,0])));
 test('a measured file explains the plan for this browser before playback', async ({ page }) => {
 	const movie = movies.find((item) => item.file_name.includes('Converted'));
-	await page.goto(`/film/${movie.id}`);
+	await page.goto(`/movie/${movie.id}`);
 	const panel = page.getByRole('region', { name: 'Lecture sur cet appareil' });
 	await expect(panel).toBeVisible();
 	const analyze = page.getByRole('button', { name: 'Analyser', exact: true });
@@ -37,7 +37,7 @@ for (const name of ['Direct','Converted','Remux']) {
   test.skip(browserName==='webkit'&&name==='Remux','Playwright WebKit on Windows exposes neither MSE nor ManagedMediaSource; its native fMP4 seek is not a Safari hardware acceptance test');
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const movie=movies.find(m=>m.file_name.includes(name));expect(movie).toBeTruthy();
-  await openPlayer(page, `/film/${movie.id}`);
+  await openPlayer(page, `/movie/${movie.id}`);
   const picture=await page.locator('video').evaluate(v=>({width:v.videoWidth,height:v.videoHeight,frames:v.getVideoPlaybackQuality?.().totalVideoFrames??v.webkitDecodedFrameCount??0}));
   expect(picture.width).toBeGreaterThan(0);expect(picture.height).toBeGreaterThan(0);
   // Playwright WebKit advances and paints the video but exposes neither a
@@ -56,7 +56,7 @@ for (const name of ['Direct','Converted','Remux']) {
 }
 test('MPEG-2 episode has the same playable conversion path',async({page,request})=>{
  const series=(await(await request.get('/api/library/series')).json()).series;
- await page.goto(`/serie/${series[0].id}`);
+ await page.goto(`/show/${series[0].id}`);
  const episode=page.locator('a[href^="/episode/"]').first();await expect(episode).toBeVisible();
  const path=await episode.getAttribute('href');await openPlayer(page,path);
  const transport=await page.locator('video').evaluate(v=>({currentSrc:v.currentSrc,mse:Boolean(globalThis.MediaSource??globalThis.ManagedMediaSource)}));
@@ -66,19 +66,19 @@ test('MPEG-2 episode has the same playable conversion path',async({page,request}
 });
 test('watch later persists and duration selection narrows the collection',async({page})=>{
  const movie=movies.find(m=>m.title.includes('Direct'));
- await page.goto(`/film/${movie.id}`);
+ await page.goto(`/movie/${movie.id}`);
  await page.getByRole('button',{name:'À voir plus tard',exact:true}).click();
  await expect(page.getByRole('button',{name:'Dans ma liste',exact:true})).toHaveAttribute('aria-pressed','true');
  await page.reload();await expect(page.getByRole('button',{name:'Dans ma liste',exact:true})).toBeVisible();
- await page.goto('/films?list=1');await expect(page.locator('.library-grid a')).toHaveCount(1);
- await page.goto('/films');await page.getByRole('button',{name:'90 minutes',exact:true}).click();
+ await page.goto('/movies?list=1');await expect(page.locator('.library-grid a')).toHaveCount(1);
+ await page.goto('/movies');await page.getByRole('button',{name:'90 minutes',exact:true}).click();
  await expect(page.locator('.library-grid a')).toHaveCount(1);
- await page.getByRole('button',{name:'Choisir pour moi'}).click();await expect(page).toHaveURL(new RegExp(`/film/${movie.id}$`));
+ await page.getByRole('button',{name:'Choisir pour moi'}).click();await expect(page).toHaveURL(new RegExp(`/movie/${movie.id}$`));
  await page.getByRole('button',{name:'Dans ma liste',exact:true}).click();
 });
 test('audio selection survives seeks and text subtitles render',async({page})=>{
  const movie=movies.find(m=>m.file_name.includes('Remux'));
- await openPlayer(page,`/film/${movie.id}`);
+ await openPlayer(page,`/movie/${movie.id}`);
  await page.mouse.move(500,700);
  await page.locator('.player-tracks-anchor > button').click();
  const lists=page.locator('.player-tracks .track-list');
@@ -136,7 +136,7 @@ test('a session that never played does not forget where the film was', async ({ 
 		if (route.request().method() === 'PUT') writes.push(route.request().postDataJSON()?.position_seconds ?? null);
 		await route.continue();
 	});
-	await page.goto(`/film/${movie.id}`);
+	await page.goto(`/movie/${movie.id}`);
 	await page.getByRole('button', { name: /^(Lire|Reprendre)/ }).first().click();
 	await expect(page.getByRole('button', { name: 'Réessayer', exact: true })).toBeVisible();
 	await page.keyboard.press('Escape');
@@ -151,7 +151,7 @@ test('a failed startup offers a working retry',async({page})=>{
  let failNextInfo=false;
  await page.route('**/info*',route=>{ if(failNextInfo){failNextInfo=false;return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'ffmpeg_unavailable'})});}return route.continue(); });
  const movie=movies.find(m=>m.file_name.includes('Direct'));
- await page.goto(`/film/${movie.id}`);
+ await page.goto(`/movie/${movie.id}`);
  await expect(page.getByRole('region',{name:'Lecture sur cet appareil'})).toBeVisible();
  failNextInfo=true;
  await page.getByRole('button',{name:/^(Lire|Reprendre)/}).first().click();
@@ -178,7 +178,7 @@ test('MSE quota pressure retries the refused batch instead of failing playback',
   };
  });
  const movie=movies.find(m=>m.file_name.includes('Remux'));
- await openPlayer(page,`/film/${movie.id}`);
+ await openPlayer(page,`/movie/${movie.id}`);
  await expect.poll(()=>page.evaluate(()=>window.__theiaQuotaHit)).toBe(true);
  await expect.poll(()=>page.evaluate(()=>window.__theiaAppendAfterQuota)).toBe(true);
  await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBeGreaterThan(4);
@@ -192,7 +192,7 @@ test('a long pause releases a fragmented stream and resumes at its position',asy
   window.setTimeout=(callback,delay,...args)=>nativeSetTimeout(callback,delay===120000?100:delay,...args);
  });
  const movie=movies.find(m=>m.file_name.includes('Remux'));
- await openPlayer(page,`/film/${movie.id}`);
+ await openPlayer(page,`/movie/${movie.id}`);
  const before=await page.locator('video').evaluate(v=>v.currentTime);
  await page.keyboard.press('Space');
  await expect(page.locator('video')).toHaveCount(0,{timeout:5000});
@@ -222,7 +222,7 @@ test('a fresh info snapshot is reloaded when ffmpeg becomes ready during the fir
   return route.continue();
  });
  const movie=movies.find(m=>m.file_name.includes('Direct'));
- await page.goto(`/film/${movie.id}`);
+ await page.goto(`/movie/${movie.id}`);
  await expect(page.getByRole('region',{name:'Lecture sur cet appareil'})).toBeVisible();
  const beforePlayer=infoRequests;injectPlayerInfo=true;
  await page.getByRole('button',{name:/^(Lire|Reprendre)/}).first().click();

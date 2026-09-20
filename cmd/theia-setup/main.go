@@ -64,7 +64,7 @@ func run() error {
 		checkUpdate = flag.Bool("check-update", false, "ask GitHub Releases what the latest version is, downloading nothing")
 		update      = flag.Bool("update", false, "install the latest version of the server, verifying its digest")
 		jsonOutput  = flag.Bool("json", false, "print the result as JSON")
-		language    = flag.String("lang", "", "fr or en; French by default")
+		language    = flag.String("lang", "", "en or fr; English by default")
 		showVersion = flag.Bool("version", false, "print the version and exit")
 		yes         = flag.Bool("yes", false, "assume yes where a form would ask")
 		force       = flag.Bool("force", false, "install the programs again even when they are already there")
@@ -126,14 +126,10 @@ func run() error {
 			Library:    splitList(*library),
 			Service:    *service,
 		})
-		if errors.Is(err, setup.ErrCancelled) {
-			fmt.Println(text["cancelled"])
-			return nil
-		}
-		if errors.Is(err, setup.ErrInterrupted) {
-			// Not the same sentence as a cancellation: by the time a download is
-			// running, "nothing was written" may no longer be true.
-			fmt.Println(text["interrupted"])
+		if errors.Is(err, setup.ErrCancelled) || errors.Is(err, setup.ErrInterrupted) {
+			// Both sentences were printed by the form, in the language it was
+			// answered in: repeating them here printed the run phase's language
+			// over a French form, which is how this was found.
 			return nil
 		}
 		if err != nil {
@@ -143,7 +139,7 @@ func run() error {
 		return nil
 	default:
 		return runOnce(onceOptions{
-			role: *role, dataDir: *dataDir, installDir: *installDir, library: *library,
+			role: *role, language: *language, dataDir: *dataDir, installDir: *installDir, library: *library,
 			port: *port, hostname: *hostname, service: *service, yes: *yes,
 			jsonOutput: *jsonOutput, defaultDir: defaultDir, source: releaseSource(*from, *force),
 			text: text,
@@ -194,6 +190,7 @@ func isInteractive(role, library string) bool {
 
 type onceOptions struct {
 	role       string
+	language   string
 	dataDir    string
 	installDir string
 	library    string
@@ -222,6 +219,7 @@ func runOnce(opts onceOptions) error {
 	}
 	plan := setup.Plan{
 		Role:         parsed,
+		Language:     opts.language,
 		DataDir:      opts.dataDir,
 		InstallDir:   installDir,
 		LibraryPaths: splitList(opts.library),

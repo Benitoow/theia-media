@@ -194,15 +194,34 @@ func TestBothLanguagesSayEverything(t *testing.T) {
 	}
 }
 
-func TestTheLanguageIsChosenExplicitlyThenFromTheLocale(t *testing.T) {
-	if _, language := CatalogueFor("en"); language != "en" {
-		t.Errorf("an explicit English choice gave %q", language)
+func TestTheLanguageFallsBackToEnglishAndNormalises(t *testing.T) {
+	// An explicit choice wins, and every way of writing it lands on the same
+	// catalogue: this is the one place that decides, so the interface, the
+	// metadata and the installer cannot drift apart.
+	for _, value := range []string{"en", "EN", "en-US", "en_GB", "English"} {
+		if _, code := CatalogueFor(value); code != "en" {
+			t.Errorf("CatalogueFor(%q) gave %q, want en", value, code)
+		}
 	}
-	// French is the product's default, not the terminal's guess.
-	if _, language := CatalogueFor(""); language != "fr" && os.Getenv("LANG") == "" {
-		t.Errorf("with no locale set, the language was %q, want fr", language)
+	for _, value := range []string{"fr", "FR", "fr-FR", "fr_CA"} {
+		if _, code := CatalogueFor(value); code != "fr" {
+			t.Errorf("CatalogueFor(%q) gave %q, want fr", value, code)
+		}
 	}
-	if _, language := CatalogueFor("de"); language != "fr" {
-		t.Errorf("an unknown language gave %q, want the French default", language)
+	// English is the base of the product, so anything that is not one of the two
+	// codes is answered in English rather than in a guess (decision 137). That
+	// includes the name of a language written out: `--lang` takes a code, and a
+	// value that only looks like one is a mistake worth landing on the base.
+	for _, value := range []string{"de", "français", "french", "en anglais"} {
+		if _, code := CatalogueFor(value); code != "en" {
+			t.Errorf("CatalogueFor(%q) gave %q, want the English base", value, code)
+		}
+	}
+	// With nothing said at all the machine's own locale is a courtesy; the
+	// terminal in a test says nothing, so English answers.
+	if os.Getenv("LANG") == "" && os.Getenv("LC_ALL") == "" {
+		if _, code := CatalogueFor(""); code != "en" {
+			t.Errorf("with no locale set, the language was %q, want en", code)
+		}
 	}
 }

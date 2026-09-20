@@ -301,7 +301,7 @@
 						{/each}
 					</div>
 				</div>
-				<button type="button" class="intent-button intent-random" disabled={!filtered.length} onclick={() => goto(`/film/${filtered[Math.floor(Math.random() * filtered.length)].id}`)}>{t.v3.surprise}<Icon name="chevronRight" size={17} /></button>
+				<button type="button" class="intent-button intent-random" disabled={!filtered.length} onclick={() => goto(`/movie/${filtered[Math.floor(Math.random() * filtered.length)].id}`)}>{t.v3.surprise}<Icon name="chevronRight" size={17} /></button>
 			</div>
 			{#if listFailed}<p class="text-error mb-5" role="alert">{t.v3.listFailed}</p>{/if}
 			{#if maxMinutes}<p class="text-muted mb-5">{t.v3.durationHint}</p>{/if}

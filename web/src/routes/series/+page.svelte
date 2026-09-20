@@ -31,7 +31,7 @@
 
 <!--
 	The two message states are full-bleed, so they sit outside the page shell.
-	They were a pair of hand-built panels here while /films and the home screen
+	They were a pair of hand-built panels here while /movies and the home screen
 	used ChromeScene for the identical states -- the same drift the library page
 	records having already fixed on its own side. A panel floating half-width in
 	a 1512px window, with a display title inside a box too small to carry one,
@@ -63,7 +63,7 @@
 		title={t.series.emptyTitle}
 		body={t.series.emptyBody}
 	>
-		<a href="/reglages" class="tv-action cursor-pointer" data-remote-default>
+		<a href="/settings" class="tv-action cursor-pointer" data-remote-default>
 			{t.nav.settings}
 		</a>
 	</ChromeScene>
@@ -78,7 +78,7 @@
 			{#each series as item, index (item.id)}
 				<PosterCard
 					movie={item}
-					href="/serie/{item.id}"
+					href="/show/{item.id}"
 					fluid
 					playable={false}
 					legend={item.metadata?.first_air_date?.slice(0, 4) ?? ''}

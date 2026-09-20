@@ -290,14 +290,14 @@ type Home struct {
 
 // HomeScreen assembles the home screen.
 //
-// The home screen is a personal surface, not a second catalogue. /films already
+// The home screen is a personal surface, not a second catalogue. /movies already
 // searches, sorts and filters the whole library, so this answers a narrower and
 // more useful question: what were you watching, what is new, and what should you
 // put on tonight. It deliberately no longer lists a row per genre - that was the
 // library pretending to be a shop front, and browsing by genre now belongs to
 // the page built for it.
 //
-// Rows are short for the same reason. Each one carries a way through to /films
+// Rows are short for the same reason. Each one carries a way through to /movies
 // pre-filtered, which is where an inventory belongs.
 func (s *Service) HomeScreen(ctx context.Context, profileID int64, perRow int) (*Home, error) {
 	total, err := s.store.Count(ctx)

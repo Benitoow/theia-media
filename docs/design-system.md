@@ -469,7 +469,7 @@ Rules that override §4 and §5:
   never on a finished film. Nothing else in the grid may take this exemption
   without being written down here first.
 - Card chrome is minimal: artwork, title, one compact legend. Home rows use the
-  year. On `/films`, the legend follows the active sort - year, rating, date
+  year. On `/movies`, the legend follows the active sort - year, rating, date
   added or runtime - and stays visible at rest. It is never revealed only on
   hover: a library operated with a D-pad cannot hide useful information behind
   a mouse gesture. Title sorting keeps the year as its useful secondary value.

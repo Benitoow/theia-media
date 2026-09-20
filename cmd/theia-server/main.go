@@ -174,8 +174,13 @@ func run() (runErr error) {
 	apiKey, keySource := cfg.ResolveTMDBKey(tmdbAPIKey)
 	var tmdbClient *tmdb.Client
 	if apiKey != "" {
-		tmdbClient = tmdb.New(apiKey)
-		log.Info("TMDB metadata enabled", "key_source", keySource, "key", config.Redact(apiKey))
+		// The language this machine was set up in, in TMDB's own vocabulary: the
+		// titles and synopses it returns have to agree with the interface that
+		// draws them (decision 137).
+		tmdbClient = tmdb.New(apiKey, tmdb.WithLanguage(config.MetadataLanguage(cfg.Language)))
+		log.Info("TMDB metadata enabled",
+			"key_source", keySource, "key", config.Redact(apiKey),
+			"language", config.MetadataLanguage(cfg.Language))
 	} else {
 		// Naming the three places it looked, and the directory the last one is
 		// relative to. A locally built binary has no key compiled in and falls
@@ -204,6 +209,15 @@ func run() (runErr error) {
 		return err
 	} else if merged > 0 {
 		log.Info("consolidated duplicate media records", "merged", merged)
+	}
+
+	// Changing the language changes what every synopsis and title should say, and
+	// nothing else notices: the cache is keyed by film, not by language. The
+	// remembered language and the configured one are compared once, here, before
+	// the first scan - matching metadata is marked stale so the enrichment that
+	// follows fetches it again in the language this machine was set up in.
+	if err := adoptMetadataLanguage(ctx, state, store, config.MetadataLanguage(cfg.Language), log); err != nil {
+		log.Warn("could not refresh metadata for the interface language", "error", err)
 	}
 
 	// An installation that already has a library has, by definition, already
@@ -461,6 +475,49 @@ func verifyLocalHealth(ctx context.Context, port int, wantVersion string) error 
 // markOnboardedIfEstablished suppresses the welcome screen for an installation
 // that clearly predates it: a database with films in it belongs to somebody who
 // has already been through setup, whatever version they were on at the time.
+// adoptMetadataLanguage notices a change of interface language and marks the
+// stored metadata stale in response.
+//
+// The cache is keyed by film, not by language, so a machine set up in English
+// and later switched to French would keep drawing English titles and synopses -
+// silently, and for as long as the installation lives. The remembered language
+// is compared once, at startup and before the first scan: a mismatch puts every
+// fetched record back in the queue the enrichment pass already drains, which is
+// cheaper than teaching a second pass how to overwrite.
+// legacyMetadataLanguage is what every build before decision 137 asked TMDB for.
+// Named here because the upgrade path depends on it, and a reader of this file
+// should not have to go looking for it.
+const legacyMetadataLanguage = "fr-FR"
+
+func adoptMetadataLanguage(ctx context.Context, state *db.State, store *library.Store, language string, log *slog.Logger) error {
+	previous, _, err := state.Get(ctx, db.KeyMetadataLanguage)
+	if err != nil {
+		return err
+	}
+	if previous == language {
+		return nil
+	}
+	switch {
+	case previous != "":
+		if err := store.MarkMetadataStale(ctx); err != nil {
+			return err
+		}
+		log.Info("the interface language changed, refetching metadata", "from", previous, "to", language)
+	case language != legacyMetadataLanguage:
+		// No marker and this machine does not want French: everything stored was
+		// fetched by a build whose TMDB language was the constant "fr-FR", so the
+		// library is carrying French titles and synopses whatever this
+		// installation is set to now. Measured on the maintainer's own server on
+		// 20 September 2026: the interface came back in English and the film
+		// titles did not.
+		if err := store.MarkMetadataStale(ctx); err != nil {
+			return err
+		}
+		log.Info("refetching metadata left by an older build", "language", language)
+	}
+	return state.Set(ctx, db.KeyMetadataLanguage, language)
+}
+
 func markOnboardedIfEstablished(ctx context.Context, state *db.State,
 	lib *library.Service, log *slog.Logger,
 ) error {

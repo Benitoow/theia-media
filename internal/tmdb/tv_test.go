@@ -14,7 +14,7 @@ func TestSearchTVUsesYearAndPrefersExactOriginalName(t *testing.T) {
 		}
 		query := r.URL.Query()
 		if query.Get("query") != "Money Heist" || query.Get("first_air_date_year") != "2017" ||
-			query.Get("language") != language || query.Get("include_adult") != "false" {
+			query.Get("language") != DefaultLanguage || query.Get("include_adult") != "false" {
 			t.Errorf("query = %v", query)
 		}
 		w.Write([]byte(`{"results":[

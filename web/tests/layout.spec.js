@@ -6,11 +6,11 @@ import { readFile } from 'node:fs/promises';
 // suite's business.
 const pages = [
 	['home', '/'],
-	['films', '/films'],
+	['movies', '/movies'],
 	['series', '/series'],
-	['search', '/recherche'],
-	['settings', '/reglages'],
-	['profiles', '/profils']
+	['search', '/search'],
+	['settings', '/settings'],
+	['profiles', '/profiles']
 ];
 
 test.beforeEach(async ({ page }) => {
@@ -26,7 +26,7 @@ test('settings controls do not wait for the FFmpeg diagnostics', async ({ page }
 	});
 
 	try {
-		await page.goto('/reglages', { waitUntil: 'domcontentloaded' });
+		await page.goto('/settings', { waitUntil: 'domcontentloaded' });
 		await expect(page.locator('[data-settings-ready]')).toBeVisible({ timeout: 2_000 });
 	} finally {
 		releaseDiagnostics();
@@ -41,7 +41,7 @@ test('settings exports a real local support archive', async ({ page }) => {
 	await page.addInitScript(() => {
 		Object.defineProperty(window, 'showSaveFilePicker', { value: undefined });
 	});
-	await page.goto('/reglages');
+	await page.goto('/settings');
 	await expect(page.locator('[data-support-export]')).toBeVisible();
 
 	const downloadStarted = page.waitForEvent('download');
@@ -186,7 +186,7 @@ test.describe('the page has one left edge', () => {
 	// headings finished 184px to the right of their own cards.
 	for (const [name, path] of [
 		['home', '/'],
-		['films', '/films']
+		['movies', '/movies']
 	]) {
 		test(name, async ({ page }, testInfo) => {
 			await page.goto(path);

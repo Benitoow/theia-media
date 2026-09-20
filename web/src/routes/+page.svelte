@@ -45,7 +45,7 @@
 				// is chosen, so this card does not claim otherwise.
 				cards: recent.map((item) => ({
 					movie: item,
-					href: `/serie/${item.id}`,
+					href: `/show/${item.id}`,
 					playable: false,
 					legend: item.metadata?.first_air_date?.slice(0, 4) ?? ''
 				}))
@@ -79,7 +79,7 @@
 		]);
 
 		if (onboarding.status === 'fulfilled' && onboarding.value.needed) {
-			goto('/bienvenue', { replaceState: true });
+			goto('/welcome', { replaceState: true });
 			return;
 		}
 
@@ -119,7 +119,7 @@
 		title={t.home.emptyTitle}
 		body={t.home.emptyBody}
 	>
-		<a href="/reglages" class="tv-action tv-action--primary" data-remote-default>
+		<a href="/settings" class="tv-action tv-action--primary" data-remote-default>
 			<span>{t.nav.settings}</span>
 			<span aria-hidden="true">→</span>
 		</a>
@@ -138,17 +138,17 @@
 				<span class="programme-count">{t.library.countAll(home.total)}</span>
 			</div>
 			<nav aria-label={t.v3.homeLabel} class="programme-links">
-				<a href="/films?status=progress">
+				<a href="/movies?status=progress">
 					<span class="programme-icon"><Icon name="play" size={16} /></span>
 					<span class="programme-label">{t.v3.continueWatching}</span>
 					<Icon name="chevronRight" size={17} />
 				</a>
-				<a href="/films?list=1">
+				<a href="/movies?list=1">
 					<span class="programme-icon"><Icon name="plus" size={18} /></span>
 					<span class="programme-label">{t.v3.myList}</span>
 					<Icon name="chevronRight" size={17} />
 				</a>
-				<a href="/films?minutes=120&status=unseen">
+				<a href="/movies?minutes=120&status=unseen">
 					<span class="programme-icon"><Icon name="playSquare" size={18} /></span>
 					<span class="programme-label">{t.v3.tonight}</span>
 					<Icon name="chevronRight" size={17} />

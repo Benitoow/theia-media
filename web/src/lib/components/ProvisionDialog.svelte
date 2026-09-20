@@ -38,7 +38,7 @@
 		const url = URL.createObjectURL(blob);
 		const link = document.createElement('a');
 		link.href = url;
-		link.download = `theia-${name.replace(/[^\p{L}\p{N}]+/gu, '-').toLowerCase() || 'appareil'}.conf`;
+		link.download = `theia-${name.replace(/[^\p{L}\p{N}]+/gu, '-').toLowerCase() || 'device'}.conf`;
 		link.click();
 		URL.revokeObjectURL(url);
 		kept = true;

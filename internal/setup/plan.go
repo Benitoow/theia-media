@@ -2,6 +2,7 @@ package setup
 
 import (
 	"fmt"
+	"github.com/Benitoow/theia-media/internal/config"
 	"net"
 	"os"
 	"os/exec"
@@ -30,6 +31,11 @@ type Plan struct {
 
 	Port     int
 	Hostname string
+
+	// Language is the language the interfaces open in and the language metadata
+	// is fetched in. It is asked by the form and accepted from --lang, and it is
+	// written into the server's configuration when this machine serves.
+	Language string
 
 	// Version is the release this installation came from, as the tool carries
 	// it. It is a fallback: what the applications list records is the version
@@ -64,6 +70,9 @@ func (p Plan) WithDefaults(defaultDataDir string) Plan {
 	}
 	if p.Port == 0 {
 		p.Port = 8383
+	}
+	if p.Language == "" {
+		p.Language = config.DefaultLanguage
 	}
 	if p.Hostname == "" {
 		p.Hostname = "theia"

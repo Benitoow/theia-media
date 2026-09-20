@@ -12,6 +12,12 @@ import (
 const (
 	// KeyOnboardingCompleted is set once the welcome screen has been dismissed.
 	KeyOnboardingCompleted = "onboarding_completed_at"
+
+	// KeyMetadataLanguage remembers which language the stored TMDB metadata was
+	// fetched in. Nothing else records it - the cache is keyed by film, not by
+	// language - so without this a machine that changed language would keep
+	// drawing the old one's titles and synopses forever.
+	KeyMetadataLanguage = "metadata_language"
 )
 
 // State reads and writes the application's own remembered values, as opposed to

@@ -109,7 +109,7 @@ func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
 
 // handleHome returns the hero and every row in one request.
 //
-// Rows are short by default. The home screen suggests; /films inventories, and
+// Rows are short by default. The home screen suggests; /movies inventories, and
 // the "see all" link on each row is the way from one to the other.
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	perRow := clamp(intQuery(r, "per_row", 12), 1, 60)

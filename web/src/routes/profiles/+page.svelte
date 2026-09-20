@@ -42,10 +42,10 @@
 	onMount(async () => {
 		try {
 			await profiles.load();
-			view = $page.url.searchParams.has('gerer') ? 'managing' : 'choosing';
+			view = $page.url.searchParams.has('manage') ? 'managing' : 'choosing';
 			// A profile's page is addressable, so reloading it does not throw the
 			// viewer back to the row they came from.
-			const wanted = Number($page.url.searchParams.get('profil'));
+			const wanted = Number($page.url.searchParams.get('profile'));
 			if (Number.isInteger(wanted) && wanted > 0) {
 				await openDetail({ id: wanted });
 			}

@@ -145,7 +145,7 @@ export type UpdateStatus = {
 
 export type Server = {
 	url: string;
-	health: { version: string; status?: string };
+	health: { version: string; status?: string; language?: string };
 	profile?: number | null;
 	profiles: Profile[];
 };

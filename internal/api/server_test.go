@@ -119,9 +119,9 @@ func TestImagesAllowTheNativeTauriOrigin(t *testing.T) {
 }
 
 func TestUnknownPathFallsBackToTheSPA(t *testing.T) {
-	// A deep link such as /films/42 is a client-side route: it has to return
+	// A deep link such as /movies/42 is a client-side route: it has to return
 	// index.html so the router can pick it up, not a 404.
-	res := get(t, newTestServer(t, bundle()), "/films/42")
+	res := get(t, newTestServer(t, bundle()), "/movies/42")
 
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("status = %d, want 200", res.StatusCode)

@@ -52,7 +52,7 @@ await page.addInitScript(({ profileID }) => {
 await page.route('**/preview*', (route) => route.abort());
 
 try {
-	await page.goto(`${baseURL}/film/${movieID}`, { waitUntil: 'domcontentloaded' });
+	await page.goto(`${baseURL}/movie/${movieID}`, { waitUntil: 'domcontentloaded' });
 	const compatibility = page.getByRole('region', { name: 'Lecture sur cet appareil' });
 	await compatibility.waitFor({ state: 'visible', timeout: 20_000 });
 

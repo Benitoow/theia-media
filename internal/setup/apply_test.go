@@ -34,6 +34,7 @@ func TestApplyWritesAConfigurationTheServerAlreadyReads(t *testing.T) {
 
 	plan := Plan{
 		Role:         RoleServer,
+		Language:     config.LanguageFrench,
 		DataDir:      dataDir,
 		LibraryPaths: []string{films},
 		Port:         port,
@@ -58,6 +59,11 @@ func TestApplyWritesAConfigurationTheServerAlreadyReads(t *testing.T) {
 	}
 	if len(loaded.LibraryPaths) != 1 || loaded.LibraryPaths[0] != films {
 		t.Errorf("library paths = %q, want %q", loaded.LibraryPaths, films)
+	}
+	// The language chosen at installation is the one the server hands both
+	// interfaces, so it has to survive the round trip like everything else.
+	if loaded.Language != config.LanguageFrench {
+		t.Errorf("language = %q, want fr", loaded.Language)
 	}
 
 	// Nothing outside the data directory, and nothing that starts by itself.

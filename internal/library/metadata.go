@@ -116,6 +116,25 @@ type staleCandidate struct {
 	Locked bool
 }
 
+// MarkMetadataStale puts every fetched record back in the queue.
+//
+// Used when the language changes: the metadata a film carries is a title and a
+// synopsis in one language, and the cache has no room for two. Marking them
+// pending reuses the pass that already knows how to fetch them, rather than
+// teaching a second one to overwrite.
+func (s *Store) MarkMetadataStale(ctx context.Context) error {
+	// The three tables that carry TMDB prose. Artwork is not language-bound and
+	// is deliberately left alone: refetching a poster would be work for nothing.
+	for _, table := range []string{"movies", "series", "episodes"} {
+		if _, err := s.db.ExecContext(ctx,
+			`UPDATE `+table+` SET metadata_status = ? WHERE metadata_status <> ?`,
+			statusPending, statusPending); err != nil {
+			return fmt.Errorf("marking %s metadata stale: %w", table, err)
+		}
+	}
+	return nil
+}
+
 // StaleMetadata returns films whose metadata has never been fetched or has
 // aged out, oldest first so that a library larger than one batch still makes
 // progress on every scan.

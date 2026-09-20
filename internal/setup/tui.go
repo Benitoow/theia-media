@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/Benitoow/theia-media/internal/config"
 	"io"
 	"os"
 	"strconv"
@@ -68,6 +69,10 @@ const maxFormWidth = 76
 // from Plan because the folders arrive as one blob of text and a port as a
 // string: parsing is where mistakes happen, and it is tested on its own.
 type FormResult struct {
+	// Language is the answer to the question the installer asks before it can
+	// speak at all, and every word after it comes from that choice.
+	Language string
+
 	Role         Role
 	DataDir      string
 	InstallDir   string
@@ -89,6 +94,7 @@ type FormResult struct {
 // mean the same thing, including the empty lines somebody leaves behind.
 func (r FormResult) Parse(defaultDataDir string) (Plan, error) {
 	plan := Plan{
+		Language:     config.NormalizeLanguage(r.Language),
 		Role:         r.Role,
 		DataDir:      strings.TrimSpace(r.DataDir),
 		InstallDir:   strings.TrimSpace(r.InstallDir),
@@ -188,16 +194,20 @@ func keyMap() *huh.KeyMap {
 // catalogue with every other thing a person reads, and each one states the keys
 // that page really accepts - enter validates an input but starts a new line in
 // the folder box, which is exactly the kind of difference a hint is for.
-func helpLine(field huh.Field, language Catalogue) string {
+func helpLine(field huh.Field, text func(string) string) string {
 	switch field.(type) {
+	case *huh.Select[string]:
+		// The language page: the keys alone, because a sentence here would have
+		// to be written in a language nobody has chosen yet.
+		return languageQuestionHint
 	case *huh.Select[Role]:
-		return language["helpSelect"]
+		return text("helpSelect")
 	case *huh.Text:
-		return language["helpText"]
+		return text("helpText")
 	case *huh.Confirm:
-		return language["helpConfirm"]
+		return text("helpConfirm")
 	case *huh.Input:
-		return language["helpInput"]
+		return text("helpInput")
 	}
 	return ""
 }
@@ -212,9 +222,11 @@ var footerStyle = lipgloss.NewStyle().Foreground(muted).PaddingLeft(2)
 // form and the screen edges. This is that program, with one line added and one
 // key bound: the form is unchanged and still updates its own fields.
 type formModel struct {
-	form     *huh.Form
-	language Catalogue
-	aborted  bool
+	form *huh.Form
+	// text draws the hint under the form. It is a function because the first
+	// page is shown before any catalogue has been chosen.
+	text    func(string) string
+	aborted bool
 }
 
 func (m *formModel) Init() tea.Cmd { return m.form.Init() }
@@ -237,7 +249,7 @@ func (m *formModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *formModel) View() string {
 	view := m.form.View()
-	if line := helpLine(m.form.GetFocusedField(), m.language); line != "" {
+	if line := helpLine(m.form.GetFocusedField(), m.text); line != "" {
 		view += "\n" + footerStyle.Render(line)
 	}
 	return view
@@ -424,7 +436,12 @@ func formDefaults(opts FormOptions) (FormResult, error) {
 		}
 		installDir = resolved
 	}
+	// The first question starts on what the command line said, then on this
+	// machine's own locale, and on English when neither speaks: the same rule
+	// CatalogueFor applies, so a scripted installation and a typed one agree.
+	_, code := CatalogueFor(opts.Language)
 	result := FormResult{
+		Language:     code,
 		Role:         DefaultRole,
 		DataDir:      defaults.DataDir,
 		InstallDir:   installDir,
@@ -479,6 +496,56 @@ func clamped(height int) int {
 	return 16
 }
 
+// askLanguage is the first thing the installer says, and the only page whose two
+// sentences are written by hand: there is no catalogue to draw from until this
+// question is answered. Both answers are endonyms, because that is what a
+// language calls itself.
+//
+// Nothing is validated and nothing is written: enter accepts the pre-selected
+// answer, which is the command line's when it gave one, the machine's locale
+// otherwise, and English when neither speaks.
+func askLanguage(opts FormOptions, current string, width, height int) (Catalogue, error) {
+	chosen := current
+	form := languageForm(&chosen, width, height)
+
+	program := []tea.ProgramOption{tea.WithOutput(opts.Output)}
+	if opts.Input != nil {
+		program = append(program, tea.WithInput(opts.Input))
+	}
+	model := &formModel{form: form, text: func(string) string { return languageQuestionHint }}
+	if _, err := tea.NewProgram(model, program...).Run(); err != nil {
+		return english, err
+	}
+	if model.aborted {
+		return Lookup(current), ErrCancelled
+	}
+	code := config.NormalizeLanguage(chosen)
+	return Lookup(code), nil
+}
+
+// languageForm is the first page on its own, so a test can drive it with the
+// messages a keyboard produces rather than through a terminal it does not have.
+func languageForm(chosen *string, width, height int) *huh.Form {
+	question := huh.NewSelect[string]().
+		Title(languageQuestionTitle).
+		Description(languageQuestionBody).
+		Options(
+			huh.NewOption(languageNameEnglish, config.LanguageEnglish),
+			huh.NewOption(languageNameFrench, config.LanguageFrench),
+		).
+		Value(chosen)
+
+	form := huh.NewForm(huh.NewGroup(question)).
+		WithTheme(theme()).
+		WithKeyMap(keyMap()).
+		WithWidth(width).
+		WithHeight(height).
+		WithShowHelp(false)
+	form.SubmitCmd = tea.Quit
+	form.CancelCmd = tea.Quit
+	return form
+}
+
 // RunInteractive shows the installer, then installs what was agreed: the
 // programs, the configuration and the autostart entry, in that order.
 //
@@ -486,13 +553,27 @@ func clamped(height int) int {
 // promise the first page makes. A download is the one step here that can take
 // minutes, so it is the one step that draws what it is doing.
 func RunInteractive(opts FormOptions) (Result, error) {
-	language, _ := CatalogueFor(opts.Language)
 	result, err := formDefaults(opts)
 	if err != nil {
 		return Result{}, err
 	}
 
 	width, height := formSize(opts.Output)
+	// The language is asked before anything else can be said, and it is asked on
+	// a page of its own because a form's own labels are fixed when it is built:
+	// asking inside the main form would draw the rest of it in whichever
+	// language happened to be presumed, which is exactly the guess this question
+	// exists to remove.
+	//
+	// Two stages is not the fault this file already carries a lesson about. That
+	// one rebuilt a form whose first group asked the role a second time; nothing
+	// here is asked twice.
+	language, err := askLanguage(opts, result.Language, width, height)
+	if err != nil {
+		return Result{}, err
+	}
+	result.Language = config.NormalizeLanguage(result.Language)
+
 	form := buildForm(&result, language, width, height)
 	// Huh issues these two when it runs its own program; formModel runs it
 	// instead, so the end of the form has to be able to stop the program.
@@ -503,11 +584,16 @@ func RunInteractive(opts FormOptions) (Result, error) {
 	if opts.Input != nil {
 		program = append(program, tea.WithInput(opts.Input))
 	}
-	model := &formModel{form: form, language: language}
+	text := func(key string) string { return language[key] }
+	model := &formModel{form: form, text: text}
 	if _, err := tea.NewProgram(model, program...).Run(); err != nil {
 		return Result{}, err
 	}
 	if model.aborted || !result.Confirmed {
+		// Printed here rather than by the caller: this is where the language the
+		// form was answered in is known, and a sentence about the installer is
+		// exactly the kind that used to come out in the run phase's language.
+		fmt.Fprintln(opts.Output, language["cancelled"])
 		return Result{}, ErrCancelled
 	}
 
@@ -524,6 +610,12 @@ func RunInteractive(opts FormOptions) (Result, error) {
 		installed, err = Install(ctx, plan, opts.Source, language, report)
 		return err
 	})
+	if errors.Is(err, ErrInterrupted) {
+		// Not the same sentence as a cancellation: by the time a download is
+		// running, "nothing was written" may no longer be true.
+		fmt.Fprintln(opts.Output, language["interrupted"])
+		return installed, ErrInterrupted
+	}
 	if err != nil {
 		return installed, err
 	}

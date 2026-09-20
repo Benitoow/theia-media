@@ -120,7 +120,7 @@ func (c *Client) searchTV(ctx context.Context, title string, year int) (int, err
 	}
 	params := url.Values{}
 	params.Set("query", title)
-	params.Set("language", language)
+	params.Set("language", c.language)
 	params.Set("include_adult", "false")
 	if year != 0 {
 		params.Set("first_air_date_year", strconv.Itoa(year))
@@ -190,7 +190,7 @@ type tvDetailsResponse struct {
 // round trip, for the same reason Details does.
 func (c *Client) TVDetails(ctx context.Context, id int) (*TVSeries, error) {
 	var body tvDetailsResponse
-	path := fmt.Sprintf("/tv/%d?language=%s&append_to_response=credits,content_ratings", id, language)
+	path := fmt.Sprintf("/tv/%d?language=%s&append_to_response=credits,content_ratings", id, c.language)
 	if err := c.get(ctx, path, &body); err != nil {
 		return nil, err
 	}
@@ -275,7 +275,7 @@ type tvSeasonDetailsResponse struct {
 
 func (c *Client) TVSeasonDetails(ctx context.Context, seriesID, seasonNumber int) (*TVSeason, error) {
 	var body tvSeasonDetailsResponse
-	path := fmt.Sprintf("/tv/%d/season/%d?language=%s", seriesID, seasonNumber, language)
+	path := fmt.Sprintf("/tv/%d/season/%d?language=%s", seriesID, seasonNumber, c.language)
 	if err := c.get(ctx, path, &body); err != nil {
 		return nil, err
 	}

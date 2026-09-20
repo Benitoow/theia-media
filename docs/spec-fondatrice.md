@@ -223,7 +223,15 @@ Questions soulevées par l'agent au démarrage de M0, tranchées ici pour réfé
    Code, commentaires et messages d'erreur internes en anglais (convention
    open source). UI utilisateur en français pour v1, avec les chaînes
    isolées dans un fichier dédié pour permettre une i18n future sans
-   réécriture. L'updater est conçu à partir du pattern documenté (§3, ligne
+   réécriture.
+   > **Amendé (décision 137)** : l'**anglais est la langue de base** du
+   > produit — c'est ce qui répond quand rien n'a été choisi, et ce que vaut
+   > un code inconnu. La langue préférée est **demandée explicitement par
+   > l'installeur**, qui l'écrit dans la configuration ; les deux interfaces
+   > s'en servent comme défaut, les URL de l'interface web sont en anglais, et
+   > les titres et synopsis TMDB sont demandés dans cette même langue. Le
+   > français reste livré complet, à parité vérifiée (137 chaînes de chaque
+   > côté dans le lecteur). L'updater est conçu à partir du pattern documenté (§3, ligne
    "Mise à jour") - pas de code source Hermes disponible à réutiliser tel
    quel ; attention particulière à la contrainte Windows (un `.exe` en cours
    d'exécution ne peut pas se remplacer lui-même : prévoir un petit binaire

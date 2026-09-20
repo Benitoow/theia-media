@@ -8,6 +8,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
+
+	"github.com/Benitoow/theia-media/internal/config"
 )
 
 // The terminal interface is checked by driving the real form with the messages a
@@ -342,6 +344,30 @@ func TestTheFormStartsWithWhatTheCommandLineSaid(t *testing.T) {
 	}
 }
 
+func TestTheInstallerAsksForTheLanguageFirst(t *testing.T) {
+	// The maintainer's instruction of 20 September 2026: the favourite language
+	// is asked explicitly by the setup launcher. It is a page of its own, before
+	// the form, because a form's labels are fixed when it is built and the rest
+	// of the installer has to be drawn in the language this page answers.
+	chosen := config.LanguageEnglish
+	form := languageForm(&chosen, maxFormWidth, 14)
+	pump(t, form, form.Init()())
+
+	focused := form.GetFocusedField()
+	if _, ok := focused.(*huh.Select[string]); !ok {
+		t.Fatalf("the first question is a %T, want the language question", focused)
+	}
+
+	// English is offered first and French second; moving down once and confirming
+	// is how somebody picks the second, and it has to reach the answer the rest
+	// of the installer reads.
+	pump(t, form, tea.KeyMsg{Type: tea.KeyDown})
+	pump(t, form, tea.KeyMsg{Type: tea.KeyEnter})
+	if chosen != config.LanguageFrench {
+		t.Errorf("choosing the second answer gave %q, want fr", chosen)
+	}
+}
+
 func TestTheHintSaysWhatThePageAccepts(t *testing.T) {
 	// The line under the form was Huh's, built from the focused field's
 	// bindings, and on a real screen it read
@@ -352,11 +378,12 @@ func TestTheHintSaysWhatThePageAccepts(t *testing.T) {
 	// sentence repeats a word, which is the fault that was on the screen.
 	for _, code := range []string{"fr", "en"} {
 		language, _ := CatalogueFor(code)
+		text := func(key string) string { return language[key] }
 		hints := map[string]string{
-			"select":  helpLine(&huh.Select[Role]{}, language),
-			"input":   helpLine(&huh.Input{}, language),
-			"text":    helpLine(&huh.Text{}, language),
-			"confirm": helpLine(&huh.Confirm{}, language),
+			"select":  helpLine(&huh.Select[Role]{}, text),
+			"input":   helpLine(&huh.Input{}, text),
+			"text":    helpLine(&huh.Text{}, text),
+			"confirm": helpLine(&huh.Confirm{}, text),
 		}
 		exit := map[string]string{"fr": "échap", "en": "esc"}[code]
 		for kind, hint := range hints {
@@ -382,7 +409,7 @@ func TestTheHintSaysWhatThePageAccepts(t *testing.T) {
 	// A field that is none of these - Huh's note, for one - gets no hint rather
 	// than somebody else's.
 	french, _ := CatalogueFor("fr")
-	if hint := helpLine(&huh.Note{}, french); hint != "" {
+	if hint := helpLine(&huh.Note{}, func(key string) string { return french[key] }); hint != "" {
 		t.Errorf("a note page was given the hint %q", hint)
 	}
 }
@@ -392,8 +419,8 @@ func TestTheFooterIsDrawnAndHuhsEnglishHelpIsNot(t *testing.T) {
 	// come from its own keymap, so a French screen has to draw its own line.
 	language, _ := CatalogueFor("fr")
 	model := &formModel{
-		form:     buildForm(&FormResult{Role: RoleAllInOne}, language, 76, 14),
-		language: language,
+		form: buildForm(&FormResult{Role: RoleAllInOne}, language, 76, 14),
+		text: func(key string) string { return language[key] },
 	}
 	// Init is what focuses the first question. Without it the focused field is
 	// still the header note, and the footer would be measured on a page nobody
@@ -420,7 +447,7 @@ func TestEscapeCancelsAndTheEndOfTheFormStopsTheProgram(t *testing.T) {
 	// happen.
 	language, _ := CatalogueFor("fr")
 
-	escape := &formModel{form: buildForm(&FormResult{Role: DefaultRole}, language, 76, 14), language: language}
+	escape := &formModel{form: buildForm(&FormResult{Role: DefaultRole}, language, 76, 14), text: func(key string) string { return language[key] }}
 	pump(t, escape.form, escape.Init()())
 	_, cmd := escape.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	if !escape.aborted {
@@ -438,7 +465,7 @@ func TestEscapeCancelsAndTheEndOfTheFormStopsTheProgram(t *testing.T) {
 		form: huh.NewForm(huh.NewGroup(
 			huh.NewConfirm().Title("Installer ?").Affirmative("Oui").Negative("Non").Value(&yes),
 		)),
-		language: language,
+		text: func(key string) string { return language[key] },
 	}
 	confirm.form.SubmitCmd = tea.Quit
 	confirm.form.CancelCmd = tea.Quit

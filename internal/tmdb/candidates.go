@@ -55,7 +55,7 @@ func (c *Client) searchCandidates(ctx context.Context, query string, year int) (
 
 	params := url.Values{}
 	params.Set("query", query)
-	params.Set("language", language)
+	params.Set("language", c.language)
 	params.Set("include_adult", "false")
 	if year != 0 {
 		params.Set("primary_release_year", strconv.Itoa(year))
@@ -105,7 +105,7 @@ func (c *Client) searchTVCandidates(ctx context.Context, query string, year int)
 
 	params := url.Values{}
 	params.Set("query", query)
-	params.Set("language", language)
+	params.Set("language", c.language)
 	params.Set("include_adult", "false")
 	if year != 0 {
 		params.Set("first_air_date_year", strconv.Itoa(year))

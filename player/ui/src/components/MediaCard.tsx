@@ -37,6 +37,12 @@ type CommonProps = {
 	 * in the legend beside its code instead.
 	 */
 	seriesLabel?: string;
+	/**
+	 * The catalogue, for the one thing this card counts rather than repeats: a
+	 * series legend states how many seasons and episodes it has, and the words
+	 * have to follow the language like every other sentence.
+	 */
+	t: (key: string) => string;
 };
 
 type Props =
@@ -44,7 +50,7 @@ type Props =
 	| (CommonProps & { kind: 'series'; item: Series })
 	| (CommonProps & { kind: 'episode'; item: Episode });
 
-export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLabel, reducedMotion, heading, seriesLabel }: Props) {
+export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLabel, reducedMotion, heading, seriesLabel, t }: Props) {
 	const [failed, setFailed] = useState<string[]>([]);
 	const [clip, setClip] = useState('');
 	const [hovered, setHovered] = useState(false);
@@ -56,7 +62,7 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 	const hovering = useRef(false);
 	const asking = useRef(false);
 	const timer = useRef<number | null>(null);
-	const view = useMemo(() => describe(kind, item, actionLabel, kindLabel, heading, seriesLabel), [kind, item, actionLabel, kindLabel, heading, seriesLabel]);
+	const view = useMemo(() => describe(kind, item, actionLabel, kindLabel, heading, seriesLabel, t), [kind, item, actionLabel, kindLabel, heading, seriesLabel, t]);
 	const artwork = view.art.find((url) => !failed.includes(url));
 	// The not-found plate, never the demo art: demo items always carry their
 	// own artwork, so this only answers when TMDB/IMDb provided nothing or
@@ -200,7 +206,7 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 	);
 }
 
-function describe(kind: Props['kind'], item: Movie | Series | Episode, actionLabel: string, kindLabel: string, heading?: string, seriesLabel?: string) {
+function describe(kind: Props['kind'], item: Movie | Series | Episode, actionLabel: string, kindLabel: string, heading: string | undefined, seriesLabel: string | undefined, t: (key: string) => string) {
 	if (kind === 'episode') {
 		const episode = item as Episode;
 		const record = episode.episode_metadata?.[0];
@@ -231,7 +237,9 @@ function describe(kind: Props['kind'], item: Movie | Series | Episode, actionLab
 		// metadata section 6.2.1 refuses.
 		const seasons = series.seasons?.length ?? 0;
 		const episodes = (series.seasons ?? []).reduce((total, season) => total + (season.metadata?.episode_count ?? 0), 0);
-		const counts = seasons ? ` · ${seasons} ${seasons === 1 ? 'saison' : 'saisons'}${episodes ? ` · ${episodes} épisode${episodes === 1 ? '' : 's'}` : ''}` : '';
+		const counts = seasons
+			? ` · ${seasons} ${seasons === 1 ? t('seasonSingular') : t('seasonPlural')}${episodes ? ` · ${episodes} ${episodes === 1 ? t('episodeSingular') : t('episodePlural')}` : ''}`
+			: '';
 		return {
 			title,
 			legend: `${kindLabel}${year ? ` · ${year}` : ''}${counts}`,

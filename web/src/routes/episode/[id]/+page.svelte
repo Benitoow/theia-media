@@ -152,7 +152,7 @@
 	</div>
 {:else}
 	<article class="page-shell page-body">
-		<a href="/serie/{episode.series_id}" class="tv-link label mb-6">← {episode.series_title}</a>
+		<a href="/show/{episode.series_id}" class="tv-link label mb-6">← {episode.series_title}</a>
 
 		<div class="episode-header">
 			{#if still}
