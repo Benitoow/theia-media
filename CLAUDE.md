@@ -17,6 +17,21 @@ They record exactly which founding clauses were superseded and which still bind.
 Windows is the only platform V3.3 can be verified on; macOS, Linux, Android TV,
 Apple TV and iOS are unverified until they run on real hardware.
 
+**Nothing leaves this machine until the maintainer publishes.** V3.3 is
+unpublished on purpose, and the boundary is worth stating rather than assuming:
+`origin/main` is still `7dd4124`, the last commit of the v3.2 line, and the whole
+native generation - this document's own V3.3 paragraphs, `docs/v3.3.md`,
+everything from decision 117 on, `player/` and every server change behind it -
+exists only in local commits. The maintainer releases when the generation is
+finished.
+
+So: **never `git push`**, and never create a release, upload an asset, or point
+anything at GitHub Releases to publish. `scripts/stub-release` serves a folder on
+localhost and is the only release-shaped thing allowed; `release.yml` fires on a
+`v*` tag, so a tag pushed "just to see CI" publishes binaries. This is the one
+mistake in this repository that a later commit cannot undo. When a task seems to
+want a remote, say what was verified locally instead.
+
 ## Read these first, every session
 
 Three documents govern every change. Read them before proposing or writing
