@@ -38,7 +38,19 @@ export type Series = {
 	id: number;
 	title: string;
 	year?: number;
-	metadata?: { name?: string; tmdb_title?: string; tmdb_name?: string; release_date?: string; first_air_date?: string; backdrop_path?: string; poster_path?: string };
+	metadata?: {
+		name?: string;
+		tmdb_title?: string;
+		tmdb_name?: string;
+		release_date?: string;
+		first_air_date?: string;
+		backdrop_path?: string;
+		poster_path?: string;
+		// The server sends these on a series; the preview shows them when they
+		// are there and stays quiet when they are not.
+		overview?: string;
+		tagline?: string;
+	};
 	backdrop_url?: string;
 	poster_url?: string;
 	seasons?: Season[];
@@ -62,7 +74,7 @@ export type Episode = {
 		id: number;
 		episode_number: number;
 		local_title?: string;
-		metadata?: { name?: string; still_path?: string; runtime_minutes?: number };
+		metadata?: { name?: string; still_path?: string; runtime_minutes?: number; overview?: string };
 	}>;
 	still_url?: string;
 	progress?: Progress;

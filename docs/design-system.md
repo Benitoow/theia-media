@@ -488,9 +488,25 @@ This is a presentation of the same library record, not a second detail screen.
   grid never shifts.
 - The preview is a fixed, clamped 16/9 surface: it grows horizontally, stays
   inside every window edge, and stacks above the grid but below modal chrome.
-- Backdrop, title, kind, year or episode/runtime, playback progress and the one
-  real action are allowed. There is no synopsis, badge or secondary action when
-  the API did not provide one; plausible-looking fake metadata is still fake.
+- Backdrop, title, kind, year or episode/runtime, playback progress, the
+  **synopsis when the server sent one**, the season and episode counts when the
+  series record carries its seasons, and the one real action are allowed. Nothing
+  is invented: no synopsis, count, badge or secondary action when the API did not
+  provide one, and a work with no synopsis draws no empty line where one would
+  have been - the frame is 16/9 and a line costs a line.
+- **The artwork does not zoom.** The card's image scaled to 1.025 over 420ms on
+  hover and on focus, which contradicted the line above that names zoom, until the
+  maintainer asked for it gone by name on 20 September 2026. `check:render` reads
+  the computed transform of the frame and of the image inside it while the card is
+  hovered, because 2.5% of a 260px card is six pixels and no screenshot settles
+  that. The frame keeps its 0.2rem of travel, and the colour lift stays: a filter
+  is not motion.
+- **Escape dismisses a preview the pointer opened.** It used to close it and
+  reopen it immediately, because the key hands focus back to the card and the card
+  opens its preview on focus: with the pointer still on the card, Escape was a
+  flicker and the preview could not be dismissed at all. The focus the key causes
+  is marked, and that one focus event does not reveal. Asserted in both
+  directions - the hover path closes, the keyboard path still opens.
 - Pointer exit closes it after a short grace period so the action can be
   reached. Keyboard focus opens it immediately, Escape returns focus to the
   card, and reduced motion removes translation while preserving the state.

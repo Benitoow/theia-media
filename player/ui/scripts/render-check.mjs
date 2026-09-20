@@ -78,7 +78,10 @@ const MOVIES = [
 		id: 1,
 		title: 'Probe Film',
 		year: 2024,
-		metadata: { backdrop_path: '/probe-backdrop.jpg' },
+		// The synopsis the preview shows, and the reason the second film has
+		// none: a preview that invents one is worse than a preview that says
+		// less, so both paths are exercised.
+		metadata: { backdrop_path: '/probe-backdrop.jpg', overview: 'A probe film about probes, long enough to be clamped by the frame it is drawn in.' },
 		backdrop_url: '/api/images/w780/probe-backdrop.jpg',
 		poster_url: '/api/images/w500/probe-poster.jpg',
 		progress: { position_seconds: 0, duration_seconds: 600, finished: false },
@@ -1870,8 +1873,83 @@ async function assertSeriesJourney(page) {
 			console.error('opening the rich card preview shifted the underlying grid');
 			failures++;
 		}
+		// No zoom. The image used to scale to 1.025 over 420ms, which section
+		// 6.2.1 forbids on the line that names zoom, and which the maintainer
+		// asked to have removed. A screenshot cannot settle it - 2.5% of a
+		// 260-pixel card is six pixels and reads as "the picture is alive" -
+		// so the computed transform is read instead, and both the frame and
+		// the image inside it must still be at scale 1 while hovered. The
+		// frame is allowed its 0.2rem of travel.
+		const transforms = await firstCard.evaluate((el) => {
+			const scaleOf = (node) => {
+				const value = getComputedStyle(node).transform;
+				if (!value || value === 'none') return 1;
+				const open = value.match(/matrix\(([^)]+)\)/);
+				return open ? Number(open[1].split(',')[0]) : NaN;
+			};
+			return {
+				frame: scaleOf(el.querySelector('.film-art')),
+				image: scaleOf(el.querySelector('.film-art img')),
+			};
+		});
+		if (transforms.frame !== 1 || transforms.image !== 1) {
+			console.error(
+				`the card zooms on hover: frame scale ${transforms.frame}, image scale ${transforms.image}, expected 1 and 1`
+			);
+			failures++;
+		}
+
+		// The synopsis, when the server sent one - and nothing at all when it
+		// did not.
+		const summary = await page.locator('.media-preview-summary').allTextContents();
+		if (summary.length !== 1 || !summary[0].startsWith('A probe film about probes')) {
+			console.error(`the preview drew ${summary.length} synopsis line(s): ${JSON.stringify(summary)}`);
+			failures++;
+		}
 		await page.screenshot({ path: join(OUT, '1-card-preview.png') });
+
+		// Escape must dismiss a preview the pointer opened. It did not: the key
+		// handed focus back to the card, the card opened the preview on focus,
+		// and the preview a viewer had just dismissed came straight back - with
+		// the pointer still on the card there was no way to be rid of it.
+		await page.keyboard.press('Escape');
+		await page.waitForTimeout(280);
+		if ((await page.locator('.media-preview').count()) !== 0) {
+			console.error('Escape closed the pointer-opened preview and it opened again on the focus Escape handed back');
+			failures++;
+		}
+		// Escape leaves the card focused, and the assertion below needs a focus
+		// it can actually give - a programmatic focus on the active element fires
+		// no event, so the preview would never open and the check would report a
+		// fault that was this probe's own footprint.
+		await firstCard.evaluate((el) => el.blur());
+		await page.waitForTimeout(60);
 	}
+
+	// The second film has no overview, so its preview must carry no synopsis
+	// line rather than an empty paragraph that still takes a line of the frame.
+	//
+	// The first preview is closed with Escape, not by moving the pointer: the
+	// preview is a fixed layer clamped to the window, and the window's own
+	// bottom-right corner sits inside it - so `mouse.move(1275, 715)` landed on
+	// the preview, kept it open through its own hover handler, and Playwright
+	// then refused to hover a card whose hit point the preview intercepts. Two
+	// failures before this one were the probe, not the product.
+	await page.keyboard.press('Escape');
+	await page.waitForTimeout(260);
+	await page.locator('.film').nth(1).hover();
+	await page.waitForTimeout(240);
+	const bareSummary = await page.locator('.media-preview-summary').count();
+	const bareOpen = await page.locator('.media-preview').count();
+	if (bareOpen !== 1) {
+		console.error(`the second card's preview did not open, so its synopsis proves nothing (count ${bareOpen})`);
+		failures++;
+	} else if (bareSummary !== 0) {
+		console.error(`a film with no synopsis drew ${bareSummary} of them`);
+		failures++;
+	}
+	await page.mouse.move(1275, 715);
+	await page.waitForTimeout(200);
 	await page.mouse.move(1275, 715);
 	await page.waitForTimeout(180);
 	await firstCard.focus();

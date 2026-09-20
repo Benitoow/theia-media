@@ -825,7 +825,7 @@ button.action:focus-visible {
 	.film:focus-visible .film-art {
 		border-color: var(--color-accent);
 		box-shadow: 0 12px 28px rgb(var(--channel-ink) / 0.55);
-		transform: translateY(-0.5rem) scale(1.015);
+		transform: translateY(-0.5rem);
 	}
 	.film:hover .film-mark,
 	.film:focus-visible .film-mark {
@@ -1412,8 +1412,13 @@ button.action:focus-visible {
 		transform var(--duration-base) var(--ease-cine);
 }
 
+/* The artwork does not grow. It used to: `scale(1.025)` on the image at 420ms,
+   which contradicted section 6.2.1 on the very line that forbids zoom, and the
+   maintainer asked for it gone by name. The colour lift stays - a filter is not
+   motion - and so does the frame's own 0.2rem travel, which is the tenth of the
+   10px the section allows. */
 .film-art img {
-	transition: transform 420ms var(--ease-cine), filter 420ms var(--ease-cine);
+	transition: filter 420ms var(--ease-cine);
 }
 
 .film-mark {
@@ -1436,7 +1441,6 @@ button.action:focus-visible {
 	.film:hover .film-art img,
 	.film:focus-visible .film-art img {
 		filter: saturate(1.04) contrast(1.02);
-		transform: scale(1.025);
 	}
 }
 
@@ -1521,6 +1525,19 @@ button.action:focus-visible {
 
 .media-preview-kind {
 	color: var(--color-accent);
+}
+
+/* The synopsis, when the server sent one. It is the line that makes the preview
+   a preview of the work rather than of its poster, and it is clamped because a
+   TMDB overview is a paragraph and the frame is 16/9. */
+.media-preview-summary {
+	display: -webkit-box;
+	overflow: hidden;
+	color: var(--color-muted);
+	font-size: 0.82rem;
+	line-height: 1.45;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 3;
 }
 
 .media-preview h2 {

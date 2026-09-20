@@ -39,6 +39,11 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 	const preview = useRef<HTMLDivElement>(null);
 	const openTimer = useRef<number | null>(null);
 	const closeTimer = useRef<number | null>(null);
+	// Escape hands focus back to the card, and the card opens its preview on
+	// focus - so the key that dismissed the preview reopened it, and with the
+	// pointer still on the card there was no way to be rid of it. The flag marks
+	// that one focus event as the key's doing.
+	const focusFromEscape = useRef(false);
 	const view = useMemo(() => describe(kind, item, actionLabel, kindLabel, heading), [kind, item, actionLabel, kindLabel, heading]);
 	const artwork = view.art.find((url) => !failed.includes(url));
 	// The not-found plate, never the demo art: demo items always carry their
@@ -84,6 +89,7 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 			if (event.key !== 'Escape') return;
 			event.preventDefault();
 			setOpen(false);
+			focusFromEscape.current = true;
 			trigger.current?.focus();
 		};
 		window.addEventListener('resize', onResize);
@@ -107,7 +113,13 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 				onClick={activate}
 				onPointerEnter={() => reveal(false)}
 				onPointerLeave={() => conceal(false)}
-				onFocus={() => reveal(true)}
+				onFocus={() => {
+					if (focusFromEscape.current) {
+						focusFromEscape.current = false;
+						return;
+					}
+					reveal(true);
+				}}
 				onBlur={(event) => {
 					if (preview.current?.contains(event.relatedTarget as Node | null)) return;
 					conceal(false);
@@ -167,6 +179,7 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 								<span className="media-preview-kind label">{view.kind}</span>
 								<h2>{view.title}</h2>
 								<p>{view.legend}{view.position >= 30 && !view.finished ? ` · ${resumeLabel} ${Math.max(1, Math.floor(view.position / 60))} min` : ''}</p>
+								{view.summary && <p className="media-preview-summary">{view.summary}</p>}
 								<Button size="sm" onClick={activate}>
 									{kind === 'series' ? <Tv size={16} /> : <Play size={15} fill="currentColor" />}
 									{view.action}
@@ -194,6 +207,7 @@ function describe(kind: Props['kind'], item: Movie | Series | Episode, actionLab
 			legend: `${code}${runtime ? ` · ${runtime} min` : ''}`,
 			kind: kindLabel,
 			art: [episode.still_url, imageURL(record?.metadata?.still_path, 'w780')].filter((url): url is string => Boolean(url)),
+			summary: record?.metadata?.overview ?? '',
 			poster: undefined as string | undefined,
 			fallback: code,
 			action: actionLabel,
@@ -206,11 +220,18 @@ function describe(kind: Props['kind'], item: Movie | Series | Episode, actionLab
 		const series = item as Series;
 		const title = displayTitle(series);
 		const year = displayYear(series);
+		// Seasons and episodes only when the server sent them: the grid's series
+		// records carry no season list, and a count nobody measured is the fake
+		// metadata section 6.2.1 refuses.
+		const seasons = series.seasons?.length ?? 0;
+		const episodes = (series.seasons ?? []).reduce((total, season) => total + (season.metadata?.episode_count ?? 0), 0);
+		const counts = seasons ? ` · ${seasons} ${seasons === 1 ? 'saison' : 'saisons'}${episodes ? ` · ${episodes} épisode${episodes === 1 ? '' : 's'}` : ''}` : '';
 		return {
 			title,
-			legend: `${kindLabel}${year ? ` · ${year}` : ''}`,
+			legend: `${kindLabel}${year ? ` · ${year}` : ''}${counts}`,
 			kind: kindLabel,
 			art: artworkCandidates(series),
+			summary: series.metadata?.overview ?? '',
 			poster: series.poster_url ?? imageURL(series.metadata?.poster_path, 'w342') ?? undefined,
 			fallback: title.slice(0, 1).toUpperCase(),
 			action: actionLabel,
@@ -227,6 +248,7 @@ function describe(kind: Props['kind'], item: Movie | Series | Episode, actionLab
 		legend: year ? String(year) : '',
 		kind: kindLabel,
 		art: artworkCandidates(movie),
+		summary: movie.metadata?.overview ?? '',
 		poster: movie.poster_url ?? imageURL(movie.metadata?.poster_path, 'w342') ?? undefined,
 		fallback: title.slice(0, 1).toUpperCase(),
 		action: actionLabel,
