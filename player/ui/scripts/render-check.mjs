@@ -1733,6 +1733,20 @@ async function assertSeriesJourney(page) {
 		);
 		failures++;
 	}
+	// A series is asked for a preview like everything else: it is not a file, so
+	// the server samples the file playback would reach first. One algorithm, and
+	// this is the assertion that the interface takes it.
+	await page.locator('.film').first().focus();
+	await page.waitForTimeout(500);
+	const seriesClip = await page.locator('.film').first().evaluate((el) => {
+		const video = el.querySelector('video.film-clip');
+		return { present: Boolean(video), src: video?.getAttribute('src')?.slice(0, 22) ?? '' };
+	});
+	if (!seriesClip.present || seriesClip.src !== 'data:video/mp4;base64,') {
+		console.error(`a series card did not ask for a preview clip: ${JSON.stringify(seriesClip)}`);
+		failures++;
+	}
+
 	await page.evaluate(() => {
 		window.__commands = [];
 	});
@@ -1859,6 +1873,33 @@ async function assertSeriesJourney(page) {
 			failures++;
 			break;
 		}
+	}
+
+	// The frame never shows a hole through it, and it settles into the page. Both
+	// are pseudo-elements, so neither is in the DOM a querySelector can reach: the
+	// computed style of the pseudo is the only honest way to read them.
+	const layers = await page.locator('.film-art').first().evaluate((el) => {
+		const before = getComputedStyle(el, '::before');
+		const after = getComputedStyle(el, '::after');
+		return {
+			fill: before.backgroundImage,
+			blur: before.filter,
+			scale: before.transform,
+			fade: after.backgroundImage,
+			media: getComputedStyle(el.querySelector('img')).zIndex,
+		};
+	});
+	if (!layers.fill.startsWith('url(') || !layers.blur.includes('blur(') || !layers.scale.includes('matrix')) {
+		console.error(`the card has no blurred fill behind its artwork: ${JSON.stringify(layers)}`);
+		failures++;
+	}
+	if (!layers.fade.includes('gradient')) {
+		console.error(`the card has no fade band: ${JSON.stringify(layers.fade)}`);
+		failures++;
+	}
+	if (Number(layers.media) < 1) {
+		console.error('the artwork is not painted above the blurred fill, so the fill would cover it');
+		failures++;
 	}
 
 	// The progress rule is drawn for a part-watched film and for nothing else:

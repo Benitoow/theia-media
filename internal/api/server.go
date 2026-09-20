@@ -215,6 +215,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/previews/{key}/clip", s.handlePreviewClip)
 	mux.HandleFunc("GET /api/stream/{id}/preview/clip", s.handleMoviePreviewClip)
 	mux.HandleFunc("GET /api/library/episodes/{id}/preview/clip", s.handleEpisodePreviewClip)
+	mux.HandleFunc("GET /api/library/series/{id}/preview/clip", s.handleSeriesPreviewClip)
 	mux.HandleFunc("GET /api/stream/{id}/preview", s.handleMoviePreview)
 	mux.HandleFunc("GET /api/stream/{id}/files/{file_id}/preview", s.handleMovieFilePreview)
 	mux.HandleFunc("GET /api/library/episodes/{id}/files/{file_id}/stream/preview", s.handleEpisodeFilePreview)

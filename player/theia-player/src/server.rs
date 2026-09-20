@@ -709,8 +709,11 @@ impl Client {
     /// and this only makes the URL absolute, for the same reason artwork is
     /// resolved here: the interface never learns the server's address.
     pub fn preview_clip(&self, kind: &str, id: i64) -> Result<PreviewState, String> {
+        // One algorithm for every kind of item: each resolves to a file - a
+        // series to its earliest episode's - and the server names the route.
         let path = match kind {
             "episode" => format!("/api/library/episodes/{id}/preview/clip"),
+            "series" => format!("/api/library/series/{id}/preview/clip"),
             _ => format!("/api/stream/{id}/preview/clip"),
         };
         let mut payload: PreviewState = self.get_json(&path)?;

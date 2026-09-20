@@ -4404,6 +4404,22 @@ preempt it, nothing downloads ffmpeg to answer a hover, and a failure is
 remembered so a file ffmpeg cannot read is not retried on every pointer move. A
 series card is never asked: a series is not a file.
 
+**One algorithm, and it is "resolve to a file".** A film previews its primary
+file, an episode its own, and a series - which is not a file - the file playback
+would reach first. The cache is keyed on the file's identity, so the clip a
+series card asks for is the very entry the episode's own card finds. The
+maintainer asked for exactly this: "un algo qui marche pour tout, pas besoin de
+se faire chier pour chaque film, chaque épisode". An episode's duration comes
+from the file when measured and from TMDB's runtime when it has not, because a
+card preview is asked for by somebody who has never played the file.
+
+**The frame's own picture fills its bands, and a fade settles it.** A poster is
+contained rather than cropped (6.1) and containing a 2:3 image in a 16/9 frame
+leaves two black bands; they are now the same picture, blurred and scaled past
+the edges. A bottom fade runs over the picture as well - the bandeau the same
+message asked for - which section 6.2's own reasoning had argued against when the
+only thing down there was the hover mark.
+
 **The bytes come through the player, not from the page to the server.**
 `<video src="http://127.0.0.1:8395/...">` does not work in the installed shell,
 whatever the response says. WebView2 starts loading, fails, and reports

@@ -1,4 +1,5 @@
 import { Play, Tv } from 'lucide-react';
+import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { cn } from '../lib/utils';
@@ -66,11 +67,12 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 	 * because the server answers `building` while it builds - six seconds for a
 	 * two-hour remux, measured. The moment the pointer leaves, the timer stops
 	 * and the card is free to ask again on the next hover; only a clip already
-	 * in hand stops a new question. A series is never asked: a series is not a
-	 * file, so there is nothing to sample.
+	 * in hand stops a new question. A series is asked like everything else: it is
+	 * not a file itself, so the server samples the file playback would reach
+	 * first, and the answer is cached against that file.
 	 */
 	const askForClip = () => {
-		if (reducedMotion || kind === 'series' || clip || asking.current) return;
+		if (reducedMotion || clip || asking.current) return;
 		asking.current = true;
 		let ticks = 0;
 		const ask = async () => {
@@ -132,7 +134,13 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 				onBlur={leave}
 				aria-label={`${view.action} ${view.legend} ${view.title}`.trim()}
 			>
-				<span className={cn('film-art', artIsFallback && 'film-art--empty')}>
+				<span
+					className={cn('film-art', artIsFallback && 'film-art--empty')}
+					// The frame's own picture, blurred behind whatever is drawn in
+					// it: a poster is contained rather than cropped, and containing a
+					// 2:3 image in a 16/9 frame is what made the black bands.
+					style={{ '--card-art': `url("${artSrc}")` } as CSSProperties}
+				>
 					<img
 						src={artSrc}
 						alt=""

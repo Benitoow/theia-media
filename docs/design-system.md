@@ -498,12 +498,34 @@ grew a box over the grid; both are gone.
   the local server is refused by WebView2 outright - it reports `Format error`
   without sending a request - and because the interface never learns the server's
   address. Every other server interaction already works this way.
+- **The frame never shows a hole through it.** A poster is *contained* in a 16/9
+  frame rather than cropped - section 6.1's rule, because a 2:3 image cropped to
+  16/9 loses its title - and containing one leaves two black bands. They are
+  filled with the frame's own picture, blurred and scaled past the edges, so the
+  bands become the artwork's light instead of a hole. The maintainer's word on
+  20 September 2026 was "retire les, c'est moche"; cropping the poster is the
+  thing section 6.1 refuses, and this removes the bands without it.
+- **The card settles into the page.** A fade along the bottom of the picture,
+  from the ink up: the bandeau the same message asked for. Section 6.2 argued
+  against a bottom gradient when the only thing down there was the hover mark's
+  radial - the title sits under the card, so nothing needed protecting. This is
+  not protection either; it is what keeps the picture from stopping at a hard
+  line.
 - **The motion is the film.** The server builds a **six-second clip** of the
   file - `internal/preview`, the same manager, cache, single encode slot and
   playback-preemption rules as the seek strip - and the card plays it muted,
   looped and inline, with the artwork as its poster, inside the artwork's own
   frame. A scope film loses a little of each edge to `cover`: the same crop every
   still in this grid already takes, and a crop is not a zoom.
+- **Every kind of item resolves to a file, and there is one algorithm.** A film
+  is its primary file, an episode its own, and a **series** - which is not a file
+  at all - the file playback would reach first, its earliest season's earliest
+  episode. The cache key is the file's identity, so a series card and the episode
+  card inside it find the same clip: nothing is built twice, and nothing has to
+  be kept in step. An episode's duration comes from the file when it has been
+  measured and from TMDB's runtime when it has not, which is what the film path
+  has always done - a card is asked for by somebody who has never played the
+  file, so waiting for an inspection would mean no preview on any first hover.
 - **Three states, and the still is the fallback for two of them.** `ready` plays;
   `building` keeps the picture that was already there and asks again while the
   pointer rests; no ffmpeg, no server or nothing worth sampling keeps it too. A

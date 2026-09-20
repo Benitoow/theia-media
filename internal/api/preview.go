@@ -102,8 +102,96 @@ func (s *Server) handleEpisodePreviewClip(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusNotFound, "no preview for this episode")
 		return
 	}
-	s.writePreviewClip(w, r, file.Path, file.SizeBytes, file.ModifiedAt,
-		file.Media.DurationSeconds, colorTransferOf(file.Media))
+	duration, transfer := episodeClipFacts(episode)
+	s.writePreviewClip(w, r, file.Path, file.SizeBytes, file.ModifiedAt, duration, transfer)
+}
+
+// handleSeriesPreviewClip answers for a series, by sampling its first episode.
+//
+// One algorithm for every kind of item, and it is the same one everywhere: a clip
+// is always made from a *file*. A film resolves to its primary file, an episode
+// to its own, and a series - which is not a file at all - to the file playback
+// would reach first, which is its earliest season's earliest episode. The cache
+// key is the file's identity, so the clip built here is the same entry that
+// episode's own card would find: nothing is built twice and nothing has to be
+// kept in step.
+func (s *Server) handleSeriesPreviewClip(w http.ResponseWriter, r *http.Request) {
+	id, ok := positivePathID(w, r, "id", "invalid_series_id")
+	if !ok {
+		return
+	}
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return
+	}
+	series, err := s.lib.GetSeries(r.Context(), profileID, id)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "no preview for this series")
+		return
+	}
+	first, ok := earliestSeason(series)
+	if !ok {
+		writeJSONError(w, http.StatusNotFound, "no preview for this series")
+		return
+	}
+	season, err := s.lib.GetSeason(r.Context(), profileID, id, first)
+	if err != nil || len(season.Items) == 0 {
+		writeJSONError(w, http.StatusNotFound, "no preview for this series")
+		return
+	}
+	episode, err := s.lib.GetEpisodeItem(r.Context(), profileID, season.Items[0].ID)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "no preview for this series")
+		return
+	}
+	file, ok := primaryEpisodeFile(episode)
+	if !ok {
+		writeJSONError(w, http.StatusNotFound, "no preview for this series")
+		return
+	}
+	duration, transfer := episodeClipFacts(episode)
+	s.writePreviewClip(w, r, file.Path, file.SizeBytes, file.ModifiedAt, duration, transfer)
+}
+
+// earliestSeason is the season number a series starts with, which is not always
+// one: a show whose first season is numbered zero (specials) is ordinary, and
+// asking for season 1 would answer "no such season" for it.
+func earliestSeason(series library.Series) (int, bool) {
+	best, found := 0, false
+	for _, season := range series.Seasons {
+		if !found || season.Number < best {
+			best, found = season.Number, true
+		}
+	}
+	return best, found
+}
+
+// episodeClipFacts is moviePrimaryFacts' counterpart for an episode: how long it
+// runs, and whether its picture has to be tone mapped.
+//
+// The duration matters more here than it does for a film, because a card preview
+// is asked for by somebody who has never played the file - and an uninspected
+// file has no measured duration at all. The film path falls back to TMDB's
+// runtime for exactly this reason; so does this one, and the measurement, when
+// the file has one, always wins. A file nothing knows the length of is still
+// unavailable rather than guessed at.
+func episodeClipFacts(item library.EpisodeItem) (float64, string) {
+	transfer := ""
+	for _, file := range item.Files {
+		if file.IsPrimary {
+			transfer = colorTransferOf(file.Media)
+			if file.Media.DurationSeconds > 0 {
+				return file.Media.DurationSeconds, transfer
+			}
+			break
+		}
+	}
+	for _, member := range item.Episodes {
+		if member.Metadata.RuntimeMinutes > 0 {
+			return float64(member.Metadata.RuntimeMinutes) * 60, transfer
+		}
+	}
+	return 0, transfer
 }
 
 // primaryEpisodeFile is the file playback would choose, and the only one a

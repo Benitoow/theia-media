@@ -793,6 +793,65 @@ button.action:focus-visible {
 .film-art img.film-art--poster {
 	object-fit: contain;
 }
+
+/* The frame never shows a hole through it. Containing a 2:3 poster in a 16/9
+   frame leaves two black bands, and the maintainer's word on 20 September 2026
+   was "il y a des bandes noires ... retire les, c'est moche". They are filled
+   with the picture itself - blurred, scaled past the frame, dimmed - so the
+   bands become the artwork's own light. The alternative, cropping the poster,
+   is the thing section 6.1 refuses; this removes the bands without it. */
+.film-art::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	background-image: var(--card-art, none);
+	background-position: center;
+	background-size: cover;
+	/* Scaled past the frame so the blur has no visible edge to fade from. */
+	transform: scale(1.22);
+	filter: blur(22px) saturate(1.15) brightness(0.92);
+	opacity: 0.62;
+}
+
+/* The bandeau: a fade into the ink along the bottom of the picture.
+   Section 6.2 argued against a bottom gradient when the only thing down there
+   was the mark's radial - the title sits *under* the card, so nothing needed
+   protecting. This is not protection either: it is what settles the picture
+   onto the page instead of stopping at a hard line, which is the effect the
+   same message asked for. */
+.film-art::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	background: linear-gradient(
+		to top,
+		rgb(var(--channel-ink) / 0.66) 0%,
+		rgb(var(--channel-ink) / 0.24) 22%,
+		transparent 48%
+	);
+	pointer-events: none;
+}
+
+/* The still is lifted above the blurred fill; the clip keeps its own
+   positioning (`.film-clip` is absolute and fills the frame) and only takes the
+   layer, because `position: relative` here would take it out of the frame it is
+   supposed to fill - which the harness caught as "drawn outside the frame". */
+.film-art img {
+	position: relative;
+	z-index: 1;
+}
+.film-art video {
+	z-index: 1;
+}
+
+/* Above the fade: what the viewer reads and what answers the pointer. */
+.film-mark,
+.film-art-title,
+.film-watched {
+	z-index: 3;
+}
 .film-art-title {
 	position: absolute;
 	inset: 0;
