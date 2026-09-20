@@ -14,6 +14,16 @@ if (!existsSync(binary)) {
 const args = ['run', './internal/testfixture', '--data-dir', data];
 if (process.env.THEIA_TEST_FFMPEG) args.push('--ffmpeg', process.env.THEIA_TEST_FFMPEG);
 const seed = spawnSync(process.env.GO_BINARY || 'go', args, { cwd: root, stdio: 'inherit', timeout: 600_000 });
+// A missing `go` is not a non-zero status: spawnSync returns `status: null` with
+// `error` set, and the bare `status !== 0` test below then exited 1 saying
+// nothing at all - a guard that fails silently is a guard nobody can act on.
+if (seed.error) {
+	console.error(
+		`Could not run ${process.env.GO_BINARY || 'go'}: ${seed.error.message}\n` +
+			`The playback fixtures are seeded with Go. Put it on PATH, or set GO_BINARY to its full path.`
+	);
+	process.exit(1);
+}
 if (seed.status !== 0) process.exit(seed.status || 1);
 const server = spawn(binary, ['--data-dir', data, '--port', '8397'], { cwd: data, stdio: 'inherit' });
 server.on('exit', code => process.exit(code || 0));
