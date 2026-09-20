@@ -3,7 +3,6 @@ package library
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -25,17 +24,29 @@ const movieColumns = `
 	m.duration_seconds,
 	COALESCE(p.position_seconds, 0), COALESCE(p.watched_at, 0), COALESCE(p.finished, 0)`
 
-// movieListColumns produces the same JSON that collectMovies has always
-// returned, without first reading detail-only cast, crew and collection blobs
-// that a list read has no use for. See decision 92.
+// movieListColumns produces the same JSON a film list has always returned,
+// without first reading detail-only cast, crew and collection blobs that a list
+// read has no use for. See decision 92.
 const movieListColumns = `
 	m.id, m.path, m.file_name, m.size_bytes, m.modified_at, m.title, m.year,
-	m.added_at, m.updated_at,
-	m.tmdb_id, m.tmdb_title, m.overview, m.release_date, m.poster_path,
-	m.backdrop_path, m.director, m.genres_json, m.runtime_minutes,
-	m.vote_average, m.metadata_status, m.metadata_fetched_at,
+	m.added_at, m.updated_at,` + listMetadataColumns + `,
 	m.duration_seconds,
 	COALESCE(p.position_seconds, 0), COALESCE(p.watched_at, 0), COALESCE(p.finished, 0)`
+
+// listMetadataColumns is metadataColumns with the detail-only positions written
+// as NULL. The order is the one metadataRow.targets() scans, position for
+// position, which is the whole point: a hand-written subset of the same columns
+// is a second list to keep in step, and the day it drifts every field shifts by
+// one - producing plausible-looking wrong metadata, as the comment over there
+// warns. NULLs read nothing, so a list still avoids the cast, crew and
+// collection blobs.
+const listMetadataColumns = `
+	m.tmdb_id, m.tmdb_title, NULL, NULL, NULL,
+	m.overview, m.release_date, m.poster_path, m.backdrop_path,
+	m.director, m.genres_json, NULL, NULL,
+	NULL, NULL,
+	NULL, NULL, NULL,
+	m.runtime_minutes, m.vote_average, m.metadata_status, m.metadata_fetched_at`
 
 // metadataColumns is the TMDB half of that projection, in the order
 // metadataRow.targets() scans it. Change one and change the other.
@@ -96,53 +107,33 @@ func scanMovie(row interface{ Scan(...any) error }) (Movie, error) {
 	return m, nil
 }
 
+// scanMovieList reads one row projected with movieListColumns. It shares the
+// metadata block with scanMovie rather than mapping the same columns a second
+// time, so the list and the detail cannot disagree about what a field is.
 func scanMovieList(row interface{ Scan(...any) error }) (Movie, error) {
 	var (
 		m                              Movie
+		meta                           metadataRow
 		modifiedAt, addedAt, updatedAt int64
-		year, tmdbID, runtime          sql.NullInt64
-		tmdbTitle, overview            sql.NullString
-		releaseDate, poster, backdrop  sql.NullString
-		director, genresJSON           sql.NullString
-		vote, duration                 sql.NullFloat64
-		fetchedAt, watchedAt           int64
+		year                           sql.NullInt64
+		duration                       sql.NullFloat64
 		position                       float64
+		watchedAt                      int64
 		finished                       int
 	)
-	err := row.Scan(
-		&m.ID, &m.Path, &m.FileName, &m.SizeBytes, &modifiedAt, &m.Title, &year,
-		&addedAt, &updatedAt, &tmdbID, &tmdbTitle, &overview, &releaseDate,
-		&poster, &backdrop, &director, &genresJSON, &runtime, &vote,
-		&m.Metadata.Status, &fetchedAt, &duration, &position, &watchedAt, &finished,
-	)
-	if err != nil {
+	targets := []any{&m.ID, &m.Path, &m.FileName, &m.SizeBytes, &modifiedAt,
+		&m.Title, &year, &addedAt, &updatedAt}
+	targets = append(targets, meta.targets()...)
+	targets = append(targets, &duration, &position, &watchedAt, &finished)
+
+	if err := row.Scan(targets...); err != nil {
 		return Movie{}, err
 	}
 	m.ModifiedAt, m.AddedAt, m.UpdatedAt = unix(modifiedAt), unix(addedAt), unix(updatedAt)
 	if year.Valid {
 		m.Year = int(year.Int64)
 	}
-	if tmdbID.Valid {
-		m.Metadata.TMDBID = int(tmdbID.Int64)
-	}
-	m.Metadata.Title = tmdbTitle.String
-	m.Metadata.Overview = overview.String
-	m.Metadata.ReleaseDate = releaseDate.String
-	m.Metadata.PosterPath = poster.String
-	m.Metadata.BackdropPath = backdrop.String
-	m.Metadata.Director = director.String
-	if runtime.Valid {
-		m.Metadata.Runtime = int(runtime.Int64)
-	}
-	if vote.Valid {
-		m.Metadata.VoteAverage = vote.Float64
-	}
-	if fetchedAt > 0 {
-		m.Metadata.FetchedAt = unix(fetchedAt)
-	}
-	if genresJSON.Valid && genresJSON.String != "" {
-		_ = json.Unmarshal([]byte(genresJSON.String), &m.Metadata.Genres)
-	}
+	meta.fill(&m)
 	m.Progress = Progress{
 		PositionSeconds: position,
 		DurationSeconds: duration.Float64,
