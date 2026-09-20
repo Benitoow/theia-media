@@ -58,11 +58,16 @@ func TestTheEntriesNameEveryProgramTheRoleInstalled(t *testing.T) {
 	}
 }
 
-func TestTheEntriesCarryTheProductsIconRatherThanAGenericOne(t *testing.T) {
-	// A Go executable has no icon resource, so Windows draws the generic
-	// application glyph beside it - which is how three Theia entries came to look
-	// like three unknown programs in a launcher. The player's build does carry the
-	// icon, so the server's entries borrow it.
+func TestTheEntriesShowTheProductsMarkWithoutBorrowingOne(t *testing.T) {
+	// Windows draws the target's own icon, and both Go binaries embed the
+	// product's mark now (cmd/*/rsrc_windows_*.syso). Before that they carried
+	// none, so the server's entries borrowed the player's - and a machine with
+	// only the server had nothing to borrow, which is how three Theia entries
+	// came to look like three unknown programs in a launcher.
+	//
+	// So no entry names an icon, and the assertion that it stays that way is the
+	// resource object each Windows build links. Delete one and this fails, which
+	// is the day the generic glyphs come back.
 	french, _ := CatalogueFor("fr")
 	install := t.TempDir()
 	write(t, filepath.Join(install, "theia-server.exe"), "MZ")
@@ -72,22 +77,19 @@ func TestTheEntriesCarryTheProductsIconRatherThanAGenericOne(t *testing.T) {
 	if len(entries) != 3 {
 		t.Fatalf("the role produced %d entries, want 3", len(entries))
 	}
-	player := filepath.Join(install, "theia-player.exe")
 	for _, entry := range entries {
-		if entry.name == french["shortcutTheiaName"] || entry.name == french["shortcutServerName"] {
-			if !strings.EqualFold(entry.link.Icon, player) {
-				t.Errorf("%s would show the generic glyph, icon = %q", entry.name, entry.link.Icon)
-			}
+		if entry.link.Icon != "" {
+			t.Errorf("%s names an icon at %q; Windows already draws the target's own", entry.name, entry.link.Icon)
 		}
 	}
 
-	// A server-only machine has no player to borrow from, and no invented path
-	// either: an icon that is not there is worse than the default one.
-	bare := t.TempDir()
-	write(t, filepath.Join(bare, "theia-server.exe"), "MZ")
-	for _, entry := range entriesFor(Plan{Role: RoleServer, InstallDir: bare}, french) {
-		if entry.link.Icon != "" {
-			t.Errorf("%s claims an icon at %q, and there is no player to take one from", entry.name, entry.link.Icon)
+	for program, path := range map[string]string{
+		"theia-server": filepath.Join("..", "..", "cmd", "theia-server", "rsrc_windows_amd64.syso"),
+		"theia-setup":  filepath.Join("..", "..", "cmd", "theia-setup", "rsrc_windows_amd64.syso"),
+		"theia-player": filepath.Join("..", "..", "player", "theia-player", "icons", "icon.ico"),
+	} {
+		if _, err := os.Stat(path); err != nil {
+			t.Errorf("%s carries no icon resource: %v", program, err)
 		}
 	}
 }

@@ -40,6 +40,13 @@ type ShortcutTargets struct {
 
 // entriesFor is what this role's installation adds: the product, which starts
 // the thing this machine is for, and then each program it actually installed.
+//
+// No entry names an icon, and that is deliberate: Windows draws the target's
+// own. The server and the installer used to carry none - a Go binary has no
+// resource unless one is given to it - so every shortcut borrowed the player's
+// icon, and a machine with only the server had nothing to borrow. Both binaries
+// embed the product's mark now (cmd/*/rsrc_windows_*.syso), so each entry shows
+// what it actually starts.
 func entriesFor(plan Plan, text Catalogue) []shortcutEntry {
 	installDir := plan.InstallDir
 	executable := func(base string) string {
@@ -48,14 +55,6 @@ func entriesFor(plan Plan, text Catalogue) []shortcutEntry {
 		}
 		return filepath.Join(installDir, base)
 	}
-
-	// The icon is the player when it is installed, even for the server's entry. A
-	// Tauri build carries the product's icon; a Go executable carries none, and
-	// Windows then draws the generic application glyph - which is what a launcher
-	// puts beside every entry, and what made three Theia entries look like three
-	// unknown programs. A shortcut's icon does not have to come from its own
-	// target.
-	icon := firstInstalled(installDir, "theia-player")
 
 	// The product entry comes first: it is the one somebody looks for by name,
 	// and the only one that also goes on the Desktop.
@@ -73,7 +72,6 @@ func entriesFor(plan Plan, text Catalogue) []shortcutEntry {
 			Target:      executable(primary),
 			WorkingDir:  installDir,
 			Description: text["shortcutTheia"],
-			Icon:        icon,
 		},
 	}}
 
@@ -84,7 +82,6 @@ func entriesFor(plan Plan, text Catalogue) []shortcutEntry {
 				Target:      executable("theia-server"),
 				WorkingDir:  installDir,
 				Description: text["shortcutServer"],
-				Icon:        icon,
 			},
 		})
 	}
