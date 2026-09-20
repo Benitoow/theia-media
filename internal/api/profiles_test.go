@@ -3,6 +3,9 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"image"
+	"image/color"
+	"image/png"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -29,6 +32,42 @@ func do(t *testing.T, h http.Handler, method, path, body string) *http.Response 
 	}
 	h.ServeHTTP(rec, request)
 	return rec.Result()
+}
+
+// The desktop shell is served from http://tauri.localhost and draws the profile
+// picture in an `<img>`, so the request is cross-origin: without the explicit
+// opt-in Chromium blocks an otherwise valid JPEG with ERR_BLOCKED_BY_ORB. The
+// images and the card previews have carried those two headers since they were
+// reported broken the same way; this endpoint was the one left out, and the
+// symptom was the maintainer importing a photo and never seeing it. Headers are
+// what the browser decides on, so headers are what this asserts.
+func TestAvatarAllowsTheNativeTauriOrigin(t *testing.T) {
+	handler, _, _ := newMovieFileTestServer(t)
+
+	wide := image.NewRGBA(image.Rect(0, 0, 1200, 400))
+	for y := 0; y < 400; y++ {
+		for x := 0; x < 1200; x++ {
+			wide.Set(x, y, color.RGBA{R: uint8(x % 256), G: 90, B: 20, A: 255})
+		}
+	}
+	var source bytes.Buffer
+	if err := png.Encode(&source, wide); err != nil {
+		t.Fatal(err)
+	}
+	if res := do(t, handler, http.MethodPut, "/api/profiles/1/avatar", source.String()); res.StatusCode != http.StatusOK {
+		t.Fatalf("uploading a picture = %d", res.StatusCode)
+	}
+
+	res := do(t, handler, http.MethodGet, "/api/profiles/1/avatar", "")
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("reading the picture = %d", res.StatusCode)
+	}
+	if got := res.Header.Get("Cross-Origin-Resource-Policy"); got != "cross-origin" {
+		t.Errorf("Cross-Origin-Resource-Policy = %q, want cross-origin", got)
+	}
+	if got := res.Header.Get("Access-Control-Allow-Origin"); got != "*" {
+		t.Errorf("Access-Control-Allow-Origin = %q, want *", got)
+	}
 }
 
 // The whole point of M2: two viewers, one film, two positions that do not touch.

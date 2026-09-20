@@ -2637,6 +2637,24 @@ async function assertSeriesJourney(page) {
 	await filmPlay.close();
 }
 
+// The player's own window, at the scale a real display gives it.
+//
+// Every other viewport here is a browser's. The player is a Tauri window: on
+// this machine 1453x913 physical at 150%, which is a 969x609 CSS viewport, and
+// at that width the library's navigation ran off the right edge and took the
+// menu - and the profile picture in it - out of the screen. The maintainer found
+// it by importing a photo and never seeing it. So the window the product is used
+// in is a viewport this harness checks, and `assertFits` names what sticks out.
+{
+	const page = await openPage({ width: 969, height: 609 });
+	await page.fill('#theia-address', 'http://127.0.0.1:8395');
+	await page.click('button[type=submit]');
+	await page.waitForTimeout(600);
+	await assertFits(page, 'the player window (969x609)');
+	await page.screenshot({ path: join(OUT, '10-player-window.png') });
+	await page.close();
+}
+
 await browser.close();
 console.log(failures === 0 ? `render check passed, pictures in ${OUT}` : `${failures} render check(s) failed`);
 process.exit(failures === 0 ? 0 : 1);

@@ -56,7 +56,7 @@ func lanBrowserBoundary(next http.Handler, names []string) http.Handler {
 			writeRemoteError(w, 403, "invalid_host")
 			return
 		}
-		if crossSiteSubresource(req) && !nativeArtworkRequest(req) {
+		if crossSiteSubresource(req) && !nativeShellImageRequest(req) {
 			writeRemoteError(w, 403, "cross_origin_denied")
 			return
 		}
@@ -81,19 +81,26 @@ func lanBrowserBoundary(next http.Handler, names []string) http.Handler {
 	})
 }
 
-// nativeArtworkRequest admits the one cross-site browser read the installed
-// desktop shell needs. Tauri's WebView has its own fixed origin, while artwork
-// is served by the local Theia HTTP process; Chromium therefore marks the image
-// as cross-site even though both programs are the same installed product.
+// A profile picture is the one other picture the shell draws, and it is matched
+// exactly: the profile itself, its name and its history stay on the LAN.
+var profilePicturePath = regexp.MustCompile(`^/api/profiles/[0-9]+/avatar$`)
+
+// nativeShellImageRequest admits the cross-site browser reads the installed
+// desktop shell needs. Tauri's WebView has its own fixed origin, while pictures
+// are served by the local Theia HTTP process; Chromium therefore marks them as
+// cross-site even though both programs are the same installed product.
 //
-// The exception is deliberately narrower than CORS for the API: a web page
-// cannot choose either Origin value, and no JSON, stream or state-changing
-// route inherits it.
-func nativeArtworkRequest(req *http.Request) bool {
+// There are two of them and no more: the artwork a card is drawn from, and the
+// profile picture. The second was found on 20 September 2026 by the maintainer
+// importing a photo and never seeing it - the request was answered 403 before
+// its handler ran, while the artwork beside it loaded. The exception is
+// deliberately narrower than CORS for the API: a web page cannot choose either
+// Origin value, and no JSON, stream or state-changing route inherits it.
+func nativeShellImageRequest(req *http.Request) bool {
 	if req.Method != http.MethodGet && req.Method != http.MethodHead {
 		return false
 	}
-	if !strings.HasPrefix(req.URL.Path, "/api/images/") {
+	if !strings.HasPrefix(req.URL.Path, "/api/images/") && !profilePicturePath.MatchString(req.URL.Path) {
 		return false
 	}
 	switch req.Header.Get("Origin") {

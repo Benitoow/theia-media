@@ -43,7 +43,7 @@ func TestUnknownRemoteRoutesFailClosed(t *testing.T) {
 	}
 }
 
-func TestTauriArtworkCanCrossTheLANBrowserBoundary(t *testing.T) {
+func TestTauriPicturesCanCrossTheLANBrowserBoundary(t *testing.T) {
 	h := LANOnly(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) }), "cinema")
 	tests := []struct {
 		name, method, path, origin string
@@ -54,6 +54,16 @@ func TestTauriArtworkCanCrossTheLANBrowserBoundary(t *testing.T) {
 		{"hostile artwork", http.MethodGet, "/api/images/w780/proof.jpg", "https://evil.example", http.StatusForbidden},
 		{"tauri catalogue", http.MethodGet, "/api/library/movies", "http://tauri.localhost", http.StatusForbidden},
 		{"tauri image write", http.MethodPost, "/api/images/w780/proof.jpg", "http://tauri.localhost", http.StatusForbidden},
+		// The profile picture: the second image the shell draws, and the one the
+		// maintainer reported missing. Its neighbours stay refused, which is what
+		// keeps the exception from becoming a way to read the household.
+		{"windows webview profile picture", http.MethodGet, "/api/profiles/3/avatar", "http://tauri.localhost", http.StatusNoContent},
+		{"custom scheme profile picture", http.MethodGet, "/api/profiles/3/avatar", "tauri://localhost", http.StatusNoContent},
+		{"hostile profile picture", http.MethodGet, "/api/profiles/3/avatar", "https://evil.example", http.StatusForbidden},
+		{"tauri profile", http.MethodGet, "/api/profiles/3", "http://tauri.localhost", http.StatusForbidden},
+		{"tauri profile list", http.MethodGet, "/api/profiles", "http://tauri.localhost", http.StatusForbidden},
+		{"tauri profile picture write", http.MethodPut, "/api/profiles/3/avatar", "http://tauri.localhost", http.StatusForbidden},
+		{"tauri profile picture traversal", http.MethodGet, "/api/profiles/3/avatar/../x", "http://tauri.localhost", http.StatusForbidden},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

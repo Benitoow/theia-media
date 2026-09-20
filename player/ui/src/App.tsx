@@ -1017,7 +1017,7 @@ function LibraryNav({ section, settingsOpen, profilesOpen, profiles, activeProfi
 					return <button key={item.key} className={`nav-link ${active ? 'nav-link--active' : ''}`} aria-current={active ? 'page' : undefined} aria-label={item.label} onClick={() => onSection(item.key)}>{active && <motion.span layoutId="library-nav-active" className="nav-active-surface" transition={{ type: 'spring', stiffness: 430, damping: 36 }} />}<Icon size={17} strokeWidth={1.8} /><span className="nav-label">{item.label}</span></button>;
 				})}
 				<button className={`nav-link ${settingsOpen ? 'nav-link--active' : ''}`} aria-current={settingsOpen ? 'page' : undefined} aria-label={`${t('settings')}${updateAvailable ? ` · ${t('updateAvailable')}` : ''}`} onClick={onSettings}>{settingsOpen && <motion.span layoutId="library-nav-active" className="nav-active-surface" />}<Cog size={17} strokeWidth={1.8} /><span className="nav-label">{t('settings')}</span>{updateAvailable && <span className="nav-update-badge" aria-hidden="true">1</span>}</button>
-				<button className={`nav-profile ${profilesOpen ? 'nav-profile--active' : ''}`} aria-label={t('profiles')} aria-current={profilesOpen ? 'page' : undefined} title={profile?.name || t('profileDefaultName')} onClick={onProfiles}>{profilesOpen && <motion.span layoutId="library-nav-active" className="nav-active-surface" />}{avatar ? <img src={avatar} alt="" /> : <span aria-hidden="true">{initial || <UserRound size={18} />}</span>}</button>
+				<button className={`nav-profile ${profilesOpen ? 'nav-profile--active' : ''}`} aria-label={t('profiles')} aria-current={profilesOpen ? 'page' : undefined} title={profile?.name || t('profileDefaultName')} onClick={onProfiles}>{profilesOpen && <motion.span layoutId="library-nav-active" className="nav-active-surface" />}{avatar ? <img src={avatar} alt="" crossOrigin="anonymous" /> : <span aria-hidden="true">{initial || <UserRound size={18} />}</span>}</button>
 			</div>
 		</nav>
 	);
@@ -1136,7 +1136,7 @@ function ProfileDialog({ open, profiles, activeProfile, serverURL, busy, t, onCl
 				</header>
 				{editing ? <form className="profile-editor" onSubmit={saveProfile}>
 					<div className="profile-editor-avatar" style={{ '--profile-hue': `${(editing.id * 71) % 360}` } as React.CSSProperties}>
-						{previewURL || (!removeAvatar && profileAvatarURL(serverURL, editing)) ? <img src={previewURL || profileAvatarURL(serverURL, editing) || ''} alt="" /> : <span>{(draftName || t('profileDefaultName')).trim().slice(0, 1).toUpperCase()}</span>}
+						{previewURL || (!removeAvatar && profileAvatarURL(serverURL, editing)) ? <img src={previewURL || profileAvatarURL(serverURL, editing) || ''} alt="" crossOrigin="anonymous" /> : <span>{(draftName || t('profileDefaultName')).trim().slice(0, 1).toUpperCase()}</span>}
 					</div>
 					<label className="profile-editor-field"><span className="label">{t('profileName')}</span><input value={draftName} onChange={(event) => setDraftName(event.target.value)} maxLength={40} required /></label>
 					<div className="profile-picture-actions">

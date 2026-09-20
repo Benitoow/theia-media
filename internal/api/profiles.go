@@ -1,9 +1,11 @@
 package api
 
 import (
+	"bytes"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/Benitoow/theia-media/internal/profiles"
 )
@@ -238,9 +240,27 @@ func (s *Server) handleProfileAvatar(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", avatar.ContentType)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(avatar.Bytes)
+	// `frame-ancestors 'none'` and not `sandbox`, which is what every other image
+	// response in this server carries. Measured on 20 September 2026: with
+	// `sandbox` present WebView2 refused the picture with `Failed to fetch` while
+	// the artwork next to it loaded, and the two responses differed in this header
+	// and in nothing else that a browser acts on.
+	w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
+	// The desktop shell is served from http://tauri.localhost and draws this in
+	// an `<img>`, so the request is cross-origin and a resource that does not opt
+	// in is blocked - Chromium answers ERR_BLOCKED_BY_ORB even for a correctly
+	// typed JPEG. Artwork and card previews have carried these two headers since
+	// they were reported broken; this endpoint was the one left out, and the
+	// symptom was the maintainer importing a photo on 20 September 2026 and never
+	// seeing it: `naturalWidth` zero, `complete` true, and no error anywhere.
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Cross-Origin-Resource-Policy", "cross-origin")
+	// Served the way artwork is served, and not with a bare Write: ServeContent
+	// gives the picture a Content-Length and a validator, and the bare Write gave
+	// it neither - a chunked response that WebView2 answered `Failed to fetch`
+	// for, while the same bytes from /api/images loaded beside it. The version is
+	// the picture's mod time: it changes exactly when the bytes do.
+	http.ServeContent(w, r, "avatar.jpg", time.Unix(avatar.Version, 0), bytes.NewReader(avatar.Bytes))
 }
 
 func (s *Server) writeProfileError(w http.ResponseWriter, err error) bool {

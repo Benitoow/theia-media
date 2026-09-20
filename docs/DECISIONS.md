@@ -4602,6 +4602,53 @@ was not the final word): 0.66 of the ink at the left edge rather than 0.4. The
 harness asserts the clip now, because the fault is invisible in a screenshot
 taken anywhere but the corner.
 
+## 136. The profile picture is the second image the shell draws
+
+**Decided 20 September 2026**, after the maintainer imported a photo into the
+player and never saw it: "quand j'importe une photo de profil elle ne s'affiche
+pas dans le menu".
+
+**The server was storing it correctly all along.** `GET /api/profiles` reported
+`has_avatar: true` and a bumped version, and `GET /api/profiles/1/avatar?v=2`
+answered a 200 with a 512x512 JPEG. The picture was simply never asked for
+successfully, and the reason took three wrong guesses to find.
+
+**What found it** was making the running player report on itself. The OSD is
+served from `http://tauri.localhost` and the pictures come from the local Theia
+process, so every image it draws is a cross-site subresource - and
+`lanBrowserBoundary` refuses those, with one exception: `nativeArtworkRequest`,
+which admitted `/api/images/` and nothing else. Measured from inside the player:
+`affiche[ok 200 cors cl=59048] avatar[leve TypeError: Failed to fetch]` - the
+artwork beside it loaded while the picture was answered **403
+`cross_origin_denied`** before its handler ever ran. Everything else in that
+report was sound: the navigation was laid out, visible, and inside the window.
+
+**The exception now covers the profile picture too**, matched exactly
+(`^/api/profiles/[0-9]+/avatar$`) and renamed `nativeShellImageRequest` to say
+what it is. The narrowness the original comment promised is kept and asserted:
+the profile itself, the profile list, a picture upload and a traversal path all
+stay refused from the shell's origin, and the test that guarded artwork now
+guards both, which is why the guard is one function rather than two.
+
+**Three corrections were made while hunting it, and none of them was the cause.**
+They are kept because each is right on its own: the avatar response now carries
+the same cross-origin opt-in as artwork (`Access-Control-Allow-Origin` and
+`Cross-Origin-Resource-Policy`, without which ORB blocks a valid JPEG), it is
+served with `http.ServeContent` rather than a bare `Write` so it has a
+Content-Length and a validator, and its CSP is `frame-ancestors 'none'` like
+every other image rather than `sandbox`. The `<img>` asks for CORS, as the
+artwork `<img>` always has.
+
+**Verified in the running window**: the player reported `nw: 512` for the
+picture where it had reported `nw: 0`, the fetch answered `ok 200 cors`, and the
+navigation's last button draws the photo - photographed at the end of the bar,
+beside MOVIES, SERIES, SEARCH and SETTINGS.
+
+**And a harness gap was closed with it.** `check:render` is a browser at a
+browser's viewport; the player is a Tauri window, which on this machine is a
+1440x900 CSS viewport. That size is now one of the viewports the harness checks
+and `assertFits` names what sticks out of it.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
