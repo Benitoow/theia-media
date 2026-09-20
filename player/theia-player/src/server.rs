@@ -14,6 +14,7 @@
 //! network, the film itself is fetched by mpv rather than by this process, and
 //! no TLS stack is linked in because there is no TLS to speak.
 
+use std::io::Read;
 use std::time::{Duration, Instant};
 
 /// The service the server announces. It is the product's own name rather than
@@ -340,6 +341,10 @@ pub struct PreviewState {
     pub state: String,
     #[serde(default)]
     pub clip_url: String,
+    /// The clip itself, as a data URL. Empty while the server is still building
+    /// one, which is the state the interface keeps its still for.
+    #[serde(default)]
+    pub data_url: String,
 }
 
 #[derive(Clone, serde::Deserialize, serde::Serialize)]
@@ -710,9 +715,43 @@ impl Client {
         };
         let mut payload: PreviewState = self.get_json(&path)?;
         if !payload.clip_url.is_empty() {
-            payload.clip_url = format!("{}{}", self.base, payload.clip_url);
+            let url = format!("{}{}", self.base, payload.clip_url);
+            // The bytes come back through here rather than being left to a
+            // `<video src>` pointing at the server, and that is not tidiness.
+            // WebView2 refused the media with `MEDIA_ELEMENT_ERROR: Format
+            // error` without sending a request at all - measured on 20 September
+            // 2026, on a clip another Chromium decodes and with the response
+            // carrying `Access-Control-Allow-Origin` and
+            // `Cross-Origin-Resource-Policy: cross-origin` - so the address
+            // never reaches the page and the element is handed the bytes it
+            // already trusts. It is also the rule this client already follows
+            // everywhere else: the interface never learns the server's address.
+            payload.data_url = self.preview_data(&url)?;
+            payload.clip_url = url;
         }
         Ok(payload)
+    }
+
+    /// Fetches a clip and returns it as a data URL.
+    ///
+    /// Bounded, because the only thing that ever answers this is a six-second
+    /// card preview and a client that will read whatever it is given should say
+    /// what it is willing to read.
+    fn preview_data(&self, url: &str) -> Result<String, String> {
+        const LIMIT: u64 = 8 << 20;
+        let response = ureq::get(url)
+            .call()
+            .map_err(|e| format!("fetching the preview: {e}"))?;
+        let mut bytes = Vec::new();
+        response
+            .into_reader()
+            .take(LIMIT)
+            .read_to_end(&mut bytes)
+            .map_err(|e| format!("reading the preview: {e}"))?;
+        if bytes.is_empty() {
+            return Err("the preview was empty".into());
+        }
+        Ok(format!("data:video/mp4;base64,{}", base64(&bytes)))
     }
 
     pub fn episode(&self, id: i64) -> Result<EpisodeItem, String> {
@@ -962,5 +1001,49 @@ mod tests {
         // the native player takes the file itself, so a rebased track would sit
         // as far from the picture as the viewer has travelled into the film.
         assert!(!client.subtitle_url(4, 9, 6).contains("t="));
+    }
+}
+
+/// Base64, written here rather than pulled in: it is twenty lines, it is the
+/// only use this crate has for it, and a dependency for one function is a
+/// dependency to keep patched for the life of the project.
+fn base64(bytes: &[u8]) -> String {
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity((bytes.len() + 2) / 3 * 4);
+    for chunk in bytes.chunks(3) {
+        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let n = ((b[0] as u32) << 16) | ((b[1] as u32) << 8) | b[2] as u32;
+        out.push(ALPHABET[(n >> 18) as usize & 63] as char);
+        out.push(ALPHABET[(n >> 12) as usize & 63] as char);
+        out.push(if chunk.len() > 1 {
+            ALPHABET[(n >> 6) as usize & 63] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            ALPHABET[n as usize & 63] as char
+        } else {
+            '='
+        });
+    }
+    out
+}
+
+#[cfg(test)]
+mod base64_tests {
+    use super::base64;
+
+    #[test]
+    fn the_three_cases_and_a_real_padding_run() {
+        // The RFC 4648 vectors, plus the lengths a video file actually has: a
+        // preview is not a multiple of three bytes and the padding has to be
+        // exactly right or the data URL decodes to a corrupt file.
+        assert_eq!(base64(b""), "");
+        assert_eq!(base64(b"f"), "Zg==");
+        assert_eq!(base64(b"fo"), "Zm8=");
+        assert_eq!(base64(b"foo"), "Zm9v");
+        assert_eq!(base64(b"foob"), "Zm9vYg==");
+        assert_eq!(base64(b"fooba"), "Zm9vYmE=");
+        assert_eq!(base64(b"foobar"), "Zm9vYmFy");
     }
 }

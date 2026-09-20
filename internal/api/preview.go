@@ -2,7 +2,9 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/Benitoow/theia-media/internal/library"
@@ -139,9 +141,21 @@ func (s *Server) writePreviewClip(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
+	// The URL carries the file's size, because it is served with a year of
+	// cache and the file behind it can change: a rebuilt clip - a new tone map,
+	// a new encoder setting - is a different byte count under the same key, and
+	// without this the webview answers from its cache and shows the old one.
+	// Measured on 20 September 2026: a clip was replaced on disk and the player
+	// kept reporting `Format error` for the file that was no longer there.
+	url := "/api/previews/" + key + "/clip"
+	if path, err := s.previews.ClipPath(key); err == nil {
+		if info, err := os.Stat(path); err == nil {
+			url = fmt.Sprintf("%s?v=%d", url, info.Size())
+		}
+	}
 	writeJSON(w, http.StatusOK, previewResponse{
 		State:   "ready",
-		ClipURL: "/api/previews/" + key + "/clip",
+		ClipURL: url,
 	})
 }
 
@@ -160,7 +174,16 @@ func (s *Server) handlePreviewClip(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "no preview for this file")
 		return
 	}
+	// The same two headers the artwork route carries, for the same reason and
+	// only that reason: the installed shell is served from http://tauri.localhost
+	// while the media comes from the local Theia process, so Chromium marks the
+	// clip cross-site. Without these the element starts loading, fails, and never
+	// reaches this server - measured on 20 September 2026, `clip loading:` then
+	// `clip failed to load:` in the player's own output with no request in this
+	// server's log at all.
 	w.Header().Set("Content-Type", "video/mp4")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Cross-Origin-Resource-Policy", "cross-origin")
 	w.Header().Set("Cache-Control", "public, max-age=86400")
 	http.ServeFile(w, r, path)
 }

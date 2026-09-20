@@ -37,8 +37,13 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 	const [failed, setFailed] = useState<string[]>([]);
 	const [clip, setClip] = useState('');
 	const [hovered, setHovered] = useState(false);
-	const previewed = useRef(false);
-	const ticks = useRef(0);
+	// Two names for one fact on purpose. The state drives what is drawn - only a
+	// card under the pointer plays - and the ref is what the retry reads, because
+	// the closure a timer was armed in still holds the value from the moment it
+	// was armed. That stale `false` is what made the first version never retry,
+	// and it is the whole reason a two-hour film's clip never appeared.
+	const hovering = useRef(false);
+	const asking = useRef(false);
 	const timer = useRef<number | null>(null);
 	const view = useMemo(() => describe(kind, item, actionLabel, kindLabel, heading), [kind, item, actionLabel, kindLabel, heading]);
 	const artwork = view.art.find((url) => !failed.includes(url));
@@ -57,32 +62,56 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 	/**
 	 * Asks the server for six seconds of this film.
 	 *
-	 * Asked once per card and then remembered, asked again while the pointer
-	 * stays because the server answers `building` while it makes one, and
-	 * stopped the moment the pointer leaves - the same "ask again in a while is
-	 * the whole protocol" the seek strip uses. A series is not asked at all: a
-	 * series is not a file, so there is nothing to sample and its card keeps its
-	 * still.
+	 * One ask per hover, and the asks are repeated **while the pointer stays**
+	 * because the server answers `building` while it builds - six seconds for a
+	 * two-hour remux, measured. The moment the pointer leaves, the timer stops
+	 * and the card is free to ask again on the next hover; only a clip already
+	 * in hand stops a new question. A series is never asked: a series is not a
+	 * file, so there is nothing to sample.
 	 */
 	const askForClip = () => {
-		if (reducedMotion || kind === 'series' || previewed.current) return;
-		previewed.current = true;
+		if (reducedMotion || kind === 'series' || clip || asking.current) return;
+		asking.current = true;
+		let ticks = 0;
 		const ask = async () => {
-			ticks.current += 1;
+			ticks += 1;
 			try {
-				const answer = JSON.parse(await invoke<string>('player_preview', { kind, id: item.id })) as { state?: string; clip_url?: string };
-				if (answer.state === 'ready' && answer.clip_url) {
-					setClip(answer.clip_url);
+				const answer = JSON.parse(await invoke<string>('player_preview', { kind, id: item.id })) as { state?: string; data_url?: string };
+				if (answer.state === 'ready' && answer.data_url) {
+					setClip(answer.data_url);
 					return;
 				}
-			} catch {
+			} catch (error) {
 				// No server, no ffmpeg, or nothing to sample: the still is the
-				// answer, and it is already on screen.
+				// answer, and it is already on screen. The reason goes to the
+				// player's own output, because a card that fails silently is
+				// indistinguishable from a card that was never asked - which is
+				// exactly how "the preview does nothing" arrived, twice.
+				void invoke('player_log', { message: `preview ${kind} ${item.id}: ${String(error)}` }).catch(() => {});
+				asking.current = false;
 				return;
 			}
-			if (ticks.current < 5 && hovered) timer.current = window.setTimeout(ask, 3000);
+			if (ticks < 8 && hovering.current) {
+				timer.current = window.setTimeout(ask, 2000);
+				return;
+			}
+			// The pointer left before the server was done. The next hover asks
+			// again, and finds it built.
+			asking.current = false;
 		};
 		void ask();
+	};
+
+	const enter = () => {
+		hovering.current = true;
+		setHovered(true);
+		askForClip();
+	};
+
+	const leave = () => {
+		hovering.current = false;
+		setHovered(false);
+		stopAsking();
 	};
 
 	useEffect(() => stopAsking, []);
@@ -97,22 +126,10 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 			<button
 				className="film"
 				onClick={activate}
-				onPointerEnter={() => {
-					setHovered(true);
-					askForClip();
-				}}
-				onPointerLeave={() => {
-					setHovered(false);
-					stopAsking();
-				}}
-				onFocus={() => {
-					setHovered(true);
-					askForClip();
-				}}
-				onBlur={() => {
-					setHovered(false);
-					stopAsking();
-				}}
+				onPointerEnter={enter}
+				onPointerLeave={leave}
+				onFocus={enter}
+				onBlur={leave}
 				aria-label={`${view.action} ${view.legend} ${view.title}`.trim()}
 			>
 				<span className={cn('film-art', artIsFallback && 'film-art--empty')}>
@@ -135,8 +152,19 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 							autoPlay
 							playsInline
 							// A clip that will not decode leaves the artwork showing
-							// rather than a black rectangle where a film used to be.
-							onError={() => setClip('')}
+							// rather than a black rectangle where a film used to be,
+							// and says so in the player's own output: the card
+							// swallows a failed preview by design, so without this
+							// line a clip that never loads and a clip that was never
+							// asked for look identical from outside - which is
+							// exactly how "the preview does nothing" arrived.
+							onError={(event) => {
+								const media = (event.currentTarget as HTMLVideoElement).error;
+								void invoke('player_log', {
+									message: `a card preview would not play: code=${media?.code} ${media?.message ?? ''}`,
+								}).catch(() => {});
+								setClip('');
+							}}
 						/>
 					)}
 					<span className="film-mark" aria-hidden="true">

@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -499,8 +500,19 @@ func (m *Manager) buildClip(ctx context.Context, key, source string, duration fl
 		}
 	}
 
+	// An HDR source must be tone mapped, and asking the database is not enough:
+	// it only knows once the file has been inspected, and a card preview is
+	// built long before anybody plays the film. Measured on 20 September 2026 -
+	// the clip of an uninspected HDR remux kept its `bt2020/smpte2084` tags, and
+	// the webview answered `MEDIA_ELEMENT_ERROR: Format error` with code 4, which
+	// is SRC_NOT_SUPPORTED: it fetched a file it would not decode.
+	hdr := stream.ToneMap(colorTransfer)
+	if !hdr {
+		hdr = m.looksHDR(ctx, binary, source, start)
+	}
+
 	scale := fmt.Sprintf("scale=-2:%d", clipHeight)
-	if stream.ToneMap(colorTransfer) {
+	if hdr {
 		scale = fmt.Sprintf("scale=-2:%d,%s", clipHeight, stream.ToneMapFilter)
 	}
 
@@ -513,6 +525,11 @@ func (m *Manager) buildClip(ctx context.Context, key, source string, duration fl
 		"-i", source,
 		"-t", strconv.Itoa(clipSeconds),
 		"-an", "-sn", "-dn",
+		// One video stream, named. Without the mapping ffmpeg copies whatever
+		// else it finds: this film's remux carries a `bin_data (text)` track, and
+		// a clip whose MP4 holds a track the webview cannot name is a clip the
+		// webview refuses.
+		"-map", "0:v:0",
 		"-vf", scale,
 		// H.264 because the only thing that has to decode this is the webview
 		// drawing the card, and H.264 is the one codec it always has.
@@ -520,6 +537,12 @@ func (m *Manager) buildClip(ctx context.Context, key, source string, duration fl
 		"-preset", "veryfast",
 		"-crf", "30",
 		"-pix_fmt", "yuv420p",
+		// Labelled BT.709 whatever the source was, because the output is either
+		// tone mapped already or was SDR to begin with. Inheriting the source's
+		// tags is how a player is told to expect PQ in a file that holds SDR.
+		"-color_primaries", "bt709",
+		"-color_trc", "bt709",
+		"-colorspace", "bt709",
 		// The moov atom first, so a six-second clip starts playing before it has
 		// finished arriving - the same reason a range request exists at all.
 		"-movflags", "+faststart",
@@ -542,4 +565,36 @@ func (m *Manager) buildClip(ctx context.Context, key, source string, duration fl
 
 	m.log.Info("built a card preview", "source", source, "start_seconds", start)
 	return nil
+}
+
+// looksHDR decodes one frame and reads what ffmpeg says about it.
+//
+// Deliberately not a probe of the file's name or of the metadata table: this is
+// the transfer function ffmpeg itself reports after opening the source, which is
+// the only answer that is true for the frames about to be encoded. One frame,
+// nothing written, a few hundred milliseconds - and it runs once per clip,
+// because clips are built once per file.
+func (m *Manager) looksHDR(ctx context.Context, binary, source string, at float64) bool {
+	cmd := exec.CommandContext(ctx, binary,
+		"-hide_banner",
+		"-ss", strconv.FormatFloat(at, 'f', 3, 64),
+		"-i", source,
+		"-frames:v", "1",
+		"-f", "null",
+		"-",
+	)
+	output := boundedio.NewTail(64 << 10)
+	cmd.Stdout, cmd.Stderr = output, output
+	if err := cmd.Run(); err != nil {
+		// A source ffmpeg cannot open is not an HDR question; the encode that
+		// follows will fail on its own terms and be remembered as failed.
+		return false
+	}
+	reported := strings.ToLower(output.String())
+	for _, marker := range []string{"smpte2084", "arib-std-b67", "bt2020"} {
+		if strings.Contains(reported, marker) {
+			return true
+		}
+	}
+	return false
 }

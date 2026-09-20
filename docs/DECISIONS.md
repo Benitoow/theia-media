@@ -4404,6 +4404,25 @@ preempt it, nothing downloads ffmpeg to answer a hover, and a failure is
 remembered so a file ffmpeg cannot read is not retried on every pointer move. A
 series card is never asked: a series is not a file.
 
+**The bytes come through the player, not from the page to the server.**
+`<video src="http://127.0.0.1:8395/...">` does not work in the installed shell,
+whatever the response says. WebView2 starts loading, fails, and reports
+`MEDIA_ELEMENT_ERROR: Format error` **without sending a request this server ever
+sees** - measured on 20 September 2026 against a clip the harness's own Chromium
+decodes, with `Access-Control-Allow-Origin` and
+`Cross-Origin-Resource-Policy: cross-origin` on the response and with
+`crossOrigin="anonymous"` on the element. So `player_preview` fetches the clip in
+Rust and hands the interface a `data:` URL. That also puts the preview back under
+the rule this client follows everywhere else: the interface never learns the
+server's address. The base64 encoder is twenty lines in `server.rs`, tested
+against the RFC vectors, because a dependency for one function is a dependency to
+keep patched.
+
+**The clip URL is versioned by its size**, because it is served with a year of
+cache and the file behind it can be rebuilt - a new tone map, a new encoder
+setting. Without that, a rebuilt clip is answered from the webview's cache under
+the same URL, which cost an afternoon here.
+
 **What a hover changes is the hairline and the picture.** No lift, no scale, no
 shifting, no second surface: the card's rectangles before, during and after the
 pointer are identical, and `check:render` asserts that list rather than a

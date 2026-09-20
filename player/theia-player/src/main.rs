@@ -1111,6 +1111,18 @@ fn player_play_episode(id: i64) -> Result<String, String> {
     play_episode(id)
 }
 
+/// One line from the interface into the player's own output.
+///
+/// The OSD has no console anybody can read: a `console.error` in a WebView2 page
+/// goes to a devtools window a release build does not open. That turned "the card
+/// preview does nothing" into a report with no evidence in either direction - the
+/// card swallows a failed preview by design, because the still is the fallback.
+/// This is the missing wire, and it prints where the engine's own lines print.
+#[tauri::command]
+fn player_log(message: String) {
+    println!("theia-player: osd: {message}");
+}
+
 /// The card preview: six seconds of the film, built by the server on demand.
 ///
 /// Three states and no fourth: `ready` with a URL, `building` while the server
@@ -1442,7 +1454,9 @@ fn main() {
             player_season,
             player_play,
             player_play_episode,
-            player_preview
+            player_preview,
+            player_log,
+            player_log
         ])
         .setup(move |app| {
             let window = app.get_webview_window("main").expect("the main window");
@@ -1485,6 +1499,27 @@ fn main() {
                 match connect_to(&url) {
                     Ok(info) => println!("theia-player: connected to {url} -> {info}"),
                     Err(e) => eprintln!("theia-player: could not connect to {url}: {e}"),
+                }
+                // The card preview, without a pointer. The interface asks for one
+                // on hover and swallows a failure by design - the still is the
+                // fallback - which made "the preview does nothing" a report with
+                // no evidence behind it in either direction. This is the same
+                // call the card makes, printed.
+                if let Some(id) = flag("--preview").and_then(|v| v.parse::<i64>().ok()) {
+                    let kind = flag("--preview-kind").unwrap_or_else(|| "movie".to_string());
+                    match CLIENT
+                        .lock()
+                        .unwrap()
+                        .as_ref()
+                        .ok_or("no client".to_string())
+                        .and_then(|client| client.preview_clip(&kind, id))
+                    {
+                        Ok(state) => println!(
+                            "theia-player: preview state={} clip_url={}",
+                            state.state, state.clip_url
+                        ),
+                        Err(e) => eprintln!("theia-player: preview for {kind} {id} failed: {e}"),
+                    }
                 }
                 if let Some(id) = flag("--play").and_then(|v| v.parse::<i64>().ok()) {
                     match play_movie(id) {

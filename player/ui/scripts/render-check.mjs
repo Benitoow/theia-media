@@ -1538,7 +1538,10 @@ async function openPage(
 		// What the server says about a card preview here. The real states are
 		// `ready`, `building` and an absence; the last two are the same thing to
 		// the interface, which is why only the first is exercised separately.
-		preview = { state: 'ready', clip_url: '/api/previews/probe/clip' },
+		// What the bridge answers, which is the bytes themselves: the clip is
+		// fetched by the Rust side and handed to the page as a data URL, because
+		// WebView2 refused a `<video src>` pointing at the local server outright.
+		preview = { state: 'ready', data_url: `data:video/mp4;base64,${PROBE_CLIP}` },
 		// Pinned, not inherited: the host's own locale used to decide the
 		// default language, so a French machine and an English one checked
 		// different products. en-US here, fr-FR where the system-French rule
@@ -1921,8 +1924,8 @@ async function assertSeriesJourney(page) {
 			console.error(`the clip is not a silent loop: ${JSON.stringify(clip)}`);
 			failures++;
 		}
-		if (!clip.src.includes('/api/previews/')) {
-			console.error(`the clip is not served by the server's preview route: ${clip.src}`);
+		if (!clip.src.startsWith('data:video/mp4;base64,')) {
+			console.error(`the clip is not the bytes the bridge handed over: ${clip.src.slice(0, 40)}`);
 			failures++;
 		}
 		if (!clip.poster) {

@@ -493,6 +493,11 @@ grew a box over the grid; both are gone.
   a list of rectangles in `check:render`, because "no change of size" is a
   measurement and not an impression. The one thing a hover changes is the
   hairline, and now the six seconds playing inside the frame.
+- **The bytes arrive through the player.** The clip is fetched by the Rust side
+  and handed to the page as a `data:` URL, because a `<video src>` pointing at
+  the local server is refused by WebView2 outright - it reports `Format error`
+  without sending a request - and because the interface never learns the server's
+  address. Every other server interaction already works this way.
 - **The motion is the film.** The server builds a **six-second clip** of the
   file - `internal/preview`, the same manager, cache, single encode slot and
   playback-preemption rules as the seek strip - and the card plays it muted,
