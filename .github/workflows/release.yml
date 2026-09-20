@@ -68,19 +68,15 @@ jobs:
       # Renaming anything here produces an updater that silently never finds a
       # release.
       #
-      # `theia-server-*` is decision 119. An installed v3.2 asks for
-      # `theia-*` - it carries the old updater and cannot be taught otherwise -
-      # so the same bytes are also staged under the old names while
-      # THEIA_TRANSITIONAL_NAMES is 'true'. **Turning that off is the release
-      # step that removes them**: do it in the release after the first V3.3,
-      # and say so in the notes.
+      # `theia-server-*` is decision 119. V3.3.0 carried byte-identical copies
+      # under the old `theia-*` names so an installed v3.2 could cross the
+      # rename. That one-release bridge is deliberately gone in V3.3.1.
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: '0'
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
-          THEIA_TRANSITIONAL_NAMES: 'true'
         run: |
           version="${GITHUB_REF_NAME}"
           mkdir -p dist
@@ -89,19 +85,16 @@ jobs:
             -ldflags "-s -w -X main.version=${version} -X main.tmdbAPIKey=${TMDB_API_KEY}" \
             -o "dist/${asset}" \
             ./cmd/theia-server
-          # Byte-identical copies under the names v3.2 installations look for.
-          # GitHub reports a digest per asset, so the two names carry the same
-          # digest and the old updater verifies the same bytes it would have.
-          if [ "${THEIA_TRANSITIONAL_NAMES}" = "true" ]; then
-            cp "dist/${asset}" "dist/theia-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}"
+          # Only Windows x64 has a released, hardware-verified native player.
+          # Publishing setup programs for the five server-only targets made
+          # them look like complete products when they are not. The installer
+          # joins a platform's release only when that whole product is verified.
+          if [ "${{ matrix.goos }}/${{ matrix.goarch }}" = "windows/amd64" ]; then
+            go build -buildvcs=false -trimpath \
+              -ldflags "-s -w -X main.version=${version}" \
+              -o "dist/theia-setup-windows-amd64.exe" \
+              ./cmd/theia-setup
           fi
-          # The installer, on the same platforms. It carries no TMDB key: it
-          # never talks to TMDB, and a key in a binary that gets downloaded by
-          # people who already have a server is a key spent for nothing.
-          go build -buildvcs=false -trimpath \
-            -ldflags "-s -w -X main.version=${version}" \
-            -o "dist/theia-setup-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}" \
-            ./cmd/theia-setup
           ls -l dist
 
       # The binary has to actually run, and report the version it was tagged
@@ -278,8 +271,11 @@ jobs:
           pattern: theia-*
           merge-multiple: true
 
-      - name: List what will be published
-        run: ls -l staging
+      - name: Check the exact public release surface
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          ./scripts/check-release-assets.ps1 -Directory staging -Version $version
 
       # No separate checksum file: GitHub reports a sha256 digest for every
       # uploaded asset through its API, and that is what the updater verifies
@@ -288,7 +284,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          version="${GITHUB_REF_NAME#v}"
           gh release create "${GITHUB_REF_NAME}" \
+            --verify-tag \
             --title "Theia ${GITHUB_REF_NAME}" \
             --notes-file docs/releases/${GITHUB_REF_NAME}.md \
-            staging/theia-*
+            "staging/theia-setup-windows-amd64.exe#DOWNLOAD — Theia ${version} for Windows x64" \
+            "staging/theia-${version}-windows-amd64.zip#OFFLINE — Complete Windows x64 bundle" \
+            "staging/theia-player-windows-amd64.zip#Component — Windows x64 player bundle (installer-managed)" \
+            "staging/theia-server-windows-amd64.exe#Component — Windows x64 server (updater-managed)" \
+            "staging/theia-server-windows-arm64.exe#Component — Windows ARM64 server (updater-managed)" \
+            "staging/theia-server-linux-amd64#Component — Linux x64 server (updater-managed)" \
+            "staging/theia-server-linux-arm64#Component — Linux ARM64 server (updater-managed)" \
+            "staging/theia-server-darwin-amd64#Component — macOS Intel server (updater-managed)" \
+            "staging/theia-server-darwin-arm64#Component — macOS Apple Silicon server (updater-managed)"

@@ -232,7 +232,8 @@ test('a fresh info snapshot is reloaded when ffmpeg becomes ready during the fir
  // that prompt is there. Reading the flag rather than assuming it keeps the
  // test independent of the order the file happens to run in.
  const fromStart=page.getByRole('button',{name:/du début/i});
- if(await fromStart.isVisible().catch(()=>false))await fromStart.click();
+ await expect.poll(async()=>!firstRiskyStream||await fromStart.isVisible(),{timeout:10000}).toBe(true);
+ if(firstRiskyStream)await fromStart.click();
  await expect.poll(()=>firstRiskyStream,{timeout:10000}).toBe(false);
  await expect.poll(()=>page.evaluate(()=>window.__theiaMIMEs)).toContainEqual(expect.stringContaining('hvc1'));
  await expect.poll(()=>infoRequests,{timeout:10000}).toBeGreaterThanOrEqual(beforePlayer+2);

@@ -12,11 +12,11 @@
   <a href="https://github.com/Benitoow/theia-media/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Benitoow/theia-media?style=flat-square&color=C8A24A"></a>
   <a href="https://github.com/Benitoow/theia-media/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Benitoow/theia-media/ci.yml?branch=main&style=flat-square&label=CI"></a>
   <a href="LICENSE"><img alt="GPL-3.0" src="https://img.shields.io/github/license/Benitoow/theia-media?style=flat-square"></a>
-  <img alt="Windows, macOS and Linux" src="https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-555?style=flat-square">
+  <img alt="Windows x64" src="https://img.shields.io/badge/Windows%20x64-555?style=flat-square">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Benitoow/theia-media/releases/latest">Download</a> ·
+  <a href="https://github.com/Benitoow/theia-media/releases/download/v3.3.1/theia-setup-windows-amd64.exe">Download for Windows x64</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
@@ -25,8 +25,8 @@
 ![The Theia home screen: the navigation, the film showing tonight and the rows below it](docs/screenshots/home.webp)
 
 Theia turns folders of films and series into a private cinema for the browsers
-already on your television, phone and computer. Run one native executable, add
-your folders and watch. There is no Theia account, subscription, Docker stack,
+already on your television, phone and computer. Run one installer, add your
+folders and watch. There is no Theia account, subscription, Docker stack,
 external database or separate web app to install.
 
 | One file | Built for choosing | Private by default |
@@ -36,7 +36,7 @@ external database or separate web app to install.
 ## V3.3: playback leaves the browser
 
 > [!IMPORTANT]
-> **`v3.3.0` is the current download.** The product is now three programs:
+> **`v3.3.1` is the current download.** The product is now three programs:
 > `theia-server` (the headless Go backend you already run, which keeps serving
 > the web interface for administration and fallback playback), `theia-player`
 > (a native desktop player built on Tauri and libmpv) and `theia-setup` (the
@@ -122,9 +122,8 @@ you an installation you would later resent.
 
 ## Three-minute setup
 
-1. Download **one file** for your operating system and CPU from
-   [GitHub Releases](https://github.com/Benitoow/theia-media/releases/latest) and
-   run it: on Windows x64 that is `theia-setup-windows-amd64.exe`. It asks which
+1. Download **[Theia 3.3.1 for Windows x64](https://github.com/Benitoow/theia-media/releases/download/v3.3.1/theia-setup-windows-amd64.exe)**
+   and run it. That one installer asks which
    language Theia should speak, what this machine is for, where to keep its data,
    the port it listens on, the name it answers to on the network, and which
    folders hold your films - then shows the whole plan before writing anything.
@@ -147,11 +146,12 @@ are. Nothing asks for administrator rights in either direction.
 
 | Platform | The download |
 | --- | --- |
-| Windows x64 | `theia-setup-windows-amd64.exe` (one file, ~13 MB) |
+| Windows x64 | [`theia-setup-windows-amd64.exe`](https://github.com/Benitoow/theia-media/releases/download/v3.3.1/theia-setup-windows-amd64.exe) (one file) |
 | Windows on ARM, macOS, Linux | not yet - see *what is verified* below |
 
-If you would rather install with nothing downloaded, the release also publishes
-`theia-<version>-windows-amd64.zip`, which holds every file. Unpack it and run
+If you would rather install with nothing downloaded, use the
+[`theia-3.3.1-windows-amd64.zip`](https://github.com/Benitoow/theia-media/releases/download/v3.3.1/theia-3.3.1-windows-amd64.zip)
+offline bundle. It holds every file. Unpack it and run
 `theia-setup.exe` from inside that folder: it finds the programs **beside itself**,
 copies them, and needs no network at all.
 
@@ -161,10 +161,13 @@ mirror, or the updater:
 | Asset | What it is |
 | --- | --- |
 | `theia-server-<os>-<arch>[.exe]` | The server alone. This is what the updater selects by name, and what the installer fetches. |
-| `theia-setup-<os>-<arch>[.exe]` | The installer alone: the one file a person downloads. It fetches the programs above, or copies them from beside itself or from `--from <folder\|zip>`. |
+| `theia-setup-windows-amd64.exe` | The one supported installer and the only executable a person downloads. It fetches the programs above, or copies them from beside itself or from `--from <folder\|zip>`. |
 | `theia-player-<os>-<arch>.zip` | The player and its engine, with the engine's licence and notice. |
 | `theia-<version>-<os>-<arch>.zip` | Everything, for an install with no network. |
-| `theia-<os>-<arch>[.exe]` | The pre-V3.3 name of the server, byte-identical, **in this release only** - it is what lets an installed v3.2 update itself. Gone in the next release, and the notes say so. |
+
+The release page labels the installer and offline bundle as the two human
+downloads. Everything named `server` or `player` is installer/updater plumbing,
+published separately because an existing installation selects it by exact name.
 
 Release binaries are unsigned and run in the foreground. Windows may show a
 reputation warning; macOS may require **Privacy & Security → Open Anyway** after

@@ -3,8 +3,9 @@
 Theia is a personal media server: no configuration, no account, no paywall. One
 user, their own films, their own machine.
 
-**V3.3 is in progress and changes the shape of the project.** `v3.2.0` is the
-last single-binary release. V3.3 splits the product into three artifacts:
+**V3.3 is the current release line.** `v3.2.0` is the last single-binary
+release; `v3.3.0` introduced the native generation and `v3.3.1` is the current
+maintenance release. V3.3 splits the product into three artifacts:
 `theia-server` (Go, headless, still serving the frozen Svelte interface as
 fallback playback), `theia-player` (Tauri 2 + Rust + libmpv - the native player,
 and where films are now meant to be watched) and `theia-setup` (Go + Charm, the
@@ -17,20 +18,13 @@ They record exactly which founding clauses were superseded and which still bind.
 Windows is the only platform V3.3 can be verified on; macOS, Linux, Android TV,
 Apple TV and iOS are unverified until they run on real hardware.
 
-**Nothing leaves this machine until the maintainer publishes.** V3.3 is
-unpublished on purpose, and the boundary is worth stating rather than assuming:
-`origin/main` is still `7dd4124`, the last commit of the v3.2 line, and the whole
-native generation - this document's own V3.3 paragraphs, `docs/v3.3.md`,
-everything from decision 117 on, `player/` and every server change behind it -
-exists only in local commits. The maintainer releases when the generation is
-finished.
-
-So: **never `git push`**, and never create a release, upload an asset, or point
-anything at GitHub Releases to publish. `scripts/stub-release` serves a folder on
-localhost and is the only release-shaped thing allowed; `release.yml` fires on a
-`v*` tag, so a tag pushed "just to see CI" publishes binaries. This is the one
-mistake in this repository that a later commit cannot undo. When a task seems to
-want a remote, say what was verified locally instead.
+**Publication is explicit.** `v3.3.0` is public; preparing a later release does
+not authorize publishing it. Never push, create or push a tag, create a release,
+or upload an asset without the maintainer's explicit instruction for that exact
+action. `release.yml` fires on a pushed `v*` tag, so a tag pushed "just to see
+CI" publishes binaries. `scripts/stub-release` remains the local release-shaped
+test path. When a task does not explicitly authorize publication, report what
+was verified locally instead.
 
 ## Read these first, every session
 
@@ -247,7 +241,7 @@ with EPERM while cleaning up.
 ## Building the release archive
 
 ```bash
-./build-release.ps1 -Version 3.3.0     # -> dist/theia-3.3.0-windows-amd64.zip
+./build-release.ps1 -Version 3.3.1     # -> dist/theia-3.3.1-windows-amd64.zip
 ```
 
 The archive is **the offline path**: everything in one zip - the installer, the
@@ -258,9 +252,13 @@ the first version published three separate downloads and told the reader to put
 them together - and somebody who downloaded only the installer, which is what the
 README said to do first, got a configuration and nothing to run it.
 
-**What a person downloads is one executable**, `theia-setup-<os>-<arch>.exe`; it
-fetches the rest, verified. The individual assets are published as well, with
-their platform names, for the updater, for mirrors, and for that fetch.
+**What a person downloads is one executable**,
+`theia-setup-windows-amd64.exe`, because Windows x64 is the only complete
+platform verified on real hardware. It fetches the rest, verified. The server
+assets for six targets and the Windows player bundle are published as labelled
+components for the updater and installer; setup executables for an unverified
+player platform are not published as if they were a complete product. Decision
+138 fixes the exact nine-file release surface.
 
 ## Building the native player
 

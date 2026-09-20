@@ -4734,6 +4734,50 @@ if the first question is anything else; the install test round-trips `fr` throug
 the OSD, the web build and the server all build; `check:render` passes with the
 player's own 1440x900 window among its viewports.
 
+## 138. A release page is a front door, not a parts inventory
+
+V3.3.0 published **twenty assets**. Six were the new server names, six were
+byte-identical aliases for the V3.2 updater, six were setup programs, one was the
+Windows player bundle and one was the complete Windows archive. The mechanism
+was correct and the presentation was not: the release page gave one person
+twenty equally weighted answers to the question "what do I download?".
+
+Two constraints stop the cosmetic answer from being honest. First, an installed
+updater selects `theia-server-<os>-<arch>` by exact name, so those six files
+cannot be folded into a friendly installer without breaking updates already in
+the world. Second, the native player has only been built and run on Windows x64.
+A setup executable for Linux, macOS or Windows ARM is not a cross-platform
+product; it is a server installer wearing the product's name.
+
+**Decided for V3.3.1.**
+
+- The release title is `Theia v3.3.1`, and the release notes lead with one
+  labelled Windows x64 installer. The complete offline ZIP is the second human
+  choice. Their direct links also replace the generic release-page link in the
+  README.
+- Only `theia-setup-windows-amd64.exe` is published. Another setup asset joins a
+  release only after that platform's player and complete install have run on
+  real hardware.
+- The six pre-V3.3 `theia-<os>-<arch>` aliases are removed. Decision 119 gave
+  them one release in which to carry V3.2 across the rename; V3.3.0 was that
+  release.
+- The six server binaries and the Windows player bundle remain public technical
+  assets. Their GitHub display labels say `Component` and name the installer or
+  updater that owns them. Embedding the 95 MB engine and every program into the
+  setup executable would turn a small bootstrap into a roughly 130 MB duplicate
+  of the offline bundle while the updater would still need the server alone.
+- Publication is an allowlist, not `staging/theia-*`: exactly nine non-empty
+  files are accepted. `scripts/check-release-assets.ps1` rejects a missing file,
+  an unexpected file, a directory or an empty asset before `gh release create`
+  can run. The create command names all nine paths explicitly and verifies that
+  the pushed tag already exists.
+
+This is one supported executable for a person, not one physical file in the
+entire delivery system. GitHub Releases is still the component registry because
+existing installations already speak that protocol. A later move to a separate
+component channel needs its own compatibility bridge; deleting the files first
+would make a tidy page and a dead updater.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
