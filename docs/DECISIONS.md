@@ -4508,6 +4508,42 @@ an address somebody typed or passed is the address they get. Verified: launched
 with the flag while the machine's own server ran, the log of the named server
 received the whole session and the installed one received nothing.
 
+## 135. A clip is cropped to the film, and the bandeau is a blur
+
+**Decided 20 September 2026**, after the maintainer's third look at the card
+preview: "la preview de Star Wars laisse toujours deux bandes noire ... j'aimerais
+que cette algo fasse les deux", and "je me suis trompé, je ne voulais pas dire
+fade, mais un blur, un flou sombre de la gauche vers la droite, très léger".
+
+**The bars were in the picture.** Most films are wider than the frame they are
+stored in, so a 2.39:1 film in a 16:9 file carries its own black bars as pixels -
+measured on the maintainer's remux: **122 of 480 rows** of the clip's frame were
+black. `object-fit` cannot remove them, because they are content and not layout;
+the first version of this preview had assumed the frame was the problem.
+
+**One probe, two answers, one algorithm.** `probeSource` runs over the frames the
+clip will be cut from and reports both facts it needs: whether the picture must
+be tone mapped, and what to crop. The crop is `cropdetect`'s, accepted only when
+it keeps at least half the frame and sixty-four rows, because a dark scene can
+persuade it that most of the picture is black and cropping a film to a corner of
+itself is worse than two bars. It applies to a film, an episode and a series
+alike, which is what the maintainer asked for in one sentence.
+
+**And a trap worth remembering, because it cost three runs.** `cropdetect`
+answered `crop=3840:2160:0:0` - no bars - on the source, and
+`crop=854:356:0:62` - the right answer - on the very same frames once encoded to
+8 bits. The film is **10-bit HDR**, where limited-range black is 64, and
+`limit=24` therefore sees no black at all. The probe converts to `yuv420p`
+before measuring; the conversion is for the measurement and nothing is written.
+Verified end to end afterwards: the clip is **1146x480**, the film's own aspect,
+with **0 black rows** in it.
+
+**The bandeau is a blur.** Not a fade over the picture but the picture itself,
+blurred where the band is and darkened from the left at low strength, ending
+without an edge of its own. The first version was a bottom gradient; the
+maintainer corrected it by name, and the section that had argued against a
+gradient was arguing against something else.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

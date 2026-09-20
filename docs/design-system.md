@@ -505,12 +505,19 @@ grew a box over the grid; both are gone.
   bands become the artwork's light instead of a hole. The maintainer's word on
   20 September 2026 was "retire les, c'est moche"; cropping the poster is the
   thing section 6.1 refuses, and this removes the bands without it.
-- **The card settles into the page.** A fade along the bottom of the picture,
-  from the ink up: the bandeau the same message asked for. Section 6.2 argued
-  against a bottom gradient when the only thing down there was the hover mark's
-  radial - the title sits under the card, so nothing needed protecting. This is
-  not protection either; it is what keeps the picture from stopping at a hard
-  line.
+- **The bandeau is a blur, not a veil.** A dark blur along the left of the
+  picture, gone before the middle, very light: the maintainer's correction on
+  20 September 2026 - "je ne voulais pas dire fade, mais un blur, un flou sombre
+  de la gauche vers la droite, très léger". The blur is done with
+  `backdrop-filter` on a masked layer, so the picture itself is what softens
+  rather than being covered; the same gradient at low strength darkens it,
+  because a blur alone is invisible on a dark frame and a smudge on a bright one.
+- **A clip is cropped to the film, never shown with its own bars.** Most films
+  are wider than the frame their file stores them in, so the picture arrives with
+  black bars *in* it - 122 rows of 480 on the maintainer's own remux - and no
+  `object-fit` can take those away. The server measures them with `cropdetect`
+  on the frames the clip is cut from and crops before scaling, so a card is
+  filled by the film and not by its letterbox.
 - **The motion is the film.** The server builds a **six-second clip** of the
   file - `internal/preview`, the same manager, cache, single encode slot and
   playback-preemption rules as the seek strip - and the card plays it muted,

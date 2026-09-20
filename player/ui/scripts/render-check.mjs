@@ -1736,6 +1736,17 @@ async function assertSeriesJourney(page) {
 		);
 		failures++;
 	}
+	// Every episode names the series it belongs to. The maintainer's word: "chaque
+	// épisode doit avoir sa série". On a season page the card's title is the
+	// episode, so the series belongs in the legend beside its code.
+	const legends = await page.locator('.film').evaluateAll((els) =>
+		els.map((el) => el.querySelector('.film-legend')?.textContent ?? '')
+	);
+	if (!legends.length || legends.some((text) => !text.includes('Shōgun'))) {
+		console.error(`an episode card does not name its series: ${JSON.stringify(legends)}`);
+		failures++;
+	}
+
 	// A series is asked for a preview like everything else: it is not a file, so
 	// the server samples the file playback would reach first. One algorithm, and
 	// this is the assertion that the interface takes it.
@@ -1889,6 +1900,8 @@ async function assertSeriesJourney(page) {
 			blur: before.filter,
 			scale: before.transform,
 			fade: after.backgroundImage,
+			blurBand: after.backdropFilter,
+			mask: after.maskImage,
 			media: getComputedStyle(el.querySelector('img')).zIndex,
 		};
 	});
@@ -1896,8 +1909,12 @@ async function assertSeriesJourney(page) {
 		console.error(`the card has no blurred fill behind its artwork: ${JSON.stringify(layers)}`);
 		failures++;
 	}
-	if (!layers.fade.includes('gradient')) {
-		console.error(`the card has no fade band: ${JSON.stringify(layers.fade)}`);
+	// The bandeau is a *blur*, which is the correction the maintainer made: not a
+	// fade over the picture but the picture itself, blurred and darkened from the
+	// left. A gradient background alone would have passed the first version of
+	// this check and be the wrong effect.
+	if (!layers.blurBand.includes('blur(') || !layers.mask.includes('gradient')) {
+		console.error(`the card has no blur band: ${JSON.stringify({ band: layers.blurBand, mask: layers.mask })}`);
 		failures++;
 	}
 	if (Number(layers.media) < 1) {

@@ -27,6 +27,16 @@ type CommonProps = {
 	 * so a card reads as the series it belongs to rather than as episode 4.
 	 */
 	heading?: string;
+	/**
+	 * The series an episode belongs to, drawn in the card's legend.
+	 *
+	 * An episode card has to say which show it is part of wherever it is drawn -
+	 * the maintainer's word on 20 September 2026: "chaque épisode doit avoir sa
+	 * série". The home rows use `heading` for that, because there the card *is*
+	 * the series; on a season page the card is the episode, so the series goes
+	 * in the legend beside its code instead.
+	 */
+	seriesLabel?: string;
 };
 
 type Props =
@@ -34,7 +44,7 @@ type Props =
 	| (CommonProps & { kind: 'series'; item: Series })
 	| (CommonProps & { kind: 'episode'; item: Episode });
 
-export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLabel, reducedMotion, heading }: Props) {
+export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLabel, reducedMotion, heading, seriesLabel }: Props) {
 	const [failed, setFailed] = useState<string[]>([]);
 	const [clip, setClip] = useState('');
 	const [hovered, setHovered] = useState(false);
@@ -46,7 +56,7 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 	const hovering = useRef(false);
 	const asking = useRef(false);
 	const timer = useRef<number | null>(null);
-	const view = useMemo(() => describe(kind, item, actionLabel, kindLabel, heading), [kind, item, actionLabel, kindLabel, heading]);
+	const view = useMemo(() => describe(kind, item, actionLabel, kindLabel, heading, seriesLabel), [kind, item, actionLabel, kindLabel, heading, seriesLabel]);
 	const artwork = view.art.find((url) => !failed.includes(url));
 	// The not-found plate, never the demo art: demo items always carry their
 	// own artwork, so this only answers when TMDB/IMDb provided nothing or
@@ -190,7 +200,7 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 	);
 }
 
-function describe(kind: Props['kind'], item: Movie | Series | Episode, actionLabel: string, kindLabel: string, heading?: string) {
+function describe(kind: Props['kind'], item: Movie | Series | Episode, actionLabel: string, kindLabel: string, heading?: string, seriesLabel?: string) {
 	if (kind === 'episode') {
 		const episode = item as Episode;
 		const record = episode.episode_metadata?.[0];
@@ -199,7 +209,9 @@ function describe(kind: Props['kind'], item: Movie | Series | Episode, actionLab
 		const runtime = record?.metadata?.runtime_minutes ?? 0;
 		return {
 			title: heading || record?.metadata?.name || record?.local_title || code,
-			legend: `${code}${runtime ? ` · ${runtime} min` : ''}`,
+			// The series first when the card's own title is the episode: "Shogun
+			// · S01E02 · 54 min" answers what this is, where a lone code does not.
+			legend: [seriesLabel, code, runtime ? `${runtime} min` : ''].filter(Boolean).join(' · '),
 			kind: kindLabel,
 			art: [episode.still_url, imageURL(record?.metadata?.still_path, 'w780')].filter((url): url is string => Boolean(url)),
 			poster: undefined as string | undefined,

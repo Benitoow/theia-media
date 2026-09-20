@@ -768,7 +768,7 @@ function Library(props: LibraryProps) {
 				) : selectedSeries ? (
 					<motion.div key={`series-${selectedSeries.id}`} className="contents" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
 						<div className="season-tabs">{selectedSeries.seasons?.map((season) => <button key={season.id} className={`season-tab label ${selectedSeason?.season_number === season.season_number ? 'season-tab--active' : ''}`} onClick={() => props.onSeason(season.season_number)}>{season.metadata?.name || `${t('season')} ${season.season_number}`}</button>)}</div>
-						{selectedSeason?.episodes?.length ? <CardGrid>{selectedSeason.episodes.map((episode) => <MediaCard key={episode.id} kind="episode" item={episode} onOpen={props.onEpisode} resumeLabel={t('resumeAt')} actionLabel={t('playEpisode')} kindLabel={t('episodeUntitled')} reducedMotion={props.reducedMotion} />)}</CardGrid> : <p className="hint">{t('emptySeason')}</p>}
+						{selectedSeason?.episodes?.length ? <CardGrid>{selectedSeason.episodes.map((episode) => <MediaCard key={episode.id} kind="episode" item={episode} seriesLabel={displayTitle(selectedSeries)} onOpen={props.onEpisode} resumeLabel={t('resumeAt')} actionLabel={t('playEpisode')} kindLabel={t('episodeUntitled')} reducedMotion={props.reducedMotion} />)}</CardGrid> : <p className="hint">{t('emptySeason')}</p>}
 					</motion.div>
 				) : section === 'home' ? (
 					<motion.div key="home" className="home-view" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}>

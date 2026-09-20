@@ -500,21 +500,34 @@ func (m *Manager) buildClip(ctx context.Context, key, source string, duration fl
 		}
 	}
 
-	// An HDR source must be tone mapped, and asking the database is not enough:
-	// it only knows once the file has been inspected, and a card preview is
-	// built long before anybody plays the film. Measured on 20 September 2026 -
-	// the clip of an uninspected HDR remux kept its `bt2020/smpte2084` tags, and
-	// the webview answered `MEDIA_ELEMENT_ERROR: Format error` with code 4, which
-	// is SRC_NOT_SUPPORTED: it fetched a file it would not decode.
-	hdr := stream.ToneMap(colorTransfer)
+	// One probe, two answers, taken from the same frames the clip is made of.
+	//
+	// HDR: a source that must be tone mapped, and asking the database is not
+	// enough - it only knows once the file has been inspected, and a card preview
+	// is built long before anybody plays the film. Measured on 20 September
+	// 2026: the clip of an uninspected HDR remux kept its `bt2020/smpte2084`
+	// tags and the webview refused it with `Format error`.
+	//
+	// Letterbox: most films are wider than the frame they are stored in, so the
+	// source *contains* two black bars as picture. Measured: 122 of 480 rows in
+	// the clip of the maintainer's own remux were black, `object-fit` cannot
+	// remove them because they are content, and the maintainer saw exactly that.
+	// Cropping them here is the same algorithm for a film, an episode and a
+	// series, because all three end up in this function with a file.
+	hdr, crop := m.probeSource(ctx, binary, source, start)
 	if !hdr {
-		hdr = m.looksHDR(ctx, binary, source, start)
+		hdr = stream.ToneMap(colorTransfer)
 	}
 
-	scale := fmt.Sprintf("scale=-2:%d", clipHeight)
-	if hdr {
-		scale = fmt.Sprintf("scale=-2:%d,%s", clipHeight, stream.ToneMapFilter)
+	filters := make([]string, 0, 3)
+	if crop != "" {
+		filters = append(filters, "crop="+crop)
 	}
+	filters = append(filters, fmt.Sprintf("scale=-2:%d", clipHeight))
+	if hdr {
+		filters = append(filters, stream.ToneMapFilter)
+	}
+	scale := strings.Join(filters, ",")
 
 	clip := filepath.Join(m.dir, key+".mp4")
 	temp := filepath.Join(m.dir, key+".building.mp4")
@@ -567,34 +580,74 @@ func (m *Manager) buildClip(ctx context.Context, key, source string, duration fl
 	return nil
 }
 
-// looksHDR decodes one frame and reads what ffmpeg says about it.
+// probeSource reads two things off the source's own frames: whether it is HDR,
+// and whether it carries letterbox bars worth cropping.
 //
-// Deliberately not a probe of the file's name or of the metadata table: this is
-// the transfer function ffmpeg itself reports after opening the source, which is
-// the only answer that is true for the frames about to be encoded. One frame,
-// nothing written, a few hundred milliseconds - and it runs once per clip,
-// because clips are built once per file.
-func (m *Manager) looksHDR(ctx context.Context, binary, source string, at float64) bool {
+// Deliberately not a probe of the file's name or of the metadata table. The
+// transfer function is what ffmpeg reports after opening the source, which is
+// the only answer true for the frames about to be encoded; the bars are measured
+// by `cropdetect` on those same frames, at the same timestamp, so the crop
+// describes what the clip will actually contain. Nothing is written, the read is
+// a fraction of a second, and it runs once per clip.
+//
+// The crop is accepted only if it is plausible: a dark scene can persuade
+// `cropdetect` that most of the picture is black, and cropping a film to a
+// corner of itself is worse than keeping two bars. Half the frame and sixty-four
+// rows are the floors, and `limit=24` is what stops a merely dim frame from
+// counting as bar in the first place.
+func (m *Manager) probeSource(ctx context.Context, binary, source string, at float64) (bool, string) {
 	cmd := exec.CommandContext(ctx, binary,
 		"-hide_banner",
 		"-ss", strconv.FormatFloat(at, 'f', 3, 64),
 		"-i", source,
-		"-frames:v", "1",
+		"-frames:v", "24",
+		// `format=yuv420p` first, and it is the whole reason this works on this
+		// library: the film is 10-bit HDR, where limited-range black is 64, and
+		// `limit=24` therefore sees no bars at all - measured, cropdetect
+		// answered `crop=3840:2160:0:0` on the source and `crop=854:356:0:62` on
+		// the very same frames once encoded to 8 bits. The conversion is for the
+		// measurement only; nothing here is written.
+		"-vf", "format=yuv420p,cropdetect=limit=24:round=2",
 		"-f", "null",
 		"-",
 	)
-	output := boundedio.NewTail(64 << 10)
+	output := boundedio.NewTail(128 << 10)
 	cmd.Stdout, cmd.Stderr = output, output
 	if err := cmd.Run(); err != nil {
-		// A source ffmpeg cannot open is not an HDR question; the encode that
-		// follows will fail on its own terms and be remembered as failed.
-		return false
+		// A source ffmpeg cannot open is neither an HDR nor a crop question; the
+		// encode that follows will fail on its own terms and be remembered.
+		return false, ""
 	}
-	reported := strings.ToLower(output.String())
+
+	reported := output.String()
+	hdr := false
+	lowered := strings.ToLower(reported)
 	for _, marker := range []string{"smpte2084", "arib-std-b67", "bt2020"} {
-		if strings.Contains(reported, marker) {
-			return true
+		if strings.Contains(lowered, marker) {
+			hdr = true
 		}
 	}
-	return false
+
+	// The last line cropdetect printed: it converges as it sees more frames, so
+	// the newest answer is the most informed one.
+	crop := ""
+	shape := regexp.MustCompile(`crop=([0-9]+):([0-9]+):([0-9]+):([0-9]+)`)
+	for _, match := range shape.FindAllStringSubmatch(reported, -1) {
+		width, _ := strconv.Atoi(match[1])
+		height, _ := strconv.Atoi(match[2])
+		if width < 64 || height < 64 {
+			continue
+		}
+		full := 0
+		if size := regexp.MustCompile(`([0-9]+)x([0-9]+)`).FindStringSubmatch(reported); size != nil {
+			w, _ := strconv.Atoi(size[1])
+			h, _ := strconv.Atoi(size[2])
+			full = w * h
+		}
+		if full > 0 && width*height < full/2 {
+			continue
+		}
+		crop = match[1] + ":" + match[2] + ":" + match[3] + ":" + match[4]
+	}
+	return hdr, crop
 }

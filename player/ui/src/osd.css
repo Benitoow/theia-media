@@ -814,23 +814,28 @@ button.action:focus-visible {
 	opacity: 0.62;
 }
 
-/* The bandeau: a fade into the ink along the bottom of the picture.
-   Section 6.2 argued against a bottom gradient when the only thing down there
-   was the mark's radial - the title sits *under* the card, so nothing needed
-   protecting. This is not protection either: it is what settles the picture
-   onto the page instead of stopping at a hard line, which is the effect the
-   same message asked for. */
+/* The bandeau: a dark blur from the left, gone before the middle.
+   The maintainer corrected this on 20 September 2026 - not a fade, "un flou
+   sombre de la gauche vers la droite, très léger". So the picture is blurred
+   where the band is, rather than veiled: `backdrop-filter` does the blur, the
+   mask is what makes it end without an edge of its own, and the background is
+   the same gradient at low strength because a blur on a dark frame is invisible
+   and on a bright one is a smudge. */
 .film-art::after {
 	content: '';
 	position: absolute;
 	inset: 0;
 	z-index: 2;
 	background: linear-gradient(
-		to top,
-		rgb(var(--channel-ink) / 0.66) 0%,
-		rgb(var(--channel-ink) / 0.24) 22%,
-		transparent 48%
+		to right,
+		rgb(var(--channel-ink) / 0.4) 0%,
+		rgb(var(--channel-ink) / 0.12) 34%,
+		transparent 64%
 	);
+	-webkit-backdrop-filter: blur(8px) saturate(1.05);
+	backdrop-filter: blur(8px) saturate(1.05);
+	-webkit-mask-image: linear-gradient(to right, #000 0%, rgb(0 0 0 / 0.45) 34%, transparent 64%);
+	mask-image: linear-gradient(to right, #000 0%, rgb(0 0 0 / 0.45) 34%, transparent 64%);
 	pointer-events: none;
 }
 
