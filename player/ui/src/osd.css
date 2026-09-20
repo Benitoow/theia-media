@@ -45,12 +45,22 @@ body {
 	/* The window itself is frameless and transparent (tauri.conf): the root
 	   clips everything to the window's rounded shape. Drag regions are
 	   attributes, untouched by this. A maximized window fills its monitor,
-	   so the radius goes away there. */
-	border-radius: 16px;
+	   so the radius goes away there.
+
+	   Measured on 19 September 2026 rather than chosen: the maintainer's
+	   reference caption bar rounds its window at ~5.9 CSS px (23 real px at a
+	   3.9x zoom, cross-checked against its 131 px bar and 44.5 px cells), and
+	   carries a one-pixel light edge that traces the same curve. 16px was the
+	   V3.1 card radius borrowed for a window, which is a different object. */
+	border-radius: 6px;
 	overflow: hidden;
+	/* The edge the reference draws around its window. Inside the radius, so a
+	   maximized window loses it with the curve (the rule below). */
+	box-shadow: inset 0 0 0 1px rgb(var(--channel-bone) / 0.1);
 }
 .osd[data-maximized='true'] {
 	border-radius: 0;
+	box-shadow: none;
 }
 .osd--library {
 	background:
@@ -183,14 +193,22 @@ html[data-reduced-motion='true'] .osd--library[data-section='search']::after {
 	border: 0;
 	border-radius: 0;
 	background: transparent;
-	color: var(--color-muted);
+	/* The reference bar draws every caption glyph near-white at rest and
+	   keeps it there on hover - the plate is what changes, not the glyph.
+	   Muted read as "disabled" beside it. */
+	color: var(--color-parchment);
 	cursor: default;
 	transition:
 		background-color var(--duration-fast) var(--ease-cine),
 		color var(--duration-fast) var(--ease-cine);
 }
+/* The plate is the whole cell: full bar height, full 2.9rem width, square
+   corners, no inset - measured on the reference at 169 x 131 real pixels
+   against a 173.5 px pitch. Its step is +24 luma over the bar there, which is
+   bone at 11% over ink here; 8% was a wash and read as a hover nobody had
+   asked for. */
 .window-control:hover {
-	background: rgb(var(--channel-bone) / 0.08);
+	background: rgb(var(--channel-bone) / 0.11);
 	color: var(--color-bone);
 }
 .window-control--close:hover {

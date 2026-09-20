@@ -1326,6 +1326,88 @@ async function assertFailuresAreReadable(page) {
 	}
 }
 
+// The caption bar, measured rather than looked at.
+//
+// The maintainer supplied a reference caption bar on 20 September 2026 and asked
+// for its hover, the placement of its cross and its edges. Every number below
+// comes from that image, read with a pixel dump at a 3.9x zoom: cells at 44.5
+// CSS px on a 173.5 px pitch, a plate filling the whole cell (169 x 131 real
+// pixels) with square corners, glyphs near-white at rest, and a window rounded
+// at ~5.9 px carrying a one-pixel light edge.
+//
+// What a picture cannot settle is whether the plate *is* the cell - a plate that
+// covers 90% of it photographs the same at a glance - nor whether the cross is
+// flush with the window's edge, since a 2px gap is invisible in a screenshot and
+// obvious when a pointer crosses it. Both are numbers here.
+async function assertCaptionChrome(page, state) {
+	await page.hover('.window-control:nth-of-type(2)');
+	await page.waitForTimeout(120);
+	const measured = await page.evaluate(() => {
+		const header = document.querySelector('.title-bar');
+		const controls = [...document.querySelectorAll('.window-control')];
+		const close = document.querySelector('.window-control--close');
+		const shell = document.querySelector('.osd');
+		const box = (el) => {
+			const r = el.getBoundingClientRect();
+			return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
+		};
+		const hovered = controls[1];
+		return {
+			header: box(header),
+			// The bar's *content* height: its 1px bottom border is the bar's own
+			// edge, and a plate that stopped one pixel above it is still a plate
+			// that fills its cell. Comparing against the border box failed the
+			// first run of this assertion by exactly that pixel.
+			headerContent: header.clientHeight,
+			headerTop: header.getBoundingClientRect().top + parseFloat(getComputedStyle(header).borderTopWidth),
+			cells: controls.map(box),
+			close: box(close),
+			hoveredBackground: getComputedStyle(hovered).backgroundColor,
+			barBackground: getComputedStyle(header).backgroundColor,
+			restingColour: getComputedStyle(controls[0]).color,
+			hoveredColour: getComputedStyle(hovered).color,
+			radius: getComputedStyle(shell).borderTopRightRadius,
+			ring: getComputedStyle(shell).boxShadow,
+			innerWidth: window.innerWidth,
+		};
+	});
+	const pitch = (measured.cells[1].left + measured.cells[1].right) / 2 - (measured.cells[0].left + measured.cells[0].right) / 2;
+	const cell = measured.cells[1];
+	if (measured.hoveredBackground === measured.barBackground) {
+		console.error(`${state}: the hovered caption control paints ${measured.hoveredBackground}, the same as its bar - no plate`);
+		failures++;
+	}
+	if (Math.abs(cell.height - measured.headerContent) > 0.5) {
+		console.error(`${state}: the caption plate is ${cell.height}px of a ${measured.headerContent}px bar, it must fill the cell`);
+		failures++;
+	}
+	if (Math.abs(cell.top - measured.headerTop) > 0.5) {
+		console.error(`${state}: the caption plate starts at ${cell.top} but the bar's content starts at ${measured.headerTop}, so there is a gap above it`);
+		failures++;
+	}
+	if (Math.abs(cell.width - pitch) > 0.5) {
+		console.error(`${state}: the caption cell is ${cell.width}px wide on a ${pitch}px pitch, so the plates do not abut`);
+		failures++;
+	}
+	if (Math.abs(measured.innerWidth - measured.close.right) > 0.5) {
+		console.error(`${state}: the close cell ends at ${measured.close.right} in a ${measured.innerWidth}px window, it must sit flush`);
+		failures++;
+	}
+	if (measured.radius !== '6px') {
+		console.error(`${state}: the window is rounded at ${measured.radius}, the reference measured 6px`);
+		failures++;
+	}
+	if (!measured.ring.includes('inset')) {
+		console.error(`${state}: the window has no edge - box-shadow is "${measured.ring}"`);
+		failures++;
+	}
+	if (measured.hoveredColour === measured.restingColour) {
+		console.error(`${state}: the caption glyph does not answer the pointer (${measured.restingColour} either way)`);
+		failures++;
+	}
+	await page.screenshot({ path: join(OUT, '9-caption-hover.png') });
+}
+
 // What the OSD is drawn over.
 //
 // The page is transparent on purpose - the film is the background - and the real
@@ -2145,6 +2227,13 @@ async function assertSeriesJourney(page) {
 	await escaping.waitForTimeout(300);
 	await assertEscapeLeavesFullscreenFirst(escaping);
 	await escaping.close();
+
+	// (o) the caption bar: its hover plate, the placement of the cross, and the
+	//     window's edges - the three things the maintainer asked for against a
+	//     reference bar on 20 September 2026.
+	const caption = await openPage({ width: 1280, height: 720 });
+	await assertCaptionChrome(caption, 'caption bar at 1280');
+	await caption.close();
 }
 
 await browser.close();

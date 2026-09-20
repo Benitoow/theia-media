@@ -546,6 +546,25 @@ a player.
   Lucide through the same visual rules. `LIRE` and `COUPER LE SON` spelled out
   read as a debug panel. The words survive as accessible names, which is where
   they belong.
+- **The caption bar matches the reference the maintainer supplied** (20 September
+  2026), and the numbers came from a pixel dump of it at a 3.9x zoom rather than
+  from a look: cells 44.5 CSS px on a 173.5 px pitch, a hover plate filling the
+  whole cell - 169 x 131 real pixels, square corners, no inset - a step of +24
+  luma over the bar, and glyphs near-white at rest **and** on hover, because it is
+  the plate that answers the pointer and not the glyph. The close cell ends flush
+  with the window's own edge. The window is rounded at ~5.9 px and carries a
+  one-pixel light edge tracing that curve, so the shell is `border-radius: 6px`
+  with an inset `bone/10` ring - not the 16px the V3.1 cards use, which is a
+  radius for a card and not for a window. The plate's step is `bone/11`, where the
+  8% it replaced read as a wash; the transferable quantity is the alpha and not
+  the luma, because the library bar is translucent - measured in the harness, the
+  plate stands **+18 luma** over the bar there against the reference's +24 over an
+  opaque one. `assertCaptionChrome` in `check:render` measures
+  the plate against the cell, the pitch, the flush close and both edges.
+  **One number was deliberately not copied**: the reference bar is about 34 CSS px
+  tall. §9 sets the floor at 44x44 for every interactive target and this section
+  keeps whatever stays at its 3.25rem target, so the bar stays 52px. A caption
+  bar cannot be the one control in the product that argues with the floor.
 - **One filled control**, the play button, in `--bone` rather than gold: the
   accent still has to mean "look here" everywhere else on the screen.
 - **The furniture hides** after three seconds of no pointer, no key and no state
