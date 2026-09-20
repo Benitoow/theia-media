@@ -46,6 +46,18 @@ const FRAME = FRAME_BYTES ? 'data:image/png;base64,' + FRAME_BYTES.toString('bas
 // is handed to mpv with the language in the title position as well as its own -
 // because mpv derives a title from the URL when given neither, which put
 // "6?profile=1" in the menu once.
+// One second of H.264, 64x36, 2085 bytes, generated once with the same pinned
+// ffmpeg the playback suite downloads:
+//
+//   ffmpeg -f lavfi -i testsrc=size=64x36:rate=10:duration=1 -c:v libx264 \
+//          -preset veryfast -crf 40 -pix_fmt yuv420p -movflags +faststart probe.mp4
+//
+// Embedded rather than fetched: the assertion below is about a video that
+// decodes, and a harness that answers with an empty body would test the
+// interface against a clip nobody can play. It is small enough to live here and
+// it is the only fixture in this file that is not hand-written.
+const PROBE_CLIP = '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';
+
 const TRACKS = [
 	{ id: 1, type: 'video', codec: 'hevc', selected: true },
 	{ id: 1, type: 'audio', title: 'Francais', lang: 'fra', codec: 'ac3', 'demux-channels': 'stereo', selected: true },
@@ -1523,6 +1535,10 @@ async function openPage(
 		seriesHome = SERIES_HOME,
 		frame = false,
 		discovered = [],
+		// What the server says about a card preview here. The real states are
+		// `ready`, `building` and an absence; the last two are the same thing to
+		// the interface, which is why only the first is exercised separately.
+		preview = { state: 'ready', clip_url: '/api/previews/probe/clip' },
 		// Pinned, not inherited: the host's own locale used to decide the
 		// default language, so a French machine and an English one checked
 		// different products. en-US here, fr-FR where the system-French rule
@@ -1541,9 +1557,17 @@ async function openPage(
 			route.fulfill({ contentType: 'image/png', body: FRAME_BYTES })
 		);
 	}
+	// The clip is answered from memory here for the same reason the artwork is:
+	// a real server is not running beside the harness, and a 404 would send the
+	// card back to its still before anything could be measured.
+	if (PROBE_CLIP) {
+		await page.route('**/api/previews/**', (route) =>
+			route.fulfill({ contentType: 'video/mp4', body: Buffer.from(PROBE_CLIP, 'base64') })
+		);
+	}
 
 	await page.addInitScript(
-		({ tracks, movies, series, seriesDetail, season, status, discovered, home, seriesHome }) => {
+		({ tracks, movies, series, seriesDetail, season, status, discovered, home, seriesHome, preview }) => {
 			window.__handlers = {};
 			window.__profiles = [
 				{ id: 1, name: 'Alex', is_default: true, has_avatar: false, avatar_version: 0 },
@@ -1577,6 +1601,7 @@ async function openPage(
 						if (cmd === 'player_series') return JSON.stringify(series);
 						if (cmd === 'player_home') return JSON.stringify(home);
 						if (cmd === 'player_series_home') return JSON.stringify(seriesHome);
+						if (cmd === 'player_preview') return JSON.stringify(preview);
 						if (cmd === 'player_series_detail') return JSON.stringify(seriesDetail);
 						if (cmd === 'player_season') return JSON.stringify(season);
 						if (cmd === 'player_discover') return JSON.stringify(discovered);
@@ -1651,7 +1676,7 @@ async function openPage(
 			};
 			window.__status = status;
 		},
-		{ tracks, movies, series, seriesDetail, season, status: STATUS, discovered, home, seriesHome }
+		{ tracks, movies, series, seriesDetail, season, status: STATUS, discovered, home, seriesHome, preview }
 	);
 	await page.goto(URL, { waitUntil: 'networkidle' });
 	await page.waitForTimeout(400);
@@ -1846,131 +1871,152 @@ async function assertSeriesJourney(page) {
 		failures++;
 	}
 
-	// The desktop-only preview waits long enough to avoid drive-by flashes, then
-	// overlays rather than reflowing the grid. It must also stay inside the
-	// window and offer the same path to a keyboard user.
+	// The card preview is the card.
+	//
+	// What stood here was a fixed overlay opened above the grid, one and a half
+	// times the size of the card it covered. The maintainer sent two screenshots
+	// - one before the pointer arrived and one under it - and asked for the
+	// first one, with no change of size. So size is asserted first: the grid's
+	// geometry before, during and after the pointer must be identical, and
+	// whatever plays must play inside the frame it belongs to.
 	const firstCard = page.locator('.film').first();
-	const beforePreview = await page.locator('.film-art').evaluateAll((els) =>
-		els.map((el) => [el.offsetLeft, el.offsetTop, el.offsetWidth, el.offsetHeight])
-	);
+	const boxes = () =>
+		page.locator('.film-art').evaluateAll((els) =>
+			els.map((el) => {
+				const r = el.getBoundingClientRect();
+				return [Math.round(r.left * 10) / 10, Math.round(r.top * 10) / 10, Math.round(r.width * 10) / 10, Math.round(r.height * 10) / 10];
+			})
+		);
+	const beforeHover = await boxes();
 	await firstCard.hover();
-	await page.waitForTimeout(100);
-	if ((await page.locator('.media-preview').count()) !== 0) {
-		console.error('the rich card preview opened before its 150ms minimum delay');
+	await page.waitForTimeout(500);
+	const duringHover = await boxes();
+	if (JSON.stringify(beforeHover) !== JSON.stringify(duringHover)) {
+		console.error(`hovering a card changed the grid: ${JSON.stringify(beforeHover)} -> ${JSON.stringify(duringHover)}`);
 		failures++;
 	}
-	await page.waitForTimeout(130);
-	if ((await page.locator('.media-preview').count()) !== 1) {
-		console.error('the rich card preview did not open after the 190ms hover delay');
+
+	const clip = await firstCard.evaluate((el) => {
+		const video = el.querySelector('video.film-clip');
+		const frame = el.querySelector('.film-art').getBoundingClientRect();
+		if (!video) return null;
+		const r = video.getBoundingClientRect();
+		return {
+			muted: video.muted,
+			loop: video.loop,
+			autoplay: video.autoplay,
+			inline: video.playsInline,
+			src: video.getAttribute('src') ?? '',
+			poster: video.getAttribute('poster') ?? '',
+			decoded: video.videoWidth,
+			readyState: video.readyState,
+			inside: r.left >= frame.left - 0.5 && r.top >= frame.top - 0.5 && r.right <= frame.right + 0.5 && r.bottom <= frame.bottom + 0.5,
+		};
+	});
+	if (!clip) {
+		console.error('hovering a film card drew no preview clip at all');
 		failures++;
 	} else {
-		const bounds = await page.locator('.media-preview').evaluate((el) => {
-			const rect = el.getBoundingClientRect();
-			return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height };
-		});
-		if (bounds.left < 0 || bounds.top < 0 || bounds.right > 1280 || bounds.bottom > 720 || bounds.width / bounds.height < 1.7) {
-			console.error(`the rich preview is not an edge-safe horizontal banner: ${JSON.stringify(bounds)}`);
+		if (!clip.muted || !clip.loop || !clip.autoplay || !clip.inline) {
+			console.error(`the clip is not a silent loop: ${JSON.stringify(clip)}`);
 			failures++;
 		}
-		const afterPreview = await page.locator('.film-art').evaluateAll((els) =>
-			els.map((el) => [el.offsetLeft, el.offsetTop, el.offsetWidth, el.offsetHeight])
-		);
-		if (JSON.stringify(beforePreview) !== JSON.stringify(afterPreview)) {
-			console.error('opening the rich card preview shifted the underlying grid');
+		if (!clip.src.includes('/api/previews/')) {
+			console.error(`the clip is not served by the server's preview route: ${clip.src}`);
 			failures++;
 		}
-		// No zoom. The image used to scale to 1.025 over 420ms, which section
-		// 6.2.1 forbids on the line that names zoom, and which the maintainer
-		// asked to have removed. A screenshot cannot settle it - 2.5% of a
-		// 260-pixel card is six pixels and reads as "the picture is alive" -
-		// so the computed transform is read instead, and both the frame and
-		// the image inside it must still be at scale 1 while hovered. The
-		// frame is allowed its 0.2rem of travel.
-		const transforms = await firstCard.evaluate((el) => {
-			const scaleOf = (node) => {
-				const value = getComputedStyle(node).transform;
-				if (!value || value === 'none') return 1;
-				const open = value.match(/matrix\(([^)]+)\)/);
-				return open ? Number(open[1].split(',')[0]) : NaN;
-			};
-			return {
-				frame: scaleOf(el.querySelector('.film-art')),
-				image: scaleOf(el.querySelector('.film-art img')),
-			};
-		});
-		if (transforms.frame !== 1 || transforms.image !== 1) {
-			console.error(
-				`the card zooms on hover: frame scale ${transforms.frame}, image scale ${transforms.image}, expected 1 and 1`
-			);
+		if (!clip.poster) {
+			console.error('the clip carries no poster, so a slow first frame shows an empty frame');
 			failures++;
 		}
-
-		// The synopsis, when the server sent one - and nothing at all when it
-		// did not.
-		const summary = await page.locator('.media-preview-summary').allTextContents();
-		if (summary.length !== 1 || !summary[0].startsWith('A probe film about probes')) {
-			console.error(`the preview drew ${summary.length} synopsis line(s): ${JSON.stringify(summary)}`);
+		if (!clip.inside) {
+			console.error('the clip is drawn outside the frame it belongs to');
 			failures++;
 		}
-		await page.screenshot({ path: join(OUT, '1-card-preview.png') });
-
-		// Escape must dismiss a preview the pointer opened. It did not: the key
-		// handed focus back to the card, the card opened the preview on focus,
-		// and the preview a viewer had just dismissed came straight back - with
-		// the pointer still on the card there was no way to be rid of it.
-		await page.keyboard.press('Escape');
-		await page.waitForTimeout(280);
-		if ((await page.locator('.media-preview').count()) !== 0) {
-			console.error('Escape closed the pointer-opened preview and it opened again on the focus Escape handed back');
+		if (clip.decoded === 0) {
+			console.error(`the clip never decoded a frame (readyState ${clip.readyState}) - it is a video element, not a preview`);
 			failures++;
 		}
-		// Escape leaves the card focused, and the assertion below needs a focus
-		// it can actually give - a programmatic focus on the active element fires
-		// no event, so the preview would never open and the check would report a
-		// fault that was this probe's own footprint.
-		await firstCard.evaluate((el) => el.blur());
-		await page.waitForTimeout(60);
 	}
 
-	// The second film has no overview, so its preview must carry no synopsis
-	// line rather than an empty paragraph that still takes a line of the frame.
-	//
-	// The first preview is closed with Escape, not by moving the pointer: the
-	// preview is a fixed layer clamped to the window, and the window's own
-	// bottom-right corner sits inside it - so `mouse.move(1275, 715)` landed on
-	// the preview, kept it open through its own hover handler, and Playwright
-	// then refused to hover a card whose hit point the preview intercepts. Two
-	// failures before this one were the probe, not the product.
-	await page.keyboard.press('Escape');
-	await page.waitForTimeout(260);
-	await page.locator('.film').nth(1).hover();
-	await page.waitForTimeout(240);
-	const bareSummary = await page.locator('.media-preview-summary').count();
-	const bareOpen = await page.locator('.media-preview').count();
-	if (bareOpen !== 1) {
-		console.error(`the second card's preview did not open, so its synopsis proves nothing (count ${bareOpen})`);
-		failures++;
-	} else if (bareSummary !== 0) {
-		console.error(`a film with no synopsis drew ${bareSummary} of them`);
+	// And no zoom, in the same state: the frame and the artwork inside it stay at
+	// scale 1 while the pointer is on the card. The frame is allowed its 0.2rem
+	// of travel, which is translation and not size.
+	const transforms = await firstCard.evaluate((el) => {
+		const scaleOf = (node) => {
+			const value = getComputedStyle(node).transform;
+			if (!value || value === 'none') return 1;
+			const open = value.match(/matrix\(([^)]+)\)/);
+			return open ? Number(open[1].split(',')[0]) : NaN;
+		};
+		return { frame: scaleOf(el.querySelector('.film-art')), image: scaleOf(el.querySelector('.film-art img')) };
+	});
+	if (transforms.frame !== 1 || transforms.image !== 1) {
+		console.error(`the card zooms on hover: frame scale ${transforms.frame}, image scale ${transforms.image}, expected 1 and 1`);
 		failures++;
 	}
-	await page.mouse.move(1275, 715);
-	await page.waitForTimeout(200);
-	await page.mouse.move(1275, 715);
-	await page.waitForTimeout(180);
-	await firstCard.focus();
-	await page.waitForTimeout(40);
-	if ((await page.locator('.media-preview').count()) !== 1) {
-		console.error('keyboard focus did not open the same rich card preview');
+	await page.screenshot({ path: join(OUT, '1-card-preview.png') });
+
+	await page.mouse.move(1275, 40);
+	await page.waitForTimeout(300);
+	const afterHover = await boxes();
+	if (JSON.stringify(beforeHover) !== JSON.stringify(afterHover)) {
+		console.error('the grid did not come back to its own size once the pointer left');
 		failures++;
 	}
-	await page.keyboard.press('Escape');
-	await page.waitForTimeout(260);
-	const previewFocusReturned = await firstCard.evaluate((el) => document.activeElement === el);
-	if ((await page.locator('.media-preview').count()) !== 0 || !previewFocusReturned) {
-		console.error('Escape did not close the rich preview and return focus to its card');
+
+	// A server still making the clip says `building`, and the card keeps the
+	// still it already had rather than an empty frame or a spinner nobody asked
+	// for. This is the state every first hover is in.
+	const building = await openPage({ width: 1280, height: 720 }, { preview: { state: 'building' } });
+	await building.fill('#theia-address', 'http://127.0.0.1:8395');
+	await building.click('button[type=submit]');
+	await building.waitForTimeout(600);
+	await building.getByRole('button', { name: 'Movies', exact: true }).click();
+	await building.waitForTimeout(250);
+	await building.locator('.film').first().hover();
+	await building.waitForTimeout(500);
+	if ((await building.locator('video.film-clip').count()) !== 0) {
+		console.error('a clip that is still being built was drawn as if it were ready');
 		failures++;
 	}
+	if ((await building.locator('.film-art img').count()) < 1) {
+		console.error('the still went missing while the clip was being built');
+		failures++;
+	}
+	await building.close();
+
+	// And the hero's synopsis, which the interface has always drawn and could
+	// never receive: server.rs's Metadata struct carried three fields and
+	// dropped `overview` before it reached the OSD (docs/v3.3.md). The harness
+	// mocks the bridge, so this pins the interface's half; `--list` is what
+	// proves the wire.
+	const featured = await openPage(
+		{ width: 1280, height: 720 },
+		{
+			// A hero that is not resuming, because that is the state the synopsis
+			// is drawn in: the section shows either what is left or what the film
+			// is, never both.
+			home: {
+				...HOME,
+				hero_kind: 'featured',
+				hero: {
+					...HOME.hero,
+					progress: { position_seconds: 0, duration_seconds: 0, finished: false },
+					metadata: { ...(HOME.hero.metadata ?? {}), overview: 'A probe film about probes, long enough to be clamped by the frame it is drawn in.' },
+				},
+			},
+		}
+	);
+	await featured.fill('#theia-address', 'http://127.0.0.1:8395');
+	await featured.click('button[type=submit]');
+	await featured.waitForTimeout(600);
+	const overview = await featured.locator('.home-hero-overview').textContent();
+	if (!overview || !overview.startsWith('A probe film about probes')) {
+		console.error(`the home hero shows no synopsis: ${JSON.stringify(overview)}`);
+		failures++;
+	}
+	await featured.close();
 
 	// The island carries the whole information architecture, including the two
 	// actions that were missing from the first native pass. The notification is

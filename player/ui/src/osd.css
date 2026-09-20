@@ -824,8 +824,6 @@ button.action:focus-visible {
 	.film:hover .film-art,
 	.film:focus-visible .film-art {
 		border-color: var(--color-accent);
-		box-shadow: 0 12px 28px rgb(var(--channel-ink) / 0.55);
-		transform: translateY(-0.5rem);
 	}
 	.film:hover .film-mark,
 	.film:focus-visible .film-mark {
@@ -1406,10 +1404,7 @@ button.action:focus-visible {
 }
 
 .film-art {
-	transition:
-		border-color var(--duration-fast) var(--ease-cine),
-		box-shadow var(--duration-base) var(--ease-cine),
-		transform var(--duration-base) var(--ease-cine);
+	transition: border-color var(--duration-fast) var(--ease-cine);
 }
 
 /* The artwork does not grow. It used to: `scale(1.025)` on the image at 420ms,
@@ -1431,16 +1426,18 @@ button.action:focus-visible {
 	color: var(--color-ink);
 }
 
+/* The card does not move.
+   It used to lift 0.2rem and brighten its artwork, and section 6.2.1 allowed a
+   3px lift as hierarchy. The maintainer sent two screenshots on 20 September
+   2026 - one before the pointer arrived, one under it - and asked for the first
+   one "sans changement de taille": measured, the card's own frame moved 3.2
+   pixels, and it was the only thing left that did. What a hover changes now is
+   the hairline and the six seconds playing inside the frame, which is what the
+   section was written for in the first place. */
 @media (hover: hover) {
 	.film:hover .film-art,
 	.film:focus-visible .film-art {
 		border-color: rgb(var(--channel-bone) / 0.2);
-		box-shadow: 0 1rem 2.2rem rgb(var(--channel-ink) / 0.5);
-		transform: translateY(-0.2rem);
-	}
-	.film:hover .film-art img,
-	.film:focus-visible .film-art img {
-		filter: saturate(1.04) contrast(1.02);
 	}
 }
 
@@ -1468,113 +1465,28 @@ button.action:focus-visible {
 	white-space: nowrap;
 }
 
-.media-preview {
-	position: fixed;
-	z-index: 55;
-	aspect-ratio: 16 / 9;
-	overflow: hidden;
-	border: 1px solid rgb(var(--channel-bone) / 0.16);
-	border-radius: var(--radius-card);
-	background: var(--color-surface);
-	box-shadow: 0 1.7rem 5rem rgba(0, 0, 0, 0.68), 0 0 0 1px rgba(0, 0, 0, 0.32);
-	isolation: isolate;
-}
+/* The card preview is the card.
+   What stood here was a fixed overlay: a separate 520x292 frame that opened
+   above the grid, one and a half times the card it covered. Measured against
+   the maintainer's two screenshots on 20 September 2026 - one before the
+   pointer arrived and one under it - the grid grew a box over itself, and the
+   ask was "the one before, with no change of size". So the preview is six
+   seconds of the film drawn inside the artwork's own frame, at the frame's own
+   size, and nothing about the card moves when a pointer crosses it.
 
-.media-preview-art,
-.media-preview-art img,
-.media-preview-shade {
+   The clip is built by the server (internal/preview) and served from
+   /api/previews/<key>/clip. It is H.264 because the webview has to decode it,
+   the card is 16/9 and the clip keeps the film's own aspect, so a scope film
+   loses a little of each edge to `cover` - a crop, not a zoom, and the same
+   crop every still in this grid already takes. */
+.film-clip {
 	position: absolute;
 	inset: 0;
-}
-
-.media-preview-art {
-	display: grid;
-	background: var(--color-surface);
-	color: var(--color-faint);
-	font-family: var(--font-display);
-	font-size: 3rem;
-	place-items: center;
-}
-
-.media-preview-art img {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
 }
 
-.media-preview-art img.media-preview-art--poster {
-	object-fit: contain;
-	filter: brightness(0.66);
-}
-
-.media-preview-shade {
-	background: linear-gradient(90deg, rgb(var(--channel-ink) / 0.94) 0%, rgb(var(--channel-ink) / 0.72) 42%, rgb(var(--channel-ink) / 0.08) 76%), linear-gradient(to top, rgb(var(--channel-ink) / 0.74), transparent 58%);
-}
-
-.media-preview-content {
-	position: absolute;
-	z-index: 2;
-	left: clamp(1rem, 4vw, 2rem);
-	bottom: clamp(0.9rem, 2.5vw, 1.35rem);
-	display: flex;
-	width: min(78%, 25rem);
-	flex-direction: column;
-	align-items: flex-start;
-	gap: 0.4rem;
-}
-
-.media-preview-kind {
-	color: var(--color-accent);
-}
-
-/* The synopsis, when the server sent one. It is the line that makes the preview
-   a preview of the work rather than of its poster, and it is clamped because a
-   TMDB overview is a paragraph and the frame is 16/9. */
-.media-preview-summary {
-	display: -webkit-box;
-	overflow: hidden;
-	color: var(--color-muted);
-	font-size: 0.82rem;
-	line-height: 1.45;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 3;
-}
-
-.media-preview h2 {
-	margin: 0;
-	display: -webkit-box;
-	overflow: hidden;
-	font-family: var(--font-display);
-	font-size: clamp(1.15rem, 1.7vw, 1.45rem);
-	font-weight: 400;
-	letter-spacing: -0.02em;
-	line-height: 1.04;
-	text-wrap: balance;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 3;
-}
-
-.media-preview p {
-	margin: 0 0 0.25rem;
-	color: var(--color-parchment);
-	font-size: var(--text-small);
-}
-
-.media-preview-progress {
-	position: absolute;
-	z-index: 3;
-	right: 0;
-	bottom: 0;
-	left: 0;
-	height: 3px;
-	background: rgb(var(--channel-bone) / 0.18);
-}
-
-.media-preview-progress span {
-	display: block;
-	height: 100%;
-	background: var(--color-accent);
-}
 
 /* --- settings ----------------------------------------------------------- */
 

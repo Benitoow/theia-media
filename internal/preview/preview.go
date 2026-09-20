@@ -58,6 +58,45 @@ const (
 	minDuration = 120.0
 )
 
+// The card preview: six seconds, half a thousand lines, no sound.
+//
+// It exists because the card is where a viewer decides, and a still is a poor
+// answer to "what is this". It is deliberately small and short - it is drawn at
+// the size of a card and it is fetched the moment a pointer rests on one - so
+// the cost of a hundred cards is a hundred small files rather than a hundred
+// encodes nobody watched. Built by the same manager as the strip, with the same
+// slot, the same cache and the same promise never to get in playback's way.
+const (
+	clipSeconds  = 6
+	clipHeight   = 480
+	clipMinFloor = 60.0
+	clipTailRoom = 90.0
+
+	// Below this a clip is not worth building: the start would land in the
+	// opening titles for anything short, and the sample would say nothing.
+	minClipSource = 45.0
+)
+
+// ClipStart is where a clip begins in a file of this duration, in seconds.
+//
+// A fifth of the way in is past the titles for anything feature length; the
+// floor keeps a short file out of its own title card, and the tail room keeps
+// the sample from landing in the credits, where a preview shows a black frame
+// and a scroll of names.
+func ClipStart(duration float64) float64 {
+	start := duration * 0.2
+	if start < clipMinFloor {
+		start = clipMinFloor
+	}
+	if latest := duration - clipTailRoom; start > latest {
+		start = latest
+	}
+	if start < 0 {
+		start = 0
+	}
+	return start
+}
+
 // Manifest is what the player needs to turn a cursor position into a tile.
 type Manifest struct {
 	// Key identifies this sheet, and is the only part of the path a client is
@@ -181,7 +220,9 @@ func (m *Manager) Lookup(ctx context.Context, key, source string, duration float
 		return Manifest{}, ErrUnavailable
 	}
 
-	m.start(key, source, duration, colorTransfer)
+	m.start("sheet:"+key, source, duration, func(ctx context.Context) error {
+		return m.build(ctx, key, source, duration, colorTransfer)
+	})
 	return Manifest{}, ErrNotReady
 }
 
@@ -191,6 +232,41 @@ func (m *Manager) SheetPath(key string) (string, error) {
 		return "", ErrUnavailable
 	}
 	path := filepath.Join(m.dir, key+".jpg")
+	if info, err := os.Stat(path); err != nil || info.IsDir() || info.Size() == 0 {
+		return "", ErrNotReady
+	}
+	return path, nil
+}
+
+// LookupClip is Lookup for the card preview: same three states, same promise
+// that asking never blocks and never downloads anything.
+func (m *Manager) LookupClip(ctx context.Context, key, source string, duration float64,
+	colorTransfer string,
+) error {
+	if !keyPattern.MatchString(key) {
+		return ErrUnavailable
+	}
+	if duration < minClipSource {
+		return ErrUnavailable
+	}
+	if _, err := m.ClipPath(key); err == nil {
+		return nil
+	}
+	if m.ffmpeg == nil || !m.ffmpeg.Available() {
+		return ErrUnavailable
+	}
+	m.start("clip:"+key, source, duration, func(ctx context.Context) error {
+		return m.buildClip(ctx, key, source, duration, colorTransfer)
+	})
+	return ErrNotReady
+}
+
+// ClipPath returns the file to serve for a key, or ErrNotReady.
+func (m *Manager) ClipPath(key string) (string, error) {
+	if !keyPattern.MatchString(key) {
+		return "", ErrUnavailable
+	}
+	path := filepath.Join(m.dir, key+".mp4")
 	if info, err := os.Stat(path); err != nil || info.IsDir() || info.Size() == 0 {
 		return "", ErrNotReady
 	}
@@ -212,23 +288,27 @@ func (m *Manager) read(key string) (Manifest, error) {
 	return manifest, nil
 }
 
-// start kicks off one build, unless that key is already being built.
-func (m *Manager) start(key, source string, duration float64, colorTransfer string) {
+// start kicks off one build, unless that entry is already being built.
+//
+// The entry is named by the caller and names both the file and the thing being
+// made - `sheet:<key>`, `clip:<key>` - so a strip that failed does not stop the
+// card preview from being tried, which is what a single key would have done.
+func (m *Manager) start(entry, source string, duration float64, work func(context.Context) error) {
 	m.mu.Lock()
-	if m.building[key] || m.failed[key] {
+	if m.building[entry] || m.failed[entry] {
 		m.mu.Unlock()
 		return
 	}
-	m.building[key] = true
+	m.building[entry] = true
 	m.mu.Unlock()
 
 	go func() {
 		failed := true
 		defer func() {
 			m.mu.Lock()
-			delete(m.building, key)
+			delete(m.building, entry)
 			if failed {
-				m.failed[key] = true
+				m.failed[entry] = true
 			}
 			m.mu.Unlock()
 		}()
@@ -263,7 +343,7 @@ func (m *Manager) start(key, source string, duration float64, colorTransfer stri
 		}
 		defer func() { <-m.slot }()
 
-		if err := m.build(ctx, key, source, duration, colorTransfer); err != nil {
+		if err := work(ctx); err != nil {
 			if errors.Is(context.Cause(ctx), workload.ErrPreempted) {
 				failed = false
 				m.log.Debug("seek preview yielded to playback", "source", source)
@@ -389,5 +469,77 @@ func (m *Manager) build(ctx context.Context, key, source string, duration float6
 
 	m.log.Info("built a seek preview", "source", source,
 		"frames", count, "interval_seconds", interval)
+	return nil
+}
+
+// buildClip encodes the card preview.
+//
+// -ss sits before -i on purpose: that is a keyframe seek, so the encoder jumps
+// to the neighbourhood of the sample point instead of decoding everything up to
+// it. The sample is six seconds of a two-hour film, and the difference between
+// the two orders is the difference between a second and half an hour.
+//
+// The same tone map the strip uses runs here for the same reason - a clip cut
+// from an HDR source and written straight out is grey - and it runs after the
+// scale, where it costs almost nothing.
+func (m *Manager) buildClip(ctx context.Context, key, source string, duration float64,
+	colorTransfer string,
+) error {
+	binary, err := m.ffmpeg.Path(ctx)
+	if err != nil {
+		return err
+	}
+
+	start := ClipStart(duration)
+	if start+float64(clipSeconds) > duration {
+		// Never ask for more than the file holds: ffmpeg would simply stop at
+		// the end, and a two-second clip is not worth the encode.
+		if duration-start < 2 {
+			return ErrUnavailable
+		}
+	}
+
+	scale := fmt.Sprintf("scale=-2:%d", clipHeight)
+	if stream.ToneMap(colorTransfer) {
+		scale = fmt.Sprintf("scale=-2:%d,%s", clipHeight, stream.ToneMapFilter)
+	}
+
+	clip := filepath.Join(m.dir, key+".mp4")
+	temp := filepath.Join(m.dir, key+".building.mp4")
+
+	cmd := exec.CommandContext(ctx, binary,
+		"-hide_banner", "-loglevel", "error",
+		"-ss", strconv.FormatFloat(start, 'f', 3, 64),
+		"-i", source,
+		"-t", strconv.Itoa(clipSeconds),
+		"-an", "-sn", "-dn",
+		"-vf", scale,
+		// H.264 because the only thing that has to decode this is the webview
+		// drawing the card, and H.264 is the one codec it always has.
+		"-c:v", "libx264",
+		"-preset", "veryfast",
+		"-crf", "30",
+		"-pix_fmt", "yuv420p",
+		// The moov atom first, so a six-second clip starts playing before it has
+		// finished arriving - the same reason a range request exists at all.
+		"-movflags", "+faststart",
+		"-f", "mp4",
+		"-y", temp,
+	)
+	output := boundedio.NewTail(64 << 10)
+	cmd.Stdout, cmd.Stderr = output, output
+	if err := cmd.Run(); err != nil {
+		os.Remove(temp)
+		return fmt.Errorf("ffmpeg clip: %w: %s", err, output.String())
+	}
+
+	// Written whole or not at all: a half-written clip that plays for two
+	// seconds is worse than the still it replaces.
+	if err := os.Rename(temp, clip); err != nil {
+		os.Remove(temp)
+		return err
+	}
+
+	m.log.Info("built a card preview", "source", source, "start_seconds", start)
 	return nil
 }

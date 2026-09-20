@@ -329,6 +329,19 @@ pub struct Metadata {
     pub director: String,
 }
 
+/// What the server says about a card preview.
+///
+/// Three states and no fourth: `ready` with a URL, `building` while it makes
+/// one, and an absence the interface answers by showing the still it already
+/// has.
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct PreviewState {
+    #[serde(default)]
+    pub state: String,
+    #[serde(default)]
+    pub clip_url: String,
+}
+
 #[derive(Clone, serde::Deserialize, serde::Serialize)]
 pub struct MovieFile {
     pub id: i64,
@@ -682,6 +695,24 @@ impl Client {
             episode.resolve_artwork(&self.base);
         }
         Ok(season)
+    }
+
+    /// The card preview for one item, with its URL resolved against this
+    /// server.
+    ///
+    /// The state machine stays the server's - `building`, `ready`, or nothing -
+    /// and this only makes the URL absolute, for the same reason artwork is
+    /// resolved here: the interface never learns the server's address.
+    pub fn preview_clip(&self, kind: &str, id: i64) -> Result<PreviewState, String> {
+        let path = match kind {
+            "episode" => format!("/api/library/episodes/{id}/preview/clip"),
+            _ => format!("/api/stream/{id}/preview/clip"),
+        };
+        let mut payload: PreviewState = self.get_json(&path)?;
+        if !payload.clip_url.is_empty() {
+            payload.clip_url = format!("{}{}", self.base, payload.clip_url);
+        }
+        Ok(payload)
     }
 
     pub fn episode(&self, id: i64) -> Result<EpisodeItem, String> {

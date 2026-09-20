@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -118,16 +119,52 @@ func TestAFileThatCannotBeBuiltIsNotRetriedForever(t *testing.T) {
 	key := Key("/films/broken.mkv", 1, 1)
 
 	m.mu.Lock()
-	m.failed[key] = true
+	m.failed["sheet:"+key] = true
 	m.mu.Unlock()
 
-	m.start(key, "/films/broken.mkv", 9000, "")
+	m.start("sheet:"+key, "/films/broken.mkv", 9000, func(context.Context) error { return nil })
 
 	m.mu.Lock()
-	building := m.building[key]
+	building := m.building["sheet:"+key]
 	m.mu.Unlock()
 	if building {
 		t.Error("a build was started for a file already known to fail")
+	}
+
+	// The refusal is per entry and not per file. Keyed on the file alone, one
+	// strip ffmpeg could not read would also have blocked the card preview -
+	// two different things to make out of one source, with no reason to share
+	// a verdict.
+	m.start("clip:"+key, "/films/broken.mkv", 9000, func(context.Context) error { return nil })
+	m.mu.Lock()
+	clipStarted := m.building["clip:"+key]
+	m.mu.Unlock()
+	if !clipStarted {
+		t.Error("the card preview was not attempted because the strip had failed")
+	}
+}
+
+func TestClipStartAvoidsTitlesAndCredits(t *testing.T) {
+	cases := []struct {
+		name     string
+		duration float64
+		want     float64
+	}{
+		// A fifth of the way in is past the titles of anything feature length.
+		{"a two-hour film", 8408, 1681.6},
+		// The tail room wins for anything short: the credits are not a preview.
+		{"a two-minute file", 120, 30},
+		{"a hundred-second file", 100, 10},
+		// And the floor never pushes past the end of a very short one.
+		{"a forty-five second file", 45, 0},
+	}
+	for _, c := range cases {
+		// A hundredth of a second: the arithmetic is a fraction of a float and
+		// an exact comparison fails on 1681.6000000000001, which is a test that
+		// reports a fault in its own last digit.
+		if got := ClipStart(c.duration); math.Abs(got-c.want) > 0.01 {
+			t.Errorf("%s: the clip starts at %.2fs, expected %.2fs", c.name, got, c.want)
+		}
 	}
 }
 

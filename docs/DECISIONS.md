@@ -4381,6 +4381,50 @@ English with the broadcast card on hero and cards, the hover preview open over
 the first row, and the search room with the loop crisp at 200%. The 274-film
 library remains the acceptance test before any release work.
 
+## 132. The card preview is the card, and the server builds the motion
+
+**Decided 20 September 2026**, on the maintainer's instruction after rejecting
+the hover overlay decision 128 had left in place. Two screenshots - one before
+the pointer arrived and one under it - said the whole thing: the grid grew a box
+over itself, and the ask was the first one, "sans changement de taille".
+
+**The overlay is deleted, not restyled.** It was a fixed 520x292 frame one and a
+half times the size of the card it covered, with its own artwork, title, synopsis
+and action. Its own invariants were maintained carefully - it never reflowed the
+grid, it stayed inside the window, Escape dismissed it - and it was still the
+wrong object: a viewer deciding what to watch was shown a second card instead of
+the one under the pointer.
+
+**The motion is the film, and the server makes it.** `internal/preview` gains a
+clip beside its seek strip: six seconds, 480 lines, H.264, no audio, cut 20 per
+cent into the file with a keyframe seek and written with its index first. It runs
+through the machinery that already exists for the strip and for the same reasons -
+the same cache keyed on the file's identity, one encode at a time, playback may
+preempt it, nothing downloads ffmpeg to answer a hover, and a failure is
+remembered so a file ffmpeg cannot read is not retried on every pointer move. A
+series card is never asked: a series is not a file.
+
+**What a hover changes is the hairline and the picture.** No lift, no scale, no
+shifting, no second surface: the card's rectangles before, during and after the
+pointer are identical, and `check:render` asserts that list rather than a
+screenshot, because 3.2 pixels of travel is invisible in a still and obvious to
+the person whose pointer caused it.
+
+**Verified at decision time:** the server built a clip from the maintainer's own
+53.79 GB HEVC remux in about six seconds - 141 832 bytes, six seconds, H.264
+High 854x480, 144 frames, and three sampled frames differ - and served it as
+`video/mp4`. `check:render` passes with the card's geometry asserted unchanged, a
+clip drawn inside the frame (muted, looped, inline, poster, and `videoWidth > 0`,
+so it is a video that decoded and not a video element), the still kept while the
+server says `building`, and the hero's synopsis, which could not be drawn at all
+until the metadata door was widened in the same pass.
+
+**Known and unverified:** the clip inherits the strip's caution about HDR. The
+tone map only runs when the file has been inspected, and the maintainer's remux
+has not been - so this clip carries `bt2020/smpte2084` tags from an untone-mapped
+encode. Sampled frames look correct, and nothing here claims a television's
+verdict on them.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

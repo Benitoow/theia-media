@@ -480,43 +480,39 @@ Rules that override §4 and §5:
 
 #### 6.2.1 Native desktop preview
 
-The desktop application has a fine-pointer interaction the television grid does
-not: after **190ms** over a card, it may open one richer preview above the grid.
-This is a presentation of the same library record, not a second detail screen.
+**The preview is the card.** What stood here from decision 128 was a second
+surface: a fixed 520x292 frame opened above the grid, one and a half times the
+size of the card it covered, with its own artwork, title, synopsis and action.
+The maintainer sent two screenshots on 20 September 2026 - one before the pointer
+arrived and one under it - and asked for the first one, "sans changement de
+taille". Measured, the card's own frame moved 3.2 pixels on hover and the overlay
+grew a box over the grid; both are gone.
 
-- The card at rest remains the §6 card. Nothing reserves preview space and the
-  grid never shifts.
-- The preview is a fixed, clamped 16/9 surface: it grows horizontally, stays
-  inside every window edge, and stacks above the grid but below modal chrome.
-- Backdrop, title, kind, year or episode/runtime, playback progress, the
-  **synopsis when the server sent one**, the season and episode counts when the
-  series record carries its seasons, and the one real action are allowed. Nothing
-  is invented: no synopsis, count, badge or secondary action when the API did not
-  provide one, and a work with no synopsis draws no empty line where one would
-  have been - the frame is 16/9 and a line costs a line.
-- **The artwork does not zoom.** The card's image scaled to 1.025 over 420ms on
-  hover and on focus, which contradicted the line above that names zoom, until the
-  maintainer asked for it gone by name on 20 September 2026. `check:render` reads
-  the computed transform of the frame and of the image inside it while the card is
-  hovered, because 2.5% of a 260px card is six pixels and no screenshot settles
-  that. The frame keeps its 0.2rem of travel, and the colour lift stays: a filter
-  is not motion.
-- **Escape dismisses a preview the pointer opened.** It used to close it and
-  reopen it immediately, because the key hands focus back to the card and the card
-  opens its preview on focus: with the pointer still on the card, Escape was a
-  flicker and the preview could not be dismissed at all. The focus the key causes
-  is marked, and that one focus event does not reveal. Asserted in both
-  directions - the hover path closes, the keyboard path still opens.
-- Pointer exit closes it after a short grace period so the action can be
-  reached. Keyboard focus opens it immediately, Escape returns focus to the
-  card, and reduced motion removes translation while preserving the state.
-- Motion is opacity plus at most 10px of vertical travel. No spring, zoom,
-  elastic easing or animated blur. The base card may lift 3px, not scale as a
-  substitute for hierarchy.
-
-The browser interface keeps the compact §6.2 hover until it deliberately adopts
-the same preview. Sharing an identity does not require the two runtimes to fake
-feature parity.
+- **Nothing about the card changes size, moves, or opens over anything.** The
+  grid's geometry before, during and after the pointer is identical - asserted as
+  a list of rectangles in `check:render`, because "no change of size" is a
+  measurement and not an impression. The one thing a hover changes is the
+  hairline, and now the six seconds playing inside the frame.
+- **The motion is the film.** The server builds a **six-second clip** of the
+  file - `internal/preview`, the same manager, cache, single encode slot and
+  playback-preemption rules as the seek strip - and the card plays it muted,
+  looped and inline, with the artwork as its poster, inside the artwork's own
+  frame. A scope film loses a little of each edge to `cover`: the same crop every
+  still in this grid already takes, and a crop is not a zoom.
+- **Three states, and the still is the fallback for two of them.** `ready` plays;
+  `building` keeps the picture that was already there and asks again while the
+  pointer rests; no ffmpeg, no server or nothing worth sampling keeps it too. A
+  series card is never asked: a series is not a file, so there is nothing to
+  sample.
+- **Reduced motion does not play it.** The preference that removes transitions
+  removes the clip as well, because a moving picture is the largest motion the
+  interface has.
+- **The card's own information is unchanged**: the §6 frame, the title, the
+  year or episode legend, the resume line, the progress rule, the play mark. The
+  synopsis belongs to the hero, which is where a viewer reads it - and which
+  could not draw one until 20 September 2026, because the metadata door in
+  `server.rs` carried three fields and dropped `overview` before the interface
+  ever saw it.
 
 The transition between the two worlds is the point: dramatic, near-empty chrome
 framing a dense, fast, businesslike grid.

@@ -29,6 +29,11 @@ type previewResponse struct {
 
 	// SheetURL is where the picture is, once there is one.
 	SheetURL string `json:"sheet_url,omitempty"`
+
+	// ClipURL is where the card preview is, once there is one. A different
+	// thing from the sheet and built on its own schedule: the sheet is a strip
+	// of stills for a scrub bar, this is six seconds of the film for a card.
+	ClipURL string `json:"clip_url,omitempty"`
 }
 
 // handleMoviePreview answers for a film's primary file.
@@ -59,6 +64,105 @@ func (s *Server) handleEpisodeFilePreview(w http.ResponseWriter, r *http.Request
 	}
 	s.writePreview(w, r, file.Path, file.SizeBytes, file.ModifiedAt,
 		file.Media.DurationSeconds, colorTransferOf(file.Media))
+}
+
+// handleMoviePreviewClip answers for a film's primary file.
+func (s *Server) handleMoviePreviewClip(w http.ResponseWriter, r *http.Request) {
+	movie, ok := s.movieForStream(w, r)
+	if !ok {
+		return
+	}
+	duration, transfer := s.moviePrimaryFacts(r, movie.ID)
+	s.writePreviewClip(w, r, movie.Path, movie.SizeBytes, movie.ModifiedAt, duration, transfer)
+}
+
+// handleEpisodePreviewClip answers for an episode's primary file.
+//
+// The route takes the episode and not the file because that is what a card
+// knows: the home rows hand the interface an episode, and nothing in it names a
+// file. Naming the file is this server's job, as it already is for playback.
+func (s *Server) handleEpisodePreviewClip(w http.ResponseWriter, r *http.Request) {
+	id, ok := positivePathID(w, r, "id", "invalid_episode_id")
+	if !ok {
+		return
+	}
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return
+	}
+	episode, err := s.lib.GetEpisodeItem(r.Context(), profileID, id)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "no preview for this episode")
+		return
+	}
+	file, ok := primaryEpisodeFile(episode)
+	if !ok {
+		writeJSONError(w, http.StatusNotFound, "no preview for this episode")
+		return
+	}
+	s.writePreviewClip(w, r, file.Path, file.SizeBytes, file.ModifiedAt,
+		file.Media.DurationSeconds, colorTransferOf(file.Media))
+}
+
+// primaryEpisodeFile is the file playback would choose, and the only one a
+// preview is made from: sampling a second copy of the same episode would answer
+// a question nobody asked.
+func primaryEpisodeFile(episode library.EpisodeItem) (library.EpisodeFile, bool) {
+	for _, file := range episode.Files {
+		if file.IsPrimary {
+			return file, true
+		}
+	}
+	if len(episode.Files) > 0 {
+		return episode.Files[0], true
+	}
+	return library.EpisodeFile{}, false
+}
+
+// writePreviewClip is writePreview's twin for the six-second card preview: the
+// same three states, the same promise that asking never downloads anything.
+func (s *Server) writePreviewClip(w http.ResponseWriter, r *http.Request,
+	path string, size int64, modified time.Time, duration float64, colorTransfer string,
+) {
+	if s.previews == nil {
+		writeJSONError(w, http.StatusNotFound, "no preview for this file")
+		return
+	}
+
+	key := preview.Key(path, size, modified.Unix())
+	switch err := s.previews.LookupClip(r.Context(), key, path, duration, colorTransfer); {
+	case errors.Is(err, preview.ErrNotReady):
+		writeJSON(w, http.StatusOK, previewResponse{State: "building"})
+		return
+	case err != nil:
+		writeJSONError(w, http.StatusNotFound, "no preview for this file")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, previewResponse{
+		State:   "ready",
+		ClipURL: "/api/previews/" + key + "/clip",
+	})
+}
+
+// handlePreviewClip serves a built clip by its key.
+//
+// ServeFile rather than a hand-rolled copy: it answers a range request, which
+// is what makes a six-second clip start playing before it has arrived, and it
+// is the same thing every other byte-serving path in this server does.
+func (s *Server) handlePreviewClip(w http.ResponseWriter, r *http.Request) {
+	if s.previews == nil {
+		writeJSONError(w, http.StatusNotFound, "previews are unavailable")
+		return
+	}
+	path, err := s.previews.ClipPath(r.PathValue("key"))
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "no preview for this file")
+		return
+	}
+	w.Header().Set("Content-Type", "video/mp4")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	http.ServeFile(w, r, path)
 }
 
 // handlePreviewSheet serves a built sheet by its key.

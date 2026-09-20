@@ -1111,6 +1111,24 @@ fn player_play_episode(id: i64) -> Result<String, String> {
     play_episode(id)
 }
 
+/// The card preview: six seconds of the film, built by the server on demand.
+///
+/// Three states and no fourth: `ready` with a URL, `building` while the server
+/// makes one, and an error the interface answers by showing the still it
+/// already has. The URL comes back absolute for the same reason artwork does -
+/// the interface never learns the server's address.
+///
+/// A series has no clip and cannot have one: a series is not a file. Its cards
+/// keep their still, which is a limitation of the data rather than of this
+/// command.
+#[tauri::command]
+fn player_preview(kind: String, id: i64) -> Result<String, String> {
+    let guard = CLIENT.lock().unwrap();
+    let client = guard.as_ref().ok_or("no server is connected")?;
+    let payload = client.preview_clip(&kind, id)?;
+    serde_json::to_string(&payload).map_err(|e| e.to_string())
+}
+
 /// Stops the current film and returns to the library without closing the app.
 #[tauri::command]
 fn player_stop() -> Result<(), String> {
@@ -1423,7 +1441,8 @@ fn main() {
             player_series_detail,
             player_season,
             player_play,
-            player_play_episode
+            player_play_episode,
+            player_preview
         ])
         .setup(move |app| {
             let window = app.get_webview_window("main").expect("the main window");
