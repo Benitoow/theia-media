@@ -61,10 +61,10 @@ would read.
 |---|---|---|---|---|
 | G1 | Manual | Open the player with no server running, so the connect screen is up. Move the pointer across the window without clicking. | immediately | **The pointer is visible and moves.** |
 | G2 | Manual | Rest the pointer on the address field, then on each of the visible buttons. | immediately | The pointer is an I-beam over the field and a hand over every button. |
-| G3 | Manual | Start a film, let the furniture hide, then move the pointer. | within 0.5 s | The pointer and the furniture come back together — one sign of life, one result. |
-| G4 | Manual | With the furniture hidden, click once on the picture. | immediately | Playback toggles **once**; the pointer reappears with the furniture. |
+| G3 | Manual | Start a film, let the furniture hide, then move the pointer. | within 0.5 s | The furniture comes back; the pointer remains stably visible throughout. |
+| G4 | Manual | With the furniture hidden, click once on the picture. | immediately | Playback toggles **once**; the furniture reappears and the pointer never flickers. |
 | G5 | Manual | Pause the film, then leave the pointer still for 5 s. | 5 s | The pointer stays visible. A paused player with an invisible pointer is a player nobody can restart. |
-| G5b | Manual | Play a film long enough that it does not reach its end, move the pointer once, then leave it still and watch for 30 s. | 30 s | **The pointer stays hidden for the whole idle period.** **Not achieved, and now measured cleanly.** With the window brought forward without any click, a 180 s film playing (`pause=false`, position advancing from 4.7 s to 29 s), the pointer over the picture, and fifteen seconds of no input at all: `GetCursorInfo` read the pointer **shown in 35 samples out of 37**, with the two hidden readings isolated at indices 6 and 29 rather than forming one long absence. So the native hide is applied and does not hold on WebView2. The earlier reading that blamed a click was wrong — a click pauses the film, and a paused player keeps its furniture — but with the click excluded the fault is still there, and it is now described accurately: **the hide works and does not persist.** |
+| G5b | Manual | Play a film long enough that it does not reach its end, move the pointer once, then leave it still and watch for 30 s. | 30 s | **The pointer remains visible without flashing.** Decision 127 deliberately removed the unreliable hide after WebView2 repeatedly redrew it every four to five seconds. Stable beats fake-cinematic. |
 
 ### The furniture's three seconds
 
@@ -88,7 +88,7 @@ would read.
 | G14 | Simulation | Type the same address and watch the commands the OSD issues. | — | No playback command is issued while typing. Fixed at the same time, when typing issued `player_toggle_pause` and `player_set_muted`. Asserted. |
 | G15 | Simulation | With a film playing, click each visible control exactly once. | 150 ms between | **One press, one command.** No control issues two state changes. |
 | G16 | Simulation + Manual | Open the track menu, then press the arrow keys. | — | The menu stays open and **no seek happens** — the film does not move. |
-| G17 | Simulation + Manual | Press `Échap` with the menu open, then again. | — | First press closes the menu and returns focus to the button that opened it (D2 = A: the menu closes before the player does). Second closes the player. |
+| G17 | Simulation + Manual | Press `Échap` with the menu open, then again. | — | First press closes the menu and returns focus to the button that opened it. Second returns from the film to the library; only the window close control exits the application. |
 | G18 | Automation | Type a complete address and submit it. | — | The library panel lists the films, and `--diagnostics` reports a connected session. A submit that silently does nothing is the failure this catches. |
 
 ### Discovery
@@ -111,10 +111,10 @@ announcement, and says so.
 | # | Class | Gesture | Timing | Expected |
 |---|---|---|---|---|
 | G23 | Automation + Manual | Press the full-screen control, then the product's own `f`. | — | The window fills the panel, and the picture with it. **Automated on 17 September 2026**: 1280×720 windowed, `f` gave 1440×900 — the whole panel at 200% scaling. Still the maintainer's eye for whether the picture fills it well. |
-| G24 | Automation + Manual | In full screen, press `Échap`. | — | Leaves full screen **first**; the player stays open. A second `Échap` closes it. **This was a fault, fixed on 17 September 2026 (decision 126).** Measured before: one `Échap` at 1440×900 left `running=False` — the player was gone, because the handler went from the menu check straight to `close()`. Measured after: the window is back at 1280×720 with the film at `pos 0.58 -> 4.63`, `pause=false`, and the second `Échap` closes it. Asserted in four steps by the render check. |
+| G24 | Automation + Manual | In full screen, press `Échap`. | — | Leaves full screen **first**; the player stays open. A second `Échap` stops the film cleanly and returns to the library. **The process is not closed.** The earlier fault and its fullscreen measurement remain recorded in decision 126; decision 127 changes the second step to match a normal desktop application. |
 | G25 | Manual | Play a film and look at the OSD over moving picture. | 30 s | The film is visible through the OSD, the scrims carry the text, and **the desktop never shows through** — the failure `force-window` was added for. |
 | G25b | Manual | Let a film play to its end and wait. | 30 s | **Decided 16 September 2026: this is the intended state.** The last frame freezes with `keep-open`, the engine reports `pause: true`, the furniture stays up, no sentence appears and there is no automatic return to the library. The viewer stays in control — nothing moves on its own, and no sentence can appear in the wrong language for a state nobody asked to be told about. Watching a credit sequence is a reason to be there. Measured on 16 September 2026 and confirmed as a decision rather than left as a defect. |
-| G26 | Automation + Manual | With a film playing, look at the whole frame at 550×350 CSS, then at 320×180. | — | Nothing is cut off: the whole control row and the clock are inside the window. **Fixed on 16 September 2026 (decision 124)**: at 320×180 the row asked for 314px of a 272px content box, and the clock now gives up its total below 30rem so the five controls stay at their 44px floor. Asserted by the render check, which also checks the bar and its four controls are still there rather than satisfied by hiding them. |
+| G26 | Automation + Manual | With a film playing, look at the whole frame at 550×350 CSS, then at 320×180. | — | Nothing is cut off: the whole control row and the clock are inside the window. Below 30rem the clock gives up its total, and close lives in the permanent title bar instead of competing with playback. The render check asserts that the bar and its three controls remain visible. |
 
 ### What this machine cannot decide
 

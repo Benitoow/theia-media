@@ -16,6 +16,8 @@ mod mpv;
 mod server;
 
 use mpv::Engine;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::{Emitter, Manager};
@@ -201,6 +203,21 @@ impl Session {
             Some(options.join(","))
         }
     }
+
+    /// Returns the engine to its library state without ending the process.
+    fn clear_media(&mut self) {
+        self.media = None;
+        self.title = None;
+        self.loaded_at = None;
+        self.start_at = 0.0;
+        self.aid = None;
+        self.sid = None;
+        self.sidecars.clear();
+        self.sidecars_pending.clear();
+        self.sidecar_tries = 0;
+        self.sidecar_decided = false;
+        self.audio_reason = None;
+    }
 }
 
 static SESSION: Mutex<Option<Session>> = Mutex::new(None);
@@ -210,10 +227,16 @@ static SESSION: Mutex<Option<Session>> = Mutex::new(None);
 /// at all because a DLL is missing is worse than one that says so.
 static CLIENT: Mutex<Option<server::Client>> = Mutex::new(None);
 
-/// The film being watched, so progress can be written back to the server. The
-/// engine knows where the playhead is; only this side knows which record it
-/// belongs to.
-static CURRENT_MOVIE: Mutex<Option<i64>> = Mutex::new(None);
+#[derive(Clone, Copy)]
+enum Playing {
+    Movie(i64),
+    Episode(i64),
+}
+
+/// The playable record currently owned by mpv. Keeping the kind beside the id
+/// matters: films and episodes have deliberately parallel progress endpoints,
+/// not one polymorphic endpoint pretending the distinction does not exist.
+static CURRENT_MEDIA: Mutex<Option<Playing>> = Mutex::new(None);
 
 /// The options the player starts with. Kept in one place so the policy is
 /// readable rather than scattered through the setup closure.
@@ -582,6 +605,149 @@ fn player_discover() -> Result<String, String> {
     serde_json::to_string(&found).map_err(|e| e.to_string())
 }
 
+/// The installer's minimal machine record. Extra fields are deliberately
+/// ignored: the player only needs to know whether this machine owns a server.
+#[derive(serde::Deserialize)]
+struct MachineRecord {
+    role: String,
+}
+
+/// The only server setting needed to reach the local all-in-one instance.
+#[derive(serde::Deserialize)]
+struct LocalServerConfig {
+    #[serde(default = "default_server_port")]
+    port: u16,
+}
+
+fn default_server_port() -> u16 {
+    8383
+}
+
+/// The same data directory convention as the Go server and installer.
+fn theia_data_dir() -> Option<PathBuf> {
+    if let Some(path) = std::env::var_os("THEIA_DATA_DIR") {
+        return Some(PathBuf::from(path));
+    }
+
+    #[cfg(windows)]
+    {
+        return std::env::var_os("APPDATA")
+            .map(PathBuf::from)
+            .map(|base| base.join("Theia"));
+    }
+    #[cfg(target_os = "macos")]
+    {
+        return std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .map(|home| home.join("Library").join("Application Support").join("Theia"));
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        if let Some(base) = std::env::var_os("XDG_CONFIG_HOME") {
+            return Some(PathBuf::from(base).join("theia"));
+        }
+        return std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .map(|home| home.join(".config").join("theia"));
+    }
+    #[allow(unreachable_code)]
+    None
+}
+
+/// Returns the local server this installation owns, if it is an all-in-one.
+fn local_server_install() -> Result<Option<(PathBuf, String)>, String> {
+    let Some(data_dir) = theia_data_dir() else {
+        return Ok(None);
+    };
+    let record_path = data_dir.join("setup.json");
+    let record = match std::fs::read(&record_path) {
+        Ok(data) => serde_json::from_slice::<MachineRecord>(&data)
+            .map_err(|e| format!("reading {}: {e}", record_path.display()))?,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(format!("reading {}: {e}", record_path.display())),
+    };
+    if record.role != "all-in-one" {
+        return Ok(None);
+    }
+
+    let config_path = data_dir.join("config.json");
+    let port = match std::fs::read(&config_path) {
+        Ok(data) => serde_json::from_slice::<LocalServerConfig>(&data)
+            .map_err(|e| format!("reading {}: {e}", config_path.display()))?
+            .port,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => default_server_port(),
+        Err(e) => return Err(format!("reading {}: {e}", config_path.display())),
+    };
+    Ok(Some((data_dir, format!("http://127.0.0.1:{port}"))))
+}
+
+fn server_executable_beside_player() -> Result<PathBuf, String> {
+    let player = std::env::current_exe().map_err(|e| format!("locating the player: {e}"))?;
+    let Some(dir) = player.parent() else {
+        return Err("the player has no installation directory".into());
+    };
+    let name = if cfg!(windows) {
+        "theia-server.exe"
+    } else {
+        "theia-server"
+    };
+    let server = dir.join(name);
+    if !server.is_file() {
+        return Err(format!("{} is missing", server.display()));
+    }
+    Ok(server)
+}
+
+fn start_local_server(server: &Path, data_dir: &Path) -> Result<(), String> {
+    let mut command = Command::new(server);
+    command
+        .arg("--data-dir")
+        .arg(data_dir)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        // CREATE_NO_WINDOW: an all-in-one player starts its server as product
+        // infrastructure, not as a console the viewer has to dismiss.
+        command.creation_flags(0x0800_0000);
+    }
+    command
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("starting {}: {e}", server.display()))
+}
+
+/// Makes the all-in-one server reachable and returns its deterministic URL.
+fn prepare_local_server() -> Result<Option<String>, String> {
+    let Some((data_dir, url)) = local_server_install()? else {
+        return Ok(None);
+    };
+    if server::reachable(&url, Duration::from_millis(750)) {
+        return Ok(Some(url));
+    }
+
+    let server = server_executable_beside_player()?;
+    start_local_server(&server, &data_dir)?;
+    for _ in 0..40 {
+        std::thread::sleep(Duration::from_millis(250));
+        if server::reachable(&url, Duration::from_millis(750)) {
+            return Ok(Some(url));
+        }
+    }
+    Err(format!("the local server did not answer at {url}"))
+}
+
+/// Startup half of the all-in-one contract. Kept asynchronous because starting
+/// and waiting for a server must never freeze the WebView's loading screen.
+#[tauri::command]
+async fn player_local_server() -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(prepare_local_server)
+        .await
+        .map_err(|e| format!("preparing the local server: {e}"))?
+}
+
 /// Connects to a server at an address. This is the path that always works,
 /// which is why the OSD offers it beside whatever discovery found.
 fn connect_to(url: &str) -> Result<String, String> {
@@ -592,6 +758,10 @@ fn connect_to(url: &str) -> Result<String, String> {
     // exactly as the web interface does.
     if profiles.len() == 1 {
         client.set_profile(Some(profiles[0].id));
+    } else if let Some(profile) = profiles.iter().find(|profile| profile.is_default) {
+        // Several profiles still have one household default. Zero friction does
+        // not mean throwing progress into an unscoped bucket.
+        client.set_profile(Some(profile.id));
     }
     let payload = serde_json::json!({
         "url": client.base(),
@@ -650,7 +820,11 @@ fn play_movie(id: i64) -> Result<String, String> {
         (
             client.stream_url(movie.id, file.id),
             movie.id,
-            movie.title.clone(),
+            if movie.metadata.title.is_empty() {
+                movie.title.clone()
+            } else {
+                movie.metadata.title.clone()
+            },
             resume_at,
             sidecars,
         )
@@ -671,7 +845,77 @@ fn play_movie(id: i64) -> Result<String, String> {
             return Err(e);
         }
     }
-    *CURRENT_MOVIE.lock().unwrap() = Some(movie_id);
+    *CURRENT_MEDIA.lock().unwrap() = Some(Playing::Movie(movie_id));
+    Ok(url)
+}
+
+/// Starts one episode through the same engine and track path as a film.
+fn play_episode(id: i64) -> Result<String, String> {
+    let (url, episode_id, title, resume_at, sidecars) = {
+        let guard = CLIENT.lock().unwrap();
+        let client = guard.as_ref().ok_or("no server is connected")?;
+        let episode = client.episode(id)?;
+        let file = episode
+            .files
+            .iter()
+            .find(|file| file.is_primary)
+            .or_else(|| episode.files.first())
+            .ok_or("this episode has no playable file")?;
+        let resume_at = if episode.progress.finished {
+            0.0
+        } else {
+            episode.progress.position_seconds
+        };
+        let sidecars = match client.episode_stream_info(episode.id, file.id) {
+            Ok(info) => info
+                .subtitle_tracks
+                .iter()
+                .filter(|track| track.fetchable())
+                .map(|track| Sidecar {
+                    url: client.episode_subtitle_url(episode.id, file.id, track.id),
+                    title: track.title.clone(),
+                    language: track.language.clone(),
+                })
+                .collect(),
+            Err(e) => {
+                eprintln!("theia-player: no external subtitles for this episode: {e}");
+                Vec::new()
+            }
+        };
+        let number = episode
+            .episode_numbers
+            .iter()
+            .map(|number| format!("E{number:02}"))
+            .collect::<Vec<_>>()
+            .join("-");
+        let episode_title = episode.title();
+        let title = if episode_title.is_empty() {
+            format!("{} · S{:02}{number}", episode.series_title, episode.season_number)
+        } else {
+            format!(
+                "{} · S{:02}{number} · {episode_title}",
+                episode.series_title, episode.season_number
+            )
+        };
+        (
+            client.episode_stream_url(episode.id, file.id),
+            episode.id,
+            title,
+            resume_at,
+            sidecars,
+        )
+    };
+
+    {
+        let mut session_guard = SESSION.lock().unwrap();
+        let session = session_guard.as_mut().ok_or("the engine is not running")?;
+        session.mark_loaded(url.clone(), Some(title), resume_at, sidecars);
+        if let Err(e) = session.load(&url) {
+            session.loaded_at = None;
+            return Err(e);
+        }
+    }
+    *CURRENT_MEDIA.lock().unwrap() = Some(Playing::Episode(episode_id));
     Ok(url)
 }
 
@@ -698,6 +942,82 @@ fn player_set_profile(id: Option<i64>) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn player_profile_rename(id: i64, name: String) -> Result<String, String> {
+    let profile = {
+        let guard = CLIENT.lock().unwrap();
+        guard
+            .as_ref()
+            .ok_or("no server is connected")?
+            .rename_profile(id, &name)?
+    };
+    serde_json::to_string(&profile).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn player_profile_set_avatar(
+    id: i64,
+    content_type: String,
+    data: Vec<u8>,
+) -> Result<String, String> {
+    let profile = {
+        let guard = CLIENT.lock().unwrap();
+        guard
+            .as_ref()
+            .ok_or("no server is connected")?
+            .set_profile_avatar(id, &content_type, &data)?
+    };
+    serde_json::to_string(&profile).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn player_profile_clear_avatar(id: i64) -> Result<String, String> {
+    let profile = {
+        let guard = CLIENT.lock().unwrap();
+        guard
+            .as_ref()
+            .ok_or("no server is connected")?
+            .clear_profile_avatar(id)?
+    };
+    serde_json::to_string(&profile).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn player_update_status() -> Result<String, String> {
+    let status = {
+        let guard = CLIENT.lock().unwrap();
+        guard
+            .as_ref()
+            .ok_or("no server is connected")?
+            .update_status()?
+    };
+    serde_json::to_string(&status).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn player_update_check() -> Result<String, String> {
+    let status = {
+        let guard = CLIENT.lock().unwrap();
+        guard
+            .as_ref()
+            .ok_or("no server is connected")?
+            .check_update()?
+    };
+    serde_json::to_string(&status).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn player_update_apply() -> Result<String, String> {
+    let status = {
+        let guard = CLIENT.lock().unwrap();
+        guard
+            .as_ref()
+            .ok_or("no server is connected")?
+            .apply_update()?
+    };
+    serde_json::to_string(&status).map_err(|e| e.to_string())
+}
+
 /// The library, for the OSD's grid.
 ///
 /// Every page, not a page. It used to ask for sixty films, which is a sensible
@@ -722,14 +1042,143 @@ fn player_library(limit: Option<u32>) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn player_series() -> Result<String, String> {
+    let series = {
+        let guard = CLIENT.lock().unwrap();
+        guard
+            .as_ref()
+            .ok_or("no server is connected")?
+            .series()?
+    };
+    serde_json::to_string(&series).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn player_home() -> Result<String, String> {
+    let home = {
+        let guard = CLIENT.lock().unwrap();
+        guard
+            .as_ref()
+            .ok_or("no server is connected")?
+            .home()?
+    };
+    serde_json::to_string(&home).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn player_series_home() -> Result<String, String> {
+    let home = {
+        let guard = CLIENT.lock().unwrap();
+        guard
+            .as_ref()
+            .ok_or("no server is connected")?
+            .series_home()?
+    };
+    serde_json::to_string(&home).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn player_series_detail(id: i64) -> Result<String, String> {
+    let series = {
+        let guard = CLIENT.lock().unwrap();
+        guard
+            .as_ref()
+            .ok_or("no server is connected")?
+            .series_detail(id)?
+    };
+    serde_json::to_string(&series).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn player_season(series_id: i64, season_number: i32) -> Result<String, String> {
+    let season = {
+        let guard = CLIENT.lock().unwrap();
+        guard
+            .as_ref()
+            .ok_or("no server is connected")?
+            .season(series_id, season_number)?
+    };
+    serde_json::to_string(&season).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn player_play(id: i64) -> Result<String, String> {
     play_movie(id)
+}
+
+#[tauri::command]
+fn player_play_episode(id: i64) -> Result<String, String> {
+    play_episode(id)
+}
+
+/// Stops the current film and returns to the library without closing the app.
+#[tauri::command]
+fn player_stop() -> Result<(), String> {
+    save_progress();
+    {
+        let mut guard = SESSION.lock().unwrap();
+        let session = guard.as_mut().ok_or("the engine is not running")?;
+        session.engine.command(&["stop"])?;
+        session.clear_media();
+    }
+    *CURRENT_MEDIA.lock().unwrap() = None;
+    Ok(())
+}
+
+/// Chooses a 16:9 logical window that fits the current monitor at any DPI.
+fn fitted_window_size(monitor_width: f64, monitor_height: f64) -> (f64, f64) {
+    let usable_width = (monitor_width - 80.0).max(640.0);
+    let usable_height = (monitor_height - 80.0).max(360.0);
+    let mut width = usable_width.min(1280.0);
+    let mut height = width * 9.0 / 16.0;
+    if height > usable_height.min(720.0) {
+        height = usable_height.min(720.0);
+        width = height * 16.0 / 9.0;
+    }
+    (width, height)
+}
+
+fn fit_initial_window(window: &tauri::WebviewWindow) {
+    let Ok(Some(monitor)) = window.current_monitor() else {
+        return;
+    };
+    let scale = monitor.scale_factor();
+    let size = monitor.size();
+    let logical_width = size.width as f64 / scale;
+    let logical_height = size.height as f64 / scale;
+    let (width, height) = fitted_window_size(logical_width, logical_height);
+    let _ = window.set_size(tauri::LogicalSize::new(width, height));
+    let _ = window.center();
+}
+
+#[cfg(test)]
+mod player_window_tests {
+    use super::fitted_window_size;
+
+    #[test]
+    fn high_dpi_small_logical_monitor_stays_on_screen() {
+        let (width, height) = fitted_window_size(720.0, 450.0);
+        assert_eq!((width, height), (640.0, 360.0));
+    }
+
+    #[test]
+    fn ordinary_desktop_keeps_the_designed_player_size() {
+        let (width, height) = fitted_window_size(1920.0, 1080.0);
+        assert_eq!((width, height), (1280.0, 720.0));
+    }
+
+    #[test]
+    fn short_monitor_reduces_both_axes_without_distortion() {
+        let (width, height) = fitted_window_size(1366.0, 768.0);
+        assert!(width <= 1286.0 && height <= 688.0);
+        assert!((width / height - 16.0 / 9.0).abs() < 0.001);
+    }
 }
 
 /// Writes the playhead back to the server. Deliberately the same call the
 /// browser player makes, so a film started in one is resumable in the other.
 fn save_progress() {
-    let Some(movie_id) = *CURRENT_MOVIE.lock().unwrap() else {
+    let Some(media) = *CURRENT_MEDIA.lock().unwrap() else {
         return;
     };
     let (position, duration) = {
@@ -753,7 +1202,11 @@ fn save_progress() {
         Err(_) => return,
     };
     let Some(client) = guard.as_ref() else { return };
-    if let Err(e) = client.save_progress(movie_id, position, duration) {
+    let result = match media {
+        Playing::Movie(id) => client.save_progress(id, position, duration),
+        Playing::Episode(id) => client.save_episode_progress(id, position, duration),
+    };
+    if let Err(e) = result {
         eprintln!("theia-player: {e}");
     }
 }
@@ -879,11 +1332,25 @@ fn main() {
             player_set_track,
             player_seek,
             player_load,
+            player_stop,
+            player_local_server,
             player_discover,
             player_connect,
             player_set_profile,
+            player_profile_rename,
+            player_profile_set_avatar,
+            player_profile_clear_avatar,
+            player_update_status,
+            player_update_check,
+            player_update_apply,
             player_library,
-            player_play
+            player_series,
+            player_home,
+            player_series_home,
+            player_series_detail,
+            player_season,
+            player_play,
+            player_play_episode
         ])
         .setup(move |app| {
             let window = app.get_webview_window("main").expect("the main window");
@@ -897,6 +1364,11 @@ fn main() {
                     0isize
                 }
             };
+            // The configured size is only a safe fallback. On a 200% display a
+            // nominal 1280x720 window became 2560x1440 physical pixels and
+            // opened mostly off-screen; size against this monitor before the
+            // hidden window is ever shown.
+            fit_initial_window(&window);
 
             match start_engine(hwnd, media.as_deref(), silent) {
                 Ok(()) => {
@@ -914,8 +1386,6 @@ fn main() {
                     );
                 }
             }
-            let _ = window.show();
-
             // Command-line connection, so the client can be exercised without a
             // click. The OSD drives the same two functions.
             if let Some(url) = flag("--server") {
@@ -928,8 +1398,14 @@ fn main() {
                         Ok(stream) => println!("theia-player: playing {stream}"),
                         Err(e) => eprintln!("theia-player: could not start film {id}: {e}"),
                     }
+                } else if let Some(id) = flag("--episode").and_then(|v| v.parse::<i64>().ok()) {
+                    match play_episode(id) {
+                        Ok(stream) => println!("theia-player: playing episode {stream}"),
+                        Err(e) => eprintln!("theia-player: could not start episode {id}: {e}"),
+                    }
                 }
             }
+            let _ = window.show();
 
             // Telemetry, mpv -> Rust -> OSD. The page never polls.
             let emitter = window.clone();
@@ -1005,6 +1481,14 @@ fn main() {
             }
 
             Ok(())
+        })
+        .on_window_event(|_, event| {
+            if matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
+                // The five-second periodic save is a safety net. Closing is an
+                // explicit boundary and records the exact playhead before the
+                // process disappears.
+                save_progress();
+            }
         })
         .run(tauri::generate_context!())
         .expect("theia-player could not start");

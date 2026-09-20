@@ -1,0 +1,50 @@
+@import 'tailwindcss';
+@import '../../../web/src/lib/tokens.css';
+@import '../../../web/src/lib/fonts.css';
+@import './osd.css';
+
+:root {
+	color: var(--color-bone);
+	font-family: var(--font-ui);
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+}
+
+#root {
+	height: 100%;
+}
+
+.font-display {
+	font-family: var(--font-display);
+}
+
+.contents {
+	display: contents;
+}
+
+.connect-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.window-control {
+	color: var(--color-muted);
+}
+
+.window-control:hover {
+	background: rgb(var(--channel-bone) / 0.08);
+	color: var(--color-bone);
+}
+
+.window-control--close:hover {
+	background: #a9342c;
+	color: var(--color-bone);
+}
+
+@media (max-width: 36rem) {
+	.films {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}

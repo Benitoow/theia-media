@@ -478,6 +478,30 @@ Rules that override §4 and §5:
 - While artwork loads, the card shows `--surface` with a subtle shimmer, never
   a spinner and never a broken-image icon.
 
+#### 6.2.1 Native desktop preview
+
+The desktop application has a fine-pointer interaction the television grid does
+not: after **190ms** over a card, it may open one richer preview above the grid.
+This is a presentation of the same library record, not a second detail screen.
+
+- The card at rest remains the §6 card. Nothing reserves preview space and the
+  grid never shifts.
+- The preview is a fixed, clamped 16/9 surface: it grows horizontally, stays
+  inside every window edge, and stacks above the grid but below modal chrome.
+- Backdrop, title, kind, year or episode/runtime, playback progress and the one
+  real action are allowed. There is no synopsis, badge or secondary action when
+  the API did not provide one; plausible-looking fake metadata is still fake.
+- Pointer exit closes it after a short grace period so the action can be
+  reached. Keyboard focus opens it immediately, Escape returns focus to the
+  card, and reduced motion removes translation while preserving the state.
+- Motion is opacity plus at most 10px of vertical travel. No spring, zoom,
+  elastic easing or animated blur. The base card may lift 3px, not scale as a
+  substitute for hierarchy.
+
+The browser interface keeps the compact §6.2 hover until it deliberately adopts
+the same preview. Sharing an identity does not require the two runtimes to fake
+feature parity.
+
 The transition between the two worlds is the point: dramatic, near-empty chrome
 framing a dense, fast, businesslike grid.
 
@@ -517,15 +541,19 @@ The picture fills the frame; everything else floats over it. A video boxed insid
 a header, a strip of text buttons and a page background is a preview window, not
 a player.
 
-- **Controls are icons**, drawn on one 24-unit grid at one stroke weight in
-  `Icon.svelte`, never text. `LIRE` and `COUPER LE SON` spelled out read as a
-  debug panel. The words survive as accessible names, which is where they belong.
+- **Controls are icons**, drawn on one 24-unit grid at one stroke weight, never
+  text. The web application uses `Icon.svelte`; the native React shell uses
+  Lucide through the same visual rules. `LIRE` and `COUPER LE SON` spelled out
+  read as a debug panel. The words survive as accessible names, which is where
+  they belong.
 - **One filled control**, the play button, in `--bone` rather than gold: the
   accent still has to mean "look here" everywhere else on the screen.
 - **The furniture hides** after three seconds of no pointer, no key and no state
-  change, and takes the cursor with it. It comes back on any sign of life. It
-  never hides while paused, seeking or buffering, and never with focus stranded
-  on a control - focus moves to the dialog first.
+  change. It comes back on any sign of life. The pointer stays visible and
+  stable: WebView2 was measured redrawing a CSS-hidden pointer every four to five
+  seconds, which made it flash rather than disappear. It never hides the
+  furniture while paused, seeking or buffering, and never with focus stranded
+  on a control - focus moves to the dialog first. See decision 127.
 - **The scrub bar shows three things**: played in gold, buffered in a lighter
   bone, and the rest. The bar itself is 4px because that reads as precision.
   **Amended 15 September 2026 (decision D3b): its hit area is 44px, not 24px.**
@@ -544,6 +572,20 @@ a player.
   state, including the library panel that is up exactly when nothing is loaded.
   Before that option was set, the window tree with no film loaded contained no
   video surface at all and the library floated over the desktop icons.
+- **The search room has one decoration, and it is the loop.** Films, Séries and
+  the home keep their ink; the search page alone carries the ascii loop,
+  stretched to fill the frame with a radial mask melting its edges into the
+  ink - no border, no tile seams, nothing pasted - with an ink scrim settling
+  the column the title, field and hint sit on, so the room is felt around the
+  furniture rather than read through it. The ambient backdrop is withdrawn so
+  nothing else is drawn there; the Search heading is centred on that page and
+  its eyebrow is dropped. The still frame replaces the loop under the
+  reduced-motion settings.
+- **Absence has a face: the broadcast card.** Artwork Theia does not have - an
+  unmatched library item, a failed load, a demonstration entry - is drawn as
+  the NO SIGNAL / PLEASE STAND BY card in the card, the preview and the hero.
+  No generated gradient stands in for a picture, and a real TMDB image always
+  wins when the server has one.
 - **The bar never wraps.** A control row that reflows into two lines moves the
   play button out from under a thumb mid-press. When the row does not fit,
   something goes instead - and what goes is what the device already does better:
@@ -588,16 +630,20 @@ a player.
   `--muted`, separated by a drawn hairline rather than a slash glyph, which sits
   at the wrong optical height at this size. A third number for the remaining
   time is the other two subtracted, and it was printed in `--faint`.
-- **Amended 16 September 2026 (decision 124): below 30rem it shows one.** The
+- **Amended 16 September 2026 (decision 124), then simplified by decision 127:
+  below 30rem it shows one.** The
   window's declared minimum of `minWidth: 640` is **320x180 CSS pixels** at this
   machine's 200% scaling, and there the row asks for **314px of a 272px content
-  box** - play 52, clock 106, tracks 52, fullscreen 52, close 52, with every
+  box** in the former layout - play 52, clock 106, tracks 52, fullscreen 52,
+  close 52, with every
   control already at the 3.25rem floor. Section 6b forbids wrapping the row and
   section 9 forbids dropping a target under 44px, so what gives is information:
   the total and its hairline are not drawn below 30rem, and the elapsed time is.
   The total is what somebody read before pressing play and it is present at every
   width above this one. Measured at 320x180 with a film playing: nothing
-  overflows, four controls are visible, and the clock reads `2:08` alone.
+  overflows. The desktop rewrite moved close into the permanent title bar, so
+  the playback row now keeps three controls visible and the clock reads `2:08`
+  alone.
 - **Audio and subtitles are a popover, not a panel.** It is a child of the
   button that opens it, so it is anchored by construction: `right: 0` against
   the button's own box rather than a measured offset from the frame. Positioned
@@ -927,6 +973,39 @@ grid underneath was unchanged at the time and still exempt under §6: the only
 gold at rest is the 3px progress rule and no card title takes the display serif.
 Verified against the 274-film library rather than inferred. The card shape itself
 changed later - see below.
+
+**The native library island.** The desktop player uses one centred pill spanning
+the content width rather than a separate logo and icon dock. `THEIA` is the only
+brand mark at left; Accueil, Films, Séries, Rechercher, Réglages and the profile
+are a single right-aligned navigation group - Accueil first, because the shell
+opens on the home screen below, and the wordmark leads there too. At rest, every
+desktop label is visible. Motion moves one restrained active surface between
+destinations, and a compact gold `1` on Réglages is reserved for a
+server-confirmed update. The profile circle opens the real server profile
+switcher and its name/photo editor; it is not an account placeholder. Below
+44rem the text labels may disappear so the island remains a single line with
+44px targets. Below 28rem the wordmark goes as well: five destinations, the
+profile circle and the 44px floor already fill a phone-sized window, and the
+web's own phone layout carries no wordmark either - the one-line rule outranks
+the mark.
+
+**The player's home screen.** The native shell opens on the web home's own
+composition rather than on the film grid: one hero for the film that was left -
+tracked eyebrow, display title, year, runtime, director and rating, the progress
+bar with what is left, and one action in the label register - then the server's
+short rows, films first and series after. A row is a sideways strip that hides
+its scrollbar (§6.3), keeps the §6 card unchanged at a fixed width, and answers
+a mouse with hover chevrons and a keyboard with left/right through the cards it
+holds. Row titles are the web application's, word for word. The hero is the
+player's only full-bleed picture: it runs to both window edges, carries the web
+hero's veil recipe over artwork at 78%, and is framed from the top per §5.
+Cards are untouched - no display serif, no accent at rest beyond the 3px
+progress rule. Three things the web home carries are deliberately absent, and
+the reason is the player itself: **no *Voir la fiche*** (there is no film page
+to open, and the web's own hero button opens its player), **no *Au programme*
+dock and no *Tout voir* links** (all of those point at filtered library views -
+by progress, sort or duration - that the player's library does not have yet;
+copy without the machinery is worse than its absence). See decision 130.
 
 **The interface language layer.** French is the default
 and English ships as a second complete catalogue. The choice is local to each

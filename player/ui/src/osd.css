@@ -26,52 +26,11 @@ body {
 	user-select: none;
 }
 
-/* The pointer is not hidden here, and that was a defect rather than a choice.
-   This rule used to read `cursor: none` unconditionally, which took the pointer
-   away on the connect screen and over the library panel - the two states where
-   the field and the buttons are the only way forward. Measured on 15 September
-   2026 on the shipped build: html, body and .osd all answered `none` before a
-   film had even been chosen.
-
-   Section 6b gives the real rule, and it is about the furniture rather than the
-   document: the furniture hides after three seconds of nothing "and takes the
-   cursor with it". So the pointer goes when, and only when, the furniture has
-   deliberately gone - which `data-idle` already states on this element. Every
-   control inside the OSD sets its own cursor and is unaffected.
-
-   **And it has to be declared on the root, not here - measured 16 September 2026.**
-   `.osd` carries `pointer-events: none`, so with the furniture hidden the element
-   Chromium resolves the cursor against is `body`, not `.osd`. The rule below was
-   on `.osd`, which answered `none` from `getComputedStyle` the whole time while
-   the pointer stayed visible in 35 of 37 samples taken from Windows: a cursor rule
-   on an element that cannot be hovered is a rule that never applies. The chain,
-   read at 1280x720 with a film playing, was `body` -> `html`, both `auto`.
-
-   So the rule goes where the resolution ends up. It is scoped by `data-idle` and
-   not by a class of its own, so nothing new can disagree with the element that
-   already states the state - and it is written as `html:has(...)` because this
-   stylesheet is a plain `.css` file imported by the component, so Svelte's
-   selector scoping does not touch it and `:global()` would not compile here.
-   `!important` is load-bearing: `cursor: pointer` is set on every control further
-   down this file, and three buttons are children of `.osd`. They are inert while
-   idle anyway - `pointer-events: none` is set on them two rules down - so no
-   cursor a person can reach is taken away.
-
-   **This is the only mechanism, since decision 125.** There used to be a native
-   half - `ShowCursor` behind a Tauri command - and it was removed on measurement
-   rather than preference: moving the rule here took the pointer from 2 hidden
-   samples of 37 to 15 of 48, while the native counter read -1 in a run where
-   Windows reported the pointer showing in 59 samples of 59. A mechanism that
-   contradicts the instrument, and that can hide a pointer on a desktop it does not
-   restore it to, is worse than the flicker it was there to remove. What remains
-   above the CSS - the pointer coming back on a four-to-five-second cadence - is a
-   WebView2 behaviour this repository cannot reach: the window that decides the
-   cursor belongs to the WebView2 process, and a process cannot subclass another
-   process's window. */
-html:has(.osd[data-idle='true']) body,
-html:has(.osd[data-idle='true']) {
-	cursor: none !important;
-}
+/* The furniture may fade; the pointer deliberately does not. WebView2 was
+   measured redrawing it every four to five seconds over `cursor: none`, so the
+   old rule produced a perpetual visible/hidden flicker. A stable visible cursor
+   is less cinematic than a reliably hidden one, but it is an honest and usable
+   state. Hiding it returns only when the native surface can own that state. */
 
 /* The document itself is the click-through layer: the OSD below carries
    pointer-events: none except on its controls, so a click on the picture lands
@@ -80,9 +39,67 @@ html:has(.osd[data-idle='true']) {
 .osd {
 	position: absolute;
 	inset: 0;
-	pointer-events: none;
+	pointer-events: auto;
 	opacity: 1;
 	transition: opacity var(--duration-base) var(--ease-cine);
+	/* The window itself is frameless and transparent (tauri.conf): the root
+	   clips everything to the window's rounded shape. Drag regions are
+	   attributes, untouched by this. A maximized window fills its monitor,
+	   so the radius goes away there. */
+	border-radius: 16px;
+	overflow: hidden;
+}
+.osd[data-maximized='true'] {
+	border-radius: 0;
+}
+.osd--library {
+	background:
+		radial-gradient(circle at 86% 0%, rgb(var(--channel-accent) / 0.07), transparent 28rem),
+		linear-gradient(145deg, rgb(var(--channel-bone) / 0.018), transparent 40%),
+		var(--color-ink);
+}
+.osd--library::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background-image: var(--texture-grain);
+	mix-blend-mode: overlay;
+	opacity: 0.65;
+	pointer-events: none;
+}
+/* The ascii-art loop belongs to the search room alone: everywhere else the
+   library keeps its ink, and on the search page the loop is the room. It
+   fills the frame edge to edge - one stretched frame, the whole room, not a
+   tile and not a sticker - and a radial mask melts it into the ink at every
+   edge so no border of its own ever shows. Motion stays out of the way: the
+   OS reduced-motion setting - and the player's own toggle, which sets
+   data-reduced-motion - freeze it to its still. */
+.osd--library[data-section='search']::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	background:
+		linear-gradient(to bottom, rgb(var(--channel-ink) / 0.76) 0%, transparent 28%, transparent 72%, rgb(var(--channel-ink) / 0.7) 100%),
+		radial-gradient(68% 48% at 50% 43%, rgb(var(--channel-ink) / 0.88), rgb(var(--channel-ink) / 0.42) 58%, transparent 86%),
+		url('./assets/ascii-art-bg.gif') center / cover no-repeat;
+	opacity: 0.64;
+	mask-image: radial-gradient(115% 108% at 50% 46%, #000 30%, transparent 80%);
+	pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+	.osd--library[data-section='search']::after {
+		background-image:
+			linear-gradient(to bottom, rgb(var(--channel-ink) / 0.76) 0%, transparent 28%, transparent 72%, rgb(var(--channel-ink) / 0.7) 100%),
+			radial-gradient(68% 48% at 50% 43%, rgb(var(--channel-ink) / 0.88), rgb(var(--channel-ink) / 0.42) 58%, transparent 86%),
+			url('./assets/ascii-art-bg-still.jpg');
+	}
+}
+html[data-reduced-motion='true'] .osd--library[data-section='search']::after {
+	background-image:
+		linear-gradient(to bottom, rgb(var(--channel-ink) / 0.76) 0%, transparent 28%, transparent 72%, rgb(var(--channel-ink) / 0.7) 100%),
+		radial-gradient(68% 48% at 50% 43%, rgb(var(--channel-ink) / 0.88), rgb(var(--channel-ink) / 0.42) 58%, transparent 86%),
+		url('./assets/ascii-art-bg-still.jpg');
 }
 .osd[data-idle='true'] {
 	opacity: 0;
@@ -114,12 +131,74 @@ html:has(.osd[data-idle='true']) {
 	top: 0;
 	left: 0;
 	right: 0;
-	height: 4rem;
+	height: 3.25rem;
 	display: flex;
 	align-items: center;
-	gap: 1rem;
-	padding: 0 var(--page-gutter);
+	padding-left: 1rem;
+	border-bottom: 1px solid rgb(var(--channel-bone) / 0.075);
+	background: rgb(var(--channel-ink) / 0.78);
+	backdrop-filter: blur(18px);
 	pointer-events: auto;
+	z-index: 20;
+}
+/* The library overlay variant: a drag strip with window controls, visually
+   merged into the page — no blur rect, no seam — so the top of the library
+   no longer reads as an empty black band. The nav pill below carries the
+   brand; playback keeps the solid chrome above. */
+.title-bar--overlay {
+	border-bottom-color: transparent;
+	background: transparent;
+	backdrop-filter: none;
+}
+
+.title-identity {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+	min-width: 0;
+	flex: 1;
+}
+
+.window-wordmark {
+	font-family: var(--font-display);
+	font-size: 0.9rem;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: var(--color-bone);
+}
+
+.window-controls {
+	display: flex;
+	align-self: stretch;
+	margin-left: auto;
+}
+
+.window-control {
+	width: 2.9rem;
+	height: 100%;
+	min-height: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	color: var(--color-muted);
+	cursor: default;
+	transition:
+		background-color var(--duration-fast) var(--ease-cine),
+		color var(--duration-fast) var(--ease-cine);
+}
+.window-control:hover {
+	background: rgb(var(--channel-bone) / 0.08);
+	color: var(--color-bone);
+}
+.window-control--close:hover {
+	background: #a9342c;
+	color: var(--color-bone);
+}
+.window-control:focus-visible {
+	outline-offset: -3px;
 }
 
 /* The language chip, while there is no film to watch.
@@ -128,14 +207,16 @@ html:has(.osd[data-idle='true']) {
    "because the native player has nowhere else to switch it". The header is that
    elsewhere, and only while the bar is gone: once a film plays, the bar is back
    and this copy disappears so one control never appears twice. */
-.title-bar .control--language {
-	margin-left: auto;
+.title-bar .control--back {
+	flex: none;
+	min-width: 2.75rem;
+	min-height: 2.75rem;
 }
 
 /* ...and the library takes the room the bar gave up, including the taller
    bottom inset it was reserving for the clock and the scrub bar. */
 .osd:has(.controls--hidden) .library {
-	bottom: 1rem;
+	bottom: 0;
 }
 
 .film-title {
@@ -326,13 +407,14 @@ button.control--primary:hover {
 
 .library {
 	position: absolute;
-	inset: 4rem 0 11rem 0;
-	padding: 0 var(--page-gutter);
+	inset: 3.25rem 0 11rem 0;
+	padding: clamp(1.25rem, 3.2vw, 3.5rem) var(--page-gutter) 3rem;
 	overflow-y: auto;
 	pointer-events: auto;
 	display: flex;
 	flex-direction: column;
-	gap: 1rem;
+	gap: 1.25rem;
+	scrollbar-color: var(--color-line) transparent;
 }
 
 .library-title {
@@ -341,6 +423,139 @@ button.control--primary:hover {
 	line-height: var(--text-display--line-height);
 	letter-spacing: var(--text-display--letter-spacing);
 	margin: 0;
+}
+
+.library-nav {
+	display: flex;
+	align-items: center;
+	gap: clamp(0.4rem, 1.2vw, 1rem);
+	min-height: 3.5rem;
+	padding: 0.35rem 0.5rem 0.35rem 1rem;
+	border: 1px solid rgb(var(--channel-bone) / 0.1);
+	border-radius: 999px;
+	background: rgb(var(--channel-surface) / 0.64);
+	box-shadow: 0 1.5rem 4rem rgb(var(--channel-ink) / 0.26);
+	backdrop-filter: blur(22px);
+}
+
+.nav-link,
+.nav-language {
+	position: relative;
+	min-height: 2.7rem;
+	padding: 0 0.9rem;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	cursor: pointer;
+	transition:
+		color var(--duration-fast) var(--ease-cine),
+		background-color var(--duration-fast) var(--ease-cine);
+}
+.nav-link:hover,
+.nav-language:hover {
+	color: var(--color-bone);
+	background: rgb(var(--channel-bone) / 0.055);
+}
+.nav-link--active {
+	color: var(--color-bone);
+}
+.nav-link--active::after {
+	content: '';
+	position: absolute;
+	left: 50%;
+	bottom: 0.25rem;
+	width: 0.28rem;
+	height: 0.28rem;
+	border-radius: 999px;
+	background: var(--color-accent);
+	transform: translateX(-50%);
+}
+.nav-spacer {
+	flex: 1;
+}
+.server-state {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+	color: var(--color-muted);
+	font-family: var(--font-label);
+	font-size: var(--text-micro);
+	letter-spacing: var(--text-micro--letter-spacing);
+	text-transform: uppercase;
+}
+.server-dot {
+	width: 0.4rem;
+	height: 0.4rem;
+	border-radius: 999px;
+	background: var(--color-accent);
+	box-shadow: 0 0 0.8rem rgb(var(--channel-accent) / 0.55);
+}
+.library-heading {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.55rem;
+	padding-top: clamp(0.5rem, 2vh, 1.5rem);
+}
+.library-heading--centered {
+	align-items: center;
+	text-align: center;
+}
+
+.library > .library-heading--centered {
+	z-index: 2;
+}
+
+.library-heading--centered .library-title {
+	color: var(--color-bone);
+	text-shadow:
+		0 0.18rem 1.4rem rgb(var(--channel-ink) / 0.96),
+		0 0 0.12rem rgb(var(--channel-bone) / 0.4);
+}
+
+.library-eyebrow,
+.library-count {
+	margin: 0;
+}
+.library-eyebrow {
+	color: var(--color-accent);
+}
+.library-back {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.55rem;
+	min-height: 2.75rem;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--color-muted);
+	font-family: var(--font-label);
+	font-size: var(--text-label);
+	letter-spacing: var(--text-label--letter-spacing);
+	text-transform: uppercase;
+	cursor: pointer;
+}
+.library-back:hover {
+	color: var(--color-bone);
+}
+.season-tabs {
+	display: flex;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+.season-tab {
+	min-height: 2.8rem;
+	padding: 0 1rem;
+	border: 1px solid var(--color-line);
+	border-radius: 999px;
+	background: transparent;
+	cursor: pointer;
+}
+.season-tab:hover,
+.season-tab--active {
+	border-color: var(--color-muted);
+	background: var(--color-raised);
+	color: var(--color-bone);
 }
 
 .connect {
@@ -462,7 +677,16 @@ button.action:focus-visible {
 	padding: 0;
 	display: grid;
 	gap: clamp(0.9rem, 1.6vw, 1.5rem);
-	grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr));
+}
+
+@media (max-width: 44rem) {
+	.server-state {
+		display: none;
+	}
+	.library-nav {
+		border-radius: var(--radius-panel);
+	}
 }
 
 @media (max-width: 36rem) {
@@ -772,4 +996,1282 @@ button.action:focus-visible {
 		animation-delay: 0ms !important;
 		transition-duration: 0.01ms !important;
 	}
+}
+
+/* --- V3.3 desktop library ------------------------------------------------
+   The native shell reuses the web tokens, but its information density is a
+   desktop concern. The bar is a compact router; the grid remains the content.
+   No second palette, no dashboard chrome. */
+
+.library {
+	inset: 3.25rem 0 0;
+	z-index: 1;
+	gap: clamp(1.2rem, 2.2vw, 2rem);
+	padding: clamp(1rem, 2.2vw, 2rem) var(--page-gutter) clamp(3rem, 6vw, 5rem);
+	overflow-x: hidden;
+	isolation: isolate;
+}
+
+.library > *:not(.library-ambient) {
+	position: relative;
+	z-index: 1;
+}
+
+.library-ambient {
+	position: absolute;
+	z-index: 0;
+	top: 0;
+	right: 0;
+	width: min(68rem, 74vw);
+	height: min(34rem, 64vh);
+	overflow: hidden;
+	opacity: 0.3;
+	mask-image: linear-gradient(105deg, transparent 8%, #000 58%, #000 100%), linear-gradient(to bottom, #000 44%, transparent 100%);
+	mask-composite: intersect;
+	pointer-events: none;
+}
+
+.library-ambient img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	filter: saturate(0.84) contrast(1.04);
+}
+
+.library-nav {
+	position: sticky;
+	z-index: 30;
+	top: 0;
+	display: flex;
+	width: min(100%, 90rem);
+	max-width: 100%;
+	min-height: 4.4rem;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1.5rem;
+	margin-inline: auto;
+	padding: 0.42rem 0.55rem 0.42rem 1.7rem;
+	border-color: rgb(var(--channel-bone) / 0.085);
+	border-radius: 999px;
+	background: rgb(var(--channel-ink) / 0.82);
+	box-shadow: 0 1rem 2.8rem rgba(0, 0, 0, 0.3), inset 0 1px rgb(var(--channel-bone) / 0.035);
+	backdrop-filter: blur(22px);
+}
+
+.nav-brand {
+	position: relative;
+	display: grid;
+	min-width: 7.2rem;
+	min-height: 3rem;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--color-bone);
+	font-family: var(--font-display);
+	font-size: 0.96rem;
+	font-weight: 600;
+	letter-spacing: 0.24em;
+	text-align: left;
+	cursor: pointer;
+	place-items: center start;
+}
+
+.nav-brand::after {
+	position: absolute;
+	right: 0.9rem;
+	bottom: 0.38rem;
+	left: 0;
+	height: 1px;
+	background: linear-gradient(90deg, var(--color-accent), transparent);
+	content: '';
+}
+
+.nav-items {
+	display: flex;
+	align-items: center;
+	gap: 0.12rem;
+}
+
+.nav-link {
+	position: relative;
+	display: inline-flex;
+	min-width: 3rem;
+	height: 2.9rem;
+	min-height: 2.9rem;
+	align-items: center;
+	justify-content: center;
+	gap: 0.55rem;
+	padding: 0 0.92rem;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--color-muted);
+	cursor: pointer;
+	transition:
+		color var(--duration-fast) var(--ease-cine),
+		background-color var(--duration-fast) var(--ease-cine),
+		border-color var(--duration-fast) var(--ease-cine),
+		transform var(--duration-fast) var(--ease-cine);
+}
+
+.nav-link > svg,
+.nav-link > .nav-label,
+.nav-link > .nav-update-badge,
+.nav-profile > span:not(.nav-active-surface) {
+	position: relative;
+	z-index: 2;
+}
+
+.nav-active-surface {
+	position: absolute;
+	z-index: 0;
+	inset: 0;
+	border: 1px solid rgb(var(--channel-bone) / 0.1);
+	border-radius: 999px;
+	background: rgb(var(--channel-bone) / 0.105);
+	box-shadow: inset 0 1px rgb(var(--channel-bone) / 0.05);
+}
+
+.nav-link:hover {
+	background: rgb(var(--channel-bone) / 0.06);
+	color: var(--color-bone);
+}
+
+.nav-link:active {
+	transform: translateY(1px);
+}
+
+.nav-link:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+}
+
+.nav-link--active {
+	border-color: transparent;
+	background: transparent;
+	color: var(--color-bone);
+}
+
+.nav-link--active::after {
+	display: none;
+}
+
+.nav-label {
+	display: block;
+	font-family: var(--font-label);
+	font-size: var(--text-label);
+	font-weight: 500;
+	letter-spacing: var(--text-label--letter-spacing);
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.nav-update-badge {
+	display: grid;
+	width: 1.1rem;
+	height: 1.1rem;
+	margin-left: -0.3rem;
+	border-radius: 999px;
+	background: var(--color-accent);
+	color: var(--color-ink);
+	font-family: var(--font-label);
+	font-size: 0.6rem;
+	font-weight: 700;
+	line-height: 1;
+	place-items: center;
+}
+
+.nav-profile {
+	position: relative;
+	display: grid;
+	width: 2.9rem;
+	height: 2.9rem;
+	min-width: 2.9rem;
+	min-height: 2.9rem;
+	margin-left: 0.22rem;
+	padding: 0;
+	border: 1px solid rgb(var(--channel-bone) / 0.14);
+	border-radius: 999px;
+	background: radial-gradient(circle at 35% 28%, color-mix(in srgb, var(--color-accent) 42%, transparent), rgb(var(--channel-bone) / 0.07) 58%, transparent 59%);
+	color: var(--color-bone);
+	font-family: var(--font-display);
+	font-size: 0.98rem;
+	cursor: pointer;
+	place-items: center;
+}
+
+.nav-profile:hover,
+.nav-profile--active {
+	border-color: color-mix(in srgb, var(--color-accent) 70%, transparent);
+}
+
+.nav-profile img,
+.profile-avatar img,
+.profile-editor-avatar img {
+	width: 100%;
+	height: 100%;
+	border-radius: inherit;
+	object-fit: cover;
+}
+
+.nav-brand:focus-visible,
+.nav-profile:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+}
+
+.nav-label--collapsed {
+	width: 0;
+	opacity: 0;
+}
+
+.library-heading {
+	gap: 0.45rem;
+	padding-top: clamp(0.75rem, 3vh, 2.6rem);
+}
+
+.library-title {
+	max-width: 13ch;
+	font-size: clamp(2.5rem, 6vw, 5.4rem);
+	line-height: 0.94;
+	text-wrap: balance;
+}
+
+.library-count {
+	margin-top: 0.35rem;
+}
+
+.search-view {
+	position: relative;
+	display: grid;
+	gap: 2rem;
+	justify-items: center;
+	isolation: isolate;
+}
+
+/* The loop supplies movement, not contrast. This broad ink lens joins the
+   heading, field and hint into one readable stage without turning the search
+   room into an opaque panel. The edges stay open, where the loop is allowed
+   to do the atmospheric work it was chosen for. */
+.search-view::before {
+	content: '';
+	position: absolute;
+	z-index: 0;
+	top: -9.5rem;
+	left: 50%;
+	width: min(70rem, calc(100vw - 2rem));
+	height: 24rem;
+	background: radial-gradient(ellipse at 50% 42%, rgb(var(--channel-ink) / 0.96) 0%, rgb(var(--channel-ink) / 0.84) 42%, rgb(var(--channel-ink) / 0.34) 67%, transparent 78%);
+	filter: blur(0.3rem);
+	transform: translateX(-50%);
+	pointer-events: none;
+}
+
+.search-view > * {
+	position: relative;
+	z-index: 1;
+}
+
+.search-field {
+	position: relative;
+	display: flex;
+	width: min(100%, 52rem);
+	min-height: 4.2rem;
+	align-items: center;
+	gap: 0.9rem;
+	margin-inline: auto;
+	padding: 0 1.25rem;
+	border: 1px solid rgb(var(--channel-bone) / 0.24);
+	border-radius: 999px;
+	background: rgb(var(--channel-ink) / 0.92);
+	box-shadow:
+		0 1.35rem 4rem rgb(var(--channel-ink) / 0.48),
+		inset 0 1px rgb(var(--channel-bone) / 0.075);
+	color: var(--color-accent);
+	backdrop-filter: blur(24px) saturate(0.72);
+}
+
+.search-field:focus-within {
+	border-color: color-mix(in srgb, var(--color-accent) 72%, transparent);
+	box-shadow:
+		0 0 0 3px color-mix(in srgb, var(--color-accent) 14%, transparent),
+		0 1.35rem 4rem rgb(var(--channel-ink) / 0.52),
+		inset 0 1px rgb(var(--channel-bone) / 0.09);
+}
+
+.search-field input {
+	width: 100%;
+	min-width: 0;
+	border: 0;
+	outline: 0;
+	background: transparent;
+	color: var(--color-bone);
+	font-family: var(--font-ui);
+	font-size: clamp(1rem, 1.7vw, 1.2rem);
+	font-weight: 400;
+	letter-spacing: 0.01em;
+}
+
+.search-field input::placeholder {
+	color: rgb(var(--channel-bone) / 0.82);
+}
+
+.search-results {
+	display: grid;
+	gap: 2.5rem;
+	width: min(100%, 76rem);
+	margin-inline: auto;
+}
+
+.search-view .hint {
+	justify-self: center;
+	margin-inline: auto;
+	color: rgb(var(--channel-bone) / 0.84);
+	font-size: clamp(0.9rem, 1.4vw, 1rem);
+	text-shadow: 0 0.15rem 1rem rgb(var(--channel-ink) / 0.96);
+	text-align: center;
+}
+
+.search-result-title {
+	margin: 0 0 1rem;
+	color: var(--color-accent);
+}
+
+.films {
+	position: relative;
+	z-index: 2;
+	grid-template-columns: repeat(auto-fill, minmax(min(13.5rem, 100%), 1fr));
+	gap: clamp(1rem, 1.8vw, 1.6rem) clamp(0.8rem, 1.4vw, 1.3rem);
+}
+
+.media-card {
+	min-width: 0;
+}
+
+.film {
+	gap: 0.42rem;
+}
+
+.film-art {
+	transition:
+		border-color var(--duration-fast) var(--ease-cine),
+		box-shadow var(--duration-base) var(--ease-cine),
+		transform var(--duration-base) var(--ease-cine);
+}
+
+.film-art img {
+	transition: transform 420ms var(--ease-cine), filter 420ms var(--ease-cine);
+}
+
+.film-mark {
+	inset: auto auto 0.7rem 0.7rem;
+	width: 2.7rem;
+	height: 2.7rem;
+	border-radius: 999px;
+	background: var(--color-bone);
+	box-shadow: 0 0.6rem 1.7rem rgba(0, 0, 0, 0.34);
+	color: var(--color-ink);
+}
+
+@media (hover: hover) {
+	.film:hover .film-art,
+	.film:focus-visible .film-art {
+		border-color: rgb(var(--channel-bone) / 0.2);
+		box-shadow: 0 1rem 2.2rem rgb(var(--channel-ink) / 0.5);
+		transform: translateY(-0.2rem);
+	}
+	.film:hover .film-art img,
+	.film:focus-visible .film-art img {
+		filter: saturate(1.04) contrast(1.02);
+		transform: scale(1.025);
+	}
+}
+
+.film:focus-visible {
+	outline: none;
+}
+
+.film:focus-visible .film-art {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 3px;
+}
+
+.film-name {
+	width: 100%;
+	overflow: hidden;
+	font-weight: 500;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.film-legend {
+	width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.media-preview {
+	position: fixed;
+	z-index: 55;
+	aspect-ratio: 16 / 9;
+	overflow: hidden;
+	border: 1px solid rgb(var(--channel-bone) / 0.16);
+	border-radius: var(--radius-card);
+	background: var(--color-surface);
+	box-shadow: 0 1.7rem 5rem rgba(0, 0, 0, 0.68), 0 0 0 1px rgba(0, 0, 0, 0.32);
+	isolation: isolate;
+}
+
+.media-preview-art,
+.media-preview-art img,
+.media-preview-shade {
+	position: absolute;
+	inset: 0;
+}
+
+.media-preview-art {
+	display: grid;
+	background: var(--color-surface);
+	color: var(--color-faint);
+	font-family: var(--font-display);
+	font-size: 3rem;
+	place-items: center;
+}
+
+.media-preview-art img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.media-preview-art img.media-preview-art--poster {
+	object-fit: contain;
+	filter: brightness(0.66);
+}
+
+.media-preview-shade {
+	background: linear-gradient(90deg, rgb(var(--channel-ink) / 0.94) 0%, rgb(var(--channel-ink) / 0.72) 42%, rgb(var(--channel-ink) / 0.08) 76%), linear-gradient(to top, rgb(var(--channel-ink) / 0.74), transparent 58%);
+}
+
+.media-preview-content {
+	position: absolute;
+	z-index: 2;
+	left: clamp(1rem, 4vw, 2rem);
+	bottom: clamp(0.9rem, 2.5vw, 1.35rem);
+	display: flex;
+	width: min(78%, 25rem);
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.4rem;
+}
+
+.media-preview-kind {
+	color: var(--color-accent);
+}
+
+.media-preview h2 {
+	margin: 0;
+	display: -webkit-box;
+	overflow: hidden;
+	font-family: var(--font-display);
+	font-size: clamp(1.15rem, 1.7vw, 1.45rem);
+	font-weight: 400;
+	letter-spacing: -0.02em;
+	line-height: 1.04;
+	text-wrap: balance;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 3;
+}
+
+.media-preview p {
+	margin: 0 0 0.25rem;
+	color: var(--color-parchment);
+	font-size: var(--text-small);
+}
+
+.media-preview-progress {
+	position: absolute;
+	z-index: 3;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	height: 3px;
+	background: rgb(var(--channel-bone) / 0.18);
+}
+
+.media-preview-progress span {
+	display: block;
+	height: 100%;
+	background: var(--color-accent);
+}
+
+/* --- settings ----------------------------------------------------------- */
+
+.settings-overlay {
+	background: rgb(var(--channel-ink) / 0.74);
+	backdrop-filter: blur(10px);
+}
+
+.settings-dialog {
+	display: grid;
+	max-height: min(48rem, calc(100vh - 2rem));
+	grid-template-rows: auto minmax(0, 1fr) auto;
+	overflow: hidden;
+	border: 1px solid rgb(var(--channel-bone) / 0.11);
+	border-radius: var(--radius-panel);
+	background: rgb(18 17 16 / 0.98);
+	box-shadow: 0 2rem 7rem rgba(0, 0, 0, 0.68), inset 0 1px rgb(var(--channel-bone) / 0.035);
+	outline: none;
+}
+
+.settings-header {
+	position: relative;
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 0.95rem;
+	padding: clamp(1.15rem, 2.5vw, 1.5rem);
+	padding-right: 4.5rem;
+	border-bottom: 1px solid var(--color-line);
+}
+
+.settings-heading-icon {
+	display: grid;
+	width: 2.8rem;
+	height: 2.8rem;
+	border: 1px solid rgb(var(--channel-bone) / 0.1);
+	border-radius: 999px;
+	background: rgb(var(--channel-bone) / 0.055);
+	color: var(--color-accent);
+	place-items: center;
+}
+
+.settings-title {
+	margin: 0;
+	font-family: var(--font-display);
+	font-size: clamp(1.45rem, 3vw, 2rem);
+	font-weight: 400;
+	letter-spacing: -0.015em;
+}
+
+.settings-description {
+	margin: 0.3rem 0 0;
+	color: var(--color-muted);
+	font-size: var(--text-small);
+}
+
+.settings-body {
+	overflow-y: auto;
+	padding: 0 clamp(1.25rem, 3vw, 1.5rem);
+	scrollbar-color: var(--color-line) transparent;
+}
+
+.settings-section {
+	display: flex;
+	flex-direction: column;
+	gap: 0.7rem;
+	padding: 0.9rem 0;
+}
+
+.settings-section--row {
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.settings-section-copy {
+	min-width: 0;
+}
+
+.settings-section h3 {
+	margin: 0;
+	font-family: var(--font-label);
+	font-size: 0.78rem;
+	font-weight: 500;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+.settings-section p {
+	max-width: 34rem;
+	margin: 0.35rem 0 0;
+	color: var(--color-muted);
+	font-size: var(--text-small);
+	line-height: 1.45;
+}
+
+.settings-separator {
+	height: 1px;
+	background: var(--color-line);
+}
+
+.settings-segment {
+	display: inline-flex;
+	width: max-content;
+	padding: 0.2rem;
+	border: 1px solid var(--color-line);
+	border-radius: 999px;
+	background: var(--color-ink);
+}
+
+.settings-segment button {
+	min-height: 2.45rem;
+	padding: 0 1rem;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--color-muted);
+	font-family: var(--font-label);
+	font-size: var(--text-label);
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	cursor: pointer;
+	transition: color var(--duration-fast) var(--ease-cine), background-color var(--duration-fast) var(--ease-cine);
+}
+
+.settings-segment button:hover {
+	color: var(--color-bone);
+}
+
+.settings-segment button[aria-pressed='true'] {
+	background: var(--color-bone);
+	color: var(--color-ink);
+}
+
+.settings-segment button:focus-visible,
+.settings-switch:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+}
+
+.settings-switch {
+	position: relative;
+	width: 3rem;
+	height: 1.7rem;
+	flex: none;
+	padding: 0;
+	border: 1px solid var(--color-line);
+	border-radius: 999px;
+	background: var(--color-raised);
+	cursor: pointer;
+	transition: background-color var(--duration-fast) var(--ease-cine), border-color var(--duration-fast) var(--ease-cine);
+}
+
+.settings-switch[data-state='checked'] {
+	border-color: var(--color-accent);
+	background: var(--color-accent);
+}
+
+.settings-switch-thumb {
+	display: block;
+	width: 1.25rem;
+	height: 1.25rem;
+	border-radius: 999px;
+	background: var(--color-bone);
+	box-shadow: 0 0.2rem 0.55rem rgba(0, 0, 0, 0.35);
+	transform: translateX(0.18rem);
+	transition: transform var(--duration-fast) var(--ease-cine);
+}
+
+.settings-switch[data-state='checked'] .settings-switch-thumb {
+	background: var(--color-ink);
+	transform: translateX(1.38rem);
+}
+
+.settings-server {
+	display: grid;
+	gap: 0.55rem;
+	margin: 0;
+	padding: 0.8rem 1rem;
+	border: 1px solid var(--color-line);
+	border-radius: var(--radius-row);
+	background: rgb(var(--channel-ink) / 0.5);
+}
+
+.settings-server div {
+	display: grid;
+	grid-template-columns: 5rem minmax(0, 1fr);
+	gap: 0.75rem;
+}
+
+.settings-server dt {
+	color: var(--color-muted);
+	font-family: var(--font-label);
+	font-size: var(--text-micro);
+	letter-spacing: 0.13em;
+	text-transform: uppercase;
+}
+
+.settings-server dd {
+	min-width: 0;
+	margin: 0;
+	overflow: hidden;
+	color: var(--color-parchment);
+	font-size: var(--text-small);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.settings-update-row {
+	display: flex;
+	align-items: end;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+.settings-update-versions {
+	min-width: min(24rem, 100%);
+}
+
+.profiles-dialog {
+	width: min(35rem, calc(100vw - 2rem));
+	padding: 0;
+	overflow: hidden;
+	border: 1px solid rgb(var(--channel-bone) / 0.11);
+	border-radius: var(--radius-panel);
+	background: rgb(18 17 16 / 0.98);
+	box-shadow: 0 2rem 7rem rgba(0, 0, 0, 0.68);
+}
+
+.profile-list {
+	display: grid;
+	gap: 0.65rem;
+	padding: 1.1rem;
+}
+
+.profile-card {
+	position: relative;
+	display: flex;
+	min-height: 4.7rem;
+	align-items: center;
+	padding: 0;
+	border: 1px solid var(--color-line);
+	border-radius: var(--radius-row);
+	background: rgb(var(--channel-bone) / 0.025);
+	color: var(--color-bone);
+	transition: border-color var(--duration-fast) var(--ease-cine), background-color var(--duration-fast) var(--ease-cine), transform var(--duration-fast) var(--ease-cine);
+}
+
+.profile-card:hover {
+	border-color: rgb(var(--channel-bone) / 0.22);
+	background: rgb(var(--channel-bone) / 0.06);
+	transform: translateY(-1px);
+}
+
+.profile-card--active {
+	border-color: color-mix(in srgb, var(--color-accent) 52%, transparent);
+}
+
+.profile-card-select {
+	display: grid;
+	min-width: 0;
+	min-height: 4.7rem;
+	flex: 1;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 0.9rem;
+	padding: 0.65rem 4.2rem 0.65rem 0.9rem;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.profile-edit {
+	position: absolute;
+	right: 0.7rem;
+	color: var(--color-muted);
+}
+
+.profile-edit:hover {
+	color: var(--color-accent);
+}
+
+.profile-avatar {
+	display: grid;
+	width: 3rem;
+	height: 3rem;
+	border-radius: 999px;
+	background: hsl(var(--profile-hue) 30% 28%);
+	color: var(--color-bone);
+	font-family: var(--font-display);
+	font-size: 1.1rem;
+	place-items: center;
+}
+
+.profile-copy {
+	display: grid;
+	gap: 0.15rem;
+}
+
+.profile-copy strong {
+	font-family: var(--font-display);
+	font-size: 1.05rem;
+	font-weight: 500;
+}
+
+.profile-copy small {
+	color: var(--color-muted);
+}
+
+.profile-card-select > svg {
+	color: var(--color-accent);
+}
+
+.profile-editor {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 1rem 1.3rem;
+	padding: 1.4rem;
+}
+
+.profile-editor-avatar {
+	display: grid;
+	width: 6.5rem;
+	height: 6.5rem;
+	grid-row: span 3;
+	overflow: hidden;
+	border: 1px solid rgb(var(--channel-bone) / 0.16);
+	border-radius: 999px;
+	background: hsl(var(--profile-hue) 30% 28%);
+	color: var(--color-bone);
+	font-family: var(--font-display);
+	font-size: 2rem;
+	place-items: center;
+}
+
+.profile-editor-field {
+	display: grid;
+	gap: 0.5rem;
+}
+
+.profile-editor-field input {
+	min-height: 3rem;
+	padding: 0 0.9rem;
+	border: 1px solid var(--color-line);
+	border-radius: var(--radius-row);
+	outline: 0;
+	background: rgb(var(--channel-ink) / 0.62);
+	color: var(--color-bone);
+	font: inherit;
+}
+
+.profile-editor-field input:focus {
+	border-color: var(--color-accent);
+}
+
+.profile-picture-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.55rem;
+	flex-wrap: wrap;
+}
+
+.profile-file-button {
+	display: inline-flex;
+	min-height: 2.75rem;
+	align-items: center;
+	gap: 0.55rem;
+	padding: 0 0.9rem;
+	border: 1px solid var(--color-line);
+	border-radius: 999px;
+	background: rgb(var(--channel-bone) / 0.05);
+	color: var(--color-bone);
+	font-family: var(--font-label);
+	font-size: var(--text-label);
+	letter-spacing: var(--text-label--letter-spacing);
+	text-transform: uppercase;
+	cursor: pointer;
+}
+
+.profile-file-button input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+}
+
+.profile-file-button:focus-within {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+}
+
+.profile-picture-hint {
+	margin: 0;
+	color: var(--color-muted);
+	font-size: var(--text-small);
+	line-height: 1.45;
+}
+
+.profile-editor-actions {
+	display: flex;
+	grid-column: 1 / -1;
+	justify-content: flex-end;
+	gap: 0.65rem;
+	padding-top: 0.65rem;
+	border-top: 1px solid var(--color-line);
+}
+
+.settings-footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.65rem;
+	padding: 0.8rem clamp(1.25rem, 3vw, 1.5rem);
+	border-top: 1px solid var(--color-line);
+	background: rgb(var(--channel-ink) / 0.5);
+}
+
+.settings-close {
+	position: absolute;
+	top: 0.95rem;
+	right: 1rem;
+}
+
+@media (max-width: 44rem) {
+	.library-nav {
+		border-radius: 999px;
+		gap: 0.4rem;
+		padding: 0.32rem 0.4rem 0.32rem 0.8rem;
+	}
+	.nav-items {
+		gap: 0.06rem;
+	}
+	.nav-link {
+		min-width: 2.75rem;
+		padding-inline: 0.5rem;
+	}
+	.nav-link .nav-label {
+		display: none;
+	}
+	.nav-brand {
+		min-width: 4.6rem;
+		font-size: 0.78rem;
+	}
+	.library-title {
+		font-size: clamp(2.4rem, 11vw, 4.4rem);
+	}
+}
+
+@media (max-width: 28rem) {
+	/* Five destinations, the avatar and the 44px floor do not leave room for
+	   the wordmark on a phone-sized window: 5 x 44 + 46 + paddings is already
+	   past the content box. The web's own phone layout answers this the same
+	   way - a tab bar of destinations and no wordmark anywhere on it. The
+	   island keeps its single line and its targets; the mark is what gives. */
+	.nav-brand {
+		display: none;
+	}
+}
+
+@media (max-width: 36rem) {
+	.library-ambient {
+		display: none;
+	}
+	.library {
+		padding-inline: 1rem;
+	}
+	.films {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1rem 0.65rem;
+	}
+	.film-name {
+		font-size: 0.78rem;
+	}
+	.settings-dialog {
+		max-height: calc(100vh - 1rem);
+	}
+	.settings-section--row {
+		gap: 1rem;
+	}
+	.settings-update-row {
+		align-items: stretch;
+		flex-direction: column;
+	}
+	.profile-editor {
+		grid-template-columns: 1fr;
+	}
+	.profile-editor-avatar {
+		grid-row: auto;
+		justify-self: center;
+	}
+}
+
+/* --- the home screen ------------------------------------------------------
+   The composition the web home already had, carried into the player: one
+   hero for the film that was left, then short rows that suggest rather than
+   catalogue. The grid below stays the library - this screen answers "what
+   were we watching", and the navigation answers "what do we own".
+
+   The hero is the only full-bleed picture in the player: it runs to both
+   window edges, under the floating bar, because it is chrome and the rest of
+   the screen is content. Everything in it comes from tokens that already
+   existed; nothing here invents a palette, a face or a duration. */
+
+.home-view {
+	display: grid;
+	gap: clamp(1.6rem, 3.2vw, 2.8rem);
+	/* The rows scroll inside themselves; without this the grid track takes the
+	   rows' min-content - the whole strip laid end to end - and nothing
+	   scrolls at all, it just overflows. */
+	min-width: 0;
+}
+
+.home-hero {
+	position: relative;
+	display: flex;
+	min-height: clamp(20rem, 54svh, 40rem);
+	align-items: flex-end;
+	overflow: hidden;
+	margin-inline: calc(-1 * var(--page-gutter));
+	isolation: isolate;
+}
+
+.home-hero-art {
+	position: absolute;
+	z-index: 0;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	/* Framed from the top like every backdrop the bar floats over (design
+	   system 5): the crop is spent on the bottom, where the copy is. */
+	object-position: top;
+	opacity: 0.78;
+}
+
+/* Scrims, not a wash, and the web home's own recipe: a horizontal shade for
+   the copy on the left, a bottom that lands the picture on the page's ink,
+   and a light top fade so the picture emerges from under the bar. Deliberately
+   lighter than it first shipped: the first pass stacked three heavy veils and
+   the artwork stopped reading at all. */
+.home-hero-veil {
+	position: absolute;
+	z-index: 1;
+	inset: 0;
+	background:
+		linear-gradient(90deg, rgb(var(--channel-ink) / 0.94) 0%, rgb(var(--channel-ink) / 0.52) 43%, transparent 76%),
+		linear-gradient(to top, var(--color-ink) 0%, rgb(var(--channel-ink) / 0.72) 34%, rgb(var(--channel-ink) / 0.08) 76%),
+		linear-gradient(to bottom, rgb(var(--channel-ink) / 0.45), transparent 22%);
+}
+
+.home-hero-content {
+	position: relative;
+	z-index: 2;
+	display: flex;
+	width: min(100%, 46rem);
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.9rem;
+	/* Top padding clears the floating bar even at the hero's shortest. */
+	padding: clamp(5.5rem, 13vh, 8rem) var(--page-gutter) clamp(1.7rem, 4.5vh, 2.6rem);
+}
+
+.home-hero-eyebrow {
+	margin: 0;
+	color: var(--color-accent);
+}
+
+.home-hero-title {
+	margin: 0;
+	font-family: var(--font-display);
+	font-size: clamp(2.5rem, 6.2vw, 4.4rem);
+	font-weight: 400;
+	letter-spacing: -0.02em;
+	line-height: 0.98;
+	text-wrap: balance;
+}
+
+.home-hero-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.45rem 1.5rem;
+}
+
+.home-hero-rating {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.4rem;
+}
+
+/* The rating carries its scale: the figure in the display face and the
+   accent, the "/ 10" in the label register and muted - the same split the
+   web settled on. */
+.home-hero-rating-figure {
+	font-family: var(--font-display);
+	font-size: 1.3rem;
+	color: var(--color-accent);
+}
+
+.home-hero-progress {
+	display: flex;
+	width: min(100%, 30rem);
+	align-items: center;
+	gap: 1rem;
+}
+
+.home-hero-progress-track {
+	position: relative;
+	flex: 1;
+	height: 4px;
+	overflow: hidden;
+	border-radius: 999px;
+	background: rgb(var(--channel-bone) / 0.16);
+}
+
+.home-hero-progress-played {
+	height: 100%;
+	border-radius: inherit;
+	background: var(--color-accent);
+}
+
+.home-hero-remaining {
+	white-space: nowrap;
+}
+
+.home-hero-overview {
+	display: -webkit-box;
+	max-width: 40rem;
+	margin: 0;
+	overflow: hidden;
+	color: var(--color-parchment);
+	font-size: var(--text-small);
+	line-height: 1.6;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 3;
+}
+
+.home-hero-actions {
+	display: flex;
+	gap: 0.8rem;
+	margin-top: 0.4rem;
+}
+
+/* The one action, in the label register: a pill you press. */
+.home-hero-action {
+	min-height: 3.4rem;
+	padding-inline: 1.6rem;
+	font-family: var(--font-label);
+	font-size: var(--text-label);
+	letter-spacing: var(--text-label--letter-spacing);
+	text-transform: uppercase;
+}
+
+/* --- the rows -------------------------------------------------------------
+   A strip you skim: it scrolls sideways, hides the scrollbar (design system
+   6.3), and is cut by the window edge - which is what says there is more. */
+
+.home-row {
+	display: grid;
+	gap: 0.75rem;
+	min-width: 0;
+}
+
+.home-row-heading {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 1.5rem;
+}
+
+.home-row-title {
+	margin: 0;
+	font-family: var(--font-ui);
+	font-size: clamp(1.08rem, 1.9vw, 1.5rem);
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+
+.row-scroll-frame {
+	position: relative;
+	margin-inline: calc(-1 * var(--page-gutter));
+	min-width: 0;
+}
+
+.row-scroll {
+	display: flex;
+	gap: clamp(0.9rem, 1.6vw, 1.5rem);
+	margin: 0;
+	padding: 0.4rem var(--page-gutter) 0.9rem;
+	overflow-x: auto;
+	overflow-y: hidden;
+	list-style: none;
+	scroll-padding-inline: var(--page-gutter);
+	scroll-snap-type: x proximity;
+	scrollbar-width: none;
+}
+
+.row-scroll::-webkit-scrollbar {
+	display: none;
+}
+
+.row-scroll > .media-card {
+	flex: 0 0 clamp(14rem, 19vw, 19rem);
+	scroll-snap-align: start;
+}
+
+@media (min-width: 80rem) {
+	.row-scroll > .media-card {
+		flex-basis: clamp(16rem, 17vw, 21rem);
+	}
+}
+
+/* The chevrons answer for a mouse; they enter no tab order and no directional
+   graph (6.3), and they sit centred on the artworks, not on the text. */
+.row-scroll-button {
+	position: absolute;
+	z-index: 5;
+	top: calc(0.4rem + clamp(14rem, 19vw, 19rem) * 0.28125);
+	display: grid;
+	width: 2.9rem;
+	height: 2.9rem;
+	border: 1px solid rgb(var(--channel-bone) / 0.14);
+	border-radius: 999px;
+	background: rgb(var(--channel-ink) / 0.8);
+	color: var(--color-bone);
+	cursor: pointer;
+	backdrop-filter: blur(14px);
+	transform: translateY(-50%);
+	place-items: center;
+}
+
+@media (min-width: 80rem) {
+	.row-scroll-button {
+		top: calc(0.4rem + clamp(16rem, 17vw, 21rem) * 0.28125);
+	}
+}
+
+.row-scroll-button--left {
+	left: 0.6rem;
+}
+
+.row-scroll-button--right {
+	right: 0.6rem;
+}
+
+.row-scroll-button:hover {
+	border-color: color-mix(in srgb, var(--color-accent) 62%, transparent);
+}
+
+@media (max-width: 36rem) {
+	/* The library's gutter is overridden to 1rem at this width; the hero and
+	   the row scrollers bleed by exactly that, not by the token. */
+	.home-hero,
+	.row-scroll-frame {
+		margin-inline: -1rem;
+	}
+	.row-scroll {
+		padding-inline: 1rem;
+	}
+}
+
+html[data-reduced-motion='true'] *,
+html[data-reduced-motion='true'] *::before,
+html[data-reduced-motion='true'] *::after {
+	animation-duration: 0.01ms !important;
+	animation-delay: 0ms !important;
+	transition-duration: 0.01ms !important;
 }

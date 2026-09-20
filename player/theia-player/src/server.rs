@@ -92,6 +92,32 @@ pub struct Profile {
     pub name: String,
     #[serde(default)]
     pub is_default: bool,
+    #[serde(default)]
+    pub has_avatar: bool,
+    #[serde(default)]
+    pub avatar_version: i64,
+}
+
+/// The updater state already exposed by the server's settings page. The native
+/// shell mirrors that contract instead of inventing a second release checker.
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct UpdateStatus {
+    #[serde(default)]
+    pub state: String,
+    #[serde(default)]
+    pub reason: String,
+    #[serde(default)]
+    pub current_version: String,
+    #[serde(default)]
+    pub latest_version: String,
+    #[serde(default)]
+    pub available: bool,
+    #[serde(default)]
+    pub message: String,
+    #[serde(default)]
+    pub release_url: String,
+    #[serde(default)]
+    pub checked_at: String,
 }
 
 /// The parts of a film the player needs to offer it and to play it. The server
@@ -119,11 +145,154 @@ pub struct Movie {
     pub poster_url: String,
 }
 
+/// A show in the library. The list deliberately stays light; seasons arrive
+/// only after somebody opens the show.
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct Series {
+    pub id: i64,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub year: i32,
+    #[serde(default)]
+    pub metadata: SeriesMetadata,
+    #[serde(default)]
+    pub seasons: Vec<Season>,
+    #[serde(default)]
+    pub backdrop_url: String,
+    #[serde(default)]
+    pub poster_url: String,
+}
+
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct SeriesMetadata {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub poster_path: String,
+    #[serde(default)]
+    pub backdrop_path: String,
+}
+
+/// A row of the home screen, exactly as the server names it. The kind travels
+/// as a code - `continue`, `recent`, `top_rated`, `tonight` - and the OSD owns
+/// the sentence that names it (decision 25).
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct HomeRow {
+    #[serde(default)]
+    pub kind: String,
+    #[serde(default)]
+    pub movies: Vec<Movie>,
+}
+
+/// The home screen: one hero and short rows, the shape the server builds.
+///
+/// The hero is a film even when the series rows below it are the thing being
+/// continued; that is the server's choice and this side does not second-guess
+/// it. `hero_kind` says whether the hero is being resumed or is simply on,
+/// which changes what the screen offers - see the design system.
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct HomeScreen {
+    #[serde(default)]
+    pub hero: Option<Movie>,
+    #[serde(default)]
+    pub hero_kind: String,
+    #[serde(default)]
+    pub rows: Vec<HomeRow>,
+    #[serde(default)]
+    pub total: i64,
+}
+
+/// The series half of the home screen: episodes to continue, shows that are
+/// new. A separate request because the server keeps the two answers in
+/// separate tables, and a server without series simply answers empty.
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct SeriesHome {
+    #[serde(default)]
+    pub continue_watching: Vec<EpisodeItem>,
+    #[serde(default)]
+    pub recent_series: Vec<Series>,
+}
+
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct Season {
+    pub id: i64,
+    pub series_id: i64,
+    #[serde(default)]
+    pub season_number: i32,
+    #[serde(default)]
+    pub metadata: SeasonMetadata,
+    #[serde(default, rename = "episodes")]
+    pub items: Vec<EpisodeItem>,
+}
+
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct SeasonMetadata {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub episode_count: i32,
+}
+
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct EpisodeItem {
+    pub id: i64,
+    pub series_id: i64,
+    #[serde(default)]
+    pub series_title: String,
+    #[serde(default)]
+    pub season_number: i32,
+    #[serde(default)]
+    pub episode_numbers: Vec<i32>,
+    #[serde(default, rename = "episode_metadata")]
+    pub episodes: Vec<Episode>,
+    #[serde(default)]
+    pub files: Vec<EpisodeFile>,
+    #[serde(default)]
+    pub progress: Progress,
+    #[serde(default)]
+    pub still_url: String,
+}
+
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct Episode {
+    pub id: i64,
+    #[serde(default)]
+    pub episode_number: i32,
+    #[serde(default)]
+    pub local_title: String,
+    #[serde(default)]
+    pub metadata: EpisodeMetadata,
+}
+
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct EpisodeMetadata {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub still_path: String,
+    #[serde(default)]
+    pub runtime_minutes: i32,
+}
+
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct EpisodeFile {
+    pub id: i64,
+    #[serde(default)]
+    pub file_name: String,
+    #[serde(default)]
+    pub is_primary: bool,
+}
+
 /// The two TMDB paths a card can be drawn from, exactly as the server stores
 /// them - a leading slash and no host.
 #[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
 pub struct Metadata {
-    #[serde(default)]
+    #[serde(
+        default,
+        rename(deserialize = "tmdb_title", serialize = "title"),
+        alias = "title"
+    )]
     pub title: String,
     #[serde(default)]
     pub poster_path: String,
@@ -160,6 +329,39 @@ impl Movie {
     fn resolve_artwork(&mut self, base: &str) {
         self.backdrop_url = image_url(base, &self.metadata.backdrop_path, "w780");
         self.poster_url = image_url(base, &self.metadata.poster_path, "w500");
+    }
+}
+
+impl Series {
+    fn resolve_artwork(&mut self, base: &str) {
+        self.backdrop_url = image_url(base, &self.metadata.backdrop_path, "w780");
+        self.poster_url = image_url(base, &self.metadata.poster_path, "w500");
+    }
+}
+
+impl EpisodeItem {
+    fn resolve_artwork(&mut self, base: &str) {
+        let path = self
+            .episodes
+            .first()
+            .map(|episode| episode.metadata.still_path.as_str())
+            .unwrap_or_default();
+        self.still_url = image_url(base, path, "w780");
+    }
+
+    pub fn title(&self) -> String {
+        self.episodes
+            .iter()
+            .map(|episode| {
+                if episode.metadata.name.is_empty() {
+                    episode.local_title.clone()
+                } else {
+                    episode.metadata.name.clone()
+                }
+            })
+            .filter(|title| !title.is_empty())
+            .collect::<Vec<_>>()
+            .join(" / ")
     }
 }
 
@@ -211,6 +413,12 @@ struct MovieList {
 }
 
 #[derive(serde::Deserialize)]
+struct SeriesList {
+    #[serde(default)]
+    series: Vec<Series>,
+}
+
+#[derive(serde::Deserialize)]
 struct ProfileList {
     #[serde(default)]
     profiles: Vec<Profile>,
@@ -257,9 +465,19 @@ pub struct Client {
 
 impl Client {
     pub fn new(base: &str) -> Client {
+        Self::with_timeout(base, Duration::from_secs(10))
+    }
+
+    /// Builds a client whose calls fail within a caller-chosen window.
+    ///
+    /// A manual connection may legitimately take a few seconds over a tunnel,
+    /// while startup probes must move on quickly to the next candidate. Keeping
+    /// both on the same ten-second timeout made an offline remembered server
+    /// look like a frozen application.
+    pub fn with_timeout(base: &str, timeout: Duration) -> Client {
         Client {
             agent: ureq::AgentBuilder::new()
-                .timeout(Duration::from_secs(10))
+                .timeout(timeout)
                 .build(),
             base: base.trim_end_matches('/').to_string(),
             profile: None,
@@ -300,6 +518,52 @@ impl Client {
         Ok(list.profiles)
     }
 
+    pub fn rename_profile(&self, id: i64, name: &str) -> Result<Profile, String> {
+        self.request_json(
+            "PATCH",
+            &format!("/api/profiles/{id}"),
+            Some(serde_json::json!({ "name": name })),
+        )
+    }
+
+    pub fn set_profile_avatar(
+        &self,
+        id: i64,
+        content_type: &str,
+        data: &[u8],
+    ) -> Result<Profile, String> {
+        let path = format!("/api/profiles/{id}/avatar");
+        let response = match self
+            .agent
+            .put(&self.url(&path))
+            .set("Content-Type", content_type)
+            .send_bytes(data)
+        {
+            Ok(response) => response,
+            Err(ureq::Error::Status(_, response)) => response,
+            Err(error) => return Err(format!("{path}: {error}")),
+        };
+        response
+            .into_json::<Profile>()
+            .map_err(|e| format!("{path}: the answer was not the JSON this player expects: {e}"))
+    }
+
+    pub fn clear_profile_avatar(&self, id: i64) -> Result<Profile, String> {
+        self.request_json("DELETE", &format!("/api/profiles/{id}/avatar"), None)
+    }
+
+    pub fn update_status(&self) -> Result<UpdateStatus, String> {
+        self.get_json("/api/update")
+    }
+
+    pub fn check_update(&self) -> Result<UpdateStatus, String> {
+        self.post_json("/api/update/check")
+    }
+
+    pub fn apply_update(&self) -> Result<UpdateStatus, String> {
+        self.post_json("/api/update/apply")
+    }
+
     pub fn movies(&self, limit: u32, offset: u32) -> Result<Vec<Movie>, String> {
         let mut list: MovieList = self.get_json(&format!("/api/library/movies?limit={limit}&offset={offset}"))?;
         for movie in &mut list.movies {
@@ -334,6 +598,69 @@ impl Client {
         Ok(movie)
     }
 
+    pub fn series(&self) -> Result<Vec<Series>, String> {
+        let mut list: SeriesList = self.get_json("/api/library/series?limit=500&offset=0")?;
+        for series in &mut list.series {
+            series.resolve_artwork(&self.base);
+        }
+        Ok(list.series)
+    }
+
+    pub fn series_detail(&self, id: i64) -> Result<Series, String> {
+        let mut series: Series = self.get_json(&format!("/api/library/series/{id}"))?;
+        series.resolve_artwork(&self.base);
+        Ok(series)
+    }
+
+    /// The home screen: one hero and the short rows the server built, in the
+    /// order it built them.
+    ///
+    /// The hero is drawn across most of the window, so its backdrop is
+    /// resolved again at w1280 - the w780 a card lives on would be soft at
+    /// that size. Everything else stays on the card sizes.
+    pub fn home(&self) -> Result<HomeScreen, String> {
+        let mut home: HomeScreen = self.get_json("/api/library/home")?;
+        if let Some(hero) = &mut home.hero {
+            hero.resolve_artwork(&self.base);
+            hero.backdrop_url = image_url(&self.base, &hero.metadata.backdrop_path, "w1280");
+        }
+        for row in &mut home.rows {
+            for movie in &mut row.movies {
+                movie.resolve_artwork(&self.base);
+            }
+        }
+        Ok(home)
+    }
+
+    /// The series half of the home screen: episodes to continue, shows that
+    /// are new.
+    pub fn series_home(&self) -> Result<SeriesHome, String> {
+        let mut home: SeriesHome = self.get_json("/api/library/series/home")?;
+        for episode in &mut home.continue_watching {
+            episode.resolve_artwork(&self.base);
+        }
+        for series in &mut home.recent_series {
+            series.resolve_artwork(&self.base);
+        }
+        Ok(home)
+    }
+
+    pub fn season(&self, series_id: i64, season_number: i32) -> Result<Season, String> {
+        let mut season: Season = self.get_json(&format!(
+            "/api/library/series/{series_id}/seasons/{season_number}"
+        ))?;
+        for episode in &mut season.items {
+            episode.resolve_artwork(&self.base);
+        }
+        Ok(season)
+    }
+
+    pub fn episode(&self, id: i64) -> Result<EpisodeItem, String> {
+        let mut episode: EpisodeItem = self.get_json(&format!("/api/library/episodes/{id}"))?;
+        episode.resolve_artwork(&self.base);
+        Ok(episode)
+    }
+
     /// The URL mpv should open. Handing mpv the URL rather than streaming
     /// through this process is deliberate: mpv does its own range requests,
     /// buffering and seeking, and it is better at all three than anything
@@ -342,10 +669,26 @@ impl Client {
         self.url(&format!("/api/stream/{movie_id}/files/{file_id}"))
     }
 
+    pub fn episode_stream_url(&self, episode_id: i64, file_id: i64) -> String {
+        self.url(&format!(
+            "/api/library/episodes/{episode_id}/files/{file_id}/stream"
+        ))
+    }
+
     /// How the server will deliver one file, and what can be chosen while
     /// watching it. Also the call that refreshes the sidecar subtitle list.
     pub fn stream_info(&self, movie_id: i64, file_id: i64) -> Result<StreamInfo, String> {
         self.get_json(&format!("/api/stream/{movie_id}/files/{file_id}/info"))
+    }
+
+    pub fn episode_stream_info(
+        &self,
+        episode_id: i64,
+        file_id: i64,
+    ) -> Result<StreamInfo, String> {
+        self.get_json(&format!(
+            "/api/library/episodes/{episode_id}/files/{file_id}/stream/info"
+        ))
     }
 
     /// One subtitle track as WebVTT, which is what the server serves and what
@@ -358,6 +701,17 @@ impl Client {
     pub fn subtitle_url(&self, movie_id: i64, file_id: i64, track_id: i64) -> String {
         self.url(&format!(
             "/api/library/movies/{movie_id}/files/{file_id}/subtitles/{track_id}"
+        ))
+    }
+
+    pub fn episode_subtitle_url(
+        &self,
+        episode_id: i64,
+        file_id: i64,
+        track_id: i64,
+    ) -> String {
+        self.url(&format!(
+            "/api/library/episodes/{episode_id}/files/{file_id}/subtitles/{track_id}"
         ))
     }
 
@@ -379,6 +733,24 @@ impl Client {
             .map_err(|e| format!("saving progress: {e}"))
     }
 
+    pub fn save_episode_progress(
+        &self,
+        episode_id: i64,
+        position_seconds: f64,
+        duration_seconds: f64,
+    ) -> Result<(), String> {
+        let body = serde_json::json!({
+            "position_seconds": position_seconds,
+            "duration_seconds": duration_seconds,
+        });
+        self.agent
+            .put(&self.url(&format!("/api/library/episodes/{episode_id}/progress")))
+            .set("Content-Type", "application/json")
+            .send_json(body)
+            .map(|_| ())
+            .map_err(|e| format!("saving episode progress: {e}"))
+    }
+
     fn get_json<T: serde::de::DeserializeOwned>(&self, path: &str) -> Result<T, String> {
         self.agent
             .get(&self.url(path))
@@ -387,6 +759,53 @@ impl Client {
             .into_json::<T>()
             .map_err(|e| format!("{path}: the answer was not the JSON this player expects: {e}"))
     }
+
+    /// Update application may legitimately answer 409 (playback in progress)
+    /// or 500 while still returning the useful structured updater state. Keep
+    /// that body instead of flattening it into an opaque HTTP error.
+    fn post_json<T: serde::de::DeserializeOwned>(&self, path: &str) -> Result<T, String> {
+        let response = match self.agent.post(&self.url(path)).call() {
+            Ok(response) => response,
+            Err(ureq::Error::Status(_, response)) => response,
+            Err(error) => return Err(format!("{path}: {error}")),
+        };
+        response
+            .into_json::<T>()
+            .map_err(|e| format!("{path}: the answer was not the JSON this player expects: {e}"))
+    }
+
+    fn request_json<T: serde::de::DeserializeOwned>(
+        &self,
+        method: &str,
+        path: &str,
+        body: Option<serde_json::Value>,
+    ) -> Result<T, String> {
+        let request = self
+            .agent
+            .request(method, &self.url(path))
+            .set("Content-Type", "application/json");
+        let response = match body {
+            Some(body) => request.send_json(body),
+            None => request.call(),
+        };
+        let response = match response {
+            Ok(response) => response,
+            Err(ureq::Error::Status(_, response)) => response,
+            Err(error) => return Err(format!("{path}: {error}")),
+        };
+        response
+            .into_json::<T>()
+            .map_err(|e| format!("{path}: the answer was not the JSON this player expects: {e}"))
+    }
+}
+
+/// A bounded health probe for startup orchestration.
+///
+/// It deliberately does not mutate the connected client. The OSD owns the
+/// decision to connect; this only answers whether an all-in-one server is ready
+/// to receive that connection.
+pub fn reachable(base: &str, timeout: Duration) -> bool {
+    Client::with_timeout(base, timeout).health().is_ok()
 }
 
 #[cfg(test)]
@@ -422,7 +841,7 @@ mod tests {
     fn a_card_is_drawn_from_the_backdrop_at_the_width_a_card_shows() {
         let mut movie: Movie = serde_json::from_str(
             r#"{"id":4,"title":"Multi Track","year":2021,
-                "metadata":{"title":"Multi Track","poster_path":"/p.jpg","backdrop_path":"/b.jpg"},
+                "metadata":{"tmdb_title":"Le film traduit","poster_path":"/p.jpg","backdrop_path":"/b.jpg"},
                 "progress":{"position_seconds":0,"finished":false}}"#,
         )
         .expect("the server's own shape should parse");
@@ -430,6 +849,10 @@ mod tests {
         // The paths arrive with a leading slash, as TMDB writes them, and the
         // URL must not end up with two.
         movie.resolve_artwork("http://host:8395/");
+        assert_eq!(movie.metadata.title, "Le film traduit");
+        let card = serde_json::to_value(&movie).expect("the player card should serialize");
+        assert_eq!(card["metadata"]["title"], "Le film traduit");
+        assert!(card["metadata"].get("tmdb_title").is_none());
         assert_eq!(movie.backdrop_url, "http://host:8395/api/images/w780/b.jpg");
         assert_eq!(movie.poster_url, "http://host:8395/api/images/w500/p.jpg");
     }

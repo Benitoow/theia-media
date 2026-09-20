@@ -116,6 +116,75 @@ const MOVIES = [
 	},
 ];
 
+const SERIES = [
+	{
+		id: 9,
+		title: 'Shogun',
+		year: 2024,
+		metadata: { name: 'Shōgun', backdrop_path: '/shogun.jpg' },
+		backdrop_url: '/api/images/w780/shogun.jpg',
+		poster_url: '/api/images/w500/shogun-poster.jpg',
+	},
+];
+
+const SERIES_DETAIL = {
+	...SERIES[0],
+	seasons: [{ id: 91, series_id: 9, season_number: 1, metadata: { name: 'Saison 1', episode_count: 2 } }],
+};
+
+const SEASON = {
+	id: 91,
+	series_id: 9,
+	season_number: 1,
+	metadata: { name: 'Saison 1', episode_count: 2 },
+	episodes: [
+		{
+			id: 901,
+			series_id: 9,
+			series_title: 'Shogun',
+			season_number: 1,
+			episode_numbers: [1],
+			episode_metadata: [
+				{ id: 901, episode_number: 1, local_title: 'Anjin', metadata: { name: "L'Anjin", runtime_minutes: 71 } },
+			],
+			still_url: '/api/images/w780/anjin.jpg',
+			progress: { position_seconds: 420, duration_seconds: 4260, finished: false },
+		},
+		{
+			id: 902,
+			series_id: 9,
+			series_title: 'Shogun',
+			season_number: 1,
+			episode_numbers: [2],
+			episode_metadata: [
+				{ id: 902, episode_number: 2, local_title: 'Servants', metadata: { name: 'Serviteurs de deux maîtres', runtime_minutes: 60 } },
+			],
+			still_url: '/api/images/w780/servants.jpg',
+			progress: { position_seconds: 0, duration_seconds: 3600, finished: false },
+		},
+	],
+};
+
+// The home screen, which is where the player opens now. The hero is the film
+// that was left - the same part-watched fixture the grid carries - and every
+// row the server can build appears at least once, films and series alike, so
+// the composition is checked in one shape rather than assumed.
+const HOME = {
+	hero: MOVIES[2],
+	hero_kind: 'resume',
+	rows: [
+		{ kind: 'continue', movies: [MOVIES[2]] },
+		{ kind: 'recent', movies: [MOVIES[0], MOVIES[4]] },
+		{ kind: 'tonight', movies: [MOVIES[1]] },
+	],
+	total: MOVIES.length,
+};
+
+const SERIES_HOME = {
+	continue_watching: [SEASON.episodes[0]],
+	recent_series: [SERIES[0]],
+};
+
 const browser = await chromium.launch();
 let failures = 0;
 
@@ -167,7 +236,7 @@ async function assertFits(page, state) {
 //   3. the stylesheet actually uses the family, and the element that should wear
 //      it does not resolve past it.
 const OSD_FACES = [
-	{ family: 'Cinzel Variable', used: '.library-title' },
+	{ family: 'Cinzel Variable', used: '.library-title, .home-hero-title' },
 	{ family: 'Jost Variable', used: '.label' },
 ];
 
@@ -296,7 +365,7 @@ async function assertTypingIsNotShortcuts(page, address) {
 		failures++;
 	}
 	const lang = await page.evaluate(() => document.documentElement.lang);
-	if (lang !== 'fr') {
+	if (lang !== 'en') {
 		console.error(`typing the address changed the interface language to "${lang}"`);
 		failures++;
 	}
@@ -399,22 +468,12 @@ async function assertOnePressOneCommand(page) {
 	}
 }
 
-// The pointer is visible unless the furniture has deliberately gone.
+// The pointer stays stable while the furniture fades.
 //
-// Design system 6b: the furniture hides after three seconds and "takes the
-// cursor with it". Everywhere else - the connect screen, the library panel while
-// nothing plays, and any moment a person is actually pointing at something - the
-// pointer has to be there. The shipped build set `cursor: none` on `html, body`
-// unconditionally, so a viewer who had not started a film yet had no pointer at
-// all, and the library panel was unusable with a mouse.
-//
-// A simulation answers the CSS half: whether the element a person is actually
-// pointing at resolves to `none`, which is the only form of the question that can
-// be answered without a WebView2. Whether the platform draws a pointer on top of
-// that anyway is a Windows question, and a probe measures it outside this file:
-// after the rule moved to the root, the pointer was read hidden in 15 samples of
-// 48 over a real film, against 2 of 37 before. The flicker that remains is
-// recorded in docs/v3.3.md as an open fault rather than described as solved.
+// WebView2 was measured redrawing a CSS-hidden cursor every four to five seconds,
+// which is worse than leaving it visible: the viewer sees a perpetual flicker.
+// Until the native surface can own the cursor state, no player state may resolve
+// it to `none`.
 async function assertCursorFollowsFurniture(page) {
 	// The pointer sits in the middle of the picture for the whole of this check,
 	// because that is where a viewer leaves it. `underPointer` is the question a
@@ -482,23 +541,22 @@ async function assertCursorFollowsFurniture(page) {
 		failures++;
 	}
 
-	// (c) a film playing and left alone: the furniture goes, and takes the
-	//     pointer with it.
+	// (c) a film playing and left alone: the furniture goes, the pointer stays.
 	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
 	await page.mouse.move(640, 360);
 	await page.waitForTimeout(3800);
 	const hidden = await settled();
 	if (hidden.idle !== 'true') {
-		console.error('the furniture did not hide, so the pointer rule cannot be judged');
+		console.error('the furniture did not hide, so the stable-pointer rule cannot be judged');
 		failures++;
-	} else if (hidden.html !== 'none' && hidden.osd !== 'none') {
-		console.error(`the furniture hid but the pointer stayed (html=${hidden.html} osd=${hidden.osd})`);
-		failures++;
-	} else if (hidden.underPointerCursor !== 'none') {
-		// The half that was missing. The furniture hid, some element declared
-		// `none`, and the element a person is actually pointing at did not.
+	} else if (
+		hidden.html === 'none' ||
+		hidden.body === 'none' ||
+		hidden.osd === 'none' ||
+		hidden.underPointerCursor === 'none'
+	) {
 		console.error(
-			`the furniture hid but the element under the pointer (${hidden.underPointer}) resolves "${hidden.underPointerCursor}" - declared none: html=${hidden.html} body=${hidden.body} osd=${hidden.osd}`
+			`the furniture hid and reintroduced cursor flicker over ${hidden.underPointer}: html=${hidden.html} body=${hidden.body} osd=${hidden.osd} under=${hidden.underPointerCursor}`
 		);
 		failures++;
 	}
@@ -552,16 +610,8 @@ async function assertCursorFollowsFurniture(page) {
 		failures++;
 	}
 
-	// There was a native half of this until decision 125 - `player_set_cursor`,
-	// which called `ShowCursor` - and this used to assert that the OSD asked for it
-	// at the right moments. It is gone, and the history is worth two lines because
-	// the reason was measured rather than preferred: the counter read -1 while
-	// Windows reported the pointer showing in 59 samples out of 59, and a
-	// window-procedure hook answering `WM_SETCURSOR` received fifteen messages and
-	// no `WM_SETCURSOR` at all, because the window that decides belongs to the
-	// WebView2 process. What is asserted above is now the whole rule rather than
-	// half of a contract: the element under the pointer resolves to `none` while
-	// the furniture is idle, and does not while it is not.
+	// Native and CSS hiding have both been measured as unable to hold on WebView2.
+	// The assertion above therefore has one answer in every state: never `none`.
 }
 
 // Every state in which the furniture must stay, whatever the timer thinks.
@@ -750,6 +800,11 @@ async function assertEscapeLeavesFullscreenFirst(page) {
 		failures++;
 		return;
 	}
+	const fullscreenPressed = await page.locator('button[aria-pressed="true"]').count();
+	if (fullscreenPressed !== 1) {
+		console.error(`fullscreen state changed but ${fullscreenPressed} control(s) expose aria-pressed=true`);
+		failures++;
+	}
 
 	// (b) one Escape gives the window back and keeps the film.
 	await page.keyboard.press('Escape');
@@ -764,14 +819,27 @@ async function assertEscapeLeavesFullscreenFirst(page) {
 		console.error(`Escape did not leave fullscreen: ${JSON.stringify(now)}`);
 		failures++;
 	}
+	if ((await page.locator('button[aria-pressed="true"]').count()) !== 0) {
+		console.error('the fullscreen control still exposes its active state after Escape left fullscreen');
+		failures++;
+	}
 
-	// (c) and the next Escape closes the player, so the sequence ends where a
-	//     viewer expects rather than leaving a window nothing can close.
+	// (c) and the next Escape returns to the library without killing the player.
 	await page.keyboard.press('Escape');
 	await page.waitForTimeout(300);
-	now = await state();
-	if (!now.closed) {
-		console.error(`the second Escape did not close the player: ${JSON.stringify(now)}`);
+	const returned = await page.evaluate(() => ({
+		closed: window.__windowClosed === true,
+		stopped: (window.__commands ?? []).includes('player_stop'),
+		library: document.querySelector('.library-title')?.textContent?.trim() ?? null,
+	}));
+	if (returned.closed || !returned.stopped || !returned.library) {
+		console.error(`the second Escape did not return to the library: ${JSON.stringify(returned)}`);
+		failures++;
+	}
+	await page.keyboard.press('Escape');
+	await page.waitForTimeout(150);
+	if (await page.evaluate(() => window.__windowClosed === true)) {
+		console.error('Escape from the library closed the desktop application');
 		failures++;
 	}
 
@@ -783,6 +851,7 @@ async function assertEscapeLeavesFullscreenFirst(page) {
 		window.__fullscreen = true;
 		window.__windowClosed = false;
 	});
+	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
 	await page.evaluate(() => window.__handlers['tauri://resize']?.({ payload: null }));
 	await page.waitForTimeout(200);
 	await page.locator('button[aria-haspopup=menu]').click();
@@ -895,7 +964,6 @@ async function assertNoFilmNoBar(page) {
 // behaviour given an answer - not that an answer arrives. A real server on a
 // real network is the other half, and it is not claimed here.
 async function assertDiscovery(page, { expect }) {
-	await page.click('button.action--quiet');
 	await page.waitForTimeout(500);
 	const commands = await page.evaluate(() => window.__commands ?? []);
 	const discovered = await page.locator('.servers li button').count();
@@ -905,7 +973,7 @@ async function assertDiscovery(page, { expect }) {
 		busy: !!document.querySelector('button[type=submit][disabled]'),
 	}));
 	if (!commands.includes('player_discover')) {
-		console.error(`"Find a server" issued ${JSON.stringify(commands)} - player_discover was never asked`);
+		console.error(`startup issued ${JSON.stringify(commands)} - player_discover was never asked`);
 		failures++;
 	}
 	if (expect === 'one' && !commands.includes('player_connect')) {
@@ -1072,7 +1140,7 @@ async function assertClock(page) {
 // restart, because a player that forgets it every time is a player somebody has
 // to correct every time.
 //
-// French is the default and English ships complete; `check:i18n` guards parity,
+// English is the default and French ships complete; `check:i18n` guards parity,
 // and this guards that either catalogue is actually reachable.
 async function assertLanguages(page, url) {
 	const readingOf = () =>
@@ -1091,38 +1159,38 @@ async function assertLanguages(page, url) {
 			})(),
 		}));
 
-	const fr = await readingOf();
-	if (fr.htmlLang !== 'fr') {
-		console.error(`the OSD starts in "${fr.htmlLang}" instead of French, which is the default`);
+	const en = await readingOf();
+	if (en.htmlLang !== 'en') {
+		console.error(`the OSD starts in "${en.htmlLang}" instead of English, which is the default`);
 		failures++;
 	}
-	if (fr.chip !== 'FR') {
-		console.error(`the language chip reads "${fr.chip}" in French, expected "FR"`);
+	if (en.chip !== 'EN') {
+		console.error(`the language chip reads "${en.chip}" in English, expected "EN"`);
 		failures++;
 	}
 
 	// The switch itself, from the header control, with no reload.
 	await page.click('.control--language');
 	await page.waitForTimeout(300);
-	const en = await readingOf();
-	if (en.htmlLang !== 'en') {
-		console.error(`switching to English left document.lang at "${en.htmlLang}"`);
+	const fr = await readingOf();
+	if (fr.htmlLang !== 'fr') {
+		console.error(`switching to French left document.lang at "${fr.htmlLang}"`);
 		failures++;
 	}
-	if (en.title === fr.title) {
-		console.error(`the visible copy did not change with the language: still "${en.title}"`);
+	if (fr.title === en.title) {
+		console.error(`the visible copy did not change with the language: still "${fr.title}"`);
 		failures++;
 	}
-	if (en.chip !== 'EN') {
-		console.error(`the language chip reads "${en.chip}" after switching, expected "EN"`);
+	if (fr.chip !== 'FR') {
+		console.error(`the language chip reads "${fr.chip}" after switching, expected "FR"`);
 		failures++;
 	}
-	if (en.stored !== 'en') {
-		console.error(`the chosen language was not stored (localStorage holds "${en.stored}"), so it will not survive a restart`);
+	if (fr.stored !== 'fr') {
+		console.error(`the chosen language was not stored (localStorage holds "${fr.stored}"), so it will not survive a restart`);
 		failures++;
 	}
-	if (!en.title || !en.connect || !en.addressLabel) {
-		console.error('a sentence is missing in English: the catalogue is not complete on screen');
+	if (!fr.title || !fr.connect || !fr.addressLabel) {
+		console.error('a sentence is missing in French: the catalogue is not complete on screen');
 		failures++;
 	}
 
@@ -1130,8 +1198,8 @@ async function assertLanguages(page, url) {
 	await page.click('.control--language');
 	await page.waitForTimeout(300);
 	const back = await readingOf();
-	if (back.htmlLang !== 'fr' || back.title !== fr.title) {
-		console.error(`switching back to French did not restore it: lang=${back.htmlLang} title="${back.title}"`);
+	if (back.htmlLang !== 'en' || back.title !== en.title) {
+		console.error(`switching back to English did not restore it: lang=${back.htmlLang} title="${back.title}"`);
 		failures++;
 	}
 
@@ -1139,10 +1207,10 @@ async function assertLanguages(page, url) {
 	// reload and not a new browser context: a context has its own empty storage,
 	// and the first version of this asked a brand-new context to remember
 	// something it had never been told. The reload happens while the interface is
-	// French and the store says English, so only reading the store at startup can
-	// produce an English page.
+	// English and the store says French, so only reading the store at startup can
+	// produce a French page.
 	await page.evaluate(() => {
-		localStorage.setItem('theia.player.language', 'en');
+		localStorage.setItem('theia.player.language', 'fr');
 	});
 	await page.reload({ waitUntil: 'networkidle' });
 	await page.waitForTimeout(400);
@@ -1150,12 +1218,12 @@ async function assertLanguages(page, url) {
 		htmlLang: document.documentElement.lang,
 		title: document.querySelector('.library-title')?.textContent?.trim() ?? null,
 	}));
-	if (restarted.htmlLang !== 'en') {
+	if (restarted.htmlLang !== 'fr') {
 		console.error(`the stored language was not honoured on a fresh load: document.lang is "${restarted.htmlLang}"`);
 		failures++;
 	}
-	if (!restarted.title || restarted.title === fr.title) {
-		console.error(`a fresh load with English stored still draws French: "${restarted.title}"`);
+	if (!restarted.title || restarted.title === en.title) {
+		console.error(`a fresh load with French stored still draws English: "${restarted.title}"`);
 		failures++;
 	}
 }
@@ -1287,8 +1355,26 @@ async function showFilm(page) {
 	}, FRAME);
 }
 
-async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = false, discovered = [] } = {}) {
-	const page = await browser.newPage({ viewport });
+async function openPage(
+	viewport,
+	{
+		tracks = TRACKS,
+		movies = MOVIES,
+		series = SERIES,
+		seriesDetail = SERIES_DETAIL,
+		season = SEASON,
+		home = HOME,
+		seriesHome = SERIES_HOME,
+		frame = false,
+		discovered = [],
+		// Pinned, not inherited: the host's own locale used to decide the
+		// default language, so a French machine and an English one checked
+		// different products. en-US here, fr-FR where the system-French rule
+		// is the point.
+		locale = 'en-US',
+	} = {}
+) {
+	const page = await browser.newPage({ viewport, locale });
 
 	// The artwork is served by a real server the harness does not have. Answering
 	// the requests keeps the cards at the size they will really be: a dead image
@@ -1301,8 +1387,13 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	}
 
 	await page.addInitScript(
-		({ tracks, movies, status, discovered }) => {
+		({ tracks, movies, series, seriesDetail, season, status, discovered, home, seriesHome }) => {
 			window.__handlers = {};
+			window.__profiles = [
+				{ id: 1, name: 'Alex', is_default: true, has_avatar: false, avatar_version: 0 },
+				{ id: 2, name: 'Lina', is_default: false, has_avatar: false, avatar_version: 0 },
+				{ id: 3, name: 'Invités', is_default: false, has_avatar: false, avatar_version: 0 },
+			];
 			// Every command the OSD asks Rust for is recorded, because "one press
 			// is one command" and "typing is not a shortcut" are counts, not
 			// opinions. A failure that says only "the click did something" would
@@ -1318,9 +1409,41 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 				core: {
 					invoke: async (cmd, args) => {
 						window.__commands.push(cmd);
+						if (cmd === 'player_local_server') return null;
 						if (cmd === 'player_tracks') return JSON.stringify(tracks);
 						if (cmd === 'player_library') return JSON.stringify(movies);
+						if (cmd === 'player_series') return JSON.stringify(series);
+						if (cmd === 'player_home') return JSON.stringify(home);
+						if (cmd === 'player_series_home') return JSON.stringify(seriesHome);
+						if (cmd === 'player_series_detail') return JSON.stringify(seriesDetail);
+						if (cmd === 'player_season') return JSON.stringify(season);
 						if (cmd === 'player_discover') return JSON.stringify(discovered);
+						if (cmd === 'player_set_profile') return null;
+						if (cmd === 'player_profile_rename') {
+							const profile = window.__profiles.find((entry) => entry.id === Number(args?.id));
+							profile.name = String(args?.name || '').trim();
+							return JSON.stringify(profile);
+						}
+						if (cmd === 'player_profile_set_avatar') {
+							const profile = window.__profiles.find((entry) => entry.id === Number(args?.id));
+							profile.has_avatar = true;
+							profile.avatar_version += 1;
+							return JSON.stringify(profile);
+						}
+						if (cmd === 'player_profile_clear_avatar') {
+							const profile = window.__profiles.find((entry) => entry.id === Number(args?.id));
+							profile.has_avatar = false;
+							profile.avatar_version += 1;
+							return JSON.stringify(profile);
+						}
+						if (cmd === 'player_update_status' || cmd === 'player_update_check') return JSON.stringify({
+							state: 'available', current_version: '3.3.0', latest_version: '3.3.1', available: true,
+							message: 'Theia 3.3.1 est prête à être installée.',
+						});
+						if (cmd === 'player_update_apply') return JSON.stringify({
+							state: 'ready', current_version: '3.3.0', latest_version: '3.3.1', available: false,
+							message: 'Mise à jour téléchargée.',
+						});
 						if (cmd === 'player_connect') {
 							// A failure has to be reachable on demand: the sentences a
 							// person reads when something is wrong are as much a part of
@@ -1330,7 +1453,7 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 								url: 'http://127.0.0.1:8395',
 								health: { status: 'ok', version: 'dev', uptime_seconds: 12 },
 								profile: 1,
-								profiles: [{ id: 1, name: '', is_default: true }],
+								profiles: window.__profiles,
 							});
 						}
 						return '{}';
@@ -1344,6 +1467,11 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 				},
 				window: {
 					getCurrentWindow: () => ({
+						minimize() {},
+						toggleMaximize: async () => {
+							window.__maximized = !window.__maximized;
+						},
+						isMaximized: async () => window.__maximized === true,
 						close() {
 							window.__windowClosed = true;
 						},
@@ -1361,13 +1489,44 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 			};
 			window.__status = status;
 		},
-		{ tracks, movies, status: STATUS, discovered }
+		{ tracks, movies, series, seriesDetail, season, status: STATUS, discovered, home, seriesHome }
 	);
 	await page.goto(URL, { waitUntil: 'networkidle' });
 	await page.waitForTimeout(400);
 
 	await addBackdrop(page, { frame });
 	return page;
+}
+
+async function assertSeriesJourney(page) {
+	await page.fill('#theia-address', 'http://127.0.0.1:8395');
+	await page.click('button[type=submit]');
+	await page.waitForTimeout(350);
+	await page.getByRole('button', { name: 'Series', exact: true }).click();
+	await page.waitForTimeout(650);
+	if ((await page.locator('.film-name', { hasText: 'Shōgun' }).count()) !== 1) {
+		console.error('the series tab did not draw the series catalogue');
+		failures++;
+		return;
+	}
+	await page.getByRole('button', { name: /Open series.*Shōgun/ }).click();
+	await page.waitForTimeout(650);
+	const episodes = await page.locator('.films > li').count();
+	if (episodes !== 2) {
+		console.error(`opening Shōgun drew ${episodes} episodes, expected 2`);
+		failures++;
+	}
+	await assertFits(page, 'the native series and episode library');
+	await page.screenshot({ path: join(OUT, '8-series-library.png') });
+	await page.evaluate(() => {
+		window.__commands = [];
+	});
+	await page.getByRole('button', { name: /Play episode.*S01E01/ }).click();
+	const commands = await page.evaluate(() => window.__commands ?? []);
+	if (!commands.includes('player_play_episode')) {
+		console.error(`pressing an episode issued ${commands.join(', ') || 'no command'}`);
+		failures++;
+	}
 }
 
 // 0. The connect screen at the widths a high-DPI window really has.
@@ -1410,6 +1569,45 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	await page.fill('#theia-address', 'http://127.0.0.1:8395');
 	await page.click('button[type=submit]');
 	await page.waitForTimeout(600);
+	// The submit button's screen position becomes a card after connection. Move
+	// the pointer away before judging the library at rest or the preview delay.
+	// The screen the player opens on is the home now: a hero for the film that
+	// was left, with what is left of it, then the server's rows. Checked before
+	// anything navigates away from it.
+	await page.screenshot({ path: join(OUT, '1-home.png') });
+	const heroTitle = await page.locator('.home-hero-title').innerText();
+	if (heroTitle !== 'Resume Test') {
+		console.error(`the home hero shows "${heroTitle}", expected the part-watched film`);
+		failures++;
+	}
+	const eyebrow = await page.locator('.home-hero-eyebrow').textContent();
+	if (eyebrow !== 'You were watching') {
+		console.error(`the home hero's eyebrow reads "${eyebrow}", expected the resume sentence`);
+		failures++;
+	}
+	if ((await page.locator('.home-hero-progress-played').count()) !== 1) {
+		console.error('the home hero drew no progress bar for a film under way');
+		failures++;
+	}
+	const homeRows = await page.locator('.home-row').count();
+	if (homeRows !== HOME.rows.length + 2) {
+		console.error(`the home drew ${homeRows} rows, expected ${HOME.rows.length + 2} (three film rows and two series rows)`);
+		failures++;
+	}
+	// A series row names the series on its card, not the episode code: the only
+	// thing that tells somebody which show they were continuing.
+	if ((await page.locator('.home-row', { hasText: 'Continue a series' }).locator('.film-name', { hasText: 'Shogun' }).count()) !== 1) {
+		console.error('the series continue row does not name the series on its card');
+		failures++;
+	}
+	await assertFits(page, 'the home screen');
+
+	// Then the film grid keeps its own page, where the whole instrument below
+	// has always run.
+	await page.getByRole('button', { name: 'Movies', exact: true }).click();
+	await page.waitForTimeout(260);
+	await page.mouse.move(1275, 25);
+	await page.waitForTimeout(220);
 	await page.screenshot({ path: join(OUT, '1-library.png') });
 
 	const films = await page.locator('.film').count();
@@ -1419,18 +1617,19 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	}
 
 	// Section 6.1's fallbacks, in order: the backdrop covering the frame, the
-	// poster contained in it, then the title as text. Never a broken image.
-	const covers = await page.locator('.film-art img:not(.film-art--poster)').count();
+	// poster contained in it, then the not-found plate. Never a broken image,
+	// never a bare letter.
+	const covers = await page.locator('.film-art img:not(.film-art--poster):not([src*="media-not-found"])').count();
 	const contained = await page.locator('.film-art img.film-art--poster').count();
-	const asText = await page.locator('.film-art-title').count();
+	const notFound = await page.locator('.film-art img[src*="media-not-found"]').count();
 	const noArtwork = MOVIES.filter((m) => !m.backdrop_url && !m.poster_url).length;
 	if (covers !== MOVIES.length - noArtwork - 1) {
 		console.error(`drew ${covers} backdrop cards, expected ${MOVIES.length - noArtwork - 1}`);
 		failures++;
 	}
-	if (contained !== 1 || asText !== noArtwork) {
+	if (contained !== 1 || notFound !== noArtwork) {
 		console.error(
-			`fallbacks drawn are wrong: ${contained} contained poster(s) and ${asText} text card(s), expected 1 and ${noArtwork}`
+			`fallbacks drawn are wrong: ${contained} contained poster(s) and ${notFound} not-found plate(s), expected 1 and ${noArtwork}`
 		);
 		failures++;
 	}
@@ -1459,7 +1658,155 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 		console.error(`offered to resume ${resumed} films, expected 1`);
 		failures++;
 	}
+
+	// The desktop-only preview waits long enough to avoid drive-by flashes, then
+	// overlays rather than reflowing the grid. It must also stay inside the
+	// window and offer the same path to a keyboard user.
+	const firstCard = page.locator('.film').first();
+	const beforePreview = await page.locator('.film-art').evaluateAll((els) =>
+		els.map((el) => [el.offsetLeft, el.offsetTop, el.offsetWidth, el.offsetHeight])
+	);
+	await firstCard.hover();
+	await page.waitForTimeout(100);
+	if ((await page.locator('.media-preview').count()) !== 0) {
+		console.error('the rich card preview opened before its 150ms minimum delay');
+		failures++;
+	}
+	await page.waitForTimeout(130);
+	if ((await page.locator('.media-preview').count()) !== 1) {
+		console.error('the rich card preview did not open after the 190ms hover delay');
+		failures++;
+	} else {
+		const bounds = await page.locator('.media-preview').evaluate((el) => {
+			const rect = el.getBoundingClientRect();
+			return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height };
+		});
+		if (bounds.left < 0 || bounds.top < 0 || bounds.right > 1280 || bounds.bottom > 720 || bounds.width / bounds.height < 1.7) {
+			console.error(`the rich preview is not an edge-safe horizontal banner: ${JSON.stringify(bounds)}`);
+			failures++;
+		}
+		const afterPreview = await page.locator('.film-art').evaluateAll((els) =>
+			els.map((el) => [el.offsetLeft, el.offsetTop, el.offsetWidth, el.offsetHeight])
+		);
+		if (JSON.stringify(beforePreview) !== JSON.stringify(afterPreview)) {
+			console.error('opening the rich card preview shifted the underlying grid');
+			failures++;
+		}
+		await page.screenshot({ path: join(OUT, '1-card-preview.png') });
+	}
+	await page.mouse.move(1275, 715);
+	await page.waitForTimeout(180);
+	await firstCard.focus();
+	await page.waitForTimeout(40);
+	if ((await page.locator('.media-preview').count()) !== 1) {
+		console.error('keyboard focus did not open the same rich card preview');
+		failures++;
+	}
+	await page.keyboard.press('Escape');
+	await page.waitForTimeout(260);
+	const previewFocusReturned = await firstCard.evaluate((el) => document.activeElement === el);
+	if ((await page.locator('.media-preview').count()) !== 0 || !previewFocusReturned) {
+		console.error('Escape did not close the rich preview and return focus to its card');
+		failures++;
+	}
+
+	// The island carries the whole information architecture, including the two
+	// actions that were missing from the first native pass. The notification is
+	// state, not decoration: it appears because the mocked server reports 3.3.1.
+	for (const label of ['Home', 'Movies', 'Series', 'Search', 'Profiles']) {
+		// Anchored: the wordmark's own accessible name is "THEIA – Home", and
+		// a substring match would count two destinations where there is one.
+		if ((await page.getByRole('button', { name: new RegExp(`^${label}$`) }).count()) !== 1) {
+			console.error(`the desktop island is missing its ${label} destination`);
+			failures++;
+		}
+	}
+	if ((await page.locator('.nav-brand', { hasText: 'THEIA' }).count()) !== 1 || (await page.locator('.nav-update-badge', { hasText: '1' }).count()) !== 1) {
+		console.error('the desktop island is missing the THEIA mark or the server-driven update badge');
+		failures++;
+	}
+
+	await page.getByRole('button', { name: 'Search', exact: true }).click();
+	const searchInput = page.getByPlaceholder(/Un film|A movie/);
+	await searchInput.waitFor({ state: 'visible' });
+	const searchLayers = await page.evaluate(() => ({
+		library: Number.parseInt(getComputedStyle(document.querySelector('.library')).zIndex, 10),
+		wallpaper: Number.parseInt(getComputedStyle(document.querySelector('.osd--library'), '::after').zIndex, 10),
+	}));
+	if (!Number.isFinite(searchLayers.library) || !Number.isFinite(searchLayers.wallpaper) || searchLayers.library <= searchLayers.wallpaper) {
+		console.error(`the search wallpaper is painting over the readable interface: ${JSON.stringify(searchLayers)}`);
+		failures++;
+	}
+	await page.screenshot({ path: join(OUT, '1-search.png') });
+	await searchInput.fill('Resume');
+	await page.waitForTimeout(180);
+	if ((await page.locator('.film-name', { hasText: 'Resume Test' }).count()) !== 1 || (await page.locator('.film').count()) !== 1) {
+		console.error('search did not reduce the mixed library to the matching title');
+		failures++;
+	}
+	await page.getByRole('button', { name: 'Movies', exact: true }).click();
+	await page.waitForTimeout(180);
+
+	await page.getByRole('button', { name: 'Profiles', exact: true }).click();
+	await page.waitForTimeout(260);
+	if ((await page.locator('.profile-card-select').count()) === 0) {
+		console.error(`profile chooser missing after navigation to ${await page.evaluate(() => location.pathname)}: ${(await page.locator('body').innerText()).slice(-500)}`);
+		failures++;
+		throw new Error('profile chooser did not open');
+	}
+	await page.locator('.profile-card-select', { hasText: 'Lina' }).click();
+	await page.waitForTimeout(180);
+	const profileCommands = await page.evaluate(() => window.__commands ?? []);
+	if (!profileCommands.includes('player_set_profile')) {
+		console.error('choosing a profile did not call the native profile switch command');
+		failures++;
+	}
+	await page.getByRole('button', { name: 'Profiles', exact: true }).click();
+	await page.getByRole('button', { name: /Personnaliser le profil · Alex|Customize profile · Alex/ }).click();
+	await page.getByLabel(/Nom du profil|Profile name/).fill('Alexandra');
+	await page.getByRole('button', { name: /Enregistrer le profil|Save profile/ }).click();
+	await page.waitForTimeout(180);
+	const profileEditCommands = await page.evaluate(() => window.__commands ?? []);
+	if (!profileEditCommands.includes('player_profile_rename') || (await page.locator('.profile-card', { hasText: 'Alexandra' }).count()) !== 1) {
+		console.error('profile personalization did not rename the real profile state');
+		failures++;
+	}
+	await page.getByRole('button', { name: /Fermer les profils|Close profiles/ }).click();
+
+	// Settings is real app state, not a decorative drawer: the modal exposes the
+	// two actual toggles, the connected server facts and a distinct save path.
+	await page.getByRole('button', { name: /Réglages|Settings/ }).click();
+	await page.waitForTimeout(250);
+	if ((await page.getByRole('dialog').count()) !== 1 || (await page.getByRole('switch').count()) !== 2) {
+		console.error('the player settings modal or its two real preference switches are missing');
+		failures++;
+	}
+	const settingsText = await page.getByRole('dialog').innerText();
+	if (!settingsText.includes('127.0.0.1:8395') || !settingsText.includes('dev')) {
+		console.error('the player settings modal does not expose the connected server facts');
+		failures++;
+	}
+	if (!settingsText.includes('3.3.0') || !settingsText.includes('3.3.1') || (await page.getByRole('button', { name: /Installer la mise à jour|Install update/ }).count()) !== 1) {
+		console.error('settings do not expose the real current/latest update state and install action');
+		failures++;
+	}
+	await page.screenshot({ path: join(OUT, '1-settings.png') });
+	await page.getByRole('switch', { name: /Réduire les animations|Reduce motion/ }).click();
+	await page.getByRole('button', { name: /Enregistrer|Save/ }).click();
+	await page.waitForTimeout(180);
+	const storedPreferences = await page.evaluate(() => JSON.parse(localStorage.getItem('theia.player.preferences') ?? '{}'));
+	if ((await page.getByRole('dialog').count()) !== 0 || storedPreferences.reducedMotion !== true) {
+		console.error(`saving player settings did not persist and close: ${JSON.stringify(storedPreferences)}`);
+		failures++;
+	}
 	await page.close();
+
+	// (a2) The desktop app carries the whole Theia library, not only films. This
+	// walks the visible product path: series tab, one show, its season, an episode
+	// and the Rust command that starts it.
+	const seriesPage = await openPage({ width: 1280, height: 720 });
+	await assertSeriesJourney(seriesPage);
+	await seriesPage.close();
 }
 
 // 2. A film playing, then the track menu.
@@ -1513,8 +1860,25 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	await page.fill('#theia-address', 'http://127.0.0.1:8395');
 	await page.click('button[type=submit]');
 	await page.waitForTimeout(300);
-	await page.screenshot({ path: join(OUT, '5-phone-library.png') });
-	await assertFits(page, 'the phone library panel, connected');
+	await page.screenshot({ path: join(OUT, '5-phone-home.png') });
+	// The phone window lands on the home too, and this is where the bar's own
+	// arithmetic is checked: five destinations, the avatar and 44px floors do
+	// not leave room for the wordmark, so the mark is what gives - inside the
+	// pill, not past its edge. `scrollWidth` catches what the clipped overflow
+	// would hide: a pill quietly wider than the box it is drawn in.
+	if ((await page.locator('.home-hero').count()) !== 1) {
+		console.error('the phone home is missing its hero');
+		failures++;
+	}
+	if ((await page.locator('.library-nav').evaluate((el) => el.scrollWidth)) > (await page.locator('.library-nav').evaluate((el) => el.clientWidth)) + 2) {
+		console.error('the phone navigation overflows its own pill');
+		failures++;
+	}
+	if (await page.locator('.nav-brand').isVisible()) {
+		console.error('the phone navigation kept a wordmark it does not have the width for');
+		failures++;
+	}
+	await assertFits(page, 'the phone home, connected');
 
 	// (b) playing, furniture up. The film is behind the OSD from here on.
 	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
@@ -1530,10 +1894,11 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	await assertFits(page, 'the phone track popover');
 
 	const controls = await page.locator('.row button.control:visible').count();
-	// Play, tracks, fullscreen, close: the volume, the language chip, the codec
-	// badge and the ten-second pair all go below 30rem (design system 6b).
-	if (controls !== 4) {
-		console.error(`the phone control row drew ${controls} controls, expected 4`);
+	// Play, tracks and film fullscreen stay in the playback row. The desktop
+	// close/maximise/minimise controls belong to the title bar, where a normal
+	// window puts them, rather than being duplicated in the film controls.
+	if (controls !== 3) {
+		console.error(`the phone control row drew ${controls} controls, expected 3`);
 		failures++;
 	}
 	await page.close();
@@ -1586,8 +1951,8 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 		console.error('the minimum window: no play button, so the film cannot be started');
 		failures++;
 	}
-	if (present.controls !== 4) {
-		console.error(`the minimum window drew ${present.controls} visible controls, expected 4 (play, tracks, fullscreen, close)`);
+	if (present.controls !== 3) {
+		console.error(`the minimum window drew ${present.controls} visible controls, expected 3 (play, tracks, fullscreen)`);
 		failures++;
 	}
 
@@ -1737,6 +2102,34 @@ async function openPage(viewport, { tracks = TRACKS, movies = MOVIES, frame = fa
 	const languages = await openPage({ width: 1280, height: 720 });
 	await assertLanguages(languages, URL);
 	await languages.close();
+
+	// (l2) the default language is English - on every machine, French ones
+	// included. The stored choice still wins (proved above); what this pins
+	// is that nothing else does. The system locale used to decide, and the
+	// maintainer instructed otherwise (decision 131).
+	const frenchSystem = await openPage({ width: 1280, height: 720 }, { locale: 'fr-FR' });
+	const frenchStart = await frenchSystem.evaluate(() => ({
+		htmlLang: document.documentElement.lang,
+		chip: document.querySelector('.control--language .label')?.textContent?.trim() ?? null,
+		stored: (() => {
+			try {
+				return localStorage.getItem('theia.player.language');
+			} catch {
+				return 'unavailable';
+			}
+		})(),
+	}));
+	if (frenchStart.htmlLang !== 'en' || frenchStart.chip !== 'EN') {
+		console.error(
+			`a French system started in "${frenchStart.htmlLang}" (${frenchStart.chip}), expected English - the default is English on every machine`
+		);
+		failures++;
+	}
+	if (frenchStart.stored !== null) {
+		console.error(`nothing was chosen yet, so the store should be empty, found "${frenchStart.stored}"`);
+		failures++;
+	}
+	await frenchSystem.close();
 
 	// (m) what a person reads when something goes wrong, in both languages.
 	const failuresPage = await openPage({ width: 1280, height: 720 });

@@ -4177,6 +4177,210 @@ list - it kept playing.
 Escape closes, and with a menu open Escape closes the menu while leaving the window
 fullscreen.
 
+## 127. The player is a desktop application, not a detachable web control bar
+
+**Decided 19 September 2026**, after the maintainer rejected the first V3.3
+player as an awkward overlay and explicitly chose the implementation stack:
+**Tauri + React + TypeScript + Vite + Tailwind + shadcn/ui + Lucide + Motion**.
+
+The previous Svelte OSD proved the engine but failed the product. It exposed a
+permanent player-shaped strip under a library, confused leaving a film with
+closing the process, did not give the window ordinary minimize/maximize/close
+furniture, and tried to hide a WebView2-owned pointer that the platform redrew
+every four to five seconds. Those are not four isolated polish bugs. They are
+the result of treating a desktop application as a video overlay with a connect
+form attached.
+
+**The shell now owns the whole journey.** It starts the local server when the
+machine was installed all-in-one, waits for health, opens the library instead of
+making the owner reconnect to their own machine, and keeps Films, Séries,
+saisons, épisodes and playback inside one window. The title bar is permanent and
+contains drag, minimize, maximize/restore and close. The playback bar contains
+playback only. Escape unwinds the most recent state: track menu, fullscreen,
+film, then selected series; it does not kill the application.
+
+React is not permission to invent another Theia. The shell imports the existing
+tokens and fonts. Tailwind expresses layout, one shadcn/ui primitive defines the
+control contract, Lucide supplies the consistent icon set, and Motion is limited
+to state transitions and card response. The server web application remains
+SvelteKit; sharing product identity does not require pretending two runtimes are
+one component tree.
+
+**The cursor policy is deliberately boring.** Only the furniture fades. The
+pointer stays visible because a stable visible pointer is less distracting than
+a cursor that blinks back into existence on a timer. The old hide measurements
+remain in decision 125 as evidence for this reversal, not as an open promise.
+
+**Verified at decision time:** TypeScript checking and locale parity pass; the
+Vite production build succeeds; the Chromium journey covers connection fallback,
+Films, Séries, season/episode navigation, playback, track selection, idle
+furniture, narrow sizes, language switching and the Escape order. The installed
+Tauri binary then started its installed sibling server from a stopped state,
+opened the real library without a connect screen, and played episode 1 of
+*Shogun*: the server recorded 37.58 s of a 4195.3 s file. A native capture shows
+the episode and its React title bar over libmpv. With the pointer parked over
+that installed window after four idle seconds, `GetCursorInfo` read visible in
+48 of 48 samples and hidden in none. Browser rendering is therefore not being
+used to impersonate the native proof.
+
+## 128. The desktop library is a routed shell with one deliberate preview layer
+
+**Decided 19 September 2026**, after a side-by-side capture of the installed
+React player and the current web interface. The player had the right palette and
+typefaces, but still read as a prototype: a large text-only tab slab, no settings
+surface, empty-looking artwork, and a generic play mark on hover. Build success
+did not make those differences small.
+
+The desktop shell keeps the stack from decision 127 and now uses a memory router
+for Films, Séries and Réglages. Its navigation follows the compact pill contract:
+inactive destinations are icons, the active destination owns icon plus label,
+and width and opacity move together over 180ms. It uses Lucide glyphs and the
+existing THEIA tokens; shadcn primitives provide accessible Dialog, Switch and
+Button behaviour, not a new visual language.
+
+The desktop card preview is the sole exception to the browser card hover in
+§6.2. After 190ms, a fixed and edge-clamped 16/9 preview presents the existing
+artwork and metadata without reflowing the grid. Focus opens the same preview,
+Escape returns to its card, reduced motion removes travel, and a missing
+backdrop falls back to the poster and then text. It never invents fields the
+server did not send.
+
+Réglages is a modal over the current route, not a fake administration page. It
+persists three client-owned facts that actually alter the player: language,
+automatic control hiding and reduced motion. Server address and version are
+read-only connection facts. Server library paths, TMDB credentials and update
+controls remain in the web settings page because duplicating them here would
+create two administration contracts.
+
+Fullscreen uses Tauri's current-window API at action time, then asks
+`isFullscreen()` for the resulting truth. Enter and exit use distinct Lucide
+icons; Escape still unwinds menu, fullscreen, film and series in that order.
+
+## 129. The native library navigation is the web masthead, not a tool palette
+
+**Decided 19 September 2026**, after the compact icon-only desktop router was
+compared with the web home screen. The router worked, but hid the product's
+information architecture and left profiles and updates stranded in the browser.
+
+The browsing shell now owns one long, centred island. `THEIA` anchors its left edge;
+Films, Séries, Rechercher, Réglages and the active profile occupy the right. A
+single Motion layout surface travels between destinations. Labels stay visible
+at desktop width and collapse only when the window can no longer hold them.
+The permanent Windows title bar no longer repeats the THEIA wordmark.
+
+Profiles are not decorative avatars: the chosen server profile is sent through
+`player_set_profile`, persisted locally and followed by a fresh library load.
+The same native surface can rename a profile and upload or clear its picture;
+those mutations use the server's existing profile API and never create a second
+desktop-only identity store.
+Because the window has no operating-system decorations, its three title-bar
+buttons are also subject to Tauri capabilities. Close, minimize,
+toggle-maximize and the corresponding state reads are explicitly allowed; a
+button whose command is denied is a broken button even when its React handler is
+correct.
+Search filters the already-loaded film and series catalogues, so it creates no
+new server contract. Réglages reads `/api/update`; its badge appears only when
+that status says an update is available, and its check/install buttons call the
+existing updater endpoints. This supersedes decision 128's choice to leave
+profiles and update controls in the web application only.
+
+## 130. The player opens on the home the web already had
+
+**Decided 20 September 2026**, after the maintainer compared the player, which
+opened on *Tous les films*, with the web home and asked for the films and the
+series to be laid out the way that screen lays them out.
+
+The flat catalogue was the wrong first question. The web home has answered
+"what were you watching" with a hero and short rows since its own rebuild, and
+the player - which V3.3 makes the primary client - had no such surface at all.
+The screen is composed entirely of pieces that already existed:
+`/api/library/home` and `/api/library/series/home` over two new Rust commands,
+the §6 card with its preview, the §5 veil recipe, and the accent and type
+tokens. The server still decides what a row is and the interface still owns
+every sentence (decision 25); film rows sort before series rows because that is
+how the two responses arrive; the hero is a film even when the series rows are
+what is being continued, because that is the shape the server sends.
+
+Three omissions are recorded so a later reader does not file them as missing
+work. There is no *Voir la fiche* beside *Reprendre*: the player has no film
+page, and the web's own documented hero button opens its player rather than a
+detail page. There is no *Au programme* dock and no *Tout voir* link on any
+row: every destination either offers is a filtered library view - by progress,
+by sort, by duration - and the player's library has no filters yet. The web
+keeps all of them; the player gains them when its library grows the machinery,
+not before.
+
+The island gains **Accueil** as its first destination, and the wordmark leads
+there too. Below 28rem the wordmark is not drawn: five destinations, the
+profile circle and 44px floors already fill a phone-sized window, and the web's
+phone layout is a destination bar with no wordmark on it.
+
+**Verified at decision time:** `check:types` and locale parity are green
+(fr 134 / en 134); `check:render` passes with new assertions on the home - the
+hero's title, the resume eyebrow, its progress bar, the row count, the series
+rows naming their series on their cards, the pill fitting inside its own box
+and the wordmark's withdrawal at phone width - while every previous flow
+(grid fallbacks, preview, series journey, search, settings, phone, minimum
+window, fullscreen, idle, clock, languages, failures) still passes;
+`cargo check` compiles the two new commands and the Rust suite is 9/9. The
+demonstration build was then driven in the real WebView2 window - hero, rows,
+hover preview, the playing state entered from a card, Escape back - and the
+274-film library remains the acceptance test before any release work.
+
+## 131. The loop belongs to the search room, and missing artwork is the broadcast card
+
+**Decided 20 September 2026**, after the maintainer reviewed the first cut on
+the real window and rejected four things by name: the ascii loop spread behind
+the whole library, blurred by upscale and superimposed on the search page with
+the library ambient; the generated SVG artwork standing in for every card and
+preview; the default language; and the title bar's dead band above the
+navigation.
+
+**The loop is the search room's wallpaper and nothing else.** It was drawn
+behind every library page from a 320x180 re-encode stretched to the window
+with no edge treatment, which reads as fog behind everything and as a pasted
+block on the page where it was wanted. It now paints only when the shell's
+`data-section` is `search`, stretched to fill the frame - one image, the
+whole room - with a radial mask melting every edge into the ink so no
+rectangle of its own ever shows. An ink scrim settles the column the title,
+the field and the hint sit on, and the field carries more of its own ink, so
+the room is felt around the furniture rather than read through it; the loop
+runs at 0.55 opacity for the same reason. The library ambient - the featured
+item's backdrop - is withdrawn from the search page: one decoration owns that
+background, and it is the loop. The Search heading is centred there and the
+"Your library" eyebrow is dropped: the loop is the decoration and that label
+said nothing. The still frame replaces the loop under the reduced-motion
+settings.
+
+**Artwork that does not exist is the broadcast card.** The demonstration
+generated an SVG gradient per item, and the maintainer read it on the cards,
+the previews and the hero as placeholder sludge; the library items the server
+never matched showed the same absence. `media-not-found.png` - the NO SIGNAL /
+PLEASE STAND BY card the maintainer supplied - is now the single answer to
+"this item has no picture": the card grid, the preview panel and the hero all
+fall back to it, the demonstration's generated artwork is deleted rather than
+kept behind a flag, and a real TMDB image still wins wherever the server has
+one.
+
+**English is the default language.** The stored choice still wins, but with
+nothing stored the player opens in English on every machine, French systems
+included; the previous "the system locale decides" reading contradicted both
+the maintainer's instruction and the harness's own assertion.
+
+**The window keeps its corrected chrome.** The title bar is an overlay strip
+carrying the language chip and the window buttons; the navigation pill follows
+directly below it; the frameless window keeps its radius. The empty band the
+maintainer circled is gone.
+
+**Verified at decision time:** locale parity (fr 134 / en 134), `tsc --noEmit`,
+the render check and the Rust suite (9/9) pass; the demonstration build was
+rebuilt and driven in the real WebView2 window through injected Win32 input
+(the driving process must be DPI-aware or every coordinate is virtualised -
+the first attempts landed at half position and pressed nothing): the home in
+English with the broadcast card on hero and cards, the hover preview open over
+the first row, and the search room with the loop crisp at 200%. The 274-film
+library remains the acceptance test before any release work.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
