@@ -47,12 +47,14 @@ body {
 	   attributes, untouched by this. A maximized window fills its monitor,
 	   so the radius goes away there.
 
-	   Measured on 19 September 2026 rather than chosen: the maintainer's
-	   reference caption bar rounds its window at ~5.9 CSS px (23 real px at a
-	   3.9x zoom, cross-checked against its 131 px bar and 44.5 px cells), and
-	   carries a one-pixel light edge that traces the same curve. 16px was the
-	   V3.1 card radius borrowed for a window, which is a different object. */
-	border-radius: 6px;
+	   Measured on 20 September 2026: the reference the maintainer supplied is a
+	   Microsoft Edge caption bar on Windows 11 (its own default browser chrome,
+	   identified from a later screen capture), and Windows 11 rounds its windows
+	   at 8. The crop gave ~5.9 px on the assumption that its bar was 34 CSS px
+	   tall; a 40 px bar gives 7.0, so the honest reading of that image is 6 to 8
+	   and the operating system's own value is the end of the range that matches
+	   the screen. 16px was the V3.1 card radius borrowed for a window. */
+	border-radius: 8px;
 	overflow: hidden;
 	/* The edge the reference draws around its window. Inside the radius, so a
 	   maximized window loses it with the curve (the rule below). */
@@ -217,6 +219,33 @@ html[data-reduced-motion='true'] .osd--library[data-section='search']::after {
 }
 .window-control:focus-visible {
 	outline-offset: -3px;
+}
+
+/* The language chip is a caption cell too, not a pill.
+   It sat there as a 44px circle with a 6% white wash - the shadcn `ghost` size
+   `icon` defaults - and the maintainer photographed it beside the three square
+   plates and asked why one of the four was round. Same cell, same plate, same
+   glyph colour as its neighbours; only the label inside differs. */
+.title-bar .control--language {
+	align-self: stretch;
+	width: 2.9rem;
+	height: auto;
+	min-width: 0;
+	min-height: 0;
+	border-radius: 0;
+	color: var(--color-parchment);
+}
+.title-bar .control--language:hover {
+	background: rgb(var(--channel-bone) / 0.11);
+	color: var(--color-bone);
+}
+/* The chip's text is a `.label`, which carries the product's muted register in
+   its own rule - so the button's colour never reached it and the chip stayed
+   grey while its plate lit. Measured in the harness: the label read (135,128,118)
+   where the ✕ beside it read (214,207,194). Inherit puts the glyph back under
+   the control's own colour, at rest and on hover both. */
+.title-bar .control--language .label {
+	color: inherit;
 }
 
 /* The language chip, while there is no film to watch.

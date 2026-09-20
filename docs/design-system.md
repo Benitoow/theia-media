@@ -547,20 +547,45 @@ a player.
   read as a debug panel. The words survive as accessible names, which is where
   they belong.
 - **The caption bar matches the reference the maintainer supplied** (20 September
-  2026), and the numbers came from a pixel dump of it at a 3.9x zoom rather than
-  from a look: cells 44.5 CSS px on a 173.5 px pitch, a hover plate filling the
-  whole cell - 169 x 131 real pixels, square corners, no inset - a step of +24
-  luma over the bar, and glyphs near-white at rest **and** on hover, because it is
-  the plate that answers the pointer and not the glyph. The close cell ends flush
-  with the window's own edge. The window is rounded at ~5.9 px and carries a
-  one-pixel light edge tracing that curve, so the shell is `border-radius: 6px`
-  with an inset `bone/10` ring - not the 16px the V3.1 cards use, which is a
-  radius for a card and not for a window. The plate's step is `bone/11`, where the
-  8% it replaced read as a wash; the transferable quantity is the alpha and not
-  the luma, because the library bar is translucent - measured in the harness, the
-  plate stands **+18 luma** over the bar there against the reference's +24 over an
-  opaque one. `assertCaptionChrome` in `check:render` measures
-  the plate against the cell, the pitch, the flush close and both edges.
+  2026). The image was dumped pixel by pixel rather than looked at, and the
+  reference itself was later identified on screen: it is a **Microsoft Edge
+  caption bar on Windows 11**. What it gave, in numbers: cells 44.5 CSS px on a
+  173.5 px pitch, a hover plate filling the whole cell - 169 x 131 real pixels,
+  square corners, no inset - a step of +24 luma over the bar, glyphs near-white
+  at rest **and** on hover because it is the plate that answers the pointer and
+  not the glyph, and a close cell flush with the window's own edge. The plate's
+  step here is `bone/11`, where the 8% it replaced read as a wash; the quantity
+  that transfers is the alpha and not the luma, because the library bar is
+  translucent - measured in the harness, the plate stands **+18 luma** over the
+  bar there against the reference's +24 over an opaque one.
+  **The window is rounded at 8px, the operating system's own value for a window
+  on Windows 11.** The crop alone gave 6 to 8 depending on the bar height assumed
+  (a 34px bar puts it at 5.9, a 40px one at 7.0), and the screen settles it. This
+  is not the 16px the V3.1 cards use: that is a radius for a card, not for a
+  window. The shell carries an inset `bone/10` ring tracing the same curve, and
+  both leave when the window is maximized.
+- **The corner is a window region, not a border radius.** The page has carried
+  `border-radius` since the desktop rewrite and it does round what the page
+  paints, but a viewer still saw a square window: the page is transparent outside
+  the curve and mpv's surface sits behind it filling the whole rectangle. Measured
+  at the top-left corner of the real window, the corner pixels read **(0,0,0)** -
+  pure black, mpv - where the page's ink is (11,10,9) and the desktop behind is
+  (248,250,253). A CSS radius cannot clip a child window owned by another process,
+  so `SetWindowRgn` does it in Rust, is reapplied on every resize, and is cleared
+  when the window is maximized or fullscreen. Verified by reading the region back:
+  `(1,1)` and `(2,2)` are outside it, `(4,4)` onward inside.
+- **The language chip is a caption cell, not a pill.** It sat among three square
+  plates as a 44px circle with the shadcn `ghost` size `icon` defaults, and the
+  maintainer photographed it and asked why one of the four was round. Same width,
+  same full height, same plate, same radius now. Its text needed one more line:
+  it is a `.label`, whose own rule carries the muted register, so the chip kept a
+  grey glyph on a lit plate - measured (135,128,118) where the &#10005; beside it
+  read (214,207,194) - until the label was told to inherit.
+  `assertCaptionChrome` in `check:render` measures the plate against the cell, the
+  pitch, the flush close, both edges, the chip in both states, and the plate's
+  **value** and not only its presence: an earlier run of it passed while
+  `index.css` imported this stylesheet and then re-declared `.window-control`
+  below the import, which silently outranked every rule written here.
   **One number was deliberately not copied**: the reference bar is about 34 CSS px
   tall. §9 sets the floor at 44x44 for every interactive target and this section
   keeps whatever stays at its 3.25rem target, so the bar stays 52px. A caption

@@ -1377,6 +1377,16 @@ async function assertCaptionChrome(page, state) {
 		console.error(`${state}: the hovered caption control paints ${measured.hoveredBackground}, the same as its bar - no plate`);
 		failures++;
 	}
+	// The plate's *value*, not only its presence. Everything above passed while
+	// the plate was still bone/8: index.css imported this stylesheet and then
+	// re-declared `.window-control` below the import, so every rule written here
+	// was silently outranked and the assertion could not tell the two apart.
+	// Section 6b names 11%, and this is the number that has to match it.
+	const plateAlpha = Number((measured.hoveredBackground.match(/[\d.]+\)$/) ?? ['0)'])[0].replace(')', ''));
+	if (Math.abs(plateAlpha - 0.11) > 0.005) {
+		console.error(`${state}: the hover plate paints ${measured.hoveredBackground}; section 6b pins bone at 11%, so the rule that wins is not the one in osd.css`);
+		failures++;
+	}
 	if (Math.abs(cell.height - measured.headerContent) > 0.5) {
 		console.error(`${state}: the caption plate is ${cell.height}px of a ${measured.headerContent}px bar, it must fill the cell`);
 		failures++;
@@ -1393,8 +1403,8 @@ async function assertCaptionChrome(page, state) {
 		console.error(`${state}: the close cell ends at ${measured.close.right} in a ${measured.innerWidth}px window, it must sit flush`);
 		failures++;
 	}
-	if (measured.radius !== '6px') {
-		console.error(`${state}: the window is rounded at ${measured.radius}, the reference measured 6px`);
+	if (measured.radius !== '8px') {
+		console.error(`${state}: the window is rounded at ${measured.radius}; the reference is Windows 11 chrome, which rounds at 8`);
 		failures++;
 	}
 	if (!measured.ring.includes('inset')) {
@@ -1403,6 +1413,61 @@ async function assertCaptionChrome(page, state) {
 	}
 	if (measured.hoveredColour === measured.restingColour) {
 		console.error(`${state}: the caption glyph does not answer the pointer (${measured.restingColour} either way)`);
+		failures++;
+	}
+
+	// The language chip sat among three square plates as a 44px circle with the
+	// shadcn ghost defaults, and the maintainer photographed it and asked why
+	// one of the four was round. It is a caption cell now: same width, same
+	// height, same plate, same radius, same colours - and this reads all of them,
+	// once at rest and once under the pointer.
+	const readChip = () =>
+		page.evaluate(() => {
+			const el = document.querySelector('.title-bar .control--language');
+			const header = document.querySelector('.title-bar');
+			const r = el.getBoundingClientRect();
+			const style = getComputedStyle(el);
+			return {
+				width: r.width,
+				height: r.height,
+				top: r.top,
+				radius: style.borderTopLeftRadius,
+				background: style.backgroundColor,
+				colour: getComputedStyle(el.querySelector('.label') ?? el).color,
+				headerContent: header.clientHeight,
+			};
+		});
+	const chipRest = await readChip();
+	await page.hover('.control--language');
+	await page.waitForTimeout(120);
+	const chip = await readChip();
+	if (chip.radius !== '0px') {
+		console.error(`${state}: the language chip is rounded at ${chip.radius} - one round control among square ones`);
+		failures++;
+	}
+	if (Math.abs(chip.width - cell.width) > 0.5 || Math.abs(chip.height - cell.height) > 0.5) {
+		console.error(`${state}: the language chip is ${chip.width}x${chip.height} where a caption cell is ${cell.width}x${cell.height}`);
+		failures++;
+	}
+	if (Math.abs(chip.top - cell.top) > 0.5 || Math.abs(chip.height - chip.headerContent) > 0.5) {
+		console.error(`${state}: the language chip sits at ${chip.top} (a cell sits at ${cell.top}) or does not fill the ${chip.headerContent}px bar`);
+		failures++;
+	}
+	if (chip.background !== measured.hoveredBackground) {
+		console.error(`${state}: the language chip hovers ${chip.background} where a caption cell hovers ${measured.hoveredBackground}`);
+		failures++;
+	}
+	// Its text is a `.label`, which brings the product's muted register with it.
+	// The chip therefore kept a grey glyph on a lit plate - measured (135,128,118)
+	// where the ✕ beside it read (214,207,194) - until the label was told to
+	// inherit. Both states are pinned, because either one alone would pass on a
+	// control that never changed colour at all.
+	if (chipRest.colour !== measured.restingColour) {
+		console.error(`${state}: the language chip's text is ${chipRest.colour} at rest where the ✕ beside it is ${measured.restingColour} - its .label rule is winning over the control's colour`);
+		failures++;
+	}
+	if (chip.colour !== measured.hoveredColour) {
+		console.error(`${state}: the language chip's text is ${chip.colour} under the pointer where a caption cell is ${measured.hoveredColour}`);
 		failures++;
 	}
 	await page.screenshot({ path: join(OUT, '9-caption-hover.png') });

@@ -1125,6 +1125,79 @@ fn player_stop() -> Result<(), String> {
     Ok(())
 }
 
+/// The window's corner radius, in logical pixels. Section 6b of the design
+/// system carries the reasoning: the reference is a Windows 11 caption bar, and
+/// Windows 11 rounds its own windows at 8.
+const WINDOW_CORNER_RADIUS: f64 = 8.0;
+
+/// Rounds the operating system window itself, not the page.
+///
+/// The page has carried `border-radius` since the desktop rewrite and it does
+/// round what the page paints - measured on 20 September 2026 from a capture of
+/// the real screen: at the window's top row the painted content starts six
+/// device-independent pixels in, exactly the declared radius. A viewer still
+/// sees a square window, because the page is transparent outside that curve and
+/// mpv's own surface sits behind it filling the whole rectangle. The corner
+/// pixels read (0,0,0) - pure black, where the page's ink is (11,10,9) and the
+/// desktop behind is (248,250,253) - and a CSS radius cannot clip a child window
+/// that belongs to another process.
+///
+/// So the region does it. `SetWindowRgn` clips the window and everything inside
+/// it, mpv included, and the region is cleared when the window is maximized or
+/// fullscreen because there the curve is not wanted. The radius is scaled by the
+/// monitor's factor so the curve is the same size to the eye at 100% and at 200%.
+#[cfg(windows)]
+fn apply_round_region(hwnd: isize, width: u32, height: u32, scale: f64, rounded: bool) {
+    use windows_sys::Win32::Foundation::HWND;
+    use windows_sys::Win32::Graphics::Gdi::{CreateRoundRectRgn, SetWindowRgn};
+
+    if width == 0 || height == 0 {
+        return;
+    }
+    let region = if rounded {
+        let diameter = (WINDOW_CORNER_RADIUS * scale).round().max(1.0) as i32 * 2;
+        // CreateRoundRectRgn takes the size of the ellipse that draws each
+        // corner - twice the radius - and its rectangle is inclusive of both
+        // edges, hence the +1.
+        unsafe { CreateRoundRectRgn(0, 0, width as i32 + 1, height as i32 + 1, diameter, diameter) }
+    } else {
+        std::ptr::null_mut()
+    };
+    // SetWindowRgn takes ownership of the region when it succeeds, and a null
+    // region is how it is cleared.
+    unsafe { SetWindowRgn(hwnd as HWND, region, 1) };
+}
+
+#[cfg(not(windows))]
+fn apply_round_region(_hwnd: isize, _width: u32, _height: u32, _scale: f64, _rounded: bool) {}
+
+/// Applies the region from a window's own geometry. Two thin wrappers, because
+/// the setup hook holds a `WebviewWindow` and the event hook a `Window`, and
+/// both answer the same three questions.
+#[cfg(windows)]
+fn round_window(window: &tauri::Window) {
+    let Ok(hwnd) = window.hwnd() else { return };
+    let size = window.inner_size().unwrap_or_default();
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let full = window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false);
+    apply_round_region(hwnd.0 as isize, size.width, size.height, scale, !full);
+}
+
+#[cfg(windows)]
+fn round_webview_window(window: &tauri::WebviewWindow) {
+    let Ok(hwnd) = window.hwnd() else { return };
+    let size = window.inner_size().unwrap_or_default();
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let full = window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false);
+    apply_round_region(hwnd.0 as isize, size.width, size.height, scale, !full);
+}
+
+#[cfg(not(windows))]
+fn round_window(_window: &tauri::Window) {}
+
+#[cfg(not(windows))]
+fn round_webview_window(_window: &tauri::WebviewWindow) {}
+
 /// Chooses a 16:9 logical window that fits the current monitor at any DPI.
 fn fitted_window_size(monitor_width: f64, monitor_height: f64) -> (f64, f64) {
     let usable_width = (monitor_width - 80.0).max(640.0);
@@ -1369,6 +1442,7 @@ fn main() {
             // opened mostly off-screen; size against this monitor before the
             // hidden window is ever shown.
             fit_initial_window(&window);
+            round_webview_window(&window);
 
             match start_engine(hwnd, media.as_deref(), silent) {
                 Ok(()) => {
@@ -1482,12 +1556,22 @@ fn main() {
 
             Ok(())
         })
-        .on_window_event(|_, event| {
-            if matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
-                // The five-second periodic save is a safety net. Closing is an
-                // explicit boundary and records the exact playhead before the
-                // process disappears.
-                save_progress();
+        .on_window_event(|window, event| {
+            match event {
+                tauri::WindowEvent::CloseRequested { .. } => {
+                    // The five-second periodic save is a safety net. Closing is an
+                    // explicit boundary and records the exact playhead before the
+                    // process disappears.
+                    save_progress();
+                }
+                // The region is a snapshot of a size, so every resize needs a new
+                // one: a stale region would clip a bigger window to the shape it
+                // used to have. Maximizing and fullscreen clear it instead, which
+                // is why the helper asks the window rather than a flag of ours.
+                tauri::WindowEvent::Resized(_) | tauri::WindowEvent::ScaleFactorChanged { .. } => {
+                    round_window(window);
+                }
+                _ => {}
             }
         })
         .run(tauri::generate_context!())

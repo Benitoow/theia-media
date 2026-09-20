@@ -29,19 +29,12 @@
 	gap: 1rem;
 }
 
-.window-control {
-	color: var(--color-muted);
-}
-
-.window-control:hover {
-	background: rgb(var(--channel-bone) / 0.08);
-	color: var(--color-bone);
-}
-
-.window-control--close:hover {
-	background: #a9342c;
-	color: var(--color-bone);
-}
+/* The caption bar's own rules live in osd.css and nowhere else. They were
+   duplicated here for a while, after the import above, which meant every one of
+   them silently won: the hover plate, its two colours and the close button's red
+   were all decided by the copy down here while the originals were edited in
+   place. `assertCaptionChrome` reads the plate's computed colour now, which is
+   what would have caught it. */
 
 @media (max-width: 36rem) {
 	.films {
