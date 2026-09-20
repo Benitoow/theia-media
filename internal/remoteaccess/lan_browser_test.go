@@ -42,3 +42,31 @@ func TestUnknownRemoteRoutesFailClosed(t *testing.T) {
 		}
 	}
 }
+
+func TestTauriArtworkCanCrossTheLANBrowserBoundary(t *testing.T) {
+	h := LANOnly(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) }), "cinema")
+	tests := []struct {
+		name, method, path, origin string
+		want                       int
+	}{
+		{"windows webview artwork", http.MethodGet, "/api/images/w780/proof.jpg", "http://tauri.localhost", http.StatusNoContent},
+		{"custom scheme artwork", http.MethodGet, "/api/images/w780/proof.jpg", "tauri://localhost", http.StatusNoContent},
+		{"hostile artwork", http.MethodGet, "/api/images/w780/proof.jpg", "https://evil.example", http.StatusForbidden},
+		{"tauri catalogue", http.MethodGet, "/api/library/movies", "http://tauri.localhost", http.StatusForbidden},
+		{"tauri image write", http.MethodPost, "/api/images/w780/proof.jpg", "http://tauri.localhost", http.StatusForbidden},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(test.method, "http://127.0.0.1:8395"+test.path, nil)
+			req.RemoteAddr = "127.0.0.1:4321"
+			req.Header.Set("Origin", test.origin)
+			req.Header.Set("Sec-Fetch-Site", "cross-site")
+			req.Header.Set("Sec-Fetch-Mode", "cors")
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, req)
+			if rec.Code != test.want {
+				t.Fatalf("status = %d, want %d", rec.Code, test.want)
+			}
+		})
+	}
+}

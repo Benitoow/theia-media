@@ -61,6 +61,14 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 // request. Both path segments are validated inside the cache before they touch
 // the filesystem.
 func (s *Server) handleImage(w http.ResponseWriter, r *http.Request) {
+	// The native Tauri shell is served from http://tauri.localhost and reads
+	// artwork from the local Theia server. Chromium's ORB protection blocks an
+	// otherwise valid <img> response unless the resource explicitly opts into
+	// cross-origin embedding. These are public cache images, not credentials;
+	// playback streams and every JSON endpoint keep their existing policy.
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Cross-Origin-Resource-Policy", "cross-origin")
+
 	if s.images == nil {
 		writeJSONError(w, http.StatusNotFound, "images are unavailable")
 		return

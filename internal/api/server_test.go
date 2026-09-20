@@ -104,6 +104,20 @@ func TestUnknownAPIPathIs404JSON(t *testing.T) {
 	}
 }
 
+func TestImagesAllowTheNativeTauriOrigin(t *testing.T) {
+	// WebView2 serves the desktop UI from http://tauri.localhost. Without an
+	// explicit cross-origin resource policy Chromium rejects even a correctly
+	// typed JPEG with ERR_BLOCKED_BY_ORB before React can draw the card.
+	res := get(t, newTestServer(t, bundle()), "/api/images/w780/proof.jpg")
+
+	if got := res.Header.Get("Cross-Origin-Resource-Policy"); got != "cross-origin" {
+		t.Errorf("Cross-Origin-Resource-Policy = %q, want cross-origin", got)
+	}
+	if got := res.Header.Get("Access-Control-Allow-Origin"); got != "*" {
+		t.Errorf("Access-Control-Allow-Origin = %q, want *", got)
+	}
+}
+
 func TestUnknownPathFallsBackToTheSPA(t *testing.T) {
 	// A deep link such as /films/42 is a client-side route: it has to return
 	// index.html so the router can pick it up, not a 404.

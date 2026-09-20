@@ -92,6 +92,19 @@ func TestTheEntriesCarryTheProductsIconRatherThanAGenericOne(t *testing.T) {
 	}
 }
 
+func TestTheProductEntryOpensTheViewerForAnAllInOne(t *testing.T) {
+	french, _ := CatalogueFor("fr")
+	install := t.TempDir()
+	entries := entriesFor(Plan{Role: RoleAllInOne, InstallDir: install}, french)
+	if len(entries) == 0 {
+		t.Fatal("the all-in-one role produced no product entry")
+	}
+	want := filepath.Join(install, "theia-player.exe")
+	if !strings.EqualFold(entries[0].link.Target, want) {
+		t.Errorf("Theia opens %q, want the viewer %q", entries[0].link.Target, want)
+	}
+}
+
 func TestAPlayerOnlyMachineGetsNoServerEntry(t *testing.T) {
 	// An entry that starts a program this machine does not have is a broken
 	// promise somebody double-clicks. The role decides, and the player-only role

@@ -56,7 +56,7 @@ func lanBrowserBoundary(next http.Handler, names []string) http.Handler {
 			writeRemoteError(w, 403, "invalid_host")
 			return
 		}
-		if crossSiteSubresource(req) {
+		if crossSiteSubresource(req) && !nativeArtworkRequest(req) {
 			writeRemoteError(w, 403, "cross_origin_denied")
 			return
 		}
@@ -79,6 +79,29 @@ func lanBrowserBoundary(next http.Handler, names []string) http.Handler {
 		}
 		next.ServeHTTP(w, req)
 	})
+}
+
+// nativeArtworkRequest admits the one cross-site browser read the installed
+// desktop shell needs. Tauri's WebView has its own fixed origin, while artwork
+// is served by the local Theia HTTP process; Chromium therefore marks the image
+// as cross-site even though both programs are the same installed product.
+//
+// The exception is deliberately narrower than CORS for the API: a web page
+// cannot choose either Origin value, and no JSON, stream or state-changing
+// route inherits it.
+func nativeArtworkRequest(req *http.Request) bool {
+	if req.Method != http.MethodGet && req.Method != http.MethodHead {
+		return false
+	}
+	if !strings.HasPrefix(req.URL.Path, "/api/images/") {
+		return false
+	}
+	switch req.Header.Get("Origin") {
+	case "http://tauri.localhost", "tauri://localhost":
+		return true
+	default:
+		return false
+	}
 }
 
 // Read routes are enumerated, not inferred from a future endpoint's prefix.

@@ -59,9 +59,13 @@ func entriesFor(plan Plan, text Catalogue) []shortcutEntry {
 
 	// The product entry comes first: it is the one somebody looks for by name,
 	// and the only one that also goes on the Desktop.
-	primary := "theia-player"
-	if plan.Role.WantsServer() {
-		primary = "theia-server"
+	// The product entry is what somebody opens to watch something. On an
+	// all-in-one machine the server is infrastructure started in the background;
+	// making it the primary shortcut exposed a console and left the actual player
+	// as a second application the viewer had to discover.
+	primary := "theia-server"
+	if plan.Role.WantsPlayer() {
+		primary = "theia-player"
 	}
 	entries := []shortcutEntry{{
 		name: text["shortcutTheiaName"],
