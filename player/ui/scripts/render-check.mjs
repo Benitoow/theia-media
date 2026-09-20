@@ -129,7 +129,13 @@ const SERIES = [
 
 const SERIES_DETAIL = {
 	...SERIES[0],
-	seasons: [{ id: 91, series_id: 9, season_number: 1, metadata: { name: 'Saison 1', episode_count: 2 } }],
+	// Two seasons, not one: a tab that looks chosen can only be checked against
+	// a tab that does not, and with a single season the assertion below would
+	// have had nothing to compare.
+	seasons: [
+		{ id: 91, series_id: 9, season_number: 1, metadata: { name: 'Saison 1', episode_count: 2 } },
+		{ id: 92, series_id: 9, season_number: 2, metadata: { name: 'Saison 2', episode_count: 1 } },
+	],
 };
 
 const SEASON = {
@@ -1665,6 +1671,31 @@ async function assertSeriesJourney(page) {
 	}
 	await assertFits(page, 'the native series and episode library');
 	await page.screenshot({ path: join(OUT, '8-series-library.png') });
+
+	// The active season tab must look chosen. It carries `.label` as well as
+	// `.season-tab`, and `.label` sets the muted register - so this only held
+	// because the state rule happened to sit below it in the stylesheet. The
+	// selector is doubled now, and this reads the result rather than trusting it:
+	// a tab that lost the tie is a tab nobody can tell they are on.
+	const seasons = await page.evaluate(() =>
+		[...document.querySelectorAll('.season-tab')].map((el) => ({
+			text: el.textContent?.trim() ?? '',
+			active: el.classList.contains('season-tab--active'),
+			colour: getComputedStyle(el).color,
+			background: getComputedStyle(el).backgroundColor,
+		}))
+	);
+	const chosen = seasons.find((s) => s.active);
+	const rest = seasons.find((s) => !s.active);
+	if (!chosen) {
+		console.error(`no season tab is marked active among ${seasons.length} drawn`);
+		failures++;
+	} else if (rest && chosen.colour === rest.colour && chosen.background === rest.background) {
+		console.error(
+			`the active season tab "${chosen.text}" paints ${chosen.colour} on ${chosen.background}, the same as "${rest.text}" - the label register won the tie`
+		);
+		failures++;
+	}
 	await page.evaluate(() => {
 		window.__commands = [];
 	});

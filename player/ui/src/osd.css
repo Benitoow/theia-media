@@ -598,8 +598,14 @@ button.control--primary:hover {
 	background: transparent;
 	cursor: pointer;
 }
+/* The active tab carries `.label` as well as `.season-tab` - the button is its
+   own label - and `.label` sets the muted register at the same specificity this
+   rule used to have. It only lit because it happens to sit below `.label` in
+   this file: 601 against 442, a tie decided by source order, which is how the
+   campaign's `.control--mute` rule was silently lost. The second class settles
+   it for good. */
 .season-tab:hover,
-.season-tab--active {
+.season-tab.season-tab--active {
 	border-color: var(--color-muted);
 	background: var(--color-raised);
 	color: var(--color-bone);

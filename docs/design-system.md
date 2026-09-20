@@ -590,6 +590,19 @@ a player.
   tall. §9 sets the floor at 44x44 for every interactive target and this section
   keeps whatever stays at its 3.25rem target, so the bar stays 52px. A caption
   bar cannot be the one control in the product that argues with the floor.
+- **A control's text belongs to the control, not to `.label`.** The chip's grey
+  glyph on a lit plate and an inactive-looking season tab are one shape: text
+  inside a control that carries a colour rule of its own. The chip inherits now.
+  The season tab *is* a `.label` and its active rule was `.season-tab--active`, at
+  the same specificity as `.label` and winning only because it happened to sit
+  below it in a 2300-line file - the tie the campaign's `.control--mute` rule lost.
+  It is `.season-tab.season-tab--active` and cannot lose on order. The audit that
+  followed covered every hover and focus rule in `osd.css` that changes a text
+  colour: `.window-control` (no text), `.nav-link` (its `.nav-label` declares no
+  colour and inherits), `.library-back` and `.settings-segment button` (plain
+  text), `.profile-edit` (icon only). `assertSeriesJourney` reads the active tab's
+  colour against an inactive one, which needed a second season in the fixture
+  before there was anything to compare it with.
 - **One filled control**, the play button, in `--bone` rather than gold: the
   accent still has to mean "look here" everywhere else on the screen.
 - **The furniture hides** after three seconds of no pointer, no key and no state
