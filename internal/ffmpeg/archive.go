@@ -102,6 +102,12 @@ func extractRuntimeTarXZ(packagePath, destination, runtimeName string) error {
 		if found {
 			return fmt.Errorf("package contains %s more than once", runtimeName)
 		}
+		// TypeRegA is the legacy writing of a regular file - a NUL type flag in
+		// ustar and GNU tar alike - and an ffmpeg build archive may carry either.
+		// The deprecation is about writing; this is a reader that has to accept
+		// both, so the old name stays and the linter is told why.
+		//
+		//lint:ignore SA1019 a tar reader must accept the legacy regular-file flag
 		if header.Typeflag != tar.TypeReg && header.Typeflag != tar.TypeRegA {
 			return fmt.Errorf("%s is not a regular file", runtimeName)
 		}

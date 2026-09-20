@@ -202,5 +202,10 @@ func tidy(s string) string {
 		return r
 	}, s)
 	s = whitespacePattern.ReplaceAllString(s, " ")
-	return strings.Trim(s, " -–-.,_:;|")
+	// The cutset holds every dash a title can end on: the hyphen, the en dash and
+	// the em dash. It used to hold the hyphen twice and the em dash not at all - a
+	// typo that left "Film — Subtitle" wearing its dash into the TMDB lookup,
+	// where the match then failed. staticcheck saw the duplicate (SA1024); the
+	// missing character was the actual fault.
+	return strings.Trim(s, " -–—.,_:;|")
 }

@@ -95,10 +95,12 @@ func main() {
 	check(err)
 	defer os.RemoveAll(temporary)
 
-	goBinary := filepath.Join(runtime.GOROOT(), "bin", "go")
-	if runtime.GOOS == "windows" {
-		goBinary += ".exe"
-	}
+	// LookPath rather than runtime.GOROOT: a binary copied to another machine
+	// carries a GOROOT that means nothing there, which is what the deprecation
+	// warning is about. A verification script that cannot find go has nothing to
+	// verify, so it says so instead of guessing.
+	goBinary, err := exec.LookPath("go")
+	check(err)
 	for _, scenario := range []struct {
 		name      string
 		unhealthy bool

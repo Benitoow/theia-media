@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -150,11 +149,4 @@ func view(status updater.Status, execPath string) UpdateStatusView {
 		Message:   status.Message,
 		ExecPath:  execPath,
 	}
-}
-
-// platformLabel names this machine the way the release assets do, which is how
-// the updater selects a binary. Exported for the status output, where "which
-// build would I get" is a fair question.
-func platformLabel() string {
-	return runtime.GOOS + "/" + runtime.GOARCH
 }

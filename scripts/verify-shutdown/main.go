@@ -209,11 +209,14 @@ func interrupt(pid int) error {
 	generate := syscall.NewLazyDLL("kernel32.dll").NewProc("GenerateConsoleCtrlEvent")
 	// A child started with CREATE_NEW_PROCESS_GROUP has its own pid as the
 	// process-group id, which is what the call wants.
-	ret, _, callErr := generate.Call(ctrlBreakEvent, uintptr(pid))
+	// The first call's error is discarded rather than captured: what it returns is
+	// only read when the second call fails too, and that one's error is the one
+	// worth reporting.
+	ret, _, _ := generate.Call(ctrlBreakEvent, uintptr(pid))
 	if ret == 0 {
 		// The child joined this console's own group rather than a fresh one;
 		// break the whole console, which is what closing a terminal does.
-		ret, _, callErr = generate.Call(ctrlBreakEvent, 0)
+		ret, _, callErr := generate.Call(ctrlBreakEvent, 0)
 		if ret == 0 {
 			return callErr
 		}
