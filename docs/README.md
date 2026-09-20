@@ -27,6 +27,8 @@ passer pour la documentation courante.
 
 - [`V3.2`](archive/v3.2/README.md) - plans de travail, mesures A/B, validations
   matérielles et campagnes sur médias réels.
+- [`V3.3`](archive/v3.3/README.md) - journaux, mesures et preuves de la campagne
+  qui a construit la génération native (phases 0 à 7).
 - [`V2`](archive/README.md) - roadmap et documents de coordination du cycle V2.
 
 Les images utilisées par la documentation publique vivent dans

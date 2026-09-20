@@ -763,15 +763,44 @@ fn connect_to(url: &str) -> Result<String, String> {
         // not mean throwing progress into an unscoped bucket.
         client.set_profile(Some(profile.id));
     }
+    let json = connection_payload(&client, &health, &profiles)?;
+    *CLIENT.lock().unwrap() = Some(client);
+    Ok(json)
+}
+
+/// The JSON a connected session is described by, in one place because two
+/// callers need it: the connect command, and the question the interface asks at
+/// startup about a connection it may already have.
+fn connection_payload(
+    client: &server::Client,
+    health: &server::Health,
+    profiles: &[server::Profile],
+) -> Result<String, String> {
     let payload = serde_json::json!({
         "url": client.base(),
         "health": health,
         "profile": client.profile(),
         "profiles": profiles,
     });
-    let json = serde_json::to_string(&payload).map_err(|e| e.to_string())?;
-    *CLIENT.lock().unwrap() = Some(client);
-    Ok(json)
+    serde_json::to_string(&payload).map_err(|e| e.to_string())
+}
+
+/// The server this player is already talking to, if any.
+///
+/// The interface asks this before it adopts anything. A machine installed
+/// all-in-one is normally served by its own server and the shell should find it
+/// without being told - but not when the caller named a server on the command
+/// line, which is what `--server` is for and what the shell used to override
+/// silently before it drew its first frame.
+#[tauri::command]
+fn player_current_server() -> Result<Option<String>, String> {
+    let guard = CLIENT.lock().unwrap();
+    let Some(client) = guard.as_ref() else {
+        return Ok(None);
+    };
+    let health = client.health()?;
+    let profiles = client.profiles()?;
+    Ok(Some(connection_payload(client, &health, &profiles)?))
 }
 
 /// Starts a film. mpv is handed the stream URL and fetches it itself: it does
@@ -1456,6 +1485,7 @@ fn main() {
             player_play_episode,
             player_preview,
             player_log,
+            player_current_server,
             player_log
         ])
         .setup(move |app| {

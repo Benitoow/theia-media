@@ -1,0 +1,19 @@
+### setup baseline  started 2026-09-15T23:17:48.8503292+02:00
+### --- go build -trimpath -o runDir/theia-setup.exe ./cmd/theia-setup ---
+### build exit=0
+### --- capture-tui.ps1 (100x30, before/00-setup-fr-100x30.png) ---
+capture: C:\Users\starx\AppData\Local\Temp\theia-v33-polish-20260915-231530\before\00-setup-fr-100x30.png
+--- console text (proves which buffer was read) ---
+  THEIA
+
+  Quelques questions, puis c'est fini. Rien n'est écrit avant la
+  confirmation.
+
+
+┃ Cette machine sert-elle, ou regarde-t-elle ?
+┃ Le rôle est déclaré, jamais deviné : un mini-PC dans un placard et un HTPC
+--- colours drawn ---
+fg=#CCCCCC  bg=#0C0C0C  cells=249    Quelquesquestions,puisc'estfini.Rienn'estécritav
+fg=#C19C00  bg=#0C0C0C  cells=77     THEIACettemachinesert-elle,ouregarde-t-elle?>Tou
+fg=#767676  bg=#0C0C0C  cells=51     ┃┃┃┃┃┃↑↓choisir·entréevalider·/filtrer·échapannu
+### capture exit=0

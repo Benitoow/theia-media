@@ -336,6 +336,20 @@ export default function App() {
 			setBooting(true);
 			setErrorKey(null);
 			try {
+				// A connection the player already holds wins. The command line named
+				// it - `--server` exists so the client can be exercised without a
+				// click - and adopting the machine's own install over it made the
+				// flag a lie: the window talked to a server nobody asked for, and
+				// nothing on screen said so.
+				try {
+					const current = await invoke<string | null>('player_current_server');
+					if (current) {
+						const url = (JSON.parse(current) as { url?: string }).url;
+						if (url && (await connect(url, true))) return;
+					}
+				} catch {
+					// Nothing connected yet, which is the ordinary start.
+				}
 				let local: string | null = null;
 				try {
 					local = await invoke<string | null>('player_local_server');

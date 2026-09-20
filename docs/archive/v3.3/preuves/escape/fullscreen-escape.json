@@ -1,0 +1,19 @@
+{
+  "exe": "C:\\Users\\starx\\Documents\\CODE\\Theia\\player\\target\\release\\theia-player.exe",
+  "media": "C:\\Users\\starx\\AppData\\Local\\Temp\\theia-v33-polish-20260915-231530\\playback-data\\media\\Guard.Long.2026.mp4",
+  "dpi": 192,
+  "windowed": "1280x720",
+  "windowed_css": "640x360",
+  "screen": "1440x900",
+  "fullscreen": "1440x900",
+  "fullscreen_is_screen": true,
+  "running_after_first_escape": false,
+  "after_first_escape": null,
+  "back_to_windowed": false,
+  "still_fullscreen": false,
+  "closed_on_second_escape": null,
+  "engine_status_lines": 0,
+  "engine_first_pos": null,
+  "engine_last_pos": null,
+  "engine_advanced": null
+}

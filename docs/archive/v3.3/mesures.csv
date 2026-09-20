@@ -1,0 +1,80 @@
+id,phase,surface,state,viewport_css,locale,metric,value,unit,status,evidence,note
+B-01,0.3,repo,go test ./...,-, -,tests,0,failures,verifie,logs/baseline-GO.log,cached and fresh packages; exit 0; CGO_ENABLED=0
+B-02,0.3,repo,go test ./...,-, -,duration,19.3,s,verifie,logs/baseline-GO.log,23:15:56 to 23:16:15
+B-03,0.3,web,node scripts/contrast.mjs,-,-,documented ratios confirmed,11,of 11,verifie,logs/baseline-WEB.log,all tokens match the documented ratios
+B-04,0.3,web,node web/scripts/check-locales.mjs,-,-,values compared,684,values,verifie,logs/baseline-WEB.log,54 functions; fr and en match
+B-05,0.3,web,npm --prefix web run check,-,-,errors,0,count,verifie,logs/baseline-WEB.log,svelte-check 0 errors 0 warnings
+B-06,0.3,server,.\build.ps1,-,-,exit,0,code,verifie,logs/baseline-WEB.log,theia-server.exe built and embedded web-dist written
+B-07,0.3,osd,npm --prefix player/ui run check:i18n,-,-,keys compared,33,keys,verifie,logs/baseline-OSD.log,osd locales agree (fr 33, en 33)
+B-08,0.3,osd,npm --prefix player/ui run build,-,-,exit,0,code,verifie,logs/baseline-OSD.log,113 modules; CSS 10741 bytes; JS 57890 bytes
+B-09,0.3,player,.\build-player.ps1,-,-,exit,0,code,verifie,logs/baseline-NATIVE.log,debug build 48.67s; 14.7 MB
+B-10,0.3,player,cargo test,-,-,passed,6,of 6,verifie,logs/baseline-NATIVE.log,4.50s
+B-11,0.3,web,npm --prefix web test (layout),375/1280/1920,-,passed,81,of 84,verifie,logs/baseline-LAYOUT.log,3 skipped; 27.3s; default port 8396
+B-12,0.3,osd,npm --prefix player/ui run check:render,550/1280/390,-,exit,0,code,verifie,logs/baseline-OSD-RENDER.log,7 pictures written to before/osd
+B-13,0.3,setup,go build ./cmd/theia-setup,-,-,size,12970496,bytes,verifie,logs/baseline-SETUP.log,built into the run directory
+B-14,0.3,setup,scripts/capture-tui.ps1 100x30,-,exit,0,code,verifie,logs/baseline-SETUP.log,probe read the buffer and reported three colours
+B-15,0.3,native,scripts/capture-window.ps1,-,-,exit,0,code,verifie,logs/baseline-NATIVE-CAPTURE.log,pid 36040; window 1100x700 real
+B-16,0.3,native,scripts/capture-window.ps1,-,-,DPI,192,dpi,verifie,logs/baseline-NATIVE-CAPTURE.log,200% scaling; 1100 real = 550 CSS
+B-17,0.3,web,npm --prefix web run test:playback,-,-,not run,-,-,en attente D0,plan phase 0,suite uses 8397; D0 asks whether to keep it
+M-01,0.4,osd,connect,550x350,fr,scrub target height,24,px,verifie,before/osd-native-viewport/measure-osd.json,only target below the 44px floor
+M-02,0.4,osd,playing,1280x720,fr,scrub target height,24,px,verifie,before/osd-native-viewport/measure-osd.json,design system 6b says 24px
+M-03,0.4,web,films,1280x800,fr,scrub target height,48,px,verifie,before/web-measure/measure-web.json,.scrub height 3rem in the web player
+M-04,0.4,osd,library,1280x720,fr,card art ratio,1.77,ratio,verifie,before/probe2/probe2-osd-1280x720.json,221.14x125.27; 16/9 is 1.7778
+M-05,0.4,osd,library,550x350,fr,card art ratio,1.77,ratio,verifie,before/probe2/probe2-osd-550x350.json,245.80x139.13
+M-06,0.4,osd,library,1280x720,fr,grid columns,5,count,verifie,before/probe2/probe2-osd-1280x720.json,219.14px each; gap 20.48px
+M-07,0.4,osd,library,550x350,fr,grid columns,2,count,verifie,before/probe2/probe2-osd-550x350.json,243.80px each; below 36rem
+M-08,0.4,web,films,1280x800,fr,grid columns,4,count,verifie,before/probe2/probe2-web-1280x800.json,279.05px each; gap 20.48px
+M-09,0.4,web,films,550x350,fr,grid columns,2,count,verifie,before/web-measure/measure-web.json,245.41px each
+M-10,0.4,osd,library,1280x720,fr,progress rule,2.81x3.04,px,verifie,before/probe2/probe2-osd-1280x720.json,part-watched film only; 3px tall as 6.2 allows
+M-11,0.4,osd,library,1280x720,fr,at-face rules declared,0,count,verifie,before/probe2/probe2-osd-1280x720.json,dist CSS 10741 bytes; web 88813 bytes declares 2
+M-12,0.4,osd,library,1280x720,fr,cinzel font loaded,false,boolean,verifie,before/osd-native-viewport/measure-osd.json,document.fonts has no entry; face never declared
+M-13,0.4,osd,library,1280x720,fr,jost font loaded,false,boolean,verifie,before/osd-native-viewport/measure-osd.json,.label resolves through the stack to Segoe UI
+M-14,0.4,osd,library,1280x720,fr,display title family resolved,Georgia,family,verifie,before/osd-native-viewport/measure-osd.json,--font-display first available fallback
+M-15,0.4,osd,library,1280x720,fr,label family resolved,"Segoe UI",family,verifie,before/osd-native-viewport/measure-osd.json,--font-label first available fallback
+M-16,0.4,web,films,1280x800,fr,cinzel font loaded,true,boolean,verifie,before/probe2/probe2-web-1280x800.json,two @font-face rules; both woff2 emitted
+M-17,0.4,web,films,1280x800,fr,jost font loaded,true,boolean,verifie,before/probe2/probe2-web-1280x800.json,Jost Variable 100 900 loaded
+M-18,0.4,osd,library,1280x720,fr,library title size,64,px,verifie,before/osd-native-viewport/measure-osd.json,--text-display clamp at 1280
+M-19,0.4,web,films,1920x1080,fr,card title size,19,px,verifie,before/web-measure/measure-web.json,three-metre step above 100rem
+M-20,0.4,web,films,1280x800,fr,card title size,14,px,verifie,before/web-measure/measure-web.json,--text-small in the UI face
+M-21,0.4,osd,library,1280x720,fr,card title size,14,px,verifie,before/osd-native-viewport/measure-osd.json,.film-name --text-small
+M-22,0.4,web,films,550x350,fr,horizontal overflow,true,boolean,verifie,before/web-measure/measure-web.json,label.library-select right=696.39 and select right=682
+M-23,0.4,web,films,1280x800,fr,horizontal overflow,false,boolean,verifie,before/web-measure/measure-web.json,none
+M-24,0.4,web,films,1920x1080,fr,horizontal overflow,false,boolean,verifie,before/web-measure/measure-web.json,none
+M-25,0.4,osd,playing,320x180,fr,horizontal overflow,true,boolean,before/osd-extremes/measure-osd.json,scrollWidth 366 in a 320px window
+M-26,0.4,osd,playing,375x812,fr,horizontal overflow,false,boolean,verifie,before/osd-extremes/measure-osd.json,none
+M-27,0.4,osd,playing,704x396,fr,horizontal overflow,false,boolean,verifie,before/osd-extremes/measure-osd.json,none
+M-28,0.4,osd,connect,320x180,fr,connect button clickable,false,boolean,verifie,logs/measure-osd-extremes.log,title-bar and .scrub intercept pointer events
+M-29,0.4,osd,connect,320x180,fr,connect form below viewport,true,boolean,before/osd-extremes/measure-osd.json,form.connect bottom=311 in a 180px window
+M-30,0.4,osd,connect,550x350,fr,connect row wraps,true,boolean,before/osd-native-viewport/measure-osd.json,button.action 147.06x54 at x=378.94
+M-31,0.4,osd,connect,550x350,fr,search button height,52,px,verifie,before/osd-native-viewport/measure-osd.json,above the 44px floor
+M-32,0.4,osd,connect,550,fr,library panel scroll,auto,css,verifie,before/osd-native-viewport/measure-osd.json,.library overflow-y auto; form 135px in a 110px box
+M-33,0.4,osd,playing,all,fr,idle after 2.6s,false,boolean,verifie,before/osd-native-viewport/measure-osd.json,three seconds of no activity
+M-34,0.4,osd,playing,all,fr,idle after 3.8s,true,boolean,verifie,before/osd-native-viewport/measure-osd.json,furniture hides and takes the cursor
+M-35,0.4,osd,paused,all,fr,idle after 2.6s,false,boolean,verifie,before/osd-native-viewport/measure-osd.json,controls stay, opacity 1
+M-36,0.4,osd,playing,all,fr,html cursor,none,css,verifie,before/osd-native-viewport/measure-osd.json,unconditional cursor none on html and body
+M-37,0.4,osd,connect,1280x720,fr,key k typed into address,false,boolean,verifie,before/probe2/probe2-osd-1280x720-noconnect.json,field unchanged; global handler consumes it
+M-38,0.4,osd,connect,1280x720,fr,key Space typed into address,false,boolean,verifie,before/probe2/probe2-osd-1280x720-noconnect.json,field unchanged; toggles playback instead
+M-39,0.4,osd,connect,1280x720,fr,key l flips language,true,boolean,verifie,before/probe2/probe2-osd-1280x720-noconnect.json,Choisir un film to Choose a film while typing
+M-40,0.4,osd,connect,1280x720,fr,keys f m c typed into address,true,boolean,verifie,before/probe2/probe2-osd-1280x720-noconnect.json,inserted and no window command issued
+M-41,0.4,osd,playing,1280x720,fr,track menu rows,5,count,verifie,logs/baseline-OSD-RENDER.log,two audio plus off plus two subtitles
+M-42,0.4,osd,playing,1280x720,fr,track menu ticks,2,count,verifie,logs/baseline-OSD-RENDER.log,one audio one subtitle
+M-43,0.4,osd,playing,1280x720,fr,track name contains a URL,false,boolean,verifie,logs/baseline-OSD-RENDER.log,asserted by the harness
+M-44,0.4,osd,playing,1280x720,fr,arrow keeps menu open,true,boolean,verifie,before/probe2/probe2-osd-1280x720.json,no seek issued
+M-45,0.4,osd,playing,1280x720,fr,escape closes menu,true,boolean,verifie,before/probe2/probe2-osd-1280x720.json,focus returns to the tracks button
+M-46,0.4,native,connect,550x350,fr,window reachable,true,boolean,verifie,player/theia-player/tauri.conf.json,minWidth 640 minHeight 360 real
+M-47,0.4,native,connect,320x180,fr,window reachable,true,boolean,verifie,player/theia-player/tauri.conf.json,minimum on this 200% machine
+T-01,0.5,setup,form 100x30,100x30,fr,accent colour drawn,#C19C00,hex,verifie,logs/baseline-SETUP.log,console probe; nearest legacy palette entry to #C8A24A
+T-02,0.5,setup,form 100x30,100x30,fr,body colour drawn,#CCCCCC,hex,verifie,logs/baseline-SETUP.log,console probe
+T-03,0.5,setup,form 100x30,100x30,fr,help colour drawn,#767676,hex,verifie,logs/baseline-SETUP.log,console probe
+T-04,0.5,setup,form 100x30,100x30,fr,background colour drawn,#0C0C0C,hex,verifie,logs/baseline-SETUP.log,console probe
+T-05,0.5,setup,form 100x30,100x30,fr,nothing written on escape,true,boolean,verifie,logs/baseline-SETUP.log,setup.json unchanged; setup-data and setup-install empty
+T-06,0.5,setup,form 60x24,60x24,fr,text wraps with no loss,true,boolean,verifie,before/00-setup-fr-60x24.png,console text read back at full width
+T-07,0.5,setup,form 100x30,100x30,fr,capture crops the window,false,boolean,non verifie,before/00-setup-fr-100x30.png,window 1030px wide inside a 1440px screen; picture is 1440x900
+N-01,0.5,native,connect,550x350,fr,picture captured,true,boolean,verifie,before/10-native-connect-1100x700-fr.png,1100x700 real pixels at DPI 192
+N-02,0.5,native,connect,550x350,fr,cursor visible in the picture,false,boolean,non verifie,before/10-native-connect-1100x700-fr.png,CopyFromScreen does not draw the pointer; needs a direct look
+N-03,0.5,native,connect,550x350,fr,libmpv digest matches the pin,true,boolean,verifie,logs/baseline-NATIVE-CAPTURE.log,6f059354... and 100021760 bytes
+N-04,0.5,native,playing,-,-,played a film in the native window,false,boolean,non verifie,-,phase 4 asks for it; the fixture is 45s and the plan wants 60s
+F-01,0.2,repo,frozen surfaces hashed,313,files,verifie,before/frozen-surfaces.csv,"web/, cmd/theia-server/, internal/ minus setup, player/, manifests"
+F-02,0.2,repo,git status --short,-,-,clean,0,entries,verifie,logs/baseline-GO.log,HEAD 249532e37770c4678fa321ee85de4f92808b7caf
+F-03,0.2,repo,git diff --binary,-,-,empty,0,bytes,verifie,session output,no tracked file modified before the campaign
+R-01,0.4,web,render determinism,390x780,-,picture identical across runs,false,boolean,verifie,before/osd vs before/osd-run2,5-phone-library.png 65785 vs 57267 bytes; the other six identical

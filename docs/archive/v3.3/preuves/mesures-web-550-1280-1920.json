@@ -1,0 +1,1630 @@
+{
+ "mode": "web",
+ "base": "http://127.0.0.1:8395/films",
+ "generated": "2026-09-15T21:21:18.876Z",
+ "runs": [
+  {
+   "viewport": {
+    "width": 550,
+    "height": 350,
+    "lang": "fr"
+   },
+   "states": {
+    "films": {
+     "report": {
+      "viewport": {
+       "w": 550,
+       "h": 350,
+       "dpr": 1
+      },
+      "documentElement": {
+       "lang": "fr",
+       "scrollWidth": 550,
+       "clientWidth": 550,
+       "scrollHeight": 1157,
+       "clientHeight": 350
+      },
+      "body": {
+       "scrollWidth": 550,
+       "clientWidth": 550,
+       "scrollHeight": 1157,
+       "clientHeight": 1157
+      },
+      "elements": {
+       "html": {
+        "selector": "html",
+        "text": "Tous les films - Theia\n\t\n\t\t\n\t\t\t\n\t\t\t\t{\n\t\t\t\t\t__sveltekit_1s0xw",
+        "fontFamily": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": 16,
+        "fontWeight": "400",
+        "letterSpacing": null,
+        "lineHeight": "24px",
+        "textTransform": "none",
+        "color": "rgb(237, 231, 220)",
+        "background": "rgb(11, 10, 9)",
+        "cursor": "auto",
+        "box": {
+         "x": 0,
+         "y": 0,
+         "w": 550,
+         "h": 1157.27,
+         "right": 550,
+         "bottom": 1157.27
+        },
+        "isTarget": false
+       },
+       "body": {
+        "selector": "body",
+        "text": "{\n\t\t\t\t\t__sveltekit_1s0xw43 = {\n\t\t\t\t\t\tbase: \"\"\n\t\t\t\t\t};\n\n\t\t\t\t\t",
+        "fontFamily": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": 16,
+        "fontWeight": "400",
+        "letterSpacing": null,
+        "lineHeight": "24px",
+        "textTransform": "none",
+        "color": "rgb(237, 231, 220)",
+        "background": "rgb(11, 10, 9)",
+        "cursor": "auto",
+        "box": {
+         "x": 0,
+         "y": 0,
+         "w": 550,
+         "h": 1157.27,
+         "right": 550,
+         "bottom": 1157.27
+        },
+        "isTarget": false
+       },
+       ".label": {
+        "selector": ".label",
+        "text": "Films",
+        "fontFamily": "\"Jost Variable\", Futura, \"Century Gothic\", \"Segoe UI\", Roboto, sans-serif",
+        "fontSize": 11,
+        "fontWeight": "400",
+        "letterSpacing": 1.98,
+        "lineHeight": "13.2px",
+        "textTransform": "uppercase",
+        "color": "rgb(237, 231, 220)",
+        "background": "rgba(0, 0, 0, 0)",
+        "cursor": "pointer",
+        "box": {
+         "x": 0,
+         "y": 0,
+         "w": 0,
+         "h": 0,
+         "right": 0,
+         "bottom": 0
+        },
+        "isTarget": true
+       },
+       ".library-title": null,
+       ".hint": null,
+       "input": {
+        "selector": "input",
+        "text": "",
+        "fontFamily": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": 15,
+        "fontWeight": "400",
+        "letterSpacing": null,
+        "lineHeight": "22.5px",
+        "textTransform": "none",
+        "color": "rgb(237, 231, 220)",
+        "background": "rgba(0, 0, 0, 0)",
+        "cursor": "text",
+        "box": {
+         "x": 70.98,
+         "y": 230.19,
+         "w": 436.42,
+         "h": 52,
+         "right": 507.41,
+         "bottom": 282.19
+        },
+        "isTarget": true
+       },
+       "button.action": null,
+       ".film": null,
+       ".film-art": null,
+       ".film-name": null,
+       ".film-legend": null,
+       ".film-watched": null,
+       ".title-bar": null,
+       ".film-title": null,
+       ".scrub": null,
+       ".scrub-track": null,
+       ".scrub-played": null,
+       ".row": null,
+       "button.control": null,
+       "button.control--primary": null,
+       ".clock": null,
+       ".elapsed": null,
+       ".total": null,
+       ".audio-mode": null,
+       ".menu-anchor": null,
+       ".track-menu": null,
+       ".track": null,
+       ".notice": null,
+       ".player": null,
+       ".player-video": null,
+       ".player-top": null,
+       ".player-title": null,
+       ".player-badge": null,
+       ".player-controls": null,
+       ".player-buttons": null,
+       ".player-icon-button": null,
+       ".player-icon-button--primary": null,
+       ".player-time": null,
+       ".player-time-now": null,
+       ".player-time-total": null,
+       ".player-volume": null,
+       ".player-tracks": null,
+       ".track-row": null,
+       ".track-primary": null,
+       ".track-detail": null
+      },
+      "targetCount": 20,
+      "targetsBelow44": [],
+      "targets": [
+       {
+        "tag": "a",
+        "cls": "nav-target nav-brand",
+        "label": "Theia - Accueil",
+        "w": 92.42,
+        "h": 52,
+        "right": 125.42,
+        "bottom": 74,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "nav-target nav-profile",
+        "label": "Changer de profil",
+        "w": 52,
+        "h": 52,
+        "right": 517,
+        "bottom": 74,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "input",
+        "cls": "library-search-input",
+        "label": "Rechercher",
+        "w": 436.42,
+        "h": 52,
+        "right": 507.41,
+        "bottom": 282.19,
+        "cursor": "text",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "select",
+        "cls": "",
+        "label": "TitrePlus récentsMieux notésAjoutés réce",
+        "w": 136,
+        "h": 52,
+        "right": 218.48,
+        "bottom": 346.38,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "select",
+        "cls": "",
+        "label": "Tous les genresTest",
+        "w": 110,
+        "h": 52,
+        "right": 418.48,
+        "bottom": 346.38,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "select",
+        "cls": "",
+        "label": "TousJamais commencésEn coursTerminés",
+        "w": 133,
+        "h": 52,
+        "right": 682,
+        "bottom": 346.38,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "intent-button intent-list",
+        "label": "Ma liste0",
+        "w": 147.98,
+        "h": 52,
+        "right": 171.98,
+        "bottom": 422.38,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(214, 207, 194)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "duration-pill duration-pill--active",
+        "label": "Toute une soirée",
+        "w": 118.56,
+        "h": 48,
+        "right": 142.56,
+        "bottom": 511.55,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "duration-pill",
+        "label": "90 minutes",
+        "w": 88.42,
+        "h": 48,
+        "right": 234.17,
+        "bottom": 511.55,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(140, 133, 122)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "duration-pill",
+        "label": "2 heures",
+        "w": 74.56,
+        "h": 48,
+        "right": 311.92,
+        "bottom": 511.55,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(140, 133, 122)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "duration-pill",
+        "label": "3 heures",
+        "w": 74.56,
+        "h": 48,
+        "right": 389.67,
+        "bottom": 511.55,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(140, 133, 122)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "intent-button intent-random",
+        "label": "Choisir pour moi",
+        "w": 176.63,
+        "h": 52,
+        "right": 526,
+        "bottom": 422.38,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(11, 10, 9)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "poster-card group poster-card--fluid",
+        "label": "G   Guard 2026",
+        "w": 245.41,
+        "h": 186.11,
+        "right": 269.41,
+        "bottom": 725.66,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "poster-card group poster-card--fluid",
+        "label": "G   Guard Converted 2026",
+        "w": 245.41,
+        "h": 186.11,
+        "right": 526,
+        "bottom": 725.66,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "poster-card group poster-card--fluid",
+        "label": "G   Guard Direct 2026",
+        "w": 245.41,
+        "h": 186.11,
+        "right": 269.41,
+        "bottom": 923.77,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Accueil",
+        "w": 110,
+        "h": 56,
+        "right": 110,
+        "bottom": 350,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(140, 133, 122)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Films",
+        "w": 110,
+        "h": 56,
+        "right": 220,
+        "bottom": 350,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(200, 162, 74)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Séries",
+        "w": 110,
+        "h": 56,
+        "right": 330,
+        "bottom": 350,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(140, 133, 122)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Rechercher",
+        "w": 110,
+        "h": 56,
+        "right": 440,
+        "bottom": 350,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(140, 133, 122)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Réglages",
+        "w": 110,
+        "h": 56,
+        "right": 550,
+        "bottom": 350,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(140, 133, 122)",
+        "below44": false
+       }
+      ],
+      "overflowing": [
+       {
+        "what": "label.library-select",
+        "left": 440.88,
+        "right": 696.39
+       },
+       {
+        "what": "select",
+        "left": 549,
+        "right": 682
+       }
+      ],
+      "clipping": [
+       {
+        "what": "html.dark",
+        "scrollHeight": 1157,
+        "clientHeight": 350
+       },
+       {
+        "what": "div.site-nav-wrap",
+        "scrollHeight": 136,
+        "clientHeight": 96
+       },
+       {
+        "what": "span.brand-word",
+        "scrollHeight": 20,
+        "clientHeight": 17
+       },
+       {
+        "what": "span",
+        "scrollHeight": 18,
+        "clientHeight": 15
+       },
+       {
+        "what": "h1.page-title.enter",
+        "scrollHeight": 42,
+        "clientHeight": 36
+       },
+       {
+        "what": "span.poster-fallback-initial",
+        "scrollHeight": 51,
+        "clientHeight": 44
+       },
+       {
+        "what": "span.poster-fallback-initial",
+        "scrollHeight": 51,
+        "clientHeight": 44
+       },
+       {
+        "what": "span.poster-fallback-initial",
+        "scrollHeight": 51,
+        "clientHeight": 44
+       },
+       {
+        "what": "span.tab-label",
+        "scrollHeight": 12,
+        "clientHeight": 10
+       },
+       {
+        "what": "span.tab-label",
+        "scrollHeight": 12,
+        "clientHeight": 10
+       },
+       {
+        "what": "span.tab-label",
+        "scrollHeight": 12,
+        "clientHeight": 10
+       },
+       {
+        "what": "span.tab-label",
+        "scrollHeight": 12,
+        "clientHeight": 10
+       },
+       {
+        "what": "span.tab-label",
+        "scrollHeight": 12,
+        "clientHeight": 10
+       }
+      ]
+     },
+     "grid": [
+      {
+       "surface": "web",
+       "title": "Guard",
+       "art": {
+        "w": 245.41,
+        "h": 138.03,
+        "ratio": 1.78
+       },
+       "rule": null,
+       "nameFont": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+       "nameSize": 14,
+       "artObjectFit": null
+      },
+      {
+       "surface": "web",
+       "title": "Guard Converted",
+       "art": {
+        "w": 245.41,
+        "h": 138.03,
+        "ratio": 1.78
+       },
+       "rule": null,
+       "nameFont": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+       "nameSize": 14,
+       "artObjectFit": null
+      },
+      {
+       "surface": "web",
+       "title": "Guard Direct",
+       "art": {
+        "w": 245.41,
+        "h": 138.03,
+        "ratio": 1.78
+       },
+       "rule": null,
+       "nameFont": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+       "nameSize": 14,
+       "artObjectFit": null
+      }
+     ],
+     "fonts": {
+      "faces": [
+       {
+        "family": "\"Cinzel Variable\"",
+        "url": "./cinzel-latin-wght-normal.DMUuCU8H.woff2",
+        "weight": "400 900"
+       },
+       {
+        "family": "\"Jost Variable\"",
+        "url": "./jost-latin-wght-normal.ObQm3Zd1.woff2",
+        "weight": "100 900"
+       }
+      ],
+      "fontsSize": 2,
+      "checks": {
+       "Cinzel Variable": true,
+       "Jost Variable": true,
+       "Inter Variable": true,
+       "Playfair Display Variable": true
+      },
+      "loadedFamilies": [
+       "Cinzel Variable 400 900 loaded",
+       "Jost Variable 100 900 loaded"
+      ],
+      "widths": {}
+     }
+    }
+   },
+   "consoleErrors": []
+  },
+  {
+   "viewport": {
+    "width": 1280,
+    "height": 800,
+    "lang": "fr"
+   },
+   "states": {
+    "films": {
+     "report": {
+      "viewport": {
+       "w": 1280,
+       "h": 800,
+       "dpr": 1
+      },
+      "documentElement": {
+       "lang": "fr",
+       "scrollWidth": 1280,
+       "clientWidth": 1280,
+       "scrollHeight": 874,
+       "clientHeight": 800
+      },
+      "body": {
+       "scrollWidth": 1280,
+       "clientWidth": 1280,
+       "scrollHeight": 874,
+       "clientHeight": 874
+      },
+      "elements": {
+       "html": {
+        "selector": "html",
+        "text": "Tous les films - Theia\n\t\n\t\t\n\t\t\t\n\t\t\t\t{\n\t\t\t\t\t__sveltekit_1s0xw",
+        "fontFamily": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": 16,
+        "fontWeight": "400",
+        "letterSpacing": null,
+        "lineHeight": "24px",
+        "textTransform": "none",
+        "color": "rgb(237, 231, 220)",
+        "background": "rgb(11, 10, 9)",
+        "cursor": "auto",
+        "box": {
+         "x": 0,
+         "y": 0,
+         "w": 1280,
+         "h": 874.09,
+         "right": 1280,
+         "bottom": 874.09
+        },
+        "isTarget": false
+       },
+       "body": {
+        "selector": "body",
+        "text": "{\n\t\t\t\t\t__sveltekit_1s0xw43 = {\n\t\t\t\t\t\tbase: \"\"\n\t\t\t\t\t};\n\n\t\t\t\t\t",
+        "fontFamily": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": 16,
+        "fontWeight": "400",
+        "letterSpacing": null,
+        "lineHeight": "24px",
+        "textTransform": "none",
+        "color": "rgb(237, 231, 220)",
+        "background": "rgb(11, 10, 9)",
+        "cursor": "auto",
+        "box": {
+         "x": 0,
+         "y": 0,
+         "w": 1280,
+         "h": 874.09,
+         "right": 1280,
+         "bottom": 874.09
+        },
+        "isTarget": false
+       },
+       ".label": {
+        "selector": ".label",
+        "text": "Films",
+        "fontFamily": "\"Jost Variable\", Futura, \"Century Gothic\", \"Segoe UI\", Roboto, sans-serif",
+        "fontSize": 11,
+        "fontWeight": "400",
+        "letterSpacing": 1.98,
+        "lineHeight": "13.2px",
+        "textTransform": "uppercase",
+        "color": "rgb(237, 231, 220)",
+        "background": "rgba(0, 0, 0, 0)",
+        "cursor": "pointer",
+        "box": {
+         "x": 752.41,
+         "y": 24,
+         "w": 89.16,
+         "h": 56,
+         "right": 841.56,
+         "bottom": 80
+        },
+        "isTarget": true
+       },
+       ".library-title": null,
+       ".hint": null,
+       "input": {
+        "selector": "input",
+        "text": "",
+        "fontFamily": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": 15,
+        "fontWeight": "400",
+        "letterSpacing": null,
+        "lineHeight": "22.5px",
+        "textTransform": "none",
+        "color": "rgb(237, 231, 220)",
+        "background": "rgba(0, 0, 0, 0)",
+        "cursor": "text",
+        "box": {
+         "x": 98.17,
+         "y": 288.58,
+         "w": 433.28,
+         "h": 56,
+         "right": 531.45,
+         "bottom": 344.58
+        },
+        "isTarget": true
+       },
+       "button.action": null,
+       ".film": null,
+       ".film-art": null,
+       ".film-name": null,
+       ".film-legend": null,
+       ".film-watched": null,
+       ".title-bar": null,
+       ".film-title": null,
+       ".scrub": null,
+       ".scrub-track": null,
+       ".scrub-played": null,
+       ".row": null,
+       "button.control": null,
+       "button.control--primary": null,
+       ".clock": null,
+       ".elapsed": null,
+       ".total": null,
+       ".audio-mode": null,
+       ".menu-anchor": null,
+       ".track-menu": null,
+       ".track": null,
+       ".notice": null,
+       ".player": null,
+       ".player-video": null,
+       ".player-top": null,
+       ".player-title": null,
+       ".player-badge": null,
+       ".player-controls": null,
+       ".player-buttons": null,
+       ".player-icon-button": null,
+       ".player-icon-button--primary": null,
+       ".player-time": null,
+       ".player-time-now": null,
+       ".player-time-total": null,
+       ".player-volume": null,
+       ".player-tracks": null,
+       ".track-row": null,
+       ".track-primary": null,
+       ".track-detail": null
+      },
+      "targetCount": 19,
+      "targetsBelow44": [],
+      "targets": [
+       {
+        "tag": "a",
+        "cls": "nav-target nav-brand",
+        "label": "Theia - Accueil",
+        "w": 103.61,
+        "h": 56,
+        "right": 163.8,
+        "bottom": 80,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "nav-target nav-link label",
+        "label": "Films",
+        "w": 89.16,
+        "h": 56,
+        "right": 841.56,
+        "bottom": 80,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "nav-target nav-link label",
+        "label": "Séries",
+        "w": 83.28,
+        "h": 56,
+        "right": 924.84,
+        "bottom": 80,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "nav-target nav-link label",
+        "label": "Rechercher",
+        "w": 125.61,
+        "h": 56,
+        "right": 1050.45,
+        "bottom": 80,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "nav-target nav-link label",
+        "label": "Réglages",
+        "w": 107.77,
+        "h": 56,
+        "right": 1158.22,
+        "bottom": 80,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "nav-target nav-profile",
+        "label": "Changer de profil",
+        "w": 56,
+        "h": 56,
+        "right": 1219.81,
+        "bottom": 80,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "input",
+        "cls": "library-search-input",
+        "label": "Rechercher",
+        "w": 433.28,
+        "h": 56,
+        "right": 531.45,
+        "bottom": 344.58,
+        "cursor": "text",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "select",
+        "cls": "",
+        "label": "TitrePlus récentsMieux notésAjoutés réce",
+        "w": 136,
+        "h": 56,
+        "right": 745.13,
+        "bottom": 344.58,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "select",
+        "cls": "",
+        "label": "Tous les genresTest",
+        "w": 110,
+        "h": 56,
+        "right": 943.52,
+        "bottom": 344.58,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "select",
+        "cls": "",
+        "label": "TousJamais commencésEn coursTerminés",
+        "w": 133,
+        "h": 56,
+        "right": 1205.42,
+        "bottom": 344.58,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "intent-button intent-list",
+        "label": "Ma liste0",
+        "w": 155.98,
+        "h": 52,
+        "right": 207.17,
+        "bottom": 446.95,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(214, 207, 194)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "duration-pill duration-pill--active",
+        "label": "Toute une soirée",
+        "w": 158.56,
+        "h": 48,
+        "right": 542.7,
+        "bottom": 444.95,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "duration-pill",
+        "label": "90 minutes",
+        "w": 158.58,
+        "h": 48,
+        "right": 704.47,
+        "bottom": 444.95,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(140, 133, 122)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "duration-pill",
+        "label": "2 heures",
+        "w": 158.58,
+        "h": 48,
+        "right": 866.23,
+        "bottom": 444.95,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(140, 133, 122)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "duration-pill",
+        "label": "3 heures",
+        "w": 158.58,
+        "h": 48,
+        "right": 1028,
+        "bottom": 444.95,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(140, 133, 122)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "intent-button intent-random",
+        "label": "Choisir pour moi",
+        "w": 182.22,
+        "h": 52,
+        "right": 1228.81,
+        "bottom": 446.95,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(11, 10, 9)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "poster-card group poster-card--fluid",
+        "label": "G   Guard 2026",
+        "w": 279.05,
+        "h": 205.05,
+        "right": 330.23,
+        "bottom": 680.59,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "poster-card group poster-card--fluid",
+        "label": "G   Guard Converted 2026",
+        "w": 279.06,
+        "h": 205.05,
+        "right": 629.77,
+        "bottom": 680.59,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "poster-card group poster-card--fluid",
+        "label": "G   Guard Direct 2026",
+        "w": 279.05,
+        "h": 205.05,
+        "right": 929.28,
+        "bottom": 680.59,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       }
+      ],
+      "overflowing": [],
+      "clipping": [
+       {
+        "what": "html.dark",
+        "scrollHeight": 874,
+        "clientHeight": 800
+       },
+       {
+        "what": "div.site-nav-wrap",
+        "scrollHeight": 144,
+        "clientHeight": 104
+       },
+       {
+        "what": "span.brand-word",
+        "scrollHeight": 20,
+        "clientHeight": 17
+       },
+       {
+        "what": "span",
+        "scrollHeight": 18,
+        "clientHeight": 15
+       },
+       {
+        "what": "h1.page-title.enter",
+        "scrollHeight": 75,
+        "clientHeight": 64
+       },
+       {
+        "what": "span.poster-fallback-initial",
+        "scrollHeight": 84,
+        "clientHeight": 72
+       },
+       {
+        "what": "span.poster-fallback-initial",
+        "scrollHeight": 84,
+        "clientHeight": 72
+       },
+       {
+        "what": "span.poster-fallback-initial",
+        "scrollHeight": 84,
+        "clientHeight": 72
+       }
+      ]
+     },
+     "grid": [
+      {
+       "surface": "web",
+       "title": "Guard",
+       "art": {
+        "w": 279.05,
+        "h": 156.95,
+        "ratio": 1.78
+       },
+       "rule": null,
+       "nameFont": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+       "nameSize": 14,
+       "artObjectFit": null
+      },
+      {
+       "surface": "web",
+       "title": "Guard Converted",
+       "art": {
+        "w": 279.06,
+        "h": 156.97,
+        "ratio": 1.78
+       },
+       "rule": null,
+       "nameFont": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+       "nameSize": 14,
+       "artObjectFit": null
+      },
+      {
+       "surface": "web",
+       "title": "Guard Direct",
+       "art": {
+        "w": 279.05,
+        "h": 156.95,
+        "ratio": 1.78
+       },
+       "rule": null,
+       "nameFont": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+       "nameSize": 14,
+       "artObjectFit": null
+      }
+     ],
+     "fonts": {
+      "faces": [
+       {
+        "family": "\"Cinzel Variable\"",
+        "url": "./cinzel-latin-wght-normal.DMUuCU8H.woff2",
+        "weight": "400 900"
+       },
+       {
+        "family": "\"Jost Variable\"",
+        "url": "./jost-latin-wght-normal.ObQm3Zd1.woff2",
+        "weight": "100 900"
+       }
+      ],
+      "fontsSize": 2,
+      "checks": {
+       "Cinzel Variable": true,
+       "Jost Variable": true,
+       "Inter Variable": true,
+       "Playfair Display Variable": true
+      },
+      "loadedFamilies": [
+       "Cinzel Variable 400 900 loaded",
+       "Jost Variable 100 900 loaded"
+      ],
+      "widths": {}
+     }
+    }
+   },
+   "consoleErrors": []
+  },
+  {
+   "viewport": {
+    "width": 1920,
+    "height": 1080,
+    "lang": "fr"
+   },
+   "states": {
+    "films": {
+     "report": {
+      "viewport": {
+       "w": 1920,
+       "h": 1080,
+       "dpr": 1
+      },
+      "documentElement": {
+       "lang": "fr",
+       "scrollWidth": 1920,
+       "clientWidth": 1920,
+       "scrollHeight": 1080,
+       "clientHeight": 1080
+      },
+      "body": {
+       "scrollWidth": 1920,
+       "clientWidth": 1920,
+       "scrollHeight": 1080,
+       "clientHeight": 1080
+      },
+      "elements": {
+       "html": {
+        "selector": "html",
+        "text": "Tous les films - Theia\n\t\n\t\t\n\t\t\t\n\t\t\t\t{\n\t\t\t\t\t__sveltekit_1s0xw",
+        "fontFamily": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": 16,
+        "fontWeight": "400",
+        "letterSpacing": null,
+        "lineHeight": "24px",
+        "textTransform": "none",
+        "color": "rgb(237, 231, 220)",
+        "background": "rgb(11, 10, 9)",
+        "cursor": "auto",
+        "box": {
+         "x": 0,
+         "y": 0,
+         "w": 1920,
+         "h": 1080,
+         "right": 1920,
+         "bottom": 1080
+        },
+        "isTarget": false
+       },
+       "body": {
+        "selector": "body",
+        "text": "{\n\t\t\t\t\t__sveltekit_1s0xw43 = {\n\t\t\t\t\t\tbase: \"\"\n\t\t\t\t\t};\n\n\t\t\t\t\t",
+        "fontFamily": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": 16,
+        "fontWeight": "400",
+        "letterSpacing": null,
+        "lineHeight": "24px",
+        "textTransform": "none",
+        "color": "rgb(237, 231, 220)",
+        "background": "rgb(11, 10, 9)",
+        "cursor": "auto",
+        "box": {
+         "x": 0,
+         "y": 0,
+         "w": 1920,
+         "h": 1080,
+         "right": 1920,
+         "bottom": 1080
+        },
+        "isTarget": false
+       },
+       ".label": {
+        "selector": ".label",
+        "text": "Films",
+        "fontFamily": "\"Jost Variable\", Futura, \"Century Gothic\", \"Segoe UI\", Roboto, sans-serif",
+        "fontSize": 16,
+        "fontWeight": "400",
+        "letterSpacing": 2.88,
+        "lineHeight": "19.2px",
+        "textTransform": "uppercase",
+        "color": "rgb(237, 231, 220)",
+        "background": "rgba(0, 0, 0, 0)",
+        "cursor": "pointer",
+        "box": {
+         "x": 1219.48,
+         "y": 64,
+         "w": 111.23,
+         "h": 56,
+         "right": 1330.72,
+         "bottom": 120
+        },
+        "isTarget": true
+       },
+       ".library-title": null,
+       ".hint": null,
+       "input": {
+        "selector": "input",
+        "text": "",
+        "fontFamily": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": 17,
+        "fontWeight": "400",
+        "letterSpacing": null,
+        "lineHeight": "25.5px",
+        "textTransform": "none",
+        "color": "rgb(237, 231, 220)",
+        "background": "rgba(0, 0, 0, 0)",
+        "cursor": "text",
+        "box": {
+         "x": 142.98,
+         "y": 374.58,
+         "w": 857.94,
+         "h": 56,
+         "right": 1000.92,
+         "bottom": 430.58
+        },
+        "isTarget": true
+       },
+       "button.action": null,
+       ".film": null,
+       ".film-art": null,
+       ".film-name": null,
+       ".film-legend": null,
+       ".film-watched": null,
+       ".title-bar": null,
+       ".film-title": null,
+       ".scrub": null,
+       ".scrub-track": null,
+       ".scrub-played": null,
+       ".row": null,
+       "button.control": null,
+       "button.control--primary": null,
+       ".clock": null,
+       ".elapsed": null,
+       ".total": null,
+       ".audio-mode": null,
+       ".menu-anchor": null,
+       ".track-menu": null,
+       ".track": null,
+       ".notice": null,
+       ".player": null,
+       ".player-video": null,
+       ".player-top": null,
+       ".player-title": null,
+       ".player-badge": null,
+       ".player-controls": null,
+       ".player-buttons": null,
+       ".player-icon-button": null,
+       ".player-icon-button--primary": null,
+       ".player-time": null,
+       ".player-time-now": null,
+       ".player-time-total": null,
+       ".player-volume": null,
+       ".player-tracks": null,
+       ".track-row": null,
+       ".track-primary": null,
+       ".track-detail": null
+      },
+      "targetCount": 19,
+      "targetsBelow44": [],
+      "targets": [
+       {
+        "tag": "a",
+        "cls": "nav-target nav-brand",
+        "label": "Theia - Accueil",
+        "w": 127.59,
+        "h": 56,
+        "right": 232.59,
+        "bottom": 120,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "nav-target nav-link label",
+        "label": "Films",
+        "w": 111.23,
+        "h": 56,
+        "right": 1330.72,
+        "bottom": 120,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "nav-target nav-link label",
+        "label": "Séries",
+        "w": 108.48,
+        "h": 56,
+        "right": 1439.2,
+        "bottom": 120,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "nav-target nav-link label",
+        "label": "Rechercher",
+        "w": 170.08,
+        "h": 56,
+        "right": 1609.28,
+        "bottom": 120,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "nav-target nav-link label",
+        "label": "Réglages",
+        "w": 144.13,
+        "h": 56,
+        "right": 1753.41,
+        "bottom": 120,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "nav-target nav-profile",
+        "label": "Changer de profil",
+        "w": 56,
+        "h": 56,
+        "right": 1815,
+        "bottom": 120,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "input",
+        "cls": "library-search-input",
+        "label": "Rechercher",
+        "w": 857.94,
+        "h": 56,
+        "right": 1000.92,
+        "bottom": 430.58,
+        "cursor": "text",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "select",
+        "cls": "",
+        "label": "TitrePlus récentsMieux notésAjoutés réce",
+        "w": 153,
+        "h": 56,
+        "right": 1248.8,
+        "bottom": 430.58,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "select",
+        "cls": "",
+        "label": "Tous les genresTest",
+        "w": 124,
+        "h": 56,
+        "right": 1481.73,
+        "bottom": 430.58,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "select",
+        "cls": "",
+        "label": "TousJamais commencésEn coursTerminés",
+        "w": 151,
+        "h": 56,
+        "right": 1800.61,
+        "bottom": 430.58,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "intent-button intent-list",
+        "label": "Ma liste0",
+        "w": 155.98,
+        "h": 52,
+        "right": 251.98,
+        "bottom": 534.56,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(214, 207, 194)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "duration-pill duration-pill--active",
+        "label": "Toute une soirée",
+        "w": 281.8,
+        "h": 48,
+        "right": 768.2,
+        "bottom": 532.56,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "duration-pill",
+        "label": "90 minutes",
+        "w": 281.81,
+        "h": 48,
+        "right": 1053.2,
+        "bottom": 532.56,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(140, 133, 122)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "duration-pill",
+        "label": "2 heures",
+        "w": 281.8,
+        "h": 48,
+        "right": 1338.19,
+        "bottom": 532.56,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(140, 133, 122)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "duration-pill",
+        "label": "3 heures",
+        "w": 281.81,
+        "h": 48,
+        "right": 1623.19,
+        "bottom": 532.56,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(140, 133, 122)",
+        "below44": false
+       },
+       {
+        "tag": "button",
+        "cls": "intent-button intent-random",
+        "label": "Choisir pour moi",
+        "w": 182.22,
+        "h": 52,
+        "right": 1824,
+        "bottom": 534.56,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(11, 10, 9)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "poster-card group poster-card--fluid",
+        "label": "G   Guard 2026",
+        "w": 268,
+        "h": 213.17,
+        "right": 364,
+        "bottom": 776.33,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "poster-card group poster-card--fluid",
+        "label": "G   Guard Converted 2026",
+        "w": 268,
+        "h": 213.17,
+        "right": 656,
+        "bottom": 776.33,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       },
+       {
+        "tag": "a",
+        "cls": "poster-card group poster-card--fluid",
+        "label": "G   Guard Direct 2026",
+        "w": 268,
+        "h": 213.17,
+        "right": 948,
+        "bottom": 776.33,
+        "cursor": "pointer",
+        "outline": "none 3px rgb(237, 231, 220)",
+        "below44": false
+       }
+      ],
+      "overflowing": [],
+      "clipping": [
+       {
+        "what": "div.site-nav-wrap",
+        "scrollHeight": 224,
+        "clientHeight": 184
+       },
+       {
+        "what": "span.brand-word",
+        "scrollHeight": 25,
+        "clientHeight": 22
+       },
+       {
+        "what": "span",
+        "scrollHeight": 18,
+        "clientHeight": 15
+       },
+       {
+        "what": "header.collection-header.mb-10",
+        "scrollHeight": 97,
+        "clientHeight": 95
+       },
+       {
+        "what": "h1.page-title.enter",
+        "scrollHeight": 75,
+        "clientHeight": 64
+       },
+       {
+        "what": "p.label.enter.enter-2.mt-3",
+        "scrollHeight": 21,
+        "clientHeight": 19
+       },
+       {
+        "what": "span.label",
+        "scrollHeight": 21,
+        "clientHeight": 19
+       },
+       {
+        "what": "span.label",
+        "scrollHeight": 21,
+        "clientHeight": 19
+       },
+       {
+        "what": "span.label",
+        "scrollHeight": 21,
+        "clientHeight": 19
+       },
+       {
+        "what": "span.label",
+        "scrollHeight": 21,
+        "clientHeight": 19
+       },
+       {
+        "what": "div.library-grid",
+        "scrollHeight": 215,
+        "clientHeight": 213
+       },
+       {
+        "what": "a.poster-card.group.poster-card--fluid",
+        "scrollHeight": 215,
+        "clientHeight": 213
+       },
+       {
+        "what": "span.poster-fallback-initial",
+        "scrollHeight": 84,
+        "clientHeight": 72
+       },
+       {
+        "what": "p.poster-legend.label",
+        "scrollHeight": 21,
+        "clientHeight": 19
+       },
+       {
+        "what": "a.poster-card.group.poster-card--fluid",
+        "scrollHeight": 215,
+        "clientHeight": 213
+       },
+       {
+        "what": "span.poster-fallback-initial",
+        "scrollHeight": 84,
+        "clientHeight": 72
+       },
+       {
+        "what": "p.poster-legend.label",
+        "scrollHeight": 21,
+        "clientHeight": 19
+       },
+       {
+        "what": "a.poster-card.group.poster-card--fluid",
+        "scrollHeight": 215,
+        "clientHeight": 213
+       },
+       {
+        "what": "span.poster-fallback-initial",
+        "scrollHeight": 84,
+        "clientHeight": 72
+       },
+       {
+        "what": "p.poster-legend.label",
+        "scrollHeight": 21,
+        "clientHeight": 19
+       }
+      ]
+     },
+     "grid": [
+      {
+       "surface": "web",
+       "title": "Guard",
+       "art": {
+        "w": 268,
+        "h": 150.75,
+        "ratio": 1.78
+       },
+       "rule": null,
+       "nameFont": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+       "nameSize": 19,
+       "artObjectFit": null
+      },
+      {
+       "surface": "web",
+       "title": "Guard Converted",
+       "art": {
+        "w": 268,
+        "h": 150.75,
+        "ratio": 1.78
+       },
+       "rule": null,
+       "nameFont": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+       "nameSize": 19,
+       "artObjectFit": null
+      },
+      {
+       "surface": "web",
+       "title": "Guard Direct",
+       "art": {
+        "w": 268,
+        "h": 150.75,
+        "ratio": 1.78
+       },
+       "rule": null,
+       "nameFont": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+       "nameSize": 19,
+       "artObjectFit": null
+      }
+     ],
+     "fonts": {
+      "faces": [
+       {
+        "family": "\"Cinzel Variable\"",
+        "url": "./cinzel-latin-wght-normal.DMUuCU8H.woff2",
+        "weight": "400 900"
+       },
+       {
+        "family": "\"Jost Variable\"",
+        "url": "./jost-latin-wght-normal.ObQm3Zd1.woff2",
+        "weight": "100 900"
+       }
+      ],
+      "fontsSize": 2,
+      "checks": {
+       "Cinzel Variable": true,
+       "Jost Variable": true,
+       "Inter Variable": true,
+       "Playfair Display Variable": true
+      },
+      "loadedFamilies": [
+       "Cinzel Variable 400 900 loaded",
+       "Jost Variable 100 900 loaded"
+      ],
+      "widths": {}
+     }
+    }
+   },
+   "consoleErrors": []
+  }
+ ]
+}

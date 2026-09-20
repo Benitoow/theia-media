@@ -28,6 +28,7 @@
 	import PlayerHelp from './PlayerHelp.svelte';
 	import PlayerPreviewStrip from './PlayerPreviewStrip.svelte';
 	import PlayerTrackMenu from './PlayerTrackMenu.svelte';
+	import { progressWrite } from '$lib/progress.js';
 
 	// fileId and audioTrackId come from the chooser on the film page. When they
 	// are absent the player falls back to the v1 routes, which the server still
@@ -1014,11 +1015,11 @@
 	}
 
 	async function save(force = false, at = null) {
-		const seconds = at ?? position;
-		if (!Number.isFinite(seconds)) return;
-		// Every few seconds is plenty; the row only needs to know roughly where
-		// somebody stopped.
-		if (!force && Math.abs(seconds - lastSaved) < 5) return;
+		// The rule lives in `$lib/progress.js` because it is the one thing here
+		// that can destroy somebody's place in a film, and a rule that can do
+		// that should be readable on its own and tested without a browser.
+		const seconds = progressWrite(at ?? position, lastSaved, { force });
+		if (seconds === null) return;
 		lastSaved = seconds;
 
 		try {

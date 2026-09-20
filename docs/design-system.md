@@ -620,6 +620,11 @@ a player.
   it is a `.label`, whose own rule carries the muted register, so the chip kept a
   grey glyph on a lit plate - measured (135,128,118) where the &#10005; beside it
   read (214,207,194) - until the label was told to inherit.
+  **One control keeps its own colour**: the close button's plate is the Windows
+  red, not the same grey as its neighbours. The reference (Edge) uses grey for
+  all three, and the question was put to the maintainer rather than decided here;
+  it stays red, which is what a Windows user's hand expects and the only control
+  whose hover means something different.
   `assertCaptionChrome` in `check:render` measures the plate against the cell, the
   pitch, the flush close, both edges, the chip in both states, and the plate's
   **value** and not only its presence: an earlier run of it passed while

@@ -1,0 +1,167 @@
+### L baseline: npm --prefix web test (default 8396, empty library)  started 2026-09-15T23:17:48.8724965+02:00
+npm notice run theia-web@3.2.0 test
+npm notice run playwright test
+
+Running 84 tests using 12 workers
+
+(node:40032) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:24688) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:26064) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7968) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:41228) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:29404) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15308) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:21048) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11304) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:21912) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:41264) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:42240) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  9 [phone] › tests\layout.spec.js:20:1 › settings controls do not wait for the FFmpeg diagnostics (3.0s)
+  ok 11 [phone] › tests\layout.spec.js:69:3 › nothing overflows the viewport › profiles (3.3s)
+  ok 12 [phone] › tests\layout.spec.js:122:3 › every shipped font actually loaded › series (3.4s)
+  ok  3 [phone] › tests\layout.spec.js:122:3 › every shipped font actually loaded › search (3.5s)
+  ok  6 [phone] › tests\layout.spec.js:69:3 › nothing overflows the viewport › home (3.4s)
+  ok  7 [phone] › tests\layout.spec.js:69:3 › nothing overflows the viewport › search (3.4s)
+  ok  1 [phone] › tests\layout.spec.js:69:3 › nothing overflows the viewport › films (3.5s)
+  ok  4 [phone] › tests\layout.spec.js:69:3 › nothing overflows the viewport › settings (3.6s)
+  ok 10 [phone] › tests\layout.spec.js:122:3 › every shipped font actually loaded › films (3.6s)
+  ok  8 [phone] › tests\layout.spec.js:69:3 › nothing overflows the viewport › series (3.6s)
+  ok  5 [phone] › tests\layout.spec.js:122:3 › every shipped font actually loaded › home (3.7s)
+  ok  2 [phone] › tests\layout.spec.js:37:1 › settings exports a real local support archive (4.1s)
+  ok 13 [phone] › tests\layout.spec.js:122:3 › every shipped font actually loaded › settings (1.8s)
+  ok 14 [phone] › tests\layout.spec.js:122:3 › every shipped font actually loaded › profiles (1.5s)
+  ok 18 [phone] › tests\layout.spec.js:159:3 › every target can be hit › search (1.6s)
+  ok 19 [phone] › tests\layout.spec.js:159:3 › every target can be hit › settings (1.8s)
+  ok 16 [phone] › tests\layout.spec.js:159:3 › every target can be hit › films (1.8s)
+  ok 17 [phone] › tests\layout.spec.js:159:3 › every target can be hit › series (1.8s)
+  -  21 [phone] › tests\layout.spec.js:191:3 › the page has one left edge › home
+  ok 20 [phone] › tests\layout.spec.js:159:3 › every target can be hit › profiles (2.1s)
+  ok 15 [phone] › tests\layout.spec.js:159:3 › every target can be hit › home (2.5s)
+  ok 22 [phone] › tests\layout.spec.js:191:3 › the page has one left edge › films (2.3s)
+  ok 23 [phone] › tests\layout.spec.js:246:3 › the page arrives at all › home (3.0s)
+  ok 24 [phone] › tests\layout.spec.js:246:3 › the page arrives at all › films (2.5s)
+  ok 26 [phone] › tests\layout.spec.js:246:3 › the page arrives at all › search (2.0s)
+  ok 25 [phone] › tests\layout.spec.js:246:3 › the page arrives at all › series (2.1s)
+(node:40164) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:37136) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 27 [phone] › tests\layout.spec.js:246:3 › the page arrives at all › settings (2.2s)
+(node:49784) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:49900) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 28 [phone] › tests\layout.spec.js:246:3 › the page arrives at all › profiles (2.0s)
+(node:34612) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:49936) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50088) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:47784) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:20544) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:48300) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 30 [desktop] › tests\layout.spec.js:69:3 › nothing overflows the viewport › films (1.6s)
+  ok 31 [desktop] › tests\layout.spec.js:20:1 › settings controls do not wait for the FFmpeg diagnostics (1.5s)
+  ok 29 [desktop] › tests\layout.spec.js:37:1 › settings exports a real local support archive (2.1s)
+  ok 33 [desktop] › tests\layout.spec.js:69:3 › nothing overflows the viewport › search (1.9s)
+  ok 32 [desktop] › tests\layout.spec.js:69:3 › nothing overflows the viewport › series (2.1s)
+  ok 35 [desktop] › tests\layout.spec.js:69:3 › nothing overflows the viewport › settings (2.5s)
+  ok 34 [desktop] › tests\layout.spec.js:69:3 › nothing overflows the viewport › home (2.5s)
+(node:19704) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 39 [desktop] › tests\layout.spec.js:122:3 › every shipped font actually loaded › profiles (1.7s)
+  ok 38 [desktop] › tests\layout.spec.js:122:3 › every shipped font actually loaded › settings (1.9s)
+(node:23792) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 37 [desktop] › tests\layout.spec.js:69:3 › nothing overflows the viewport › profiles (1.6s)
+  ok 40 [desktop] › tests\layout.spec.js:122:3 › every shipped font actually loaded › films (1.6s)
+  ok 36 [desktop] › tests\layout.spec.js:122:3 › every shipped font actually loaded › home (2.5s)
+  ok 42 [desktop] › tests\layout.spec.js:159:3 › every target can be hit › films (1.6s)
+  ok 41 [desktop] › tests\layout.spec.js:159:3 › every target can be hit › home (2.2s)
+  ok 43 [desktop] › tests\layout.spec.js:159:3 › every target can be hit › series (2.1s)
+  ok 44 [desktop] › tests\layout.spec.js:159:3 › every target can be hit › search (1.7s)
+  ok 46 [desktop] › tests\layout.spec.js:159:3 › every target can be hit › profiles (1.9s)
+  ok 45 [desktop] › tests\layout.spec.js:159:3 › every target can be hit › settings (2.0s)
+  ok 49 [desktop] › tests\layout.spec.js:191:3 › the page has one left edge › films (1.8s)
+  -  48 [desktop] › tests\layout.spec.js:191:3 › the page has one left edge › home
+  ok 47 [desktop] › tests\layout.spec.js:122:3 › every shipped font actually loaded › series (2.3s)
+  ok 51 [desktop] › tests\layout.spec.js:246:3 › the page arrives at all › films (2.4s)
+  ok 54 [desktop] › tests\layout.spec.js:122:3 › every shipped font actually loaded › search (1.7s)
+(node:35020) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:36120) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:23320) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:49788) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 50 [desktop] › tests\layout.spec.js:246:3 › the page arrives at all › home (3.2s)
+(node:47732) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 53 [desktop] › tests\layout.spec.js:246:3 › the page arrives at all › search (3.0s)
+  ok 56 [desktop] › tests\layout.spec.js:246:3 › the page arrives at all › profiles (2.2s)
+  ok 52 [desktop] › tests\layout.spec.js:246:3 › the page arrives at all › series (3.3s)
+  ok 55 [desktop] › tests\layout.spec.js:246:3 › the page arrives at all › settings (2.7s)
+(node:47812) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:49920) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 58 [television] › tests\layout.spec.js:20:1 › settings controls do not wait for the FFmpeg diagnostics (1.7s)
+  ok 59 [television] › tests\layout.spec.js:37:1 › settings exports a real local support archive (2.2s)
+  ok 60 [television] › tests\layout.spec.js:69:3 › nothing overflows the viewport › films (2.1s)
+  ok 57 [television] › tests\layout.spec.js:69:3 › nothing overflows the viewport › home (2.7s)
+  ok 62 [television] › tests\layout.spec.js:69:3 › nothing overflows the viewport › search (1.9s)
+(node:11304) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 63 [television] › tests\layout.spec.js:69:3 › nothing overflows the viewport › settings (1.8s)
+(node:45752) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 64 [television] › tests\layout.spec.js:122:3 › every shipped font actually loaded › settings (1.5s)
+  ok 61 [television] › tests\layout.spec.js:69:3 › nothing overflows the viewport › series (2.8s)
+(node:39080) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11084) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:42140) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 65 [television] › tests\layout.spec.js:122:3 › every shipped font actually loaded › profiles (1.5s)
+  ok 67 [television] › tests\layout.spec.js:159:3 › every target can be hit › films (1.7s)
+  ok 72 [television] › tests\layout.spec.js:159:3 › every target can be hit › profiles (1.8s)
+  ok 69 [television] › tests\layout.spec.js:159:3 › every target can be hit › search (2.1s)
+  ok 66 [television] › tests\layout.spec.js:159:3 › every target can be hit › home (2.9s)
+  ok 71 [television] › tests\layout.spec.js:69:3 › nothing overflows the viewport › profiles (1.9s)
+  ok 68 [television] › tests\layout.spec.js:159:3 › every target can be hit › series (2.8s)
+  ok 70 [television] › tests\layout.spec.js:159:3 › every target can be hit › settings (2.4s)
+  ok 73 [television] › tests\layout.spec.js:122:3 › every shipped font actually loaded › search (2.6s)
+  ok 76 [television] › tests\layout.spec.js:122:3 › every shipped font actually loaded › films (2.7s)
+  ok 78 [television] › tests\layout.spec.js:191:3 › the page has one left edge › films (2.6s)
+  -  75 [television] › tests\layout.spec.js:191:3 › the page has one left edge › home
+  ok 77 [television] › tests\layout.spec.js:122:3 › every shipped font actually loaded › series (2.9s)
+  ok 74 [television] › tests\layout.spec.js:122:3 › every shipped font actually loaded › home (3.5s)
+  ok 80 [television] › tests\layout.spec.js:246:3 › the page arrives at all › films (2.6s)
+  ok 82 [television] › tests\layout.spec.js:246:3 › the page arrives at all › search (2.3s)
+  ok 84 [television] › tests\layout.spec.js:246:3 › the page arrives at all › profiles (2.6s)
+  ok 83 [television] › tests\layout.spec.js:246:3 › the page arrives at all › settings (2.6s)
+  ok 81 [television] › tests\layout.spec.js:246:3 › the page arrives at all › series (3.4s)
+  ok 79 [television] › tests\layout.spec.js:246:3 › the page arrives at all › home (3.5s)
+
+  3 skipped
+  81 passed (27.3s)
+### web layout test exit=0
+### finished 2026-09-15T23:18:18.6851411+02:00

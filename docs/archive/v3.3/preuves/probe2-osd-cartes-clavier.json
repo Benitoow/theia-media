@@ -1,0 +1,203 @@
+{
+ "mode": "osd",
+ "viewport": {
+  "width": 1280,
+  "height": 720,
+  "lang": "fr"
+ },
+ "cssAudit": {
+  "osd.css": [
+   {
+    "file": "index-N8Y4fR2C.css",
+    "bytes": 10741,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": true,
+    "citesJost": true
+   }
+  ],
+  "web.css": [
+   {
+    "file": "0.ClqMxFqX.css",
+    "bytes": 88813,
+    "fontFaceRules": 2,
+    "fontFiles": [
+     "./cinzel-latin-wght-normal.DMUuCU8H.woff2",
+     "./jost-latin-wght-normal.ObQm3Zd1.woff2"
+    ],
+    "citesCinzel": true,
+    "citesJost": true
+   },
+   {
+    "file": "4.fdXtxz3I.css",
+    "bytes": 91,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": false,
+    "citesJost": false
+   },
+   {
+    "file": "5.BoYZV-Hz.css",
+    "bytes": 373,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": false,
+    "citesJost": false
+   },
+   {
+    "file": "9.CwbSY30k.css",
+    "bytes": 395,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": false,
+    "citesJost": false
+   },
+   {
+    "file": "Credits.DBRE4-Pq.css",
+    "bytes": 1667,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": false,
+    "citesJost": false
+   },
+   {
+    "file": "PlaybackCompatibility.qF5c_QNK.css",
+    "bytes": 2189,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": false,
+    "citesJost": false
+   }
+  ],
+  "emittedFontFiles": {
+   "web": [
+    "cinzel-latin-wght-normal.DMUuCU8H.woff2",
+    "jost-latin-wght-normal.ObQm3Zd1.woff2"
+   ],
+   "osd": []
+  }
+ },
+ "domBefore": {
+  "osdChildren": [
+   "div.scrim-top",
+   "div.scrim-bottom",
+   "header.title-bar",
+   "div.notice",
+   "section.library",
+   "div.controls"
+  ],
+  "hasForm": true,
+  "hasField": true,
+  "libraryText": "Choisir un film\nADRESSE DU SERVEUR\nSE CONNECTER\nCHERCHER UN SERVEUR\n\nAucun serveur détecté sur le réseau. Saisis l'adresse que Theia affiche à son démarrage.",
+  "libraryDisplay": "flex",
+  "html": 4009
+ },
+ "addressFieldKeyboard": [],
+ "cards": [
+  {
+   "index": 0,
+   "art": {
+    "x": 51.19,
+    "y": 144,
+    "w": 221.14,
+    "h": 125.27,
+    "ratio": 1.77
+   },
+   "target": null,
+   "name": {
+    "font": "Arial",
+    "size": 14,
+    "w": 79.36,
+    "text": "Guard Direct"
+   },
+   "legend": {
+    "size": 11,
+    "text": "2026"
+   },
+   "rule": null
+  },
+  {
+   "index": 1,
+   "art": {
+    "x": 289.16,
+    "y": 135.2,
+    "w": 224.42,
+    "h": 127.12,
+    "ratio": 1.77
+   },
+   "target": null,
+   "name": {
+    "font": "Arial",
+    "size": 14,
+    "w": 107.41,
+    "text": "Guard Converted"
+   },
+   "legend": {
+    "size": 11,
+    "text": "2026 · Reprendre à 1 min"
+   },
+   "rule": {
+    "w": 2.81,
+    "h": 3.04
+   }
+  },
+  {
+   "index": 2,
+   "art": {
+    "x": 530.42,
+    "y": 144,
+    "w": 221.14,
+    "h": 125.27,
+    "ratio": 1.77
+   },
+   "target": null,
+   "name": {
+    "font": "Arial",
+    "size": 14,
+    "w": 87.16,
+    "text": "Guard Remux"
+   },
+   "legend": {
+    "size": 11,
+    "text": "2026"
+   },
+   "rule": null
+  },
+  {
+   "index": 3,
+   "art": {
+    "x": 770.03,
+    "y": 144,
+    "w": 221.16,
+    "h": 125.27,
+    "ratio": 1.77
+   },
+   "target": null,
+   "name": {
+    "font": "Arial",
+    "size": 14,
+    "w": 136.2,
+    "text": "Guard Series S01E01"
+   },
+   "legend": {
+    "size": 11,
+    "text": "2026"
+   },
+   "rule": null
+  }
+ ],
+ "gridContainer": {
+  "display": "grid",
+  "columns": "219.141px 219.156px 219.141px 219.156px 219.141px",
+  "gap": "20.48px",
+  "width": 1177.625,
+  "autoFlow": "row"
+ },
+ "trackMenuKeyboard": {
+  "openBefore": 1,
+  "focusedInMenu": "control",
+  "openAfterArrow": 1,
+  "openAfterEscape": 0,
+  "focusAfterEscape": "control"
+ }
+}

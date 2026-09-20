@@ -1,0 +1,5 @@
+### check:render baseline  started 2026-09-15T23:18:40.4251375+02:00
+npm notice run theia-player-osd@0.3.3 check:render
+npm notice run node scripts/render-check.mjs http://127.0.0.1:5199/ C:\Users\starx\AppData\Local\Temp\theia-v33-polish-20260915-231530\before\osd
+render check passed, pictures in C:\Users\starx\AppData\Local\Temp\theia-v33-polish-20260915-231530\before\osd
+### check:render exit=0

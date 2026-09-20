@@ -1,0 +1,27 @@
+### player/ui baseline  started 2026-09-15T23:15:56.3027231+02:00
+### node_modules present: True
+### NO @fontsource-variable in OSD node_modules
+### --- npm run check:i18n ---
+npm notice run theia-player-osd@0.3.3 check:i18n
+npm notice run node scripts/check-locales.mjs
+osd locales agree (fr 33, en 33)
+### check:i18n exit=0
+### --- npm run build ---
+npm notice run theia-player-osd@0.3.3 prebuild
+npm notice run npm run check:i18n
+npm notice run theia-player-osd@0.3.3 check:i18n
+npm notice run node scripts/check-locales.mjs
+osd locales agree (fr 33, en 33)
+npm notice run theia-player-osd@0.3.3 build
+npm notice run vite build
+vite v6.4.3 building for production...
+transforming...
+✓ 113 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  0.37 kB │ gzip:  0.26 kB
+dist/assets/index-N8Y4fR2C.css  10.74 kB │ gzip:  3.03 kB
+dist/assets/index-CWmYZzL9.js   57.89 kB │ gzip: 22.50 kB
+✓ built in 2.98s
+### build exit=0
+### finished 2026-09-15T23:16:18.3833690+02:00

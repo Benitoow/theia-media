@@ -1,0 +1,269 @@
+{
+ "mode": "web",
+ "viewport": {
+  "width": 1280,
+  "height": 800,
+  "lang": "fr"
+ },
+ "cssAudit": {
+  "osd.css": [
+   {
+    "file": "index-N8Y4fR2C.css",
+    "bytes": 10741,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": true,
+    "citesJost": true
+   }
+  ],
+  "web.css": [
+   {
+    "file": "0.ClqMxFqX.css",
+    "bytes": 88813,
+    "fontFaceRules": 2,
+    "fontFiles": [
+     "./cinzel-latin-wght-normal.DMUuCU8H.woff2",
+     "./jost-latin-wght-normal.ObQm3Zd1.woff2"
+    ],
+    "citesCinzel": true,
+    "citesJost": true
+   },
+   {
+    "file": "4.fdXtxz3I.css",
+    "bytes": 91,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": false,
+    "citesJost": false
+   },
+   {
+    "file": "5.BoYZV-Hz.css",
+    "bytes": 373,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": false,
+    "citesJost": false
+   },
+   {
+    "file": "9.CwbSY30k.css",
+    "bytes": 395,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": false,
+    "citesJost": false
+   },
+   {
+    "file": "Credits.DBRE4-Pq.css",
+    "bytes": 1667,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": false,
+    "citesJost": false
+   },
+   {
+    "file": "PlaybackCompatibility.qF5c_QNK.css",
+    "bytes": 2189,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": false,
+    "citesJost": false
+   }
+  ],
+  "emittedFontFiles": {
+   "web": [
+    "cinzel-latin-wght-normal.DMUuCU8H.woff2",
+    "jost-latin-wght-normal.ObQm3Zd1.woff2"
+   ],
+   "osd": []
+  }
+ },
+ "cards": [
+  {
+   "index": 0,
+   "art": {
+    "x": 51.19,
+    "y": 475.55,
+    "w": 279.05,
+    "h": 156.95,
+    "ratio": 1.78
+   },
+   "target": null,
+   "name": {
+    "font": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+    "size": 14,
+    "text": "Guard"
+   },
+   "objectFit": null
+  },
+  {
+   "index": 1,
+   "art": {
+    "x": 350.7,
+    "y": 475.55,
+    "w": 279.06,
+    "h": 156.97,
+    "ratio": 1.78
+   },
+   "target": null,
+   "name": {
+    "font": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+    "size": 14,
+    "text": "Guard Converted"
+   },
+   "objectFit": null
+  },
+  {
+   "index": 2,
+   "art": {
+    "x": 650.23,
+    "y": 475.55,
+    "w": 279.05,
+    "h": 156.95,
+    "ratio": 1.78
+   },
+   "target": null,
+   "name": {
+    "font": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+    "size": 14,
+    "text": "Guard Direct"
+   },
+   "objectFit": null
+  }
+ ],
+ "gridContainer": {
+  "display": "grid",
+  "columns": "279.047px 279.062px 279.047px 279.062px",
+  "gap": "20.48px",
+  "width": 1177.625
+ },
+ "toolbar": [
+  {
+   "what": "div.library-toolbar",
+   "x": 51.19,
+   "right": 1228.81,
+   "w": 1177.63,
+   "h": 70.78,
+   "overflows": false
+  },
+  {
+   "what": "div.library-search",
+   "x": 69.78,
+   "right": 531.45,
+   "w": 461.67,
+   "h": 56,
+   "overflows": false
+  },
+  {
+   "what": "svg.shrink-0.text-muted",
+   "x": 69.78,
+   "right": 87.78,
+   "w": 18,
+   "h": 18,
+   "overflows": false
+  },
+  {
+   "what": "path",
+   "x": 72.48,
+   "right": 83.43,
+   "w": 10.95,
+   "h": 10.95,
+   "overflows": false
+  },
+  {
+   "what": "path",
+   "x": 81.93,
+   "right": 85.08,
+   "w": 3.15,
+   "h": 3.15,
+   "overflows": false
+  },
+  {
+   "what": "input.library-search-input",
+   "x": 98.17,
+   "right": 531.45,
+   "w": 433.28,
+   "h": 56,
+   "overflows": false
+  },
+  {
+   "what": "div.library-selects",
+   "x": 550.64,
+   "right": 1219.81,
+   "w": 669.17,
+   "h": 56,
+   "overflows": false
+  },
+  {
+   "what": "label.library-select",
+   "x": 550.64,
+   "right": 759.52,
+   "w": 208.88,
+   "h": 56,
+   "overflows": false
+  },
+  {
+   "what": "span.label",
+   "x": 565.03,
+   "right": 601.13,
+   "w": 36.09,
+   "h": 13.19,
+   "overflows": false
+  },
+  {
+   "what": "select",
+   "x": 609.13,
+   "right": 745.13,
+   "w": 136,
+   "h": 56,
+   "overflows": false
+  },
+  {
+   "what": "label.library-select",
+   "x": 765.91,
+   "right": 957.91,
+   "w": 192,
+   "h": 56,
+   "overflows": false
+  },
+  {
+   "what": "span.label",
+   "x": 780.3,
+   "right": 825.52,
+   "w": 45.22,
+   "h": 13.19,
+   "overflows": false
+  },
+  {
+   "what": "select",
+   "x": 833.52,
+   "right": 943.52,
+   "w": 110,
+   "h": 56,
+   "overflows": false
+  },
+  {
+   "what": "label.library-select",
+   "x": 964.3,
+   "right": 1219.81,
+   "w": 255.52,
+   "h": 56,
+   "overflows": false
+  },
+  {
+   "what": "span.label",
+   "x": 978.69,
+   "right": 1064.42,
+   "w": 85.73,
+   "h": 13.19,
+   "overflows": false
+  },
+  {
+   "what": "select",
+   "x": 1072.42,
+   "right": 1205.42,
+   "w": 133,
+   "h": 56,
+   "overflows": false
+  }
+ ]
+}

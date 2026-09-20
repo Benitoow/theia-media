@@ -1,0 +1,38 @@
+### command: go test ./...  (CGO_ENABLED=0)  started 2026-09-15T23:15:56.2774071+02:00
+?   	github.com/Benitoow/theia-media	[no test files]
+?   	github.com/Benitoow/theia-media/cmd/theia-server	[no test files]
+?   	github.com/Benitoow/theia-media/cmd/theia-setup	[no test files]
+ok  	github.com/Benitoow/theia-media/internal/activity	(cached)
+ok  	github.com/Benitoow/theia-media/internal/api	(cached)
+ok  	github.com/Benitoow/theia-media/internal/boundedio	(cached)
+ok  	github.com/Benitoow/theia-media/internal/config	(cached)
+ok  	github.com/Benitoow/theia-media/internal/db	(cached)
+ok  	github.com/Benitoow/theia-media/internal/discovery	(cached)
+?   	github.com/Benitoow/theia-media/internal/fakeffmpeg	[no test files]
+ok  	github.com/Benitoow/theia-media/internal/ffmpeg	(cached)
+ok  	github.com/Benitoow/theia-media/internal/imagecache	(cached)
+ok  	github.com/Benitoow/theia-media/internal/library	(cached)
+ok  	github.com/Benitoow/theia-media/internal/playback	(cached)
+?   	github.com/Benitoow/theia-media/internal/portmap	[no test files]
+ok  	github.com/Benitoow/theia-media/internal/preview	(cached)
+ok  	github.com/Benitoow/theia-media/internal/profiles	(cached)
+ok  	github.com/Benitoow/theia-media/internal/recovery	(cached)
+ok  	github.com/Benitoow/theia-media/internal/release	(cached)
+ok  	github.com/Benitoow/theia-media/internal/remoteaccess	(cached)
+ok  	github.com/Benitoow/theia-media/internal/scanner	(cached)
+ok  	github.com/Benitoow/theia-media/internal/setup	6.352s
+ok  	github.com/Benitoow/theia-media/internal/stream	(cached)
+ok  	github.com/Benitoow/theia-media/internal/subtitles	(cached)
+ok  	github.com/Benitoow/theia-media/internal/supportlog	(cached)
+?   	github.com/Benitoow/theia-media/internal/testfixture	[no test files]
+ok  	github.com/Benitoow/theia-media/internal/tmdb	(cached)
+ok  	github.com/Benitoow/theia-media/internal/updater	(cached)
+ok  	github.com/Benitoow/theia-media/internal/workload	(cached)
+?   	github.com/Benitoow/theia-media/scripts/bench	[no test files]
+?   	github.com/Benitoow/theia-media/scripts/fetch-libmpv	[no test files]
+?   	github.com/Benitoow/theia-media/scripts/measure-hardware	[no test files]
+?   	github.com/Benitoow/theia-media/scripts/stub-release	[no test files]
+?   	github.com/Benitoow/theia-media/scripts/verify-endurance	[no test files]
+?   	github.com/Benitoow/theia-media/scripts/verify-shutdown	[no test files]
+?   	github.com/Benitoow/theia-media/scripts/verify-update	[no test files]
+### exit code: 0   finished 2026-09-15T23:16:15.5751547+02:00

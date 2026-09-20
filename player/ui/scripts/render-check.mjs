@@ -1599,6 +1599,9 @@ async function openPage(
 						window.__commands.push(cmd);
 						window.__invocations.push({ cmd, args });
 						if (cmd === 'player_local_server') return null;
+						// Nothing connected at boot in the harness: the whole
+						// connection journey is a screen the checks drive.
+						if (cmd === 'player_current_server') return null;
 						if (cmd === 'player_tracks') return JSON.stringify(tracks);
 						if (cmd === 'player_library') return JSON.stringify(movies);
 						if (cmd === 'player_series') return JSON.stringify(series);

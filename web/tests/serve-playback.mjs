@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '../..');
@@ -11,6 +11,39 @@ if (!existsSync(binary)) {
 	console.error(`No binary at ${binary}. Build one first: .\\build.ps1  or  make build`);
 	process.exit(1);
 }
+// The suite drives the *built* interface, not the sources: the server serves
+// web-dist. Editing web/src and running this without a build tests the previous
+// frontend and reports on code nobody is changing - which is exactly what
+// happened on 20 September 2026, when a fixed write path was measured as still
+// broken because the bundle predated it. Cheap to check, expensive to miss.
+{
+	const built = join(root, 'web-dist', 'index.html');
+	const sources = join(root, 'web', 'src');
+	const newest = (dir) => {
+		let latest = 0;
+		const walk = (path) => {
+			for (const entry of readdirSync(path, { withFileTypes: true })) {
+				const child = join(path, entry.name);
+				if (entry.isDirectory()) walk(child);
+				else latest = Math.max(latest, statSync(child).mtimeMs);
+			}
+		};
+		walk(dir);
+		return latest;
+	};
+	if (!existsSync(built)) {
+		console.error(`No built interface at ${built}. Build one first: .\\build.ps1`);
+		process.exit(1);
+	}
+	if (existsSync(sources) && newest(sources) > statSync(built).mtimeMs) {
+		console.error(
+			`web/src is newer than ${built}: this suite would test the interface as it was before ` +
+				`those edits. Run .\\build.ps1 first.`
+		);
+		process.exit(1);
+	}
+}
+
 const args = ['run', './internal/testfixture', '--data-dir', data];
 if (process.env.THEIA_TEST_FFMPEG) args.push('--ffmpeg', process.env.THEIA_TEST_FFMPEG);
 const seed = spawnSync(process.env.GO_BINARY || 'go', args, { cwd: root, stdio: 'inherit', timeout: 600_000 });

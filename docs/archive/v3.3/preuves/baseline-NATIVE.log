@@ -1,0 +1,54 @@
+### N baseline: build-player.ps1 then cargo test  started 2026-09-15T23:16:25.8707212+02:00
+### --- .\build-player.ps1 ---
+==> Building the OSD
+
+added 39 packages, and audited 40 packages in 4s
+
+5 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+npm warn install-scripts 1 package had install scripts blocked because they are not covered by allowScripts:
+npm warn install-scripts   esbuild@0.25.12 (postinstall: node install.js)
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+npm notice run theia-player-osd@0.3.3 prebuild
+npm notice run npm run check:i18n
+npm notice run theia-player-osd@0.3.3 check:i18n
+npm notice run node scripts/check-locales.mjs
+osd locales agree (fr 33, en 33)
+npm notice run theia-player-osd@0.3.3 build
+npm notice run vite build
+vite v6.4.3 building for production...
+transforming...
+✓ 113 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  0.37 kB │ gzip:  0.26 kB
+dist/assets/index-N8Y4fR2C.css  10.74 kB │ gzip:  3.03 kB
+dist/assets/index-CWmYZzL9.js   57.89 kB │ gzip: 22.50 kB
+✓ built in 2.17s
+==> Building theia-player (debug, using C:\Users\starx\.cargo\bin\cargo.exe)
+   Compiling theia-player v0.3.3 (C:\Users\starx\Documents\CODE\Theia\player\theia-player)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 48.67s
+==> theia-player ready (14.7 MB, debug)
+    The engine is not bundled: set THEIA_LIBMPV, or put libmpv-2.dll beside the executable.
+    Use -Bundle to produce what gets shipped, with its licence.
+### build-player exit=0
+### --- cargo test --manifest-path player/Cargo.toml ---
+   Compiling theia-player v0.3.3 (C:\Users\starx\Documents\CODE\Theia\player\theia-player)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.50s
+     Running unittests src\main.rs (player\target\debug\deps\theia_player-09ee417e0d0ca50e.exe)
+
+running 6 tests
+test server::tests::only_a_text_file_beside_the_film_is_fetched ... ok
+test server::tests::a_card_is_drawn_from_the_backdrop_at_the_width_a_card_shows ... ok
+test server::tests::the_stream_url_names_both_ids ... ok
+test server::tests::a_sidecar_is_fetched_as_webvtt_and_keeps_the_films_clock ... ok
+test server::tests::the_profile_is_appended_without_breaking_a_query ... ok
+test server::tests::a_film_with_no_artwork_gets_no_url_rather_than_a_broken_one ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+### cargo test exit=0
+### finished 2026-09-15T23:17:33.2881286+02:00

@@ -1,0 +1,124 @@
+{
+  "pid": 4368,
+  "media": "C:\\Users\\starx\\AppData\\Local\\Temp\\theia-v33-polish-20260915-231530\\playback-data\\media\\Guard.Long.2026.mp4",
+  "seconds": 60,
+  "before": {
+    "cpuSeconds": 0.734,
+    "workingSetMB": 188.6,
+    "threads": 83
+  },
+  "after": {
+    "cpuSeconds": 4.328,
+    "workingSetMB": 189.3,
+    "threads": 81
+  },
+  "cpuUsedDuringSeconds": 3.59,
+  "statusBefore": {
+    "aid": 1,
+    "ao": "wasapi",
+    "audioMode": "passthrough",
+    "audioReason": null,
+    "duration": 180.0,
+    "engine": "mpv v0.41.0-1049-g0b7ed670f",
+    "hwdec": "d3d11va",
+    "media": "C:\\Users\\starx\\AppData\\Local\\Temp\\theia-v33-polish-20260915-231530\\playback-data\\media\\Guard.Long.2026.mp4",
+    "mute": true,
+    "pause": false,
+    "pos": 3.583333,
+    "ready": true,
+    "sid": null,
+    "startAt": 0.0,
+    "title": "Guard.Long.2026.mp4",
+    "videoCodec": "h264",
+    "vo": "gpu-next"
+  },
+  "statusAfter": {
+    "aid": 1,
+    "ao": "wasapi",
+    "audioMode": "passthrough",
+    "audioReason": null,
+    "duration": 180.0,
+    "engine": "mpv v0.41.0-1049-g0b7ed670f",
+    "hwdec": "d3d11va",
+    "media": "C:\\Users\\starx\\AppData\\Local\\Temp\\theia-v33-polish-20260915-231530\\playback-data\\media\\Guard.Long.2026.mp4",
+    "mute": true,
+    "pause": false,
+    "pos": 63.791667,
+    "ready": true,
+    "sid": null,
+    "startAt": 0.0,
+    "title": "Guard.Long.2026.mp4",
+    "videoCodec": "h264",
+    "vo": "gpu-next"
+  },
+  "samples": [
+    {
+      "at": "17:15:19",
+      "cpuSeconds": 1.078,
+      "workingSetMB": 188.9,
+      "pos": 12.83,
+      "pause": false,
+      "ao": "wasapi",
+      "audioMode": "passthrough",
+      "hwdec": "d3d11va",
+      "vo": "gpu-next"
+    },
+    {
+      "at": "17:15:29",
+      "cpuSeconds": 1.438,
+      "workingSetMB": 188.9,
+      "pos": 23.17,
+      "pause": false,
+      "ao": "wasapi",
+      "audioMode": "passthrough",
+      "hwdec": "d3d11va",
+      "vo": "gpu-next"
+    },
+    {
+      "at": "17:15:39",
+      "cpuSeconds": 1.766,
+      "workingSetMB": 189.3,
+      "pos": 33.46,
+      "pause": false,
+      "ao": "wasapi",
+      "audioMode": "passthrough",
+      "hwdec": "d3d11va",
+      "vo": "gpu-next"
+    },
+    {
+      "at": "17:15:49",
+      "cpuSeconds": 2.797,
+      "workingSetMB": 189.3,
+      "pos": 43.75,
+      "pause": false,
+      "ao": "wasapi",
+      "audioMode": "passthrough",
+      "hwdec": "d3d11va",
+      "vo": "gpu-next"
+    },
+    {
+      "at": "17:15:59",
+      "cpuSeconds": 3.656,
+      "workingSetMB": 189.4,
+      "pos": 53.75,
+      "pause": false,
+      "ao": "wasapi",
+      "audioMode": "passthrough",
+      "hwdec": "d3d11va",
+      "vo": "gpu-next"
+    },
+    {
+      "at": "17:16:09",
+      "cpuSeconds": 4.328,
+      "workingSetMB": 189.3,
+      "pos": 63.79,
+      "pause": false,
+      "ao": "wasapi",
+      "audioMode": "passthrough",
+      "hwdec": "d3d11va",
+      "vo": "gpu-next"
+    }
+  ],
+  "closedCleanly": true,
+  "stderrLines": 0
+}

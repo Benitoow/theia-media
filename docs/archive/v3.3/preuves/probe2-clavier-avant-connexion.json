@@ -1,0 +1,101 @@
+{
+ "mode": "osd",
+ "viewport": {
+  "width": 1280,
+  "height": 720,
+  "lang": "fr"
+ },
+ "cssAudit": {
+  "osd.css": [
+   {
+    "file": "index-N8Y4fR2C.css",
+    "bytes": 10741,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": true,
+    "citesJost": true
+   }
+  ],
+  "web.css": [
+   {
+    "file": "0.ClqMxFqX.css",
+    "bytes": 88813,
+    "fontFaceRules": 2,
+    "fontFiles": [
+     "./cinzel-latin-wght-normal.DMUuCU8H.woff2",
+     "./jost-latin-wght-normal.ObQm3Zd1.woff2"
+    ],
+    "citesCinzel": true,
+    "citesJost": true
+   },
+   {
+    "file": "4.fdXtxz3I.css",
+    "bytes": 91,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": false,
+    "citesJost": false
+   },
+   {
+    "file": "5.BoYZV-Hz.css",
+    "bytes": 373,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": false,
+    "citesJost": false
+   },
+   {
+    "file": "9.CwbSY30k.css",
+    "bytes": 395,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": false,
+    "citesJost": false
+   },
+   {
+    "file": "Credits.DBRE4-Pq.css",
+    "bytes": 1667,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": false,
+    "citesJost": false
+   },
+   {
+    "file": "PlaybackCompatibility.qF5c_QNK.css",
+    "bytes": 2189,
+    "fontFaceRules": 0,
+    "fontFiles": [],
+    "citesCinzel": false,
+    "citesJost": false
+   }
+  ],
+  "emittedFontFiles": {
+   "web": [
+    "cinzel-latin-wght-normal.DMUuCU8H.woff2",
+    "jost-latin-wght-normal.ObQm3Zd1.woff2"
+   ],
+   "osd": []
+  }
+ },
+ "domBefore": {
+  "osdChildren": [
+   "div.scrim-top",
+   "div.scrim-bottom",
+   "header.title-bar",
+   "div.notice",
+   "section.library",
+   "div.controls"
+  ],
+  "hasForm": true,
+  "hasField": true,
+  "libraryText": "Choisir un film\nADRESSE DU SERVEUR\nSE CONNECTER\nCHERCHER UN SERVEUR\n\nAucun serveur détecté sur le réseau. Saisis l'adresse que Theia affiche à son démarrage.",
+  "libraryDisplay": "flex",
+  "html": 4009
+ },
+ "addressFieldKeyboard": [],
+ "domAfterConnect": {
+  "hasForm": false,
+  "libraryText": "Bibliothèque\nGuard Direct\n2026\nGuard Converted\n2026 · REPRENDRE À 1 MIN\nGuard Remux\n2026\nGuard Series S01E01\n2026",
+  "hint": null
+ }
+}

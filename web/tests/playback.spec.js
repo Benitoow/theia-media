@@ -95,6 +95,58 @@ test('audio selection survives seeks and text subtitles render',async({page})=>{
  await page.keyboard.press('Escape');
 });
 
+// The one rule here that can destroy something. A position of zero is not a
+// position, it is the absence of one, and writing it takes the row with it -
+// which is what happened to the maintainer's place in a film on 20 September
+// 2026. The native player has always refused it; the web player is the fallback
+// and did not.
+test('the position policy refuses a zero and keeps its five seconds', async () => {
+	const { progressWrite } = await import('../src/lib/progress.js');
+	expect(progressWrite(0, 0, { force: true })).toBeNull();
+	expect(progressWrite(0.4, 0, { force: true })).toBeNull();
+	expect(progressWrite(Number.NaN, 0)).toBeNull();
+	// Forced, because 0.6 is inside the five-second interval and the interval is
+	// what would otherwise skip it: the floor is the rule under test here.
+	expect(progressWrite(0.6, 0, { force: true })).toBe(0.6);
+	// The interval is what keeps a heartbeat from being a request per tick, and
+	// a forced save is what the closing player does - it bypasses the interval,
+	// never the floor.
+	expect(progressWrite(12, 10)).toBeNull();
+	expect(progressWrite(12, 10, { force: true })).toBe(12);
+	expect(progressWrite(40, 39, { force: true })).toBe(40);
+});
+
+test('a session that never played does not forget where the film was', async ({ page, request }) => {
+	const movie = movies.find((m) => m.file_name.includes('Direct'));
+	await request.put(`/api/library/movies/${movie.id}/progress`, { data: { position_seconds: 40, duration_seconds: 600 } });
+	const seeded = (await (await request.get(`/api/library/movies/${movie.id}`)).json()).progress;
+	expect(seeded.position_seconds).toBeGreaterThan(30);
+
+	// The player opens and cannot start: the clock stays at zero for the whole
+	// session, and closing it is the path that used to write that zero. The row
+	// is somebody's place in a film; it has to survive a session that never
+	// played anything.
+	await page.route('**/info*', (route) =>
+		route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'ffmpeg_unavailable' }) })
+	);
+	// Every write this session attempts, recorded: the assertion below names the
+	// one that carried a zero rather than only reporting that the row changed.
+	const writes = [];
+	await page.route('**/progress*', async (route) => {
+		if (route.request().method() === 'PUT') writes.push(route.request().postDataJSON()?.position_seconds ?? null);
+		await route.continue();
+	});
+	await page.goto(`/film/${movie.id}`);
+	await page.getByRole('button', { name: /^(Lire|Reprendre)/ }).first().click();
+	await expect(page.getByRole('button', { name: 'Réessayer', exact: true })).toBeVisible();
+	await page.keyboard.press('Escape');
+	await page.waitForTimeout(400);
+
+	expect({ wrote: writes.filter((value) => value !== null && value <= 0.5) }).toEqual({ wrote: [] });
+	const after = (await (await request.get(`/api/library/movies/${movie.id}`)).json()).progress;
+	expect(after.position_seconds).toBeGreaterThan(30);
+});
+
 test('a failed startup offers a working retry',async({page})=>{
  let failNextInfo=false;
  await page.route('**/info*',route=>{ if(failNextInfo){failNextInfo=false;return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'ffmpeg_unavailable'})});}return route.continue(); });

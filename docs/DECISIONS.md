@@ -4460,6 +4460,54 @@ has not been - so this clip carries `bt2020/smpte2084` tags from an untone-mappe
 encode. Sampled frames look correct, and nothing here claims a television's
 verdict on them.
 
+## 133. A zero is not a position, and neither player may write one
+
+**Decided 20 September 2026**, after the maintainer's place in a film was erased.
+The row for *Revenge of the Sith* held **7500.618 s**; it was found at
+`position 0, watched_at 0`, and the only writer that produces that shape is a
+save with a zero in it. The native player has refused one since its first
+version - `if position <= 0.5 { return } // Nothing has been watched yet; a zero
+would erase a position` - and the web player, which is the *fallback* and the
+one more likely to be closed early on a television, had no floor at all.
+
+**The rule is one rule, in one place.** `web/src/lib/progress.js` holds it:
+below half a second there is nothing to write, an unforced save needs the clock
+to have moved five seconds, and a forced save - the closing player - bypasses the
+interval and never the floor. `Player.svelte` calls it; the native player already
+behaves this way. "Start from the beginning" remains a different intent with its
+own route, `DELETE .../progress`, so nothing here has to make a zero mean
+"reset".
+
+**Verified by making it fail first.** `playback.spec.js` gained two tests: the
+policy's cases, and a session that opens a film, cannot start it, and closes -
+which is the accident. Against the old write path they failed on all four
+engines; with the rule they pass. The suite also runs against the **built**
+`web-dist`, which is its own trap: the first run measured the previous bundle and
+reported the fix as broken. `tests/serve-playback.mjs` now refuses to start when
+`web/src` is newer than `web-dist`, the same discipline `build-player.ps1`
+applies to the embedded OSD.
+
+## 134. An explicit server beats the machine's own installation
+
+**Decided 20 September 2026**, superseding that part of decision 127 which let
+the shell adopt the machine's installed all-in-one server unconditionally.
+
+The shell's boot order was: ask the installed server, then a remembered address,
+then discovery. A connection made by `--server` was established by the Rust side
+before the window appeared and then **replaced** by the installed one - and the
+flag's own comment says it exists so the client can be exercised without a click,
+which is precisely what it did not do. Measured: launched with
+`--server http://127.0.0.1:8395` on a machine whose own server was running, the
+window talked to the machine's server instead, and only the arithmetic gave it
+away - the hero carried the installed server's viewing position.
+
+`player_current_server` now answers whether a connection already exists, and the
+shell adopts it before it asks for anything. Zero configuration is untouched for
+the ordinary launch, which has no connection to start with; what changed is that
+an address somebody typed or passed is the address they get. Verified: launched
+with the flag while the machine's own server ran, the log of the named server
+received the whole session and the installed one received nothing.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

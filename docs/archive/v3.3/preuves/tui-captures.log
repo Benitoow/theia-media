@@ -1,0 +1,49 @@
+### TUI captures  started 2026-09-15T23:26:22.1031671+02:00
+### --- capture 100x30 ---
+capture: C:\Users\starx\AppData\Local\Temp\theia-v33-polish-20260915-231530\before\00-setup-fr-100x30.png
+--- console text (proves which buffer was read) ---
+  THEIA
+
+  Quelques questions, puis c'est fini. Rien n'est écrit avant la
+  confirmation.
+
+
+┃ Cette machine sert-elle, ou regarde-t-elle ?
+┃ Le rôle est déclaré, jamais deviné : un mini-PC dans un placard et un HTPC
+--- colours drawn ---
+fg=#CCCCCC  bg=#0C0C0C  cells=249    Quelquesquestions,puisc'estfini.Rienn'estécritav
+fg=#C19C00  bg=#0C0C0C  cells=77     THEIACettemachinesert-elle,ouregarde-t-elle?>Tou
+fg=#767676  bg=#0C0C0C  cells=51     ┃┃┃┃┃┃↑↓choisir·entréevalider·/filtrer·échapannu
+### 100x30 exit=
+### --- capture 80x24 ---
+capture: C:\Users\starx\AppData\Local\Temp\theia-v33-polish-20260915-231530\before\00-setup-fr-80x24.png
+--- console text (proves which buffer was read) ---
+  THEIA
+
+  Quelques questions, puis c'est fini. Rien n'est écrit avant la
+  confirmation.
+
+
+┃ Cette machine sert-elle, ou regarde-t-elle ?
+┃ Le rôle est déclaré, jamais deviné : un mini-PC dans un placard et un
+--- colours drawn ---
+fg=#CCCCCC  bg=#0C0C0C  cells=249    Quelquesquestions,puisc'estfini.Rienn'estécritav
+fg=#C19C00  bg=#0C0C0C  cells=77     THEIACettemachinesert-elle,ouregarde-t-elle?>Tou
+fg=#767676  bg=#0C0C0C  cells=51     ┃┃┃┃┃┃↑↓choisir·entréevalider·/filtrer·échapannu
+### 80x24 exit=
+### --- capture 60x24 ---
+capture: C:\Users\starx\AppData\Local\Temp\theia-v33-polish-20260915-231530\before\00-setup-fr-60x24.png
+--- console text (proves which buffer was read) ---
+  THEIA
+
+  Quelques questions, puis c'est fini. Rien n'est
+  écrit avant la confirmation.
+
+
+┃ Cette machine sert-elle, ou regarde-t-elle ?
+┃ Le rôle est déclaré, jamais deviné : un mini-PC dans
+--- colours drawn ---
+fg=#CCCCCC  bg=#0C0C0C  cells=249    Quelquesquestions,puisc'estfini.Rienn'estécritav
+fg=#C19C00  bg=#0C0C0C  cells=77     THEIACettemachinesert-elle,ouregarde-t-elle?>Tou
+fg=#767676  bg=#0C0C0C  cells=53     ┃┃┃┃┃┃┃┃↑↓choisir·entréevalider·/filtrer·échapan
+### 60x24 exit=

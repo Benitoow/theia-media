@@ -1,0 +1,187 @@
+### W+B baseline  started 2026-09-15T23:16:25.9133275+02:00
+### --- node scripts/contrast.mjs ---
+
+contrast against #0B0A09 (--ink)
+
+  token           hex       documented  measured  min
+  ----------------------------------------------------------
+  bone            #EDE7DC   16.07       16.07     4.5	ok
+  parchment       #D6CFC2   12.78       12.78     4.5	ok
+  muted           #8C857A   5.42        5.42      4.5	ok
+  faint           #5A544C   2.64        2.64      -	ok
+  accent          #C8A24A   8.22        8.22      4.5	ok
+  accent-bright   #E3C173   11.44       11.44     4.5	ok
+  accent-dim      #7A6330   3.44        3.44      3	ok
+  error           #D06A5D   5.56        5.56      4.5	ok
+  warning         #C9964A   7.48        7.48      4.5	ok
+
+contrast on surfaces other than --ink
+
+  what            on        documented  measured  min
+  ----------------------------------------------------------
+  badge label     #131211   5.12        5.12      4.5	ok
+  rating scale    #0B0A09   5.42        5.42      4.5	ok
+
+all tokens match the documented ratios.
+
+### contrast exit=0
+### --- node web/scripts/check-locales.mjs ---
+Locale catalogues match: fr ↔ en (684 values, 54 functions).
+### check-locales exit=0
+### --- npm --prefix web run check ---
+npm notice run theia-web@3.2.0 check
+npm notice run svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --fail-on-warnings
+Loading svelte-check in workspace: c:\Users\starx\Documents\CODE\Theia\web
+Getting Svelte diagnostics...
+
+svelte-check found 0 errors and 0 warnings
+### web check exit=0
+### --- .\build.ps1 (server + embedded web) ---
+==> Building the frontend
+
+added 76 packages, and audited 77 packages in 5s
+
+14 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+npm warn install-scripts 1 package had install scripts blocked because they are not covered by allowScripts:
+npm warn install-scripts   esbuild@0.25.12 (postinstall: node install.js)
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+npm notice run theia-web@3.2.0 prebuild
+npm notice run npm run check && npm run check:i18n && npm run check:backdrops
+npm notice run theia-web@3.2.0 check
+npm notice run svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --fail-on-warnings
+Loading svelte-check in workspace: c:\Users\starx\Documents\CODE\Theia\web
+Getting Svelte diagnostics...
+
+svelte-check found 0 errors and 0 warnings
+npm notice run theia-web@3.2.0 check:i18n
+npm notice run node scripts/check-locales.mjs
+Locale catalogues match: fr ↔ en (684 values, 54 functions).
+npm notice run theia-web@3.2.0 check:backdrops
+npm notice run node scripts/check-backdrops.mjs
+
+full-bleed pictures and where they are framed
+
+  framed   src/lib/components/Hero.svelte:59              object-top
+  framed   src/routes/bienvenue/+page.svelte:48           object-center
+  framed   src/routes/film/[id]/+page.svelte:234          object-top
+  framed   src/routes/serie/[id]/+page.svelte:125         object-top
+  framed   web/src/app.css  .chrome-scene-image           68% center
+
+5 full-bleed pictures, all framed.
+
+npm notice run theia-web@3.2.0 build
+npm notice run vite build
+vite v6.4.3 building SSR bundle for production...
+transforming...
+✓ 202 modules transformed.
+rendering chunks...
+vite v6.4.3 building for production...
+transforming...
+✓ 220 modules transformed.
+rendering chunks...
+computing gzip size...
+.svelte-kit/output/client/_app/version.json                                               0.03 kB │ gzip:  0.05 kB
+.svelte-kit/output/client/.vite/manifest.json                                            13.56 kB │ gzip:  1.74 kB
+.svelte-kit/output/client/_app/immutable/assets/cinzel-latin-wght-normal.DMUuCU8H.woff2  25.90 kB
+.svelte-kit/output/client/_app/immutable/assets/jost-latin-wght-normal.ObQm3Zd1.woff2    26.58 kB
+.svelte-kit/output/client/_app/immutable/assets/4.fdXtxz3I.css                            0.09 kB │ gzip:  0.10 kB
+.svelte-kit/output/client/_app/immutable/assets/5.BoYZV-Hz.css                            0.37 kB │ gzip:  0.22 kB
+.svelte-kit/output/client/_app/immutable/assets/9.CwbSY30k.css                            0.40 kB │ gzip:  0.21 kB
+.svelte-kit/output/client/_app/immutable/assets/Credits.DBRE4-Pq.css                      1.67 kB │ gzip:  0.63 kB
+.svelte-kit/output/client/_app/immutable/assets/PlaybackCompatibility.qF5c_QNK.css        2.19 kB │ gzip:  0.66 kB
+.svelte-kit/output/client/_app/immutable/assets/0.ClqMxFqX.css                           88.81 kB │ gzip: 17.60 kB
+.svelte-kit/output/client/_app/immutable/entry/start.lOeyze6J.js                          0.08 kB │ gzip:  0.09 kB
+.svelte-kit/output/client/_app/immutable/chunks/DY6zZqsE.js                               0.19 kB │ gzip:  0.17 kB
+.svelte-kit/output/client/_app/immutable/chunks/BN4JZoW9.js                               0.21 kB │ gzip:  0.19 kB
+.svelte-kit/output/client/_app/immutable/chunks/5EZYmoEi.js                               0.23 kB │ gzip:  0.16 kB
+.svelte-kit/output/client/_app/immutable/chunks/hvzOFCDO.js                               0.39 kB │ gzip:  0.29 kB
+.svelte-kit/output/client/_app/immutable/chunks/B1BR1z_D.js                               0.46 kB │ gzip:  0.30 kB
+.svelte-kit/output/client/_app/immutable/chunks/DaGFbxkK.js                               0.81 kB │ gzip:  0.45 kB
+.svelte-kit/output/client/_app/immutable/chunks/CDgvPSmx.js                               0.92 kB │ gzip:  0.49 kB
+.svelte-kit/output/client/_app/immutable/chunks/QR15GZ_A.js                               0.96 kB │ gzip:  0.57 kB
+.svelte-kit/output/client/_app/immutable/chunks/1iRLj-tk.js                               1.14 kB │ gzip:  0.64 kB
+.svelte-kit/output/client/_app/immutable/nodes/1.Cvrjg2Gb.js                              1.36 kB │ gzip:  0.74 kB
+.svelte-kit/output/client/_app/immutable/chunks/wbPk3Yxo.js                               1.37 kB │ gzip:  0.66 kB
+.svelte-kit/output/client/_app/immutable/chunks/BA3L8lxL.js                               1.38 kB │ gzip:  0.73 kB
+.svelte-kit/output/client/_app/immutable/chunks/BmYmKSCV.js                               1.86 kB │ gzip:  0.92 kB
+.svelte-kit/output/client/_app/immutable/nodes/3.BMijF4pR.js                              1.98 kB │ gzip:  1.10 kB
+.svelte-kit/output/client/_app/immutable/nodes/11.D4CJOD7a.js                             2.34 kB │ gzip:  1.17 kB
+.svelte-kit/output/client/_app/immutable/chunks/BYtOZf5u.js                               2.66 kB │ gzip:  1.20 kB
+.svelte-kit/output/client/_app/immutable/chunks/1mHZFgDK.js                               2.80 kB │ gzip:  0.83 kB
+.svelte-kit/output/client/_app/immutable/chunks/Bhialu3e.js                               3.39 kB │ gzip:  1.75 kB
+.svelte-kit/output/client/_app/immutable/chunks/CwkAry9F.js                               3.48 kB │ gzip:  1.60 kB
+.svelte-kit/output/client/_app/immutable/chunks/BEiaVP0q.js                               4.30 kB │ gzip:  1.95 kB
+.svelte-kit/output/client/_app/immutable/chunks/Eno6iH3k.js                               5.36 kB │ gzip:  2.52 kB
+.svelte-kit/output/client/_app/immutable/nodes/8.DhM0DlQM.js                              5.74 kB │ gzip:  2.41 kB
+.svelte-kit/output/client/_app/immutable/chunks/DqDIQVtf.js                               7.73 kB │ gzip:  3.18 kB
+.svelte-kit/output/client/_app/immutable/nodes/4.D6JGGVzq.js                              7.85 kB │ gzip:  3.24 kB
+.svelte-kit/output/client/_app/immutable/nodes/0.TtFNYU-6.js                              7.93 kB │ gzip:  3.22 kB
+.svelte-kit/output/client/_app/immutable/entry/app.B-2hB3Cw.js                            8.27 kB │ gzip:  3.54 kB
+.svelte-kit/output/client/_app/immutable/nodes/2.CrcOv20B.js                              8.45 kB │ gzip:  3.31 kB
+.svelte-kit/output/client/_app/immutable/chunks/CRDtC1wn.js                               9.29 kB │ gzip:  3.96 kB
+.svelte-kit/output/client/_app/immutable/nodes/6.DE7XSJcg.js                              9.55 kB │ gzip:  3.75 kB
+.svelte-kit/output/client/_app/immutable/nodes/10.VQMQLW5p.js                            10.20 kB │ gzip:  4.14 kB
+.svelte-kit/output/client/_app/immutable/nodes/7.Ij0h8pTj.js                             10.46 kB │ gzip:  3.74 kB
+.svelte-kit/output/client/_app/immutable/nodes/5.CMvz557Y.js                             11.62 kB │ gzip:  4.70 kB
+.svelte-kit/output/client/_app/immutable/chunks/DCd58rBW.js                              14.48 kB │ gzip:  6.01 kB
+.svelte-kit/output/client/_app/immutable/chunks/DRfLyS8J.js                              28.99 kB │ gzip: 11.06 kB
+.svelte-kit/output/client/_app/immutable/chunks/Akt_fy7L.js                              29.23 kB │ gzip: 11.21 kB
+.svelte-kit/output/client/_app/immutable/nodes/9.BsR38BSW.js                             38.32 kB │ gzip: 11.85 kB
+.svelte-kit/output/client/_app/immutable/chunks/aAA6rj7Y.js                              54.39 kB │ gzip: 18.88 kB
+.svelte-kit/output/client/_app/immutable/chunks/CET-mQS_.js                              69.48 kB │ gzip: 24.80 kB
+✓ built in 3.23s
+.svelte-kit/output/server/.vite/manifest.json                                              8.60 kB
+.svelte-kit/output/server/_app/immutable/assets/cinzel-latin-wght-normal.DMUuCU8H.woff2   25.90 kB
+.svelte-kit/output/server/_app/immutable/assets/jost-latin-wght-normal.ObQm3Zd1.woff2     26.58 kB
+.svelte-kit/output/server/_app/immutable/assets/_page.fdXtxz3I.css                         0.09 kB
+.svelte-kit/output/server/_app/immutable/assets/_page.BoYZV-Hz.css                         0.37 kB
+.svelte-kit/output/server/_app/immutable/assets/_page.CwbSY30k.css                         0.40 kB
+.svelte-kit/output/server/_app/immutable/assets/_layout.BJfoRjLR.css                      88.32 kB
+.svelte-kit/output/server/chunks/PlaybackCompatibility.svelte_svelte_type_style_lang.js    0.00 kB
+.svelte-kit/output/server/chunks/MatchDialog.svelte_svelte_type_style_lang.js              0.00 kB
+.svelte-kit/output/server/entries/pages/_layout.js                                         0.08 kB
+.svelte-kit/output/server/env.js                                                           0.23 kB
+.svelte-kit/output/server/internal.js                                                      0.35 kB
+.svelte-kit/output/server/chunks/state.svelte.js                                           0.45 kB
+.svelte-kit/output/server/chunks/server.js                                                 0.62 kB
+.svelte-kit/output/server/chunks/stores.js                                                 0.71 kB
+.svelte-kit/output/server/entries/pages/series/_page.svelte.js                             0.73 kB
+.svelte-kit/output/server/entries/pages/reglages/_page.svelte.js                           0.83 kB
+.svelte-kit/output/server/entries/pages/_page.svelte.js                                    0.89 kB
+.svelte-kit/output/server/entries/pages/profils/_page.svelte.js                            0.96 kB
+.svelte-kit/output/server/entries/pages/serie/_id_/_page.svelte.js                         1.01 kB
+.svelte-kit/output/server/entries/pages/episode/_id_/_page.svelte.js                       1.02 kB
+.svelte-kit/output/server/entries/pages/bienvenue/_page.svelte.js                          1.07 kB
+.svelte-kit/output/server/entries/pages/film/_id_/_page.svelte.js                          1.09 kB
+.svelte-kit/output/server/chunks/utils2.js                                                 1.09 kB
+.svelte-kit/output/server/entries/pages/films/_page.svelte.js                              1.16 kB
+.svelte-kit/output/server/entries/pages/_error.svelte.js                                   3.09 kB
+.svelte-kit/output/server/chunks/LoadingSkeleton.js                                        3.64 kB
+.svelte-kit/output/server/chunks/internal.js                                               3.75 kB
+.svelte-kit/output/server/chunks/exports.js                                                5.54 kB
+.svelte-kit/output/server/chunks/Icon.js                                                   7.42 kB
+.svelte-kit/output/server/entries/pages/recherche/_page.svelte.js                          8.11 kB
+.svelte-kit/output/server/entries/pages/_layout.svelte.js                                 12.16 kB
+.svelte-kit/output/server/chunks/root.js                                                  28.66 kB
+.svelte-kit/output/server/chunks/utils.js                                                 34.22 kB
+.svelte-kit/output/server/remote-entry.js                                                 36.81 kB
+.svelte-kit/output/server/chunks/index.svelte.js                                          84.07 kB
+.svelte-kit/output/server/chunks/index.js                                                 98.52 kB
+.svelte-kit/output/server/index.js                                                       132.24 kB
+✓ built in 12.14s
+
+Run npm run preview to preview your production build locally.
+
+> Using @sveltejs/adapter-static
+  Wrote site to "../web-dist"
+  ✔ done
+npm notice run theia-web@3.2.0 postbuild
+npm notice run node scripts/keep-webdist.mjs
+==> Building the binary (using C:\Users\starx\go-toolchain\go\bin\go.exe)
+==> theia-server.exe ready (17.7 MB, version dev)
+### build.ps1 exit=0
+### finished 2026-09-15T23:17:34.7133825+02:00
