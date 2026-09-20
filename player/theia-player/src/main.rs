@@ -1591,6 +1591,11 @@ fn main() {
 
             if diagnostics {
                 std::thread::spawn(|| {
+                    // Which build this is, before which engine it found. The
+                    // engine pin below names the library; it does not say which
+                    // Theia drew the picture, and a report that names neither
+                    // cannot be acted on.
+                    println!("theia-player: version {}", env!("THEIA_VERSION"));
                     // Once, at the top: which engine is running, where it came
                     // from and the digest it was pinned with. Decision 118
                     // accepts the LGPL's obligations in exchange for shipping

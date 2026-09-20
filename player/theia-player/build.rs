@@ -1,4 +1,14 @@
 fn main() {
+    // A bug report has to be able to name the build it came from. The release
+    // workflow knows the tag and passes it as `-Version` to build-player.ps1,
+    // which sets THEIA_VERSION for this script; a build without it is a local
+    // one and says so, the same answer the server gives. The var is declared as
+    // watched so that changing it actually rebuilds the crate instead of
+    // leaving the previous version compiled in.
+    println!("cargo:rerun-if-env-changed=THEIA_VERSION");
+    let version = std::env::var("THEIA_VERSION").unwrap_or_else(|_| "dev".to_string());
+    println!("cargo:rustc-env=THEIA_VERSION={version}");
+
     // The OSD is embedded by `tauri::generate_context!` at compile time, from
     // `../ui/dist`, and cargo watches this crate's own sources - not that
     // directory. So an OSD-only change compiled a binary that still carried the

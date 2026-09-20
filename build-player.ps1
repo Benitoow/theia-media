@@ -4,6 +4,11 @@
 #   .\build-player.ps1 -Release     -> release build
 #   .\build-player.ps1 -Release -Bundle
 #                                   -> and a distribution directory to ship
+#   .\build-player.ps1 -Release -Version v3.3.0
+#                                   -> and a binary that names that build in
+#                                      --diagnostics. Without it the build says
+#                                      'dev', which is the same answer the
+#                                      server gives and what a local build is.
 #
 # The order is not negotiable: tauri-build embeds player/ui/dist into the Rust
 # binary at compile time, so the OSD has to exist first. Cargo will not tell you
@@ -12,7 +17,8 @@
 
 param(
     [switch]$Release,
-    [switch]$Bundle
+    [switch]$Bundle,
+    [string]$Version
 )
 
 $ErrorActionPreference = 'Stop'
@@ -45,6 +51,11 @@ if (-not $cargo) {
 if (-not $cargo) {
     throw "cargo was not found. Install Rust from https://rustup.rs, or put cargo on PATH."
 }
+
+# The workflow passes the tag this release is being built from, so the binary
+# can name it when somebody reports something. build.rs reads this and answers
+# 'dev' when it is absent, which is what a local build is.
+if ($Version) { $env:THEIA_VERSION = $Version }
 
 Write-Host "==> Building theia-player ($profile, using $cargo)" -ForegroundColor Cyan
 Push-Location $root

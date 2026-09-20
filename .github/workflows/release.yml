@@ -156,12 +156,12 @@ jobs:
       # embeds it), compiles the player, fetches the pinned engine - refusing
       # anything whose digest does not match - and lays out what ships.
       #
-      # `-Version` reaches the player through the same ldflag mechanism the
-      # server uses, so a bug report can name the build.
+      # `-Version` reaches the player through build.rs, which compiles the tag
+      # into the binary so --diagnostics names the build a bug report came from.
       - name: Build the player and its bundle
         env:
           CGO_ENABLED: '0'
-        run: .\build-player.ps1 -Release -Bundle
+        run: .\build-player.ps1 -Release -Bundle -Version ${{ github.ref_name }}
 
       # A bundle without the engine plays nothing; one without the licence
       # breaches the LGPL that allows us to ship the engine at all. Both are
@@ -222,7 +222,7 @@ jobs:
       # shipped with. This is the check that would have caught an unpinned
       # download, a truncated DLL, or a build that only worked on the machine
       # that made it.
-      - name: Check the bundled player starts and names its engine
+      - name: Check the bundled player starts, names its build and names its engine
         shell: pwsh
         run: |
           $dir = (Resolve-Path 'dist\theia-player-windows-amd64').Path
@@ -240,6 +240,18 @@ jobs:
           if (-not $json.loaded) { Write-Error 'the bundled player loaded no engine'; exit 1 }
           if ($json.library_sha256 -ne '6f059354c5c45b41192cc52d867d94c0044edb48207c4efd2ea1244208c55359') {
             Write-Error "the player reports an unexpected engine digest: $($json.library_sha256)"
+            exit 1
+          }
+          # And it has to name the build it came from. The engine pin says which
+          # library is loaded; it does not say which Theia is drawing the
+          # picture, and 'dev' here means the tag never reached build.rs - the
+          # failure this check exists to catch, because it is silent otherwise.
+          $build = Select-String -Path $log -Pattern '^theia-player: version ' | Select-Object -First 1
+          if (-not $build) { Write-Error 'the player never printed its build version'; Get-Content $log; exit 1 }
+          $reported = $build.Line -replace '^theia-player: version ', ''
+          Write-Host "build:         $reported"
+          if ($reported -ne '${{ github.ref_name }}') {
+            Write-Error "the player reports build '$reported', expected ${{ github.ref_name }}"
             exit 1
           }
 
