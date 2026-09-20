@@ -22,7 +22,7 @@
   <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
 </p>
 
-![Theia home screen with Dune, the programme dock and the beginning of the collection](docs/screenshots/home.webp)
+![The Theia home screen: the navigation, the film showing tonight and the rows below it](docs/screenshots/home.webp)
 
 Theia turns folders of films and series into a private cinema for the browsers
 already on your television, phone and computer. Run one native executable, add
@@ -33,15 +33,15 @@ external database or separate web app to install.
 | --- | --- | --- |
 | The Go server, SQLite database driver and Svelte interface ship in one binary - the V3.3 player is the part that moves out. FFmpeg is downloaded only when a file needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud library. Metadata comes from TMDB; updates come from GitHub Releases. |
 
-## V3.3 in progress: playback leaves the browser
+## V3.3: playback leaves the browser
 
 > [!IMPORTANT]
-> **`v3.2.0` is the current download, and the last release of the single-binary
-> line.** V3.3 is in progress and splits the product in three: `theia-server`
-> (the headless Go backend you already run, which keeps serving the web
-> interface for administration and fallback playback), `theia-player` (a native
-> desktop player built on Tauri and libmpv) and `theia-setup` (a terminal
-> installer that declares the machine's role).
+> **`v3.3.0` is the current download.** The product is now three programs:
+> `theia-server` (the headless Go backend you already run, which keeps serving
+> the web interface for administration and fallback playback), `theia-player`
+> (a native desktop player built on Tauri and libmpv) and `theia-setup` (the
+> installer, and the one file you download). `v3.2.0` was the last release of
+> the single-binary line, and an installed v3.2 updates into this one by itself.
 
 The reason is not novelty. A browser cannot hand an untouched Dolby TrueHD,
 DTS-HD MA or Atmos stream to an amplifier, renders only the HDR10 base layer of
@@ -54,14 +54,33 @@ written down in [decision 117](docs/DECISIONS.md) and
 [the V3.3 record](docs/v3.3.md). Windows is the only platform this work can be
 verified on today; macOS and Linux are written but not yet proven.
 
+## Which program goes where
+
+Theia is three programs, and which ones belong on a machine depends on the
+house, not on taste.
+
+| Your setup | What to install | Why |
+| --- | --- | --- |
+| One computer that holds the films and is plugged into the screen | **All-in-one** - the default answer in the installer | It serves and it plays. Nothing travels over the network, so nothing is limited by it. |
+| A small machine in a cupboard or a NAS, and a television, a laptop or a desktop you watch on | **Server only** on that machine, then **player only** on each device you watch on | The server indexes, stores and streams; the player uses the sound and picture hardware of the machine in front of you, which is where the difference is heard. |
+| A computer that only watches, with the films held elsewhere | **Player only** | No library is scanned or stored locally. It asks the server for the catalogue and the files. |
+| Anything else - a phone, a tablet, a television browser, a machine you have not decided about | **Nothing.** Open the address the server prints in any browser | The web interface is the complete administration surface and a working fallback player. It is simply not where the best sound and picture live. |
+
+Two things the table cannot say. **The player is Windows only in V3.3** - the
+other platforms are written but have never been run, and the project does not
+ship what it has not seen work. **The browser is not a second-class citizen**: it
+plays everything it can decode, it holds the settings, and it is how you check
+what the server is doing.
+
 ## Project phase: field testing
 
 > [!IMPORTANT]
-> **Library-facing features are paused while Theia is tested in roughly ten real
-> households.** Maintenance continues for security, data-loss risks, playback
-> blockers, regressions and compatibility problems, and those fixes ship as
-> `v3.2.1`, `v3.2.2`, `v3.2.3` and so on. Playback work is the one exception
-> open today, because [decision 117](docs/DECISIONS.md) carries it.
+> **The field test asked for roughly ten real households and did not get them.**
+> The pivot to a native player was taken on platform limits and the maintainer's
+> own decision instead, which is written down in
+> [decision 117](docs/DECISIONS.md) rather than dressed up as evidence. The
+> `3.3.x` line is for the faults found since: interface, wording, rough edges,
+> and whatever the first real users report.
 
 This phase is about replacing guesses with evidence. Theia needs people who will
 run it against their own film and series libraries for at least a week, on the
@@ -97,18 +116,18 @@ expensive fan-fiction.
   rollback.
 
 Theia deliberately has no live TV, DVR, music library, plugins or multi-user
-permissions. A native desktop player arrives in V3.3; there is still no
-television or mobile application. If those matter, the comparison below saves
+permissions. A native desktop player arrived in V3.3 - Windows only for now; a
+television and a mobile application are the next generation, not a promise. If those matter, the comparison below saves
 you an installation you would later resent.
 
 ## Three-minute setup
 
 1. Download **one file** for your operating system and CPU from
    [GitHub Releases](https://github.com/Benitoow/theia-media/releases/latest) and
-   run it: on Windows x64 that is `theia-setup-windows-amd64.exe`. It asks what
-   this machine is for, where to keep its data, the port it listens on, the name
-   it answers to on the network, and which folders hold your films - then shows
-   the whole plan before writing anything.
+   run it: on Windows x64 that is `theia-setup-windows-amd64.exe`. It asks which
+   language Theia should speak, what this machine is for, where to keep its data,
+   the port it listens on, the name it answers to on the network, and which
+   folders hold your films - then shows the whole plan before writing anything.
 2. It fetches what this machine needs - the server, the native player, and the
    media engine the player uses - checking the SHA-256 digest GitHub publishes for
    each file and refusing anything that does not match. The programs are copied
@@ -202,7 +221,7 @@ would be advertising wearing a Markdown costume.
 | Cost | Free, GPL-3.0 | Local personal video is free; remote video and hardware transcoding use paid passes | Free, GPL-2.0, no premium tier | Free tier; several server and app features use Premiere |
 | Identity | No account; passwordless local profiles | Plex account model | Local users and permissions | Local users; optional Emby Connect |
 | Server setup | One native binary for the server, no Docker or external runtime; the V3.3 player is a second native application | Installers and NAS packages | Native packages, containers and NAS options | Installers, containers and many NAS options |
-| Clients | Responsive browser today, native desktop player in V3.3 | Browser plus wide TV, mobile, desktop and console coverage | Browser plus official and community apps | Browser plus TV and mobile apps |
+| Clients | A native desktop player, and a responsive browser for administration and fallback | Browser plus wide TV, mobile, desktop and console coverage | Browser plus official and community apps | Browser plus TV and mobile apps |
 | Hardware transcoding | Included; host capabilities are probed | Plex Pass | Included | Generally Premiere, with documented device exceptions |
 | Remote model | Embedded WireGuard, device keys, viewer-only routes | Account-based remote streaming; a paid pass is required for personal video away from home | You configure networking or a proxy | Manual access or Emby Connect |
 | Live TV, music, plugins | No | Yes | Yes | Yes |
