@@ -804,7 +804,7 @@ button.action:focus-visible {
 	color: var(--color-parchment);
 }
 
-/* On hover and on keyboard focus the frame lifts, scales and draws the mark.
+/* On hover and on keyboard focus the frame lifts and draws the mark.
    Radial rather than a bottom-up gradient, because the title sits *under* the
    card: weighting the bottom would darken artwork to protect text that is not
    there. Suppressed entirely on touch pointers, where a hover state would hide

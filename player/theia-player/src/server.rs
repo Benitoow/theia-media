@@ -172,6 +172,16 @@ pub struct SeriesMetadata {
     pub poster_path: String,
     #[serde(default)]
     pub backdrop_path: String,
+    // Same door, same rule: the series preview names its synopsis and its year
+    // from these, and the year comes from the air date rather than the name.
+    #[serde(default)]
+    pub overview: String,
+    #[serde(default)]
+    pub tagline: String,
+    #[serde(default)]
+    pub first_air_date: String,
+    #[serde(default)]
+    pub release_date: String,
 }
 
 /// A row of the home screen, exactly as the server names it. The kind travels
@@ -273,6 +283,8 @@ pub struct EpisodeMetadata {
     pub still_path: String,
     #[serde(default)]
     pub runtime_minutes: i32,
+    #[serde(default)]
+    pub overview: String,
 }
 
 #[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
@@ -298,6 +310,23 @@ pub struct Metadata {
     pub poster_path: String,
     #[serde(default)]
     pub backdrop_path: String,
+    // The rest of what the interface draws. This struct is the only door the
+    // server's metadata comes through - anything missing here is dropped before
+    // the OSD ever sees it, whatever the API sent. Measured on 20 September
+    // 2026: the hero and the card preview could not show a synopsis because
+    // `overview` was not in this list, and the harness passed anyway because it
+    // mocks the invoke layer and answers with its own fixtures.
+    #[serde(default)]
+    pub overview: String,
+    /// TMDB's release date, `YYYY-MM-DD`.
+    #[serde(default)]
+    pub release_date: String,
+    #[serde(default)]
+    pub runtime_minutes: i32,
+    #[serde(default)]
+    pub vote_average: f64,
+    #[serde(default)]
+    pub director: String,
 }
 
 #[derive(Clone, serde::Deserialize, serde::Serialize)]
