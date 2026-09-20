@@ -1555,6 +1555,11 @@ async function openPage(
 			// opinions. A failure that says only "the click did something" would
 			// send the next person hunting with a debugger.
 			window.__commands = [];
+			// The same list with its arguments, for the checks that care *which*
+			// film a command named and not only which command ran. Kept separate
+			// because the existing assertions compare command names element by
+			// element, and a suffix would quietly break every one of them.
+			window.__invocations = [];
 			// The window's own state, so the Escape rule can be asserted rather than
 			// described: fullscreen is a real flag, `close()` leaves a trace, and
 			// every `setFullscreen` call is recorded.
@@ -1565,6 +1570,7 @@ async function openPage(
 				core: {
 					invoke: async (cmd, args) => {
 						window.__commands.push(cmd);
+						window.__invocations.push({ cmd, args });
 						if (cmd === 'player_local_server') return null;
 						if (cmd === 'player_tracks') return JSON.stringify(tracks);
 						if (cmd === 'player_library') return JSON.stringify(movies);
@@ -2408,6 +2414,34 @@ async function assertSeriesJourney(page) {
 	const caption = await openPage({ width: 1280, height: 720 });
 	await assertCaptionChrome(caption, 'caption bar at 1280');
 	await caption.close();
+
+	// (p) A film's own play path. The series journey asserts that pressing an
+	//     episode issues player_play_episode; the film half had no guard at all,
+	//     which is worth stating plainly: the maintainer pressed Play movie, and
+	//     nothing anywhere in this harness would have noticed either way. Both
+	//     the card and the button inside the preview lead to the same call, and
+	//     the id matters - a command that starts the wrong film is not "playing".
+	const filmPlay = await openPage({ width: 1280, height: 720 });
+	// Connected, then on the film grid, so "the first card" is MOVIES[0] and the
+	// id in the assertion is a fact rather than a guess about which row drew
+	// first.
+	await filmPlay.fill('#theia-address', 'http://127.0.0.1:8395');
+	await filmPlay.click('button[type=submit]');
+	await filmPlay.waitForTimeout(600);
+	await filmPlay.getByRole('button', { name: 'Movies', exact: true }).click();
+	await filmPlay.waitForTimeout(300);
+	await filmPlay.evaluate(() => {
+		window.__commands = [];
+		window.__invocations = [];
+	});
+	await filmPlay.locator('.film').first().click();
+	await filmPlay.waitForTimeout(400);
+	const playCalls = await filmPlay.evaluate(() => (window.__invocations ?? []).filter((call) => call.cmd === 'player_play'));
+	if (playCalls.length !== 1 || playCalls[0].args?.id !== 1) {
+		console.error(`pressing the first card issued ${JSON.stringify(playCalls)}, expected exactly one player_play for film 1`);
+		failures++;
+	}
+	await filmPlay.close();
 }
 
 await browser.close();

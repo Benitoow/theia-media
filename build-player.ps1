@@ -60,8 +60,32 @@ finally {
 
 $exe = Join-Path $root "player\target\$profile\theia-player.exe"
 if (-not (Test-Path $exe)) { throw "the build reported success but $exe does not exist." }
+
+# The binary has to carry the interface that was just built, and "cargo said ok"
+# does not say that: tauri-build reads player/ui/dist at compile time, and cargo
+# does not watch it on its own (see the note in player/theia-player/build.rs).
+# Measured on 20 September 2026: a release binary carried the asset names of the
+# build before it while dist/ already named the new ones, and the maintainer was
+# shown a preview two revisions old.
+#
+# Checked by name, because Vite's asset names are content-hashed: a match means
+# these bytes and not merely a build that ran. The file names are plain text in
+# the executable's asset manifest even though the assets themselves are stored
+# compressed, which is why this works where grepping for a class name does not.
+$index = Get-Content (Join-Path $root 'player\ui\dist\index.html') -Raw
+$assets = [regex]::Matches($index, 'assets/(index-[A-Za-z0-9_-]+\.(?:js|css))') | ForEach-Object { $_.Groups[1].Value }
+if ($assets.Count -eq 0) {
+    throw 'player/ui/dist/index.html names no hashed asset; the OSD build produced something unexpected.'
+}
+$exeText = [System.Text.Encoding]::ASCII.GetString([System.IO.File]::ReadAllBytes($exe))
+$missing = $assets | Where-Object { -not $exeText.Contains($_) }
+if ($missing) {
+    throw ("the built player does not carry the OSD just built: {0} {1} in player/ui/dist and not in {2}. " -f ($missing -join ', '), $(if ($missing.Count -eq 1) { 'is' } else { 'are' }), $exe) +
+        "Cargo reused a cached crate - rebuild, or run 'cargo clean -p theia-player' and rebuild."
+}
+
 $size = [math]::Round((Get-Item $exe).Length / 1MB, 1)
-Write-Host "==> theia-player ready ($size MB, $profile)" -ForegroundColor Green
+Write-Host "==> theia-player ready ($size MB, $profile, carrying $($assets -join ' and '))" -ForegroundColor Green
 
 if (-not $Bundle) {
     Write-Host '    The engine is not bundled: set THEIA_LIBMPV, or put libmpv-2.dll beside the executable.' -ForegroundColor DarkGray

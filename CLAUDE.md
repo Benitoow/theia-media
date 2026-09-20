@@ -275,6 +275,15 @@ cargo build --manifest-path player/Cargo.toml
 
 `player/target`, `player/ui/dist` and `player/theia-player/gen` are generated and
 ignored. A missing `player/ui/dist` is the intended build order, not an accident.
+
+**And the order alone is not enough: a change to the OSD alone reaches no binary
+until the crate is recompiled.** `tauri::generate_context!` reads `player/ui/dist`
+at compile time, and cargo watches this crate's sources, not that directory - so
+editing only `player/ui/` built a player that still carried the interface before
+the change. On 20 September 2026 that shipped a preview two revisions old to the
+maintainer's screen and cost an afternoon. `player/theia-player/build.rs` declares
+`cargo:rerun-if-changed=../ui/dist`, and `build-player.ps1` refuses to finish
+unless the executable carries the hashed asset names from the dist it just built.
 See [`player/README.md`](player/README.md) and decision 118.
 
 What ships is the **bundle**, not the executable:
