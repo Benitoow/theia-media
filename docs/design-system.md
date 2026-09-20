@@ -512,6 +512,10 @@ grew a box over the grid; both are gone.
   `backdrop-filter` on a masked layer, so the picture itself is what softens
   rather than being covered; the same gradient at low strength darkens it,
   because a blur alone is invisible on a dark frame and a smudge on a bright one.
+  **It rounds its own corner.** A blurred layer is composited, and an ancestor's
+  `overflow: hidden` and `border-radius` do not clip it - without
+  `clip-path: inset(0 round var(--radius-card))` the band's square corner draws
+  outside the card, which is exactly what happened.
 - **A clip is cropped to the film, never shown with its own bars.** Most films
   are wider than the frame their file stores them in, so the picture arrives with
   black bars *in* it - 122 rows of 480 on the maintainer's own remux - and no

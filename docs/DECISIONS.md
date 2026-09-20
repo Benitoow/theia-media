@@ -4544,6 +4544,16 @@ without an edge of its own. The first version was a bottom gradient; the
 maintainer corrected it by name, and the section that had argued against a
 gradient was arguing against something else.
 
+**Corrected the same day, and the corner is the lesson.** The maintainer's next
+screenshot showed the band's square corner drawn *outside* the card's rounded
+one. `backdrop-filter` is composited: an ancestor's `overflow: hidden` and
+`border-radius` do not clip it, so a blurred layer has to round its own corner -
+`clip-path: inset(0 round var(--radius-card))`, which clips the element's output
+including the blur. The band is also darker than the first version ("très léger"
+was not the final word): 0.66 of the ink at the left edge rather than 0.4. The
+harness asserts the clip now, because the fault is invisible in a screenshot
+taken anywhere but the corner.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

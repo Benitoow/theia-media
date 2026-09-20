@@ -1902,6 +1902,7 @@ async function assertSeriesJourney(page) {
 			fade: after.backgroundImage,
 			blurBand: after.backdropFilter,
 			mask: after.maskImage,
+			clip: after.clipPath,
 			media: getComputedStyle(el.querySelector('img')).zIndex,
 		};
 	});
@@ -1915,6 +1916,13 @@ async function assertSeriesJourney(page) {
 	// this check and be the wrong effect.
 	if (!layers.blurBand.includes('blur(') || !layers.mask.includes('gradient')) {
 		console.error(`the card has no blur band: ${JSON.stringify({ band: layers.blurBand, mask: layers.mask })}`);
+		failures++;
+	}
+	// The band rounds its own corner, because a blur is composited and an
+	// ancestor's radius does not clip it: without this its square corner draws
+	// outside the card, which is the fault the maintainer photographed.
+	if (!layers.clip.includes('round')) {
+		console.error(`the blur band does not round its own corner: ${JSON.stringify(layers.clip)}`);
 		failures++;
 	}
 	if (Number(layers.media) < 1) {

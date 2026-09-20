@@ -828,14 +828,20 @@ button.action:focus-visible {
 	z-index: 2;
 	background: linear-gradient(
 		to right,
-		rgb(var(--channel-ink) / 0.4) 0%,
-		rgb(var(--channel-ink) / 0.12) 34%,
-		transparent 64%
+		rgb(var(--channel-ink) / 0.66) 0%,
+		rgb(var(--channel-ink) / 0.22) 36%,
+		transparent 66%
 	);
 	-webkit-backdrop-filter: blur(8px) saturate(1.05);
 	backdrop-filter: blur(8px) saturate(1.05);
-	-webkit-mask-image: linear-gradient(to right, #000 0%, rgb(0 0 0 / 0.45) 34%, transparent 64%);
-	mask-image: linear-gradient(to right, #000 0%, rgb(0 0 0 / 0.45) 34%, transparent 64%);
+	-webkit-mask-image: linear-gradient(to right, #000 0%, rgb(0 0 0 / 0.45) 36%, transparent 66%);
+	mask-image: linear-gradient(to right, #000 0%, rgb(0 0 0 / 0.45) 36%, transparent 66%);
+	/* Its own rounded clip, and it is not belt and braces: `backdrop-filter` is
+	   painted by the compositor and is **not** clipped by an ancestor's
+	   `overflow: hidden` or `border-radius`, so the band's square corner drew
+	   outside the card's - the maintainer's screenshot, 20 September 2026. The
+	   clip works on the element's own output, blur included. */
+	clip-path: inset(0 round var(--radius-card));
 	pointer-events: none;
 }
 
