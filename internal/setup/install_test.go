@@ -27,14 +27,53 @@ import (
 // fakeRelease writes a folder holding what an unpacked archive holds.
 func fakeRelease(t *testing.T, dir string, withPlayer bool) {
 	t.Helper()
-	write(t, filepath.Join(dir, "theia-server.exe"), "MZ the server")
+	write(t, filepath.Join(dir, installed("theia-server")), "MZ the server")
 	if !withPlayer {
 		return
 	}
-	write(t, filepath.Join(dir, "theia-player.exe"), "MZ the player")
-	write(t, filepath.Join(dir, "libmpv-2.dll"), "the engine, a hundred megabytes of it")
-	write(t, filepath.Join(dir, "LICENSE-libmpv.txt"), "LGPL")
-	write(t, filepath.Join(dir, "NOTICE.md"), "where the engine came from")
+	write(t, filepath.Join(dir, installed("theia-player")), "MZ the player")
+	for _, member := range bundleExtras() {
+		write(t, filepath.Join(dir, member), bundleBody(member))
+	}
+}
+
+// installed is the name a program carries once it is in place. It is the
+// product's own rule rather than a second copy of it: a server is theia-server
+// on every platform and theia-server.exe on Windows, and the rule itself is
+// pinned by TestTheInstallerAcceptsTheNamesTheReleasePublishes. Writing .exe
+// into a fixture on Linux is how nine of these tests came to fail there while
+// passing on the machine they were written on.
+func installed(base string) string { return executableName(program{base: base}) }
+
+// bundleExtras is what the player's published bundle carries on this platform
+// besides the executable itself, read from the product's own list: Windows
+// ships the engine and its licences beside the player, and every other platform
+// ships the executable alone. That difference is real - the player is built for
+// Windows only in this release - and the tests that need a second member say so
+// instead of pretending the Windows list is universal.
+func bundleExtras() []string { return bundleFiles(runtime.GOOS)[1:] }
+
+// bundleBody is what a fixture writes into a bundle member, so an assertion can
+// prove the member came out of the bundle rather than from somewhere else.
+func bundleBody(member string) string {
+	switch member {
+	case "libmpv-2.dll":
+		return "engine"
+	case "LICENSE-libmpv.txt":
+		return "LGPL"
+	case "NOTICE.md":
+		return "notice"
+	}
+	return "bundle member"
+}
+
+// needsBundleExtras skips a test whose whole point is an incomplete bundle.
+// There is nothing to leave out of a bundle that is one file.
+func needsBundleExtras(t *testing.T) {
+	t.Helper()
+	if len(bundleExtras()) == 0 {
+		t.Skipf("the %s player bundle is the executable alone; no member can be missing from it", runtime.GOOS)
+	}
 }
 
 func write(t *testing.T, path, body string) {
@@ -89,12 +128,12 @@ func TestAReleaseFolderBesideTheInstallerIsInstalledWhole(t *testing.T) {
 	if err != nil {
 		t.Fatalf("InstallPrograms: %v", err)
 	}
-	for _, name := range []string{"theia-server.exe", "theia-player.exe", "libmpv-2.dll", "LICENSE-libmpv.txt", "NOTICE.md"} {
+	for _, name := range append([]string{installed("theia-server"), installed("theia-player")}, bundleExtras()...) {
 		if _, err := os.Stat(filepath.Join(install, name)); err != nil {
 			t.Errorf("%s was not installed: %v", name, err)
 		}
 	}
-	if read(t, filepath.Join(install, "theia-server.exe")) != "MZ the server" {
+	if read(t, filepath.Join(install, installed("theia-server"))) != "MZ the server" {
 		t.Error("the installed server is not the file that was copied")
 	}
 	if len(actions) != 2 {
@@ -112,22 +151,23 @@ func TestAReleaseFolderBesideTheInstallerIsInstalledWhole(t *testing.T) {
 func TestAReleaseArchiveIsInstalledWithoutUnpackingItFirst(t *testing.T) {
 	// The other thing a person has: the zip itself, untouched, because Windows
 	// opens archives rather than extracting them half the time.
-	archive := filepath.Join(t.TempDir(), "theia-3.3.0-windows-amd64.zip")
-	makeZip(t, archive, map[string]string{
-		"theia-server.exe":   "MZ the server",
-		"theia-player.exe":   "MZ the player",
-		"libmpv-2.dll":       "engine",
-		"LICENSE-libmpv.txt": "LGPL",
-		"NOTICE.md":          "notice",
-		"START-HERE.txt":     "read me first",
-	})
+	archive := filepath.Join(t.TempDir(), "theia-3.3.0-"+runtime.GOOS+"-"+runtime.GOARCH+".zip")
+	members := map[string]string{
+		installed("theia-server"): "MZ the server",
+		installed("theia-player"): "MZ the player",
+		"START-HERE.txt":          "read me first",
+	}
+	for _, member := range bundleExtras() {
+		members[member] = bundleBody(member)
+	}
+	makeZip(t, archive, members)
 	install := t.TempDir()
 
 	plan := Plan{Role: RoleAllInOne, DataDir: t.TempDir(), InstallDir: install, Port: 8395, Hostname: "theia"}
 	if _, err := InstallPrograms(context.Background(), plan, Source{From: archive}, nil); err != nil {
 		t.Fatalf("InstallPrograms from an archive: %v", err)
 	}
-	for _, name := range []string{"theia-server.exe", "theia-player.exe", "libmpv-2.dll", "LICENSE-libmpv.txt"} {
+	for _, name := range append([]string{installed("theia-server"), installed("theia-player")}, bundleExtras()...) {
 		if _, err := os.Stat(filepath.Join(install, name)); err != nil {
 			t.Errorf("%s was not installed from the archive: %v", name, err)
 		}
@@ -142,8 +182,9 @@ func TestAReleaseArchiveIsInstalledWithoutUnpackingItFirst(t *testing.T) {
 func TestAnIncompletePlayerBundleStopsTheInstallation(t *testing.T) {
 	// The player looks installed without its engine and does not start. Half a
 	// bundle is a failure, and the failure names what was missing.
+	needsBundleExtras(t)
 	source := t.TempDir()
-	write(t, filepath.Join(source, "theia-player.exe"), "MZ the player")
+	write(t, filepath.Join(source, installed("theia-player")), "MZ the player")
 	install := t.TempDir()
 
 	plan := Plan{Role: RolePlayer, DataDir: t.TempDir(), InstallDir: install, Port: 8395, Hostname: "theia"}
@@ -175,7 +216,7 @@ func TestAnInstalledProgramIsNotDownloadedAgain(t *testing.T) {
 	defer server.Close()
 
 	install := t.TempDir()
-	write(t, filepath.Join(install, "theia-server.exe"), "MZ already here")
+	write(t, filepath.Join(install, installed("theia-server")), "MZ already here")
 	plan := Plan{Role: RoleServer, DataDir: t.TempDir(), InstallDir: install, Port: 8395, Hostname: "theia"}
 
 	actions, err := InstallPrograms(context.Background(), plan, Source{APIBase: server.URL}, nil)
@@ -195,12 +236,11 @@ func TestTheInstallerFetchesAndVerifiesWhatIsMissing(t *testing.T) {
 	// the installer fetches the rest itself. Everything here is real bytes with
 	// real digests, served by a stub standing in for GitHub.
 	bundle := filepath.Join(t.TempDir(), "player.zip")
-	makeZip(t, bundle, map[string]string{
-		"theia-player.exe":   "MZ the player",
-		"libmpv-2.dll":       "engine",
-		"LICENSE-libmpv.txt": "LGPL",
-		"NOTICE.md":          "notice",
-	})
+	player := map[string]string{installed("theia-player"): "MZ the player"}
+	for _, member := range bundleExtras() {
+		player[member] = bundleBody(member)
+	}
+	makeZip(t, bundle, player)
 	payloads := map[string][]byte{
 		release.ServerName(runtime.GOOS, runtime.GOARCH): []byte("MZ the server, downloaded"),
 		release.PlayerName(runtime.GOOS, runtime.GOARCH): mustRead(t, bundle),
@@ -214,11 +254,13 @@ func TestTheInstallerFetchesAndVerifiesWhatIsMissing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("InstallPrograms: %v", err)
 	}
-	if read(t, filepath.Join(install, "theia-server.exe")) != "MZ the server, downloaded" {
+	if read(t, filepath.Join(install, installed("theia-server"))) != "MZ the server, downloaded" {
 		t.Error("the server was not installed from the release")
 	}
-	if read(t, filepath.Join(install, "libmpv-2.dll")) != "engine" {
-		t.Error("the player's engine did not come out of the published bundle")
+	for _, member := range bundleExtras() {
+		if read(t, filepath.Join(install, member)) != bundleBody(member) {
+			t.Errorf("%s did not come out of the published bundle", member)
+		}
 	}
 	for _, action := range actions {
 		if action.Kind != "downloaded-program" || action.Detail != "v3.3.0" {

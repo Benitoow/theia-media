@@ -13,9 +13,10 @@ import (
 // checked by shortcut_windows_test.go, which reads one back with Windows.
 
 func TestTheEntriesNameEveryProgramTheRoleInstalled(t *testing.T) {
+	requireWindowsForEntries(t)
 	french, _ := CatalogueFor("fr")
 	install := t.TempDir()
-	for _, name := range []string{"theia-server.exe", "theia-player.exe", "libmpv-2.dll"} {
+	for _, name := range []string{installed("theia-server"), installed("theia-player"), "libmpv-2.dll"} {
 		write(t, filepath.Join(install, name), "MZ")
 	}
 
@@ -70,8 +71,8 @@ func TestTheEntriesShowTheProductsMarkWithoutBorrowingOne(t *testing.T) {
 	// is the day the generic glyphs come back.
 	french, _ := CatalogueFor("fr")
 	install := t.TempDir()
-	write(t, filepath.Join(install, "theia-server.exe"), "MZ")
-	write(t, filepath.Join(install, "theia-player.exe"), "MZ")
+	write(t, filepath.Join(install, installed("theia-server")), "MZ")
+	write(t, filepath.Join(install, installed("theia-player")), "MZ")
 
 	entries := entriesFor(Plan{Role: RoleAllInOne, InstallDir: install}, french)
 	if len(entries) != 3 {
@@ -101,7 +102,7 @@ func TestTheProductEntryOpensTheViewerForAnAllInOne(t *testing.T) {
 	if len(entries) == 0 {
 		t.Fatal("the all-in-one role produced no product entry")
 	}
-	want := filepath.Join(install, "theia-player.exe")
+	want := filepath.Join(install, installed("theia-player"))
 	if !strings.EqualFold(entries[0].link.Target, want) {
 		t.Errorf("Theia opens %q, want the viewer %q", entries[0].link.Target, want)
 	}
@@ -111,9 +112,10 @@ func TestAPlayerOnlyMachineGetsNoServerEntry(t *testing.T) {
 	// An entry that starts a program this machine does not have is a broken
 	// promise somebody double-clicks. The role decides, and the player-only role
 	// must not leave a server behind it.
+	requireWindowsForEntries(t)
 	french, _ := CatalogueFor("fr")
 	install := t.TempDir()
-	write(t, filepath.Join(install, "theia-player.exe"), "MZ")
+	write(t, filepath.Join(install, installed("theia-player")), "MZ")
 
 	targets := ShortcutTargets{StartMenu: t.TempDir(), Desktop: t.TempDir()}
 	if _, failure := createShortcuts(Plan{Role: RolePlayer, InstallDir: install}, targets, french); failure != "" {
@@ -138,6 +140,7 @@ func TestAnEntryIsNotWrittenForAProgramThatIsNotThere(t *testing.T) {
 	// The programs are installed before the entries, so a missing one means the
 	// installation is not what it claims. It is reported, and no entry points at
 	// a file that does not exist.
+	requireWindowsForEntries(t)
 	french, _ := CatalogueFor("fr")
 	install := t.TempDir() // deliberately empty
 	targets := ShortcutTargets{StartMenu: t.TempDir(), Desktop: t.TempDir()}
@@ -191,6 +194,18 @@ func TestEntriesAreOnlyWrittenOnWindows(t *testing.T) {
 	actions, failure := createShortcuts(Plan{Role: RoleServer, InstallDir: install}, targets, french)
 	if len(actions) != 0 || failure != "" {
 		t.Errorf("a non-Windows platform was given entries: %+v %q", actions, failure)
+	}
+}
+
+// requireWindowsForEntries skips the entry tests that assert files on disk:
+// createShortcuts is a deliberate no-op on every other platform, which is what
+// TestEntriesAreOnlyWrittenOnWindows is the test for. The tests that only read
+// what entriesFor builds run everywhere, because that rule has no platform in
+// it beyond the name each program carries.
+func requireWindowsForEntries(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS != "windows" {
+		t.Skip("the entries are only written on Windows; TestEntriesAreOnlyWrittenOnWindows is the guard for the others")
 	}
 }
 
