@@ -50,7 +50,6 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { Switch } from './components/ui/switch';
 import notFoundArt from './assets/media-not-found.png';
 import { catalogues, initialLanguage, storedLanguage } from './lib/catalogues.js';
-import { ambientColours } from './lib/ambient';
 import { artworkCandidates, displayTitle, displayYear } from './lib/tmdb';
 import { formatRuntime } from './lib/utils';
 import type { DiscoveredServer, Home, HomeRow, Movie, PlayerStatus, Profile, Season, Series, SeriesHome, Server, Track, UpdateStatus } from './types';
@@ -747,7 +746,6 @@ function Library(props: LibraryProps) {
 	return (
 		<section className="library">
 			{spotlight && !selectedSeries && section !== 'home' && section !== 'search' && <div className="library-ambient" aria-hidden="true"><img src={spotlight} alt="" crossOrigin="anonymous" /></div>}
-			{spotlight && !selectedSeries && section !== 'home' && section !== 'search' && <AmbientGlow url={spotlight} placement="corner" />}
 			{server && <LibraryNav section={section} settingsOpen={props.settingsOpen} profilesOpen={props.profilesOpen} profiles={server.profiles ?? []} activeProfile={server.profile ?? null} serverURL={server.url} updateAvailable={Boolean(props.updateStatus?.available)} t={t} onSection={props.onSection} onSettings={props.onSettings} onProfiles={props.onProfiles} />}
 
 			{/* The home screen has no page heading: its hero is the heading. A
@@ -877,13 +875,8 @@ function HomeView({ home, seriesHome, language, reducedMotion, t, onMovie, onSer
 		});
 	}
 	const hero = home.hero ?? null;
-	// The picture the page takes its light from: the hero's own backdrop, when
-	// the hero has one. An item that fell back to the broadcast card throws no
-	// colour, and the extraction answers nothing for it.
-	const heroArt = hero ? artworkCandidates(hero, 'w1280')[0] : undefined;
 	return (
 		<>
-			{hero && <AmbientGlow url={heroArt} placement="hero" />}
 			{hero && <HomeHero movie={hero} resuming={home.hero_kind === 'resume'} language={language} t={t} onPlay={onMovie} />}
 			{rows.map((row) => (
 				<MediaRow key={row.kind} title={t(ROW_TITLES[row.kind] ?? row.kind)} hint={row.hint} t={t} reducedMotion={reducedMotion}>
@@ -923,7 +916,6 @@ function HomeHero({ movie, resuming, language, t, onPlay }: { movie: Movie; resu
 	return (
 		<section className="home-hero" aria-label={title}>
 			<img className="home-hero-art" src={heroArt} alt="" crossOrigin="anonymous" fetchPriority="high" onError={() => setHeroFailed(true)} />
-			<div className="home-hero-veil" aria-hidden="true" />
 			<div className="home-hero-content">
 				<p className="label home-hero-eyebrow">{playing ? t('heroResumeEyebrow') : t('heroFeaturedEyebrow')}</p>
 				<h1 className="home-hero-title">{title}</h1>
@@ -1182,34 +1174,6 @@ function SettingsModal({ open, language, preferences, server, updateStatus, upda
 			</DialogContent>
 		</Dialog>
 	);
-}
-
-/**
- * The colour a picture throws on the wall behind it. It reads the artwork's own
- * pixels (lib/ambient.js) and hands the two loudest colours to the stylesheet,
- * which spreads them around the picture and drops them back to the page's ink
- * with distance - the far stop of every gradient is transparent, and what is
- * behind it is the ink the player otherwise sits on.
- *
- * The layer is drawn under everything on the page (z-index 0, and the library's
- * own stacking rule sends content to 1). When the pixels cannot be read there is
- * nothing to draw: no glow, not a guess.
- */
-function AmbientGlow({ url, placement }: { url?: string; placement: 'hero' | 'corner' }) {
-	const [colours, setColours] = useState<string[] | null>(null);
-	useEffect(() => {
-		let current = true;
-		// The previous picture's light goes out first: a glow that changes colour
-		// before the new image has loaded is a colour from the film before.
-		setColours(null);
-		if (url) void ambientColours(url).then((found) => { if (current) setColours(found); });
-		return () => { current = false; };
-	}, [url]);
-	const style = {
-		'--ambient-a': colours?.[0] ?? '0 0 0',
-		'--ambient-b': colours?.[1] ?? colours?.[0] ?? '0 0 0',
-	} as React.CSSProperties;
-	return <div className={`ambient-glow ambient-glow--${placement}`} data-ready={colours ? 'true' : 'false'} style={style} aria-hidden="true" />;
 }
 
 function ProfileDialog({ open, profiles, activeProfile, serverURL, busy, t, onClose, onSelect, onRename, onSetAvatar, onClearAvatar }: { open: boolean; profiles: Profile[]; activeProfile: number | null; serverURL: string; busy: boolean; t: (key: string) => string; onClose: () => void; onSelect: (id: number) => void; onRename: (id: number, name: string) => Promise<Profile>; onSetAvatar: (id: number, file: File) => Promise<Profile>; onClearAvatar: (id: number) => Promise<Profile> }) {

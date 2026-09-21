@@ -689,29 +689,16 @@ a player.
   which is what the maintainer's screenshot showed and what the arithmetic
   (24rem box + button + gap in a 27.5rem panel) already said. The sheet is 48rem
   wide now, and no panel may scroll sideways.
-- **A picture arrives and leaves; it does not appear.** The hero's backdrop used
-  to be a rectangle: the maintainer's own screenshots show it (21 September
-  2026), and they show why Films and Series escaped it - the library's ambient
-  picture carries a mask on two sides, and the hero carried none. The page read
-  `rgb(13,12,11)` above the picture and `rgb(30,29,27)` inside it, one row apart,
-  at the top; at the bottom the veil painted opaque ink on top of the ambient
-  glow, so the hero ended on a line that measured ~20 levels against the page
-  below it. Now the hero's art melts at both ends (nothing, half, whole by 18%,
-  whole until 62%, nothing at 100%) and the veil is masked below the copy (70%),
-  so what the hero ends in is the page itself, glow included, over a ramp the
-  same length as the one the library's picture uses.
-- **A picture lights the wall behind it.** The home hero and the library's first
-  card are large pictures, and the page under them was a flat near-black that
-  made them sit on it like posters on a wall. `lib/ambient.ts` reads the
-  artwork's own pixels - thirty-two by eighteen of them, bucketed and weighted by
-  saturation, so a coloured patch outranks the dark a film still is mostly made
-  of - and answers up to two colours. The layers spread them around the picture,
-  centred where the picture is, and every gradient ends transparent: distance is
-  the ink the player sits on, which is the OLED black §3 asks for. A picture
-  whose pixels cannot be read (a refused origin, a CDN that sends no CORS header)
-  throws no light: no glow, not a guess. `assertAmbientGlow` in `check:render`
-  serves the hero a flat teal backdrop and fails on a grey answer, because "a
-  glow exists" is not the claim - "the glow is the picture's colour" is.
+- **The home's picture is the library's picture.** One recipe, not two: the
+  hero's backdrop uses the ambient picture's own soften and mask - `opacity
+  0.3`, `saturate(0.84) contrast(1.04)`, and a melt that takes the picture away
+  to the left, where the copy is, and away at the bottom. The maintainer asked
+  for exactly this on 21 September 2026, after three passes spent fading a
+  brighter banner instead; the recipe that already read right was the recipe.
+  The copy sits on the page's ink, which is why the hero's veils are gone with
+  it - there is nothing left behind the text but the page. The one addition is a
+  short fade at the top, because the hero starts below the page's own top
+  padding while the library's picture starts at the scroller's edge.
 - **One filled control**, the play button, in `--bone` rather than gold: the
   accent still has to mean "look here" everywhere else on the screen.
 - **The furniture hides** after three seconds of no pointer, no key and no state

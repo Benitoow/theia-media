@@ -1153,49 +1153,9 @@ button.action:focus-visible {
 	isolation: isolate;
 }
 
-.library > *:not(.library-ambient):not(.ambient-glow) {
+.library > *:not(.library-ambient) {
 	position: relative;
 	z-index: 1;
-}
-
-/* The colour a picture throws on the wall (lib/ambient.js, called from
-   AmbientGlow): two circles of the artwork's own loudest colours, centred where
-   the picture is, and every stop outside them transparent - so the ink the
-   player sits on is what distance turns to (design system 6b, the OLED floor).
-   Drawn under everything, and it never takes a pointer. */
-.ambient-glow {
-	position: absolute;
-	z-index: 0;
-	pointer-events: none;
-	opacity: 0;
-	transition: opacity 900ms var(--ease-cine);
-	background-image:
-		radial-gradient(66% 62% at var(--ambient-x) var(--ambient-y), rgb(var(--ambient-a) / 0.5), transparent 72%),
-		radial-gradient(46% 48% at calc(var(--ambient-x) + 15%) calc(var(--ambient-y) + 16%), rgb(var(--ambient-b) / 0.32), transparent 70%);
-}
-
-.ambient-glow[data-ready='true'] {
-	opacity: 1;
-}
-
-/* The home hero is full-bleed at the top of the scroller, so its light spreads
-   from the middle of the picture downwards, where the rows are. The height is
-   capped at the scroller's own box (100% of it, not of the content): an
-   absolutely positioned child that reached past the content would add empty
-   scroll space below the last row. */
-.ambient-glow--hero {
-	inset: 0 0 auto 0;
-	height: min(58rem, 100%);
-	--ambient-x: 50%;
-	--ambient-y: 26%;
-}
-
-/* The library's first card is the picture in the top-right corner. */
-.ambient-glow--corner {
-	inset: 0 0 auto 0;
-	height: min(46rem, 100%);
-	--ambient-x: 74%;
-	--ambient-y: 16%;
 }
 
 .library-ambient {
@@ -2289,40 +2249,23 @@ button.action:focus-visible {
 	/* Framed from the top like every backdrop the bar floats over (design
 	   system 5): the crop is spent on the bottom, where the copy is. */
 	object-position: top;
-	opacity: 0.78;
-	/* The picture melts at both ends, which is what the library's ambient
-	   picture already does and what makes Films and Series read as light on the
-	   wall rather than as a pasted rectangle. Measured on the maintainer's own
-	   screenshots (21 September 2026): their Films page fades the picture out
-	   over ~180px and the home drew a short ramp that stopped at a line. The
-	   mask starts the picture at nothing, has it whole by 18%, and takes it away
-	   again from 62% - the copy sits above that. */
-	mask-image: linear-gradient(to bottom, transparent 0%, rgb(0 0 0 / 0.45) 5%, #000 18%, #000 62%, transparent 100%);
+	/* The library's ambient picture, verbatim: the same soften and the same
+	   two-axis melt - away to the left, where the copy is, and away at the
+	   bottom. The maintainer asked for the home's picture to be *this and
+	   nothing else* on 21 September 2026, after three passes of trying to fade
+	   a brighter banner instead; the recipe that already read right is the
+	   recipe. The only addition is the short top fade, because the hero starts
+	   below the page's own top padding while the library's picture starts at
+	   the scroller's edge. */
+	opacity: 0.3;
+	filter: saturate(0.84) contrast(1.04);
+	mask-image:
+		linear-gradient(to bottom, transparent 0%, rgb(0 0 0 / 0.5) 6%, #000 20%, #000 44%, transparent 100%),
+		linear-gradient(105deg, transparent 8%, #000 58%, #000 100%);
+	mask-composite: intersect;
 }
 
-/* Scrims, not a wash, and the web home's own recipe: a horizontal shade for
-   the copy on the left, a bottom that lands the picture on the page's ink,
-   and a light top fade so the picture emerges from under the bar. Deliberately
-   lighter than it first shipped: the first pass stacked three heavy veils and
-   the artwork stopped reading at all.
 
-   The bottom one is masked now instead of being painted as opaque ink. Ink over
-   the page is still ink - between them there is only the ambient glow, and the
-   hero's last row was sitting exactly on top of it: that step is what the
-   maintainer circled on 21 September 2026, while the Films page, whose picture
-   carries a mask, faded perfectly. Both layers go now, so what the hero ends in
-   is the page itself. The mask keeps the full scrim where the copy is (70% of
-   the hero) and takes it away below. */
-.home-hero-veil {
-	position: absolute;
-	z-index: 1;
-	inset: 0;
-	background:
-		linear-gradient(90deg, rgb(var(--channel-ink) / 0.94) 0%, rgb(var(--channel-ink) / 0.52) 43%, transparent 76%),
-		linear-gradient(to top, var(--color-ink) 0%, rgb(var(--channel-ink) / 0.72) 34%, rgb(var(--channel-ink) / 0.08) 76%),
-		linear-gradient(to bottom, rgb(var(--channel-ink) / 0.45), transparent 22%);
-	mask-image: linear-gradient(to bottom, #000 0%, #000 70%, transparent 100%);
-}
 
 .home-hero-content {
 	position: relative;
