@@ -673,6 +673,17 @@ a player.
   rather than swallowed: a copy button that silently does nothing is worse than
   none. `assertSeriesJourney` clicks it and reads the clipboard back, because the
   sentence beside the button is not evidence that anything was copied.
+- **The settings sheet is a rail and a panel.** The maintainer brought a
+  reference from 21st.dev on 21 September 2026 (v-card-17): sections listed down
+  the left, the chosen one on the right. Four sections stacked in one column was
+  a page to scroll through looking for a single switch. The chosen rail item is
+  *filled* - the inversion the language segment already uses, so this sheet has
+  one active treatment and not two - and behind it the panel holds that
+  section's real controls. Below 44rem the rail becomes a row above the panel.
+  The footer wears the reference's own pair: a bordered, quiet Cancel beside a
+  filled Save, both `--radius-row` rectangles rather than the pills the player's
+  controls wear, because a dialog's footer is not a control on the picture.
+  `assertSeriesJourney` walks all four sections and checks what each one holds.
 - **A picture lights the wall behind it.** The home hero and the library's first
   card are large pictures, and the page under them was a flat near-black that
   made them sit on it like posters on a wall. `lib/ambient.ts` reads the

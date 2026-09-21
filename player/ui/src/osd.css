@@ -1672,9 +1672,68 @@ button.action:focus-visible {
 	font-size: var(--text-small);
 }
 
-.settings-body {
+/* The sheet is a rail and a panel - the shape of the reference the maintainer
+   brought from 21st.dev (v-card-17, 21 September 2026): the sections listed on
+   the left, the chosen one on the right. One column holding four sections was a
+   page to scroll through looking for one switch, and the sheet is the one
+   screen in the player with nothing behind it to dim. */
+.settings-panes {
+	display: grid;
+	min-height: 0;
+	grid-template-columns: 11rem minmax(0, 1fr);
+	overflow: hidden;
+}
+
+.settings-nav {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	padding: 0.7rem 0.55rem;
+	border-right: 1px solid var(--color-line);
 	overflow-y: auto;
-	padding: 0 clamp(1.25rem, 3vw, 1.5rem);
+	scrollbar-color: var(--color-line) transparent;
+}
+
+.settings-nav-item {
+	display: flex;
+	align-items: center;
+	gap: 0.55rem;
+	min-height: 2.6rem;
+	padding: 0 0.7rem;
+	border: 0;
+	border-radius: var(--radius-row);
+	background: transparent;
+	color: var(--color-muted);
+	font-family: var(--font-label);
+	font-size: var(--text-label);
+	letter-spacing: 0.1em;
+	text-align: left;
+	text-transform: uppercase;
+	cursor: pointer;
+	transition: color var(--duration-fast) var(--ease-cine), background-color var(--duration-fast) var(--ease-cine);
+}
+
+.settings-nav-item:hover {
+	background: rgb(var(--channel-bone) / 0.06);
+	color: var(--color-bone);
+}
+
+/* The chosen section is filled, the inversion the language segment already
+   uses: one active treatment in this sheet, not two. */
+.settings-nav-item[aria-current='true'] {
+	background: var(--color-bone);
+	color: var(--color-ink);
+}
+
+.settings-nav-item:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+}
+
+.settings-panel {
+	min-width: 0;
+	overflow-y: auto;
+	padding: 0.9rem clamp(1.1rem, 3vw, 1.4rem) 1.2rem;
 	scrollbar-color: var(--color-line) transparent;
 }
 
@@ -1758,8 +1817,8 @@ button.action:focus-visible {
 
 .settings-switch {
 	position: relative;
-	width: 3rem;
-	height: 1.7rem;
+	width: 3.6rem;
+	height: 2.05rem;
 	flex: none;
 	padding: 0;
 	border: 1px solid var(--color-line);
@@ -1776,18 +1835,18 @@ button.action:focus-visible {
 
 .settings-switch-thumb {
 	display: block;
-	width: 1.25rem;
-	height: 1.25rem;
+	width: 1.55rem;
+	height: 1.55rem;
 	border-radius: 999px;
 	background: var(--color-bone);
 	box-shadow: 0 0.2rem 0.55rem rgba(0, 0, 0, 0.35);
-	transform: translateX(0.18rem);
+	transform: translateX(0.22rem);
 	transition: transform var(--duration-fast) var(--ease-cine);
 }
 
 .settings-switch[data-state='checked'] .settings-switch-thumb {
 	background: var(--color-ink);
-	transform: translateX(1.38rem);
+	transform: translateX(1.72rem);
 }
 
 .settings-server {
@@ -2079,6 +2138,15 @@ button.action:focus-visible {
 	background: rgb(var(--channel-ink) / 0.5);
 }
 
+/* The reference's own pair: a bordered, quiet Cancel beside a filled Save, both
+   rounded rectangles rather than the pill the player's controls wear - a
+   dialog's footer is not a control on the picture. §9's 44px floor is the
+   Button's own `min-h-11`, untouched. */
+.settings-footer button {
+	padding-inline: 1.35rem;
+	border-radius: var(--radius-row);
+}
+
 .settings-close {
 	position: absolute;
 	top: 0.95rem;
@@ -2137,6 +2205,23 @@ button.action:focus-visible {
 	}
 	.settings-dialog {
 		max-height: calc(100vh - 1rem);
+	}
+	/* A rail on a phone becomes a row above the panel: the sections stay one
+	   tap away, and the panel keeps the width it needs for its own text. */
+	.settings-panes {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto minmax(0, 1fr);
+	}
+	.settings-nav {
+		flex-direction: row;
+		gap: 0.3rem;
+		border-right: 0;
+		border-bottom: 1px solid var(--color-line);
+		overflow-x: auto;
+		overflow-y: hidden;
+	}
+	.settings-nav-item {
+		flex: none;
 	}
 	.settings-section--row {
 		gap: 1rem;

@@ -7,19 +7,23 @@ import {
 	ChevronRight,
 	Clapperboard,
 	Cog,
+	Copy,
+	Download,
 	House,
 	ImagePlus,
 	Languages,
+	type LucideIcon,
 	Maximize2,
 	Minimize2,
+	MonitorPlay,
 	Pause,
 	Pencil,
 	Play,
 	RotateCcw,
 	RotateCw,
 	Search,
+	Server as ServerIcon,
 	Settings2,
-	Copy,
 	Tv,
 	UserRound,
 	Volume2,
@@ -1046,6 +1050,11 @@ function CardGrid({ children }: { children: React.ReactNode }) {
 	return <ul className="films">{children}</ul>;
 }
 
+// The sections of the settings sheet, in the order its rail shows them. The
+// name is also the catalogue key of the panel's heading, so the rail, the panel
+// and the sentences cannot drift apart.
+type SettingsPane = 'interface' | 'playback' | 'server' | 'update';
+
 function SettingsModal({ open, language, preferences, server, updateStatus, updateBusy, t, onClose, onSave, onCheckUpdate, onApplyUpdate }: { open: boolean; language: string; preferences: Preferences; server: Server | null; updateStatus: UpdateStatus | null; updateBusy: boolean; t: (key: string) => string; onClose: () => void; onSave: (language: string, preferences: Preferences) => void; onCheckUpdate: () => void; onApplyUpdate: () => void }) {
 	const [draftLanguage, setDraftLanguage] = useState(language);
 	const [draft, setDraft] = useState(preferences);
@@ -1054,12 +1063,27 @@ function SettingsModal({ open, language, preferences, server, updateStatus, upda
 	// more than the eye can read - which is the reason it exists.
 	const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
 	const copyTimer = useRef<number | null>(null);
+	// Which section the sheet is showing. The maintainer asked for the shape of
+	// a reference from 21st.dev (v-card-17, 21 September 2026): a rail of
+	// sections on the left, the chosen one on the right. Four sections in one
+	// column was a page of switches and links with no way to see what was in it
+	// without scrolling past everything else.
+	const [pane, setPane] = useState<SettingsPane>('interface');
 	const updateStateKey = updateStatus ? ({ idle: 'updateUnknown', checking: 'updateChecking', available: 'updateAvailable', downloading: 'updateInstalling', ready: 'updateReady', deferred: 'updateDeferred', failed: 'updateFailed', unsupported: 'updateUnsupported' } as Record<string, string>)[updateStatus.state] ?? 'updateUnknown' : 'updateUnknown';
+	const panes: Array<{ id: SettingsPane; icon: LucideIcon; label: string }> = [
+		{ id: 'interface', icon: Languages, label: t('interface') },
+		{ id: 'playback', icon: MonitorPlay, label: t('playback') },
+		{ id: 'server', icon: ServerIcon, label: t('server') },
+		{ id: 'update', icon: Download, label: t('update') },
+	];
 	useEffect(() => {
 		if (open) {
 			setDraftLanguage(language);
 			setDraft(preferences);
 			setCopyState('idle');
+			// The sheet opens where it always opens: the section whose settings
+			// a person changes most, not wherever it was left.
+			setPane('interface');
 		}
 	}, [language, open, preferences]);
 	useEffect(() => () => {
@@ -1084,52 +1108,77 @@ function SettingsModal({ open, language, preferences, server, updateStatus, upda
 
 	return (
 		<Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-			<DialogContent aria-describedby="player-settings-description">
+			<DialogContent className="settings-dialog" aria-describedby="player-settings-description">
 				<header className="settings-header">
 					<span className="settings-heading-icon" aria-hidden="true"><Cog size={21} /></span>
 					<div><DialogTitle>{t('settings')}</DialogTitle><DialogDescription id="player-settings-description">{t('settingsDescription')}</DialogDescription></div>
 					<DialogClose asChild><Button className="settings-close" variant="ghost" size="icon" aria-label={t('closeSettings')}><X size={18} /></Button></DialogClose>
 				</header>
-				<div className="settings-body">
-					<section className="settings-section">
-						<div className="settings-section-copy"><h3>{t('interface')}</h3><p>{t('languageHint')}</p></div>
-						<div className="settings-segment" role="group" aria-label={t('language')}>{(['fr', 'en'] as const).map((locale) => <button key={locale} type="button" aria-pressed={draftLanguage === locale} onClick={() => setDraftLanguage(locale)}>{locale === 'fr' ? 'Français' : 'English'}</button>)}</div>
-					</section>
-					<div className="settings-separator" />
-					<section className="settings-section settings-section--row">
-						<div className="settings-section-copy"><h3>{t('autoHideControls')}</h3><p>{t('autoHideControlsHint')}</p></div>
-						<Switch checked={draft.autoHideControls} onCheckedChange={(checked) => setDraft((current) => ({ ...current, autoHideControls: checked }))} aria-label={t('autoHideControls')} />
-					</section>
-					<div className="settings-separator" />
-					<section className="settings-section settings-section--row">
-						<div className="settings-section-copy"><h3>{t('reducedMotion')}</h3><p>{t('reducedMotionHint')}</p></div>
-						<Switch checked={draft.reducedMotion} onCheckedChange={(checked) => setDraft((current) => ({ ...current, reducedMotion: checked }))} aria-label={t('reducedMotion')} />
-					</section>
-					<div className="settings-separator" />
-					<section className="settings-section settings-section--connection">
-						<div className="settings-section-copy"><h3>{t('server')}</h3><p>{server ? t('serverConnectedHint') : t('serverDisconnectedHint')}</p></div>
-						{server && <dl className="settings-server">
-							<div>
-								<dt>{t('address')}</dt>
-								<dd className="settings-address">
-									<span className="settings-address-value">{server.url}</span>
-									<button type="button" className="settings-copy" onClick={() => void copyAddress()} aria-label={t('copyAddress')} title={t('copyAddress')}><Copy size={15} strokeWidth={1.8} /></button>
-								</dd>
-							</div>
-							<div><dt>{t('version')}</dt><dd>{server.health.version}</dd></div>
-						</dl>}
-						{copyState !== 'idle' && <p className={`settings-copy-note${copyState === 'failed' ? ' settings-copy-note--error' : ''}`} role="status">{copyState === 'copied' ? t('addressCopied') : t('addressCopyFailed')}</p>}
-					</section>
-					<div className="settings-separator" />
-					<section className="settings-section settings-update">
-						<div className="settings-section-copy"><h3>{t('update')}</h3><p>{updateStatus?.message || t(updateStateKey)}</p></div>
-						<div className="settings-update-row">
-							<dl className="settings-server settings-update-versions"><div><dt>{t('updateCurrent')}</dt><dd>{updateStatus?.current_version || server?.health.version || '—'}</dd></div>{updateStatus?.latest_version && <div><dt>{t('updateLatest')}</dt><dd>{updateStatus.latest_version}</dd></div>}</dl>
-							{updateStatus?.available ? <Button onClick={onApplyUpdate} disabled={updateBusy || ['downloading', 'ready'].includes(updateStatus.state)}>{updateBusy ? t('updateInstalling') : t('updateInstall')}</Button> : <Button variant="outline" onClick={onCheckUpdate} disabled={updateBusy}>{updateBusy ? t('updateChecking') : t('updateCheck')}</Button>}
-						</div>
-					</section>
+				<div className="settings-panes">
+					<nav className="settings-nav" aria-label={t('settingsSections')}>
+						{panes.map(({ id, icon: Icon, label }) => (
+							<button key={id} type="button" className="settings-nav-item" aria-current={pane === id ? 'true' : undefined} onClick={() => setPane(id)}>
+								<Icon size={16} strokeWidth={1.8} aria-hidden="true" />
+								<span>{label}</span>
+							</button>
+						))}
+					</nav>
+					<div className="settings-panel" role="region" aria-label={t(pane)}>
+						{pane === 'interface' && (
+							<section className="settings-section">
+								<div className="settings-section-copy"><h3>{t('interface')}</h3><p>{t('languageHint')}</p></div>
+								<div className="settings-segment" role="group" aria-label={t('language')}>{(['fr', 'en'] as const).map((locale) => <button key={locale} type="button" aria-pressed={draftLanguage === locale} onClick={() => setDraftLanguage(locale)}>{locale === 'fr' ? 'Français' : 'English'}</button>)}</div>
+							</section>
+						)}
+						{pane === 'playback' && (
+							<>
+								<section className="settings-section">
+									<div className="settings-section-copy"><h3>{t('playback')}</h3><p>{t('playbackHint')}</p></div>
+								</section>
+								<div className="settings-separator" />
+								<section className="settings-section settings-section--row">
+									<div className="settings-section-copy"><h3>{t('autoHideControls')}</h3><p>{t('autoHideControlsHint')}</p></div>
+									<Switch checked={draft.autoHideControls} onCheckedChange={(checked) => setDraft((current) => ({ ...current, autoHideControls: checked }))} aria-label={t('autoHideControls')} />
+								</section>
+								<div className="settings-separator" />
+								<section className="settings-section settings-section--row">
+									<div className="settings-section-copy"><h3>{t('reducedMotion')}</h3><p>{t('reducedMotionHint')}</p></div>
+									<Switch checked={draft.reducedMotion} onCheckedChange={(checked) => setDraft((current) => ({ ...current, reducedMotion: checked }))} aria-label={t('reducedMotion')} />
+								</section>
+							</>
+						)}
+						{pane === 'server' && (
+							<section className="settings-section settings-section--connection">
+								<div className="settings-section-copy"><h3>{t('server')}</h3><p>{server ? t('serverConnectedHint') : t('serverDisconnectedHint')}</p></div>
+								{server && <dl className="settings-server">
+									<div>
+										<dt>{t('address')}</dt>
+										<dd className="settings-address">
+											<span className="settings-address-value">{server.url}</span>
+											<button type="button" className="settings-copy" onClick={() => void copyAddress()} aria-label={t('copyAddress')} title={t('copyAddress')}><Copy size={15} strokeWidth={1.8} /></button>
+										</dd>
+									</div>
+									<div><dt>{t('version')}</dt><dd>{server.health.version}</dd></div>
+								</dl>}
+								{copyState !== 'idle' && <p className={`settings-copy-note${copyState === 'failed' ? ' settings-copy-note--error' : ''}`} role="status">{copyState === 'copied' ? t('addressCopied') : t('addressCopyFailed')}</p>}
+							</section>
+						)}
+						{pane === 'update' && (
+							<section className="settings-section settings-update">
+								<div className="settings-section-copy"><h3>{t('update')}</h3><p>{updateStatus?.message || t(updateStateKey)}</p></div>
+								<div className="settings-update-row">
+									<dl className="settings-server settings-update-versions"><div><dt>{t('updateCurrent')}</dt><dd>{updateStatus?.current_version || server?.health.version || '—'}</dd></div>{updateStatus?.latest_version && <div><dt>{t('updateLatest')}</dt><dd>{updateStatus.latest_version}</dd></div>}</dl>
+									{updateStatus?.available ? <Button onClick={onApplyUpdate} disabled={updateBusy || ['downloading', 'ready'].includes(updateStatus.state)}>{updateBusy ? t('updateInstalling') : t('updateInstall')}</Button> : <Button variant="outline" onClick={onCheckUpdate} disabled={updateBusy}>{updateBusy ? t('updateChecking') : t('updateCheck')}</Button>}
+								</div>
+							</section>
+						)}
+					</div>
 				</div>
-				<footer className="settings-footer"><DialogClose asChild><Button variant="ghost">{t('cancel')}</Button></DialogClose><Button onClick={() => onSave(draftLanguage, draft)}>{t('save')}</Button></footer>
+				{/* The two actions wear the reference's own shape: a bordered,
+				    quiet Cancel beside a filled Save, both rounded rectangles
+				    rather than the pills the player's controls use - a dialog's
+				    footer is not a control on the picture. */}
+				<footer className="settings-footer"><DialogClose asChild><Button variant="outline">{t('cancel')}</Button></DialogClose><Button onClick={() => onSave(draftLanguage, draft)}>{t('save')}</Button></footer>
 			</DialogContent>
 		</Dialog>
 	);

@@ -1571,6 +1571,13 @@ async function assertAmbientGlow() {
 	for (let attempt = 0; attempt < 40 && (await glow.getAttribute('data-ready').catch(() => null)) !== 'true'; attempt++) {
 		await page.waitForTimeout(100);
 	}
+	// The layer fades in over 900ms, so the colour is asserted once the fade has
+	// finished: reading the computed opacity mid-transition reported 0 and made
+	// this guard fail on a layer that was arriving perfectly well.
+	for (let attempt = 0; attempt < 20; attempt++) {
+		if (Number(await glow.evaluate((node) => getComputedStyle(node).opacity)) > 0.95) break;
+		await page.waitForTimeout(100);
+	}
 	if ((await glow.count()) !== 1) {
 		console.error('the home hero threw no colour: no ambient glow layer was drawn');
 		failures++;
@@ -2298,17 +2305,30 @@ async function assertSeriesJourney(page) {
 	}
 	await page.getByRole('button', { name: /Fermer les profils|Close profiles/ }).click();
 
-	// Settings is real app state, not a decorative drawer: the modal exposes the
-	// two actual toggles, the connected server facts and a distinct save path.
+	// Settings is real app state, not a decorative drawer: a rail of sections and,
+	// behind each one, that section's real controls - the shape the maintainer
+	// brought back from a 21st.dev reference on 21 September 2026.
+	const openSettingsSection = async (name) => {
+		await page.locator('.settings-nav-item', { hasText: name }).click();
+		await page.waitForTimeout(180);
+	};
 	await page.getByRole('button', { name: /Réglages|Settings/ }).click();
 	await page.waitForTimeout(250);
-	if ((await page.getByRole('dialog').count()) !== 1 || (await page.getByRole('switch').count()) !== 2) {
-		console.error('the player settings modal or its two real preference switches are missing');
+	if ((await page.getByRole('dialog').count()) !== 1 || (await page.locator('.settings-nav-item').count()) !== 4) {
+		console.error('the player settings sheet or its four sections are missing');
 		failures++;
 	}
+	// The two real preference switches live behind Playback.
+	await openSettingsSection(/Lecture|Playback/);
+	if ((await page.getByRole('switch').count()) !== 2) {
+		console.error('the Playback panel does not hold its two real preference switches');
+		failures++;
+	}
+	// The connected facts live behind Server, and the address can be taken out.
+	await openSettingsSection(/Serveur|Server/);
 	const settingsText = await page.getByRole('dialog').innerText();
 	if (!settingsText.includes('127.0.0.1:8395') || !settingsText.includes('dev')) {
-		console.error('the player settings modal does not expose the connected server facts');
+		console.error('the Server panel does not expose the connected server facts');
 		failures++;
 	}
 	// The address can be taken out of the sheet. The row ellipsises its value, so
@@ -2327,10 +2347,15 @@ async function assertSeriesJourney(page) {
 		console.error(`the copy button said ${JSON.stringify(copyNote)} after copying`);
 		failures++;
 	}
-	if (!settingsText.includes('3.3.2') || !settingsText.includes('3.3.3') || (await page.getByRole('button', { name: /Installer la mise à jour|Install update/ }).count()) !== 1) {
-		console.error('settings do not expose the real current/latest update state and install action');
+	// And the update state lives behind Update.
+	await openSettingsSection(/Mise à jour|Update/);
+	const updateText = await page.getByRole('dialog').innerText();
+	if (!updateText.includes('3.3.2') || !updateText.includes('3.3.3') || (await page.getByRole('button', { name: /Installer la mise à jour|Install update/ }).count()) !== 1) {
+		console.error('the Update panel does not expose the real current/latest state and install action');
 		failures++;
 	}
+	// Back to the panel whose switch this journey flips, and photograph the sheet.
+	await openSettingsSection(/Lecture|Playback/);
 	await page.screenshot({ path: join(OUT, '1-settings.png') });
 	await page.getByRole('switch', { name: /Réduire les animations|Reduce motion/ }).click();
 	await page.getByRole('button', { name: /Enregistrer|Save/ }).click();
