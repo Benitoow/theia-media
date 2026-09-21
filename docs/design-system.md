@@ -689,14 +689,17 @@ a player.
   which is what the maintainer's screenshot showed and what the arithmetic
   (24rem box + button + gap in a 27.5rem panel) already said. The sheet is 48rem
   wide now, and no panel may scroll sideways.
-- **A picture arrives; it does not appear.** The hero's backdrop used to start as
-  a rectangle under the bar. The maintainer circled it on 21 September 2026, and
-  it was measurable: the page read `rgb(13,12,11)` above the picture and
-  `rgb(30,29,27)` inside it, one row apart. The library's own ambient picture had
-  solved this already with a mask, which is exactly why Films and Series looked
-  right and the home did not: the hero's art is masked at its top edge now -
-  transparent, half, whole by 18% of the hero - so the page and the picture meet
-  through a ramp instead of at a line.
+- **A picture arrives and leaves; it does not appear.** The hero's backdrop used
+  to be a rectangle: the maintainer's own screenshots show it (21 September
+  2026), and they show why Films and Series escaped it - the library's ambient
+  picture carries a mask on two sides, and the hero carried none. The page read
+  `rgb(13,12,11)` above the picture and `rgb(30,29,27)` inside it, one row apart,
+  at the top; at the bottom the veil painted opaque ink on top of the ambient
+  glow, so the hero ended on a line that measured ~20 levels against the page
+  below it. Now the hero's art melts at both ends (nothing, half, whole by 18%,
+  whole until 62%, nothing at 100%) and the veil is masked below the copy (70%),
+  so what the hero ends in is the page itself, glow included, over a ramp the
+  same length as the one the library's picture uses.
 - **A picture lights the wall behind it.** The home hero and the library's first
   card are large pictures, and the page under them was a flat near-black that
   made them sit on it like posters on a wall. `lib/ambient.ts` reads the

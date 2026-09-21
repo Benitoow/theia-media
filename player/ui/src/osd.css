@@ -2290,21 +2290,29 @@ button.action:focus-visible {
 	   system 5): the crop is spent on the bottom, where the copy is. */
 	object-position: top;
 	opacity: 0.78;
-	/* And its top edge melts into the page, which is what the library's ambient
-	   picture already does with the same tool. The veil's own top fade was not
-	   enough: measured on the maintainer's window, the page read rgb(13,12,11)
-	   above the picture and rgb(30,29,27) inside it - a step at the rectangle's
-	   boundary, which is the "you can see it is just an image" they reported on
-	   21 September 2026. The mask starts the picture at nothing and has it whole
-	   by the time the copy area begins. */
-	mask-image: linear-gradient(to bottom, transparent 0%, rgb(0 0 0 / 0.45) 5%, #000 18%, #000 100%);
+	/* The picture melts at both ends, which is what the library's ambient
+	   picture already does and what makes Films and Series read as light on the
+	   wall rather than as a pasted rectangle. Measured on the maintainer's own
+	   screenshots (21 September 2026): their Films page fades the picture out
+	   over ~180px and the home drew a short ramp that stopped at a line. The
+	   mask starts the picture at nothing, has it whole by 18%, and takes it away
+	   again from 62% - the copy sits above that. */
+	mask-image: linear-gradient(to bottom, transparent 0%, rgb(0 0 0 / 0.45) 5%, #000 18%, #000 62%, transparent 100%);
 }
 
 /* Scrims, not a wash, and the web home's own recipe: a horizontal shade for
    the copy on the left, a bottom that lands the picture on the page's ink,
    and a light top fade so the picture emerges from under the bar. Deliberately
    lighter than it first shipped: the first pass stacked three heavy veils and
-   the artwork stopped reading at all. */
+   the artwork stopped reading at all.
+
+   The bottom one is masked now instead of being painted as opaque ink. Ink over
+   the page is still ink - between them there is only the ambient glow, and the
+   hero's last row was sitting exactly on top of it: that step is what the
+   maintainer circled on 21 September 2026, while the Films page, whose picture
+   carries a mask, faded perfectly. Both layers go now, so what the hero ends in
+   is the page itself. The mask keeps the full scrim where the copy is (70% of
+   the hero) and takes it away below. */
 .home-hero-veil {
 	position: absolute;
 	z-index: 1;
@@ -2313,6 +2321,7 @@ button.action:focus-visible {
 		linear-gradient(90deg, rgb(var(--channel-ink) / 0.94) 0%, rgb(var(--channel-ink) / 0.52) 43%, transparent 76%),
 		linear-gradient(to top, var(--color-ink) 0%, rgb(var(--channel-ink) / 0.72) 34%, rgb(var(--channel-ink) / 0.08) 76%),
 		linear-gradient(to bottom, rgb(var(--channel-ink) / 0.45), transparent 22%);
+	mask-image: linear-gradient(to bottom, #000 0%, #000 70%, transparent 100%);
 }
 
 .home-hero-content {
