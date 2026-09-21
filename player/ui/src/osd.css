@@ -2290,6 +2290,14 @@ button.action:focus-visible {
 	   system 5): the crop is spent on the bottom, where the copy is. */
 	object-position: top;
 	opacity: 0.78;
+	/* And its top edge melts into the page, which is what the library's ambient
+	   picture already does with the same tool. The veil's own top fade was not
+	   enough: measured on the maintainer's window, the page read rgb(13,12,11)
+	   above the picture and rgb(30,29,27) inside it - a step at the rectangle's
+	   boundary, which is the "you can see it is just an image" they reported on
+	   21 September 2026. The mask starts the picture at nothing and has it whole
+	   by the time the copy area begins. */
+	mask-image: linear-gradient(to bottom, transparent 0%, rgb(0 0 0 / 0.45) 5%, #000 18%, #000 100%);
 }
 
 /* Scrims, not a wash, and the web home's own recipe: a horizontal shade for
