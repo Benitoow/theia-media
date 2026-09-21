@@ -242,13 +242,30 @@ jobs:
         run: |
           $dir = (Resolve-Path 'dist\theia-player-windows-amd64').Path
           $log = Join-Path $env:TEMP 'player-start.log'
+          $err = "$log.err"
           $process = Start-Process -FilePath (Join-Path $dir 'theia-player.exe') `
             -ArgumentList '--mute', '--diagnostics' -PassThru `
-            -RedirectStandardOutput $log -RedirectStandardError "$log.err"
-          Start-Sleep -Seconds 12
+            -RedirectStandardOutput $log -RedirectStandardError $err
+          # Wait for the line, not for a clock. The player loads a 100 MB engine
+          # and opens a WebView2 window on a runner that boots cold, and the
+          # first v3.3.2 attempt failed here after a fixed twelve seconds with an
+          # empty stdout log: a statement about the wait, not about the player.
+          # Ninety seconds is a ceiling reached only by a player that is not
+          # going to print anything at all.
+          $pin = $null
+          for ($second = 0; $second -lt 90 -and -not $pin; $second++) {
+            Start-Sleep -Seconds 1
+            if (Test-Path $log) {
+              $pin = Select-String -Path $log -Pattern '^engine-pin: ' | Select-Object -First 1
+            }
+          }
           Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-          $pin = Select-String -Path $log -Pattern '^engine-pin: ' | Select-Object -First 1
-          if (-not $pin) { Write-Error 'the player never printed its engine pin'; Get-Content $log; exit 1 }
+          if (-not $pin) {
+            Write-Error 'the player never printed its engine pin within ninety seconds'
+            if (Test-Path $log) { Write-Host '--- stdout ---'; Get-Content $log }
+            if (Test-Path $err) { Write-Host '--- stderr ---'; Get-Content $err }
+            exit 1
+          }
           $json = ($pin.Line -replace '^engine-pin: ', '') | ConvertFrom-Json
           Write-Host "engine loaded: $($json.loaded)"
           Write-Host "pinned:        $($json.library) sha256:$($json.library_sha256)"
