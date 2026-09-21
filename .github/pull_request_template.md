@@ -23,6 +23,7 @@ An optimistic summary is not.
 - [ ] `./build.ps1` (or `make build`) succeeds
 - [ ] `go test ./...` passes
 - [ ] `node scripts/contrast.mjs` passes (if colours changed)
+- [ ] `node scripts/decisions.mjs` passes (if `docs/DECISIONS.md` changed)
 - [ ] `node web/scripts/check-locales.mjs` passes (if strings changed)
 
 ## Checks
@@ -36,5 +37,7 @@ An optimistic summary is not.
 - [ ] No image, and no third-party binary, added without a checked licence - and
       for a binary, a pinned source and a SHA-256.
 - [ ] If this contradicts the spec, a decision or the design system, that document
-      is updated **in this pull request**, with the reasoning - superseding the old
-      entry rather than rewriting it.
+      is updated **in this pull request**, with the reasoning. In `DECISIONS.md`
+      the old entry keeps its text and gains a `**Status:**` line naming the new
+      one; nothing is renumbered, deleted or rewritten (decision 141), and
+      `node scripts/decisions.mjs` proves it.

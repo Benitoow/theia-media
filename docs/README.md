@@ -10,7 +10,7 @@ passer pour la documentation courante.
 | Document | Rôle |
 |---|---|
 | [`spec-fondatrice.md`](spec-fondatrice.md) | Ce que Theia est et refuse de devenir |
-| [`DECISIONS.md`](DECISIONS.md) | Les décisions techniques et produit, avec leur raisonnement |
+| [`DECISIONS.md`](DECISIONS.md) | Les décisions techniques et produit, avec leur raisonnement. Chaque entrée porte son statut et ses sujets ; l'index en tête dit ce qui gouverne encore |
 | [`design-system.md`](design-system.md) | Les règles visuelles et d'interaction |
 | [`v3.md`](v3.md) | Le périmètre livré et vérifié de la génération V3 |
 | [`v3.3.md`](v3.3.md) | Le périmètre **en cours** et le registre de vérification de la V3.3 (architecture native) |

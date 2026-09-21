@@ -17,8 +17,12 @@ them will be asked to change the document first.
 
 If your change contradicts one of them, that is not automatically wrong. It means
 the document changes first, in the same commit, with the reasoning written down.
-`DECISIONS.md` is append-only in spirit: supersede an entry, do not quietly
-rewrite it.
+In `DECISIONS.md`, numbers are identities: nothing is renumbered or deleted, an
+entry whose rule was replaced keeps its text and says so in its `**Status:**`
+line, and one whose rule still binds is kept current in place.
+`node scripts/decisions.mjs` checks the record - numbering, every citation in the
+repository, the status and topic grammar, supersession reciprocity - and
+`--write` regenerates its index (decision 141).
 
 ## Current phase: V3.3, playback leaves the browser
 
@@ -95,6 +99,7 @@ restores it, but the script is the tested path.
 ```bash
 go test ./...                       # the whole suite
 node scripts/contrast.mjs           # guards the documented colour ratios
+node scripts/decisions.mjs          # checks the decision record; --write regenerates its index
 node web/scripts/check-locales.mjs  # guards French/English catalogue parity
 ```
 

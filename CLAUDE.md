@@ -40,7 +40,7 @@ anything; they answer most questions that would otherwise be asked again.
 | Document | What it settles |
 |---|---|
 | [`docs/spec-fondatrice.md`](docs/spec-fondatrice.md) | What Theia is and what it refuses to be. The scope of v1, and the technical prohibitions. Start here. |
-| [`docs/DECISIONS.md`](docs/DECISIONS.md) | Every decision already taken, with its reasoning and, where it matters, the bug that forced it. Check here before re-opening a question. |
+| [`docs/DECISIONS.md`](docs/DECISIONS.md) | Every decision already taken, with its reasoning and, where it matters, the bug that forced it. Read the index first: each entry carries a machine-readable `**Status:**` and `**Topics:**` line, and `node scripts/decisions.mjs --list --topic <topic>` answers without reading the file (decision 141). |
 | [`docs/design-system.md`](docs/design-system.md) | Colour, type, spacing, motion, focus. §6 - *the card grid is exempt* - is the single most important constraint in the interface. |
 
 **V3 shipped in `v3.0.0`.** Its verified product and playback boundaries are in
@@ -62,8 +62,11 @@ not describe the current product. Read the code, the V3 record and the three
 governing documents above instead.
 
 If a change contradicts one of them, the document is changed first, in the same
-commit, with the reasoning written down. `DECISIONS.md` is append-only in
-spirit: supersede an entry, do not quietly rewrite it.
+commit, with the reasoning written down. In `DECISIONS.md` the numbers are
+identities: nothing is renumbered or deleted, an entry whose rule was replaced
+keeps its text and says so in its `**Status:**` line, and one whose rule still
+binds is kept current in place. `node scripts/decisions.mjs` checks all of it
+(decision 141).
 
 ## Standing constraints
 
@@ -143,6 +146,7 @@ tested path. Deleting that file has turned CI red before.
 ```bash
 go test ./...                       # the whole suite
 node scripts/contrast.mjs           # guards the documented colour ratios
+node scripts/decisions.mjs          # checks the decision record; --write regenerates its index
 node web/scripts/check-locales.mjs  # guards French/English catalogue parity
 cd web && npm run check             # checks JavaScript and Svelte markup
 cd web && npm test                  # drives a real browser at 375, 1280 and 1920
