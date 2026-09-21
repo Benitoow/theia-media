@@ -1,0 +1,15 @@
+#!/bin/sh
+# The decision record's guard, before the commit rather than after it.
+#
+# Enable once per clone:  git config core.hooksPath .githooks
+#
+# A commit that touches the record or its guard runs the checks; anything else
+# is left alone, and a machine without node is never blocked. This is the
+# primary guard: a commit that carries [skip ci] never reaches CI (decision 141).
+if ! command -v node >/dev/null 2>&1; then
+	exit 0
+fi
+if git diff --cached --name-only | grep -qE '^(docs/DECISIONS\.md|scripts/decisions\.mjs)$'; then
+	node scripts/decisions.mjs || exit 1
+fi
+exit 0

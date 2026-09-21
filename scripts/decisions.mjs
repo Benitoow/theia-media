@@ -6,26 +6,33 @@
 //	node scripts/decisions.mjs --write  regenerate the index block
 //	node scripts/decisions.mjs --list   query without reading the file
 //	                                    [--topic playback] [--status superseded]
+//	node scripts/decisions.mjs --grep tmdb      free text over titles and bodies
 //	node scripts/decisions.mjs --json   the whole record, machine-readable
+//	node scripts/decisions.mjs --add "Title" --topics playback,testing
+//	                                    [--supersedes 12,34] appends decision N+1
 //
 // It owns no content: every fact is parsed out of docs/DECISIONS.md, which stays
 // the source of truth, and the index it writes is that file's own navigation.
-// Run it after adding or superseding a decision. The record is cited from code,
-// tests and documents by number, so numbers are identities: the checks below are
-// what keeps them stable and the status lines honest.
+// Run it after adding or superseding a decision. An entry opens with
+// `**Status:**`, and one a decision has replaced also carries `**Today:**` -
+// what stands now, citing the decision that says so.
 
-import { execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 
-const FILE = 'docs/DECISIONS.md';
+// The file can be pointed elsewhere for a rehearsal; everything else assumes
+// the real one.
+const FILE = process.env.THEIA_DECISIONS_FILE ?? 'docs/DECISIONS.md';
 const START = '<!-- index:start -->';
 const END = '<!-- index:end -->';
 
 // The closed vocabulary. A new topic is a decision about the vocabulary, not a
 // word added here in passing.
 const TOPICS = [
+	'design',
 	'installer',
 	'interface',
+	'language',
 	'library',
 	'metadata',
 	'playback',
@@ -52,6 +59,16 @@ const cited = (text) => {
 		for (const number of match[1].matchAll(NUMBER)) seen.add(number[0]);
 	}
 	return [...seen];
+};
+
+// A **Today:** line cites in parentheses - "(58)", "(110, 111)" - or with the
+// word, and either form counts.
+const todayCited = (text) => {
+	const found = new Set(cited(text));
+	for (const match of text.matchAll(/\((\d+[a-z]?(?:\s*(?:,|and)\s*\d+[a-z]?)*)\)/g)) {
+		for (const number of match[1].matchAll(NUMBER)) found.add(number[0]);
+	}
+	return [...found];
 };
 
 const rank = (key) => [parseInt(key, 10), key.replace(/^\d+/, '')];
@@ -87,6 +104,18 @@ entries.forEach((entry, index) => {
 				: { kind: match[1] };
 			entry.topics = match[3].split(',').map((t) => t.trim());
 			entry.statusAt = entry.line + first + 1;
+			// The line wraps, so its continuation lines belong to it: collect
+			// until the blank line that ends the block.
+			const collected = [];
+			for (const line of entry.body.slice(first + 1)) {
+				if (line.trim() === '') break;
+				collected.push(line.trim());
+			}
+			const today = /^\*\*Today:\*\* (.+)$/.exec(collected[0] ?? '');
+			if (today) {
+				entry.today = [today[1], ...collected.slice(1)].join(' ');
+				entry.todayAt = entry.line + first + 2;
+			}
 		} else if (entry.body[first].trim().startsWith('**Status:**')) {
 			entry.status = { kind: 'malformed' };
 			entry.statusAt = entry.line + first + 1;
@@ -143,6 +172,23 @@ for (const entry of entries) {
 		}
 		if (new Set(entry.topics).size !== entry.topics.length) fail(entry.line, `decision ${entry.key}: duplicate topic`);
 	}
+	if (entry.topics && entry.topics.join(',') !== [...entry.topics].sort().join(',')) {
+		fail(entry.line, `decision ${entry.key}: topics are not in alphabetical order`);
+	}
+	if (status.kind === 'superseded') {
+		if (!entry.today) {
+			fail(entry.line, `decision ${entry.key} is superseded and has no **Today:** line`);
+		} else {
+			for (const number of todayCited(entry.today)) {
+				if (!keys.has(number)) fail(entry.todayAt, `decision ${entry.key}: **Today:** cites ${number}, which does not exist`);
+			}
+			if (!todayCited(entry.today).some((number) => status.by.includes(number))) {
+				fail(entry.todayAt, `decision ${entry.key}: **Today:** cites none of its replacements (${status.by.join(', ')})`);
+			}
+		}
+	} else if (entry.today) {
+		fail(entry.todayAt, `decision ${entry.key} is ${status.kind} and must not carry a **Today:** line`);
+	}
 	if (status.kind !== 'superseded') continue;
 	for (const target of status.by) {
 		if (!keys.has(target)) fail(entry.line, `decision ${entry.key} is superseded by ${target}, which does not exist`);
@@ -180,7 +226,7 @@ for (const entry of entries) {
 		if (!keys.has(target)) fail(entry.line, `decision ${entry.key} cites ${target}, which does not exist`);
 	}
 }
-const tracked = execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split('\n').filter(Boolean);
+const tracked = spawnSync('git', ['ls-files'], { encoding: 'utf8' }).stdout.split('\n').filter(Boolean);
 const readable = /\.(md|go|rs|js|mjs|ts|svelte|ps1|yml|yaml|toml|json|html|css|txt)$/;
 for (const file of tracked) {
 	if (!readable.test(file) || file === FILE) continue;
@@ -264,6 +310,28 @@ if (argv.includes('--write')) {
 	process.exit(0);
 }
 
+if (argv.includes('--grep')) {
+	const word = flag('--grep');
+	if (!word) {
+		console.error('--grep needs a word');
+		process.exit(1);
+	}
+	const needle = word.toLowerCase();
+	let hits = 0;
+	for (const entry of entries) {
+		const body = entry.body.map((line, index) => [entry.line + 1 + index, line]).filter(([, line]) => line.toLowerCase().includes(needle));
+		if (!entry.title.toLowerCase().includes(needle) && body.length === 0) continue;
+		hits++;
+		const what =
+			entry.status.kind === 'superseded' ? `${entry.status.inPart ? 'in part' : 'superseded'} by ${entry.status.by.join(', ')}`
+			: entry.status.kind;
+		console.log(`${entry.key}\t${what}\t${entry.topics?.join(', ')}\t${entry.title}\tline ${entry.line}`);
+		for (const [number, line] of body.slice(0, 3)) console.log(`\t${number}: ${line.trim().slice(0, 140)}`);
+	}
+	console.log(`\n${hits} entr${hits === 1 ? 'y' : 'ies'} match "${word}"`);
+	process.exit(0);
+}
+
 if (argv.includes('--list') || argv.includes('--json')) {
 	const wantTopic = flag('--topic');
 	const wantStatus = flag('--status');
@@ -289,6 +357,57 @@ if (argv.includes('--list') || argv.includes('--json')) {
 		}
 	}
 	process.exit(0);
+}
+
+if (argv.includes('--add')) {
+	const title = flag('--add');
+	const topicsArg = flag('--topics');
+	if (!title || !topicsArg) {
+		console.error('usage: node scripts/decisions.mjs --add "Title" --topics playback,testing [--supersedes 12,34]');
+		process.exit(1);
+	}
+	const wanted = topicsArg.split(',').map((topic) => topic.trim());
+	for (const topic of wanted) {
+		if (!TOPICS.includes(topic)) {
+			console.error(`unknown topic "${topic}"`);
+			process.exit(1);
+		}
+	}
+	const supersedes = (flag('--supersedes') ?? '').split(',').map((n) => n.trim()).filter(Boolean);
+	for (const target of supersedes) {
+		const old = byKey.get(target);
+		if (!old) {
+			console.error(`--supersedes ${target}: no such decision`);
+			process.exit(1);
+		}
+		if (old.status.kind !== 'active') {
+			console.error(`--supersedes ${target}: it is ${old.status.kind}, edit its status line by hand`);
+			process.exit(1);
+		}
+	}
+	const key = String(Math.max(...entries.map((entry) => parseInt(entry.key, 10))) + 1);
+	const living = entries.find((entry) => entry.status.kind === 'living');
+	const at = living ? living.line - 1 : lines.length;
+	let next = [...lines];
+	for (const target of supersedes) {
+		const old = byKey.get(target);
+		next[old.statusAt - 1] = next[old.statusAt - 1].replace('**Status:** active · ', `**Status:** superseded by ${key} · `);
+	}
+	const block = [
+		`## ${key}. ${title}`,
+		`**Status:** active · **Topics:** ${[...wanted].sort().join(', ')}`,
+		'',
+		`**Decided ${new Date().toISOString().slice(0, 10)}.**`,
+		'',
+	];
+	next = [...next.slice(0, at), ...block, ...next.slice(at)];
+	writeFileSync(FILE, next.join(eol));
+	const wrote = spawnSync(process.execPath, [process.argv[1], '--write'], { stdio: 'inherit' });
+	console.log(`decision ${key} added.`);
+	if (supersedes.length > 0) {
+		console.log(`now write the **Today:** line of ${supersedes.join(', ')} - the guard refuses until you do.`);
+	}
+	process.exit(wrote.status ?? 1);
 }
 
 if (failed.length > 0) {

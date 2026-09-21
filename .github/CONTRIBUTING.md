@@ -18,11 +18,15 @@ them will be asked to change the document first.
 If your change contradicts one of them, that is not automatically wrong. It means
 the document changes first, in the same commit, with the reasoning written down.
 In `DECISIONS.md`, numbers are identities: nothing is renumbered or deleted, an
-entry whose rule was replaced keeps its text and says so in its `**Status:**`
-line, and one whose rule still binds is kept current in place.
-`node scripts/decisions.mjs` checks the record - numbering, every citation in the
-repository, the status and topic grammar, supersession reciprocity - and
-`--write` regenerates its index (decision 141).
+entry whose rule was replaced keeps its text, says so in its `**Status:**` line
+and states what stands in its `**Today:**` line, and one whose rule still binds
+is kept current in place. `node scripts/decisions.mjs` checks the record -
+numbering, every citation in the repository, the status, today and topic
+grammar, supersession reciprocity - and `--write` regenerates its index
+(decision 141). Enable it once per clone with
+`git config core.hooksPath .githooks`: the hook runs it on any commit that
+touches the record, which matters because a commit carrying `[skip ci]` never
+reaches CI.
 
 ## Current phase: V3.3, playback leaves the browser
 
