@@ -118,6 +118,23 @@ jobs:
             *) echo "::error::binary reports '$reported', expected ${GITHUB_REF_NAME}" ; exit 1 ;;
           esac
 
+      # A Windows binary cannot be started on this runner, so what it carries is
+      # read out of the file. `/_app/` is the built application's own asset
+      # path: 75 occurrences in the published server, none in one compiled
+      # without web-dist - which is what fault 14 shipped in the offline bundle.
+      # The player job asks the archive's copy the same question by running it.
+      - name: Check the Windows server carries the built interface
+        if: matrix.goos == 'windows' && matrix.goarch == 'amd64'
+        shell: pwsh
+        run: |
+          $bytes = [System.IO.File]::ReadAllBytes('dist/theia-server-windows-amd64.exe')
+          $text = [System.Text.Encoding]::GetEncoding('iso-8859-1').GetString($bytes)
+          if ($text.IndexOf('/_app/') -lt 0) {
+            Write-Error 'the server carries no interface: web-dist held no application when it was built'
+            exit 1
+          }
+          Write-Host 'the Windows server carries the built interface'
+
       - uses: actions/upload-artifact@v7
         with:
           name: theia-server-${{ matrix.goos }}-${{ matrix.goarch }}
@@ -136,6 +153,16 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+
+      # The interface is an artifact, not a source file, and this job is where
+      # the archive is assembled: without this download, the server inside it is
+      # compiled with nothing but web-dist/.gitkeep. That is fault 14 - four
+      # releases shipped a bundle whose server answered 503 with the "frontend
+      # not built" placeholder.
+      - uses: actions/download-artifact@v8
+        with:
+          name: embedded-web
+          path: web-dist
 
       - uses: actions/setup-go@v7
         with:
@@ -184,14 +211,17 @@ jobs:
           }
           Get-ChildItem $dir | Select-Object Name, Length
 
-      # And the archive a person downloads: decision 121. It is assembled from
-      # the pieces built above, so it cannot drift from them - the server and
+      # And the archive a person downloads: decision 121. The server and the
       # installer are rebuilt here at the tagged version, and the player bundle
-      # is the one just checked.
+      # is the one just checked - and "rebuilt here" is exactly why this step
+      # needs the interface downloaded above and the key below: a rebuild takes
+      # what this job has, not what the build job had. Fault 14.
       - name: Assemble the one-file download
         shell: pwsh
         env:
           CGO_ENABLED: '0'
+          # The same secret the build job injects into the published server.
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: |
           $version = '${{ github.ref_name }}'.TrimStart('v')
           .\build-release.ps1 -Version $version -SkipPlayer
@@ -232,6 +262,50 @@ jobs:
             exit 1
           }
           Get-ChildItem $dir | Select-Object Name, Length
+
+      # Reporting a version is not being the product, and this server is built
+      # in this job: the two things it cannot take from the source are the
+      # interface and the metadata key, and both went missing here for four
+      # releases (fault 14). The check reads them back from a running process -
+      # /api/health proves it started, / answers with the interface rather than
+      # the 503 placeholder, and the log names the key source it resolved.
+      - name: Check the archived server serves the interface and carries the key
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          $dir = (Resolve-Path "dist\theia-$version-windows-amd64").Path
+          $port = 8397
+          $dataDir = Join-Path $env:TEMP 'theia-archive-server-check'
+          Remove-Item $dataDir -Recurse -Force -ErrorAction SilentlyContinue
+          $log = Join-Path $env:TEMP 'theia-archive-server.log'
+          Remove-Item $log -Force -ErrorAction SilentlyContinue
+          $server = Start-Process -FilePath (Join-Path $dir 'theia-server.exe') `
+            -ArgumentList '-data-dir', $dataDir, '-port', $port -PassThru -NoNewWindow `
+            -RedirectStandardOutput $log -RedirectStandardError "$log.err"
+          try {
+            $client = [System.Net.Http.HttpClient]::new()
+            $client.Timeout = [TimeSpan]::FromSeconds(10)
+            $health = $null
+            for ($second = 0; $second -lt 60 -and -not $health; $second++) {
+              Start-Sleep -Seconds 1
+              try { $health = $client.GetStringAsync("http://127.0.0.1:$port/api/health").Result } catch { }
+            }
+            if (-not $health) { Write-Error 'the archived server never answered /api/health'; exit 1 }
+            $page = $client.GetAsync("http://127.0.0.1:$port/").Result
+            $body = $page.Content.ReadAsStringAsync().Result
+            if (-not $page.IsSuccessStatusCode -or $body -notmatch '<html') {
+              Write-Error "the archived server answered $([int]$page.StatusCode) for / - the interface is not in this build"
+              exit 1
+            }
+            if ((Get-Content $log -Raw) -notmatch 'TMDB metadata enabled') {
+              Write-Error 'the archived server has no built-in TMDB key'
+              exit 1
+            }
+            Write-Host 'the archived server serves the interface and carries the metadata key'
+          }
+          finally {
+            Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
+          }
 
       # And the player has to run, from the bundle, with the engine it was
       # shipped with. This is the check that would have caught an unpinned
