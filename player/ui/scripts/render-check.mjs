@@ -1657,11 +1657,11 @@ async function openPage(
 							return JSON.stringify(profile);
 						}
 						if (cmd === 'player_update_status' || cmd === 'player_update_check') return JSON.stringify({
-							state: 'available', current_version: '3.3.1', latest_version: '3.3.2', available: true,
-							message: 'Theia 3.3.2 est prête à être installée.',
+							state: 'available', current_version: '3.3.2', latest_version: '3.3.3', available: true,
+							message: 'Theia 3.3.3 est prête à être installée.',
 						});
 						if (cmd === 'player_update_apply') return JSON.stringify({
-							state: 'ready', current_version: '3.3.1', latest_version: '3.3.2', available: false,
+							state: 'ready', current_version: '3.3.2', latest_version: '3.3.3', available: false,
 							message: 'Mise à jour téléchargée.',
 						});
 						if (cmd === 'player_connect') {
@@ -2241,7 +2241,7 @@ async function assertSeriesJourney(page) {
 		console.error('the player settings modal does not expose the connected server facts');
 		failures++;
 	}
-	if (!settingsText.includes('3.3.1') || !settingsText.includes('3.3.2') || (await page.getByRole('button', { name: /Installer la mise à jour|Install update/ }).count()) !== 1) {
+	if (!settingsText.includes('3.3.2') || !settingsText.includes('3.3.3') || (await page.getByRole('button', { name: /Installer la mise à jour|Install update/ }).count()) !== 1) {
 		console.error('settings do not expose the real current/latest update state and install action');
 		failures++;
 	}

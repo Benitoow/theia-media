@@ -1,7 +1,7 @@
 {
 	"name": "theia-player-osd",
 	"private": true,
-	"version": "3.3.1",
+	"version": "3.3.2",
 	"type": "module",
 	"description": "Theia's native desktop player, built with React, TypeScript, Tailwind and shadcn/ui.",
 	"scripts": {

@@ -1,7 +1,7 @@
 # Assembles what a person actually downloads: one archive, one file to run.
 #
 #   .\build-release.ps1                     -> dist\theia-<version>-windows-amd64.zip
-#   .\build-release.ps1 -Version 3.3.1
+#   .\build-release.ps1 -Version 3.3.2
 #
 # Why one archive and not three downloads. The first version of V3.3 published
 # the installer, the server and the player separately and told the reader to put
