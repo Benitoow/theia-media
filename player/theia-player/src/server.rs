@@ -213,10 +213,28 @@ pub struct HomeScreen {
     pub hero: Option<Movie>,
     #[serde(default)]
     pub hero_kind: String,
-    #[serde(default)]
+    // A list that arrives as null is an empty list. The released 3.3.1 server
+    // encoded an empty row list that way, and the two programs update
+    // separately: without this, a 3.3.2 player talking to an installed 3.3.1
+    // server said "the home screen could not be loaded" about a library that was
+    // simply empty. The server sends `[]` now (internal/library.HomeScreen), and
+    // a window must not refuse a screen over the difference.
+    #[serde(default, deserialize_with = "de_null_as_empty")]
     pub rows: Vec<HomeRow>,
     #[serde(default)]
     pub total: i64,
+}
+
+/// de_null_as_empty reads a list that a server may have encoded as null.
+fn de_null_as_empty<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::Deserialize<'de>,
+{
+    // Fully qualified: this module uses serde's derive paths rather than
+    // importing the traits, and `Option::<Vec<T>>::deserialize` needs the trait
+    // in scope to resolve.
+    Ok(<Option<Vec<T>> as serde::Deserialize>::deserialize(deserializer)?.unwrap_or_default())
 }
 
 /// The series half of the home screen: episodes to continue, shows that are
@@ -918,6 +936,26 @@ pub fn reachable(base: &str, timeout: Duration) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_null_row_list_from_a_released_server_is_an_empty_one() {
+        // What 3.3.1 sent for a library with no rows. The player and the server
+        // update separately, so this is a real combination until the installed
+        // server updates itself - and it was "the home screen could not be
+        // loaded" until this test existed.
+        let released: HomeScreen = serde_json::from_str(r#"{"hero":null,"rows":null,"total":0}"#)
+            .expect("a released server's empty home screen has to parse");
+        assert!(released.rows.is_empty());
+        assert_eq!(released.total, 0);
+
+        // And the shape the fixed server sends keeps working, with a row in it.
+        let current: HomeScreen = serde_json::from_str(
+            r#"{"hero":null,"hero_kind":"","rows":[{"kind":"recent","movies":[{"id":7,"title":"A film"}]}],"total":1}"#,
+        )
+        .expect("the current shape parses");
+        assert_eq!(current.rows.len(), 1);
+        assert_eq!(current.rows[0].movies[0].title, "A film");
+    }
 
     #[test]
     fn the_profile_is_appended_without_breaking_a_query() {

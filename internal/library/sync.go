@@ -281,6 +281,12 @@ type Home struct {
 
 // HomeScreen assembles the home screen.
 //
+// The rows are always a list, even when there are none: a Go nil slice encodes
+// as JSON null, and the native player decodes rows into a Vec, so null is "the
+// home screen could not be loaded" on an empty library - which is exactly what a
+// fresh installation has. The released 3.3.1 server sent null here; the player
+// tolerates it now, and the contract stays a list.
+//
 // The home screen is a personal surface, not a second catalogue. /movies already
 // searches, sorts and filters the whole library, so this answers a narrower and
 // more useful question: what were you watching, what is new, and what should you
@@ -295,7 +301,7 @@ func (s *Service) HomeScreen(ctx context.Context, profileID int64, perRow int) (
 	if err != nil {
 		return nil, err
 	}
-	home := &Home{Total: total}
+	home := &Home{Total: total, Rows: []Row{}}
 	if total == 0 {
 		return home, nil
 	}
