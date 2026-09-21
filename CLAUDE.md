@@ -27,7 +27,10 @@ or upload an asset without the maintainer's explicit instruction for that exact
 action. `release.yml` fires on a pushed `v*` tag, so a tag pushed "just to see
 CI" publishes binaries. `scripts/stub-release` remains the local release-shaped
 test path. When a task does not explicitly authorize publication, report what
-was verified locally instead.
+was verified locally instead. **A dispatch measures the pipeline without
+publishing** (decision 140): `gh workflow run release.yml --ref main` runs every
+gate and builds every artifact, and `publish` refuses anything that is not a
+pushed tag.
 
 ## Read these first, every session
 

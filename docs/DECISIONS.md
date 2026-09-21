@@ -4883,6 +4883,75 @@ search box. Both read exactly the Start Menu folder and the applications-list
 entry that were read back above (decision 123 drove Flow Launcher by hand over
 the same two sources), and the launcher's own entry was not driven again.
 
+## 140. The release builds while its gates run, and the interface is built once
+
+**Decided 21 September 2026**, after the 3.3.3 re-cut made the pipeline time
+visible: a release took twenty minutes and every one of them was serial.
+
+**What was measured, before changing anything.** Release
+[`35599498573`](https://github.com/Benitoow/theia-media/actions/runs/35599498573),
+all jobs green, 20.4 min from tag to release, in three chained stages: the
+interface guard (8.0 min), the release-only gates (3.4), the player (8.6), then
+publish. Two things were wrong with that shape and neither was the duration of
+any one job:
+
+- **Everything waited for the browsers.** The artifact the six target builds,
+  the guard and the archive all embed was produced by a job that then spends
+  seven minutes driving Chromium, Edge, Firefox and WebKit. Compiling a binary
+  required the test suite to have finished.
+- **The release tested what CI had just tested.** The same commit paid for the
+  guard twice (8.1 min and 8.0 min) and built the six platforms twice, because
+  the tag push and the `main` push are two workflows.
+
+**Decided.**
+
+- **The interface build is its own reusable workflow** (`interface.yml`), called
+  by CI and by Release, and the guard downloads its artifact instead of
+  compiling the frontend again. One npm build, one artifact, ~25 s - and the
+  guard still tests exactly the bytes that ship, which is the property the old
+  arrangement was protecting by accident.
+- **The release jobs stop chaining.** `release-gates` has no `needs`; the six
+  builds and the player need only the artifact; `publish` names
+  `[validate, release-gates, build, player]` and is now the single place that
+  states what a release requires. Nothing is published unless every gate passes,
+  so the old order ("no distributable built before the gates") bought serial
+  time and nothing else. Its cost when a gate fails: a built player on a runner,
+  unspent. That is the accepted trade.
+- **`workflow_dispatch` on Release, with `publish` refusing anything that is not
+  a pushed tag.** The pipeline can be built, gated and measured without
+  publishing anything - which is how the numbers below exist, and how the next
+  change to `release.yml` gets tried before it meets a tag. A dispatch can never
+  publish; that is the point of the `if:`.
+- **The playback journey's playhead assertions wait 30 seconds, not
+  `expect.poll`'s 5.** The 3.3.3 re-cut failed on WebKit asking for the playhead
+  to pass 11 seconds and seeing 8, then passed the same assertion on the retry.
+  A five-second wall clock is not a statement about a player; the position is.
+- **The browsers Playwright downloads are cached on the lockfile that pins
+  them.** Kept for the download it removes, not for speed - see below, where it
+  bought nothing measurable.
+- **Refused: letting CI's validation stand in for the release's own.** It saves
+  no wall time now that the guard is off the critical path, and it would replace
+  "the release re-runs the validation on the tagged tree" with "the release
+  trusts a run somewhere else" - including the case where the tag does not point
+  at the commit CI validated. The duplication stays, visible and deliberate.
+
+**Verified, on the same commit (`e5066d1`), by dispatching the release and by CI.**
+The release went from **20.4 min to 8.1 min** (player cache warm; 9.8 min with it
+cold), and the job offsets say where it went: the interface artifact is ready at
++0.4 min, the six builds are done by +1.7, the gates by +2.7, the player by +5.0,
+and the guard - still 7.4 min of real browsers - finishes last without anything
+waiting on it. CI is marginally the longer run now (9.5 min against 9.1), because
+the interface build became its own job; its own path is the guard either way.
+
+**What did not work.** The browser cache changed nothing measurable: the guard
+took 8.2 min on a miss and 8.0 min on a hit. The time is in the suites (the
+playback journey alone is about five minutes across four browsers), not in the
+download, and the cache is kept for the few hundred megabytes it saves per run
+rather than for the seconds it does not. The floor is now the guard: getting
+below about eight minutes means shortening the suites themselves, which is a
+question about what they must prove and not about the pipeline - so it is left
+alone.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.
