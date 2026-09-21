@@ -126,6 +126,14 @@ Written as full sentences that say what changed and why, in English. The history
 is a record somebody will read in a year, and "fix stuff" costs them an
 afternoon. Look at recent commits for the tone.
 
+**Never let the skip marker appear in a message unless the push must genuinely
+skip CI.** GitHub scans the whole message - prose, quotations and explanations
+included - and skips every workflow for that push, so a sentence *about* the
+marker silences CI just as effectively as an intentional one. It is how a
+change to the decision record can reach `main` without the guard ever seeing it:
+the 21 September push that first carried the guard did exactly that, quoted the
+marker while explaining the hook, and ran no workflow at all.
+
 ## Reporting a bug
 
 Open an issue with the template. The three things that make a media-server bug
