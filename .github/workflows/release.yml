@@ -3,17 +3,33 @@ name: Release
 on:
   push:
     tags: ['v*']
+  # A dispatch runs every gate and builds every artifact without publishing
+  # anything: `publish` refuses anything that is not a pushed tag. It is how a
+  # change to this file is tried before it meets a tag, and how the pipeline's
+  # own timing is measured.
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+  # The interface is built on its own so a release no longer waits eight minutes
+  # of browser tests before it can compile a binary: the artifact is ready in
+  # about a minute, and the guard keeps running beside everything else.
+  interface:
+    uses: ./.github/workflows/interface.yml
+
   validate:
     uses: ./.github/workflows/validate.yml
+    needs: interface
 
   release-gates:
     name: Update rollback and stream endurance
-    needs: validate
+    # No `needs` on purpose: the gates run beside the builds now. Nothing is
+    # published unless every one of them passes - `publish` states that in one
+    # place - so the old "before any distributable binary is built" order bought
+    # serial time and nothing else. What it cost when a gate fails: a built
+    # player on a runner, unspent.
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
@@ -25,7 +41,7 @@ jobs:
 
       # These are deliberately release-only. Pull requests keep the fast unit
       # contracts; a tag pays for real process replacement and 100 real FFmpeg
-      # cancellations before any distributable binary is built.
+      # cancellations, on the same tree the binaries are being built from.
       - name: Exercise install, restart and unhealthy rollback
         run: go run ./scripts/verify-update
 
@@ -38,7 +54,8 @@ jobs:
         run: go run ./scripts/verify-endurance -theia .\theia-release-gate.exe -cycles 100 -long-minutes 30 -port 8395
 
   build:
-    needs: [validate, release-gates]
+    # Only the artifact: the guard and the gates are running while this builds.
+    needs: interface
     name: ${{ matrix.goos }}/${{ matrix.goarch }}
     runs-on: ubuntu-latest
     strategy:
@@ -148,7 +165,8 @@ jobs:
   # they can be validated, which is what the validation boundary says.
   player:
     name: Player (windows/amd64)
-    needs: [validate, release-gates]
+    # Only the artifact, like the build matrix above.
+    needs: interface
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
@@ -373,7 +391,11 @@ jobs:
 
   publish:
     name: Publish the release
-    needs: [build, player]
+    # Every gate, explicitly: the jobs no longer chain through each other, so
+    # this is the one place that says what a release requires.
+    needs: [validate, release-gates, build, player]
+    # A dispatch measures the pipeline; only a pushed tag publishes.
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

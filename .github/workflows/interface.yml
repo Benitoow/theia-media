@@ -1,0 +1,46 @@
+name: Interface
+
+# The compiled frontend, on its own.
+#
+# It used to be the first half of the guard job, which meant everything
+# downstream waited for four browsers: the artifact the six target builds, the
+# guard and the archive all embed was produced by the job that then spends seven
+# minutes testing it. One definition, called by both CI and Release before the
+# guard, so nothing compiles the frontend twice and the release can start
+# building one minute after the tag instead of eight.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build the interface
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm audit --audit-level=high
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+
+      # The six target builds, the guard and the archive all embed these exact
+      # bytes. Build the interface once, then fan the immutable artifact out
+      # instead of paying for six identical npm installs and Svelte
+      # compilations - and instead of making the release wait for the tests
+      # before it can compile anything.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: embedded-web
+          path: web-dist/
+          retention-days: 1

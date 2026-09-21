@@ -1,5 +1,11 @@
 name: Validate
 
+# The Go contracts and the interface guard.
+#
+# The guard drives the bytes built by the Interface workflow, which the caller
+# runs first in the same run: it downloads `embedded-web` instead of compiling
+# the frontend a second time, so what it tests is what ships.
+
 on:
   workflow_call:
 
@@ -28,6 +34,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The bytes the guard drives come from the Interface workflow, which the
+      # caller ran first: the same artifact the six target builds embed.
+      - uses: actions/download-artifact@v8
+        with:
+          name: embedded-web
+          path: web-dist
+
+      # npm ci is still needed here, for Playwright and the test harness.
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
@@ -35,19 +49,6 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
         working-directory: web
-      - run: npm audit --audit-level=high
-        working-directory: web
-      - run: npm run build
-        working-directory: web
-
-      # The six target builds all embed these exact bytes. Build the interface
-      # once, then fan the immutable artifact out instead of paying for six
-      # identical npm installs and Svelte compilations.
-      - uses: actions/upload-artifact@v7
-        with:
-          name: embedded-web
-          path: web-dist/
-          retention-days: 1
 
       - uses: actions/setup-go@v7
         with:
@@ -64,6 +65,15 @@ jobs:
       # Layout stays on Chromium, where it asserts geometry. Playback crosses
       # Chromium, stable Edge, Firefox and WebKit because MediaSource, codecs,
       # quotas and cancellation are precisely the parts that do differ.
+      #
+      # Four browsers are a few hundred megabytes and they change only when
+      # Playwright does, which the lockfile pins. A miss costs what this step
+      # always cost; a hit skips the download, and still installs the system
+      # dependencies and still runs every suite.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
       - run: npx playwright install --with-deps chromium msedge firefox webkit
         working-directory: web
 

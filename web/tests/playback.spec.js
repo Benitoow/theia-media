@@ -46,9 +46,15 @@ for (const name of ['Direct','Converted','Remux']) {
   const slider=page.getByRole('slider',{name:'Position dans le film'});
   expect((await slider.boundingBox()).height).toBeGreaterThanOrEqual(44);
   await slider.focus();await page.keyboard.press('ArrowRight');
-  await expect.poll(async()=>Number(await slider.getAttribute('aria-valuenow'))).toBeGreaterThan(11);
+  // The playhead is a clock, and a shared runner can decode slower than the
+  // film plays: five seconds of wall clock, which is what expect.poll defaults
+  // to, is not a statement about the player. These wait for the position
+  // itself, so only a stalled seek or a stopped film can fail them. The 3.3.3
+  // re-cut failed here on WebKit with 8 of the 11 seconds asked for, and passed
+  // the same assertion on the retry - which is the whole argument.
+  await expect.poll(async()=>Number(await slider.getAttribute('aria-valuenow')),{timeout:30_000}).toBeGreaterThan(11);
   const before=Number(await slider.getAttribute('aria-valuenow'));
-  await expect.poll(async()=>Number(await slider.getAttribute('aria-valuenow'))).toBeGreaterThan(before+1);
+  await expect.poll(async()=>Number(await slider.getAttribute('aria-valuenow')),{timeout:30_000}).toBeGreaterThan(before+1);
   await page.keyboard.press('Space');await expect.poll(()=>page.locator('video').evaluate(v=>v.paused)).toBe(true);
   await page.keyboard.press('Escape');await expect(page.locator('video')).toHaveCount(0);
   expect(errors).toEqual([]);
@@ -91,7 +97,7 @@ test('audio selection survives seeks and text subtitles render',async({page})=>{
  const slider=page.getByRole('slider',{name:'Position dans le film'});await slider.focus();await page.keyboard.press('End');
  const audio=new URL(source,'http://localhost').searchParams.get('audio');
  await expect.poll(async()=>new URL(await page.locator('video').getAttribute('data-stream-source'),'http://localhost').searchParams.get('audio')).toBe(audio);
- await expect.poll(async()=>Number(await slider.getAttribute('aria-valuenow'))).toBeGreaterThan(40);
+ await expect.poll(async()=>Number(await slider.getAttribute('aria-valuenow')),{timeout:30_000}).toBeGreaterThan(40);
  await page.keyboard.press('Escape');
 });
 
@@ -181,7 +187,7 @@ test('MSE quota pressure retries the refused batch instead of failing playback',
  await openPlayer(page,`/movie/${movie.id}`);
  await expect.poll(()=>page.evaluate(()=>window.__theiaQuotaHit)).toBe(true);
  await expect.poll(()=>page.evaluate(()=>window.__theiaAppendAfterQuota)).toBe(true);
- await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBeGreaterThan(4);
+ await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime),{timeout:30_000}).toBeGreaterThan(4);
  await expect(page.locator('.player-message')).toHaveCount(0);
 });
 

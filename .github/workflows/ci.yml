@@ -9,8 +9,14 @@ permissions:
   contents: read
 
 jobs:
+  interface:
+    uses: ./.github/workflows/interface.yml
+
+  # The guard downloads the artifact the job above produced, and so do the six
+  # target builds below.
   validate:
     uses: ./.github/workflows/validate.yml
+    needs: interface
 
   build:
     name: ${{ matrix.goos }}/${{ matrix.goarch }}
