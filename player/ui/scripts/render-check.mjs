@@ -1576,7 +1576,14 @@ async function openPage(
 		locale = 'en-US',
 	} = {}
 ) {
-	const page = await browser.newPage({ viewport, locale });
+	const page = await browser.newPage({
+		viewport,
+		locale,
+		// The settings sheet can copy the server address, and the assertion reads
+		// the clipboard back rather than trusting the sentence beside the button.
+		// Chromium refuses both without the grant.
+		permissions: ['clipboard-read', 'clipboard-write'],
+	});
 
 	// The artwork is served by a real server the harness does not have. Answering
 	// the requests keeps the cards at the size they will really be: a dead image
@@ -2239,6 +2246,22 @@ async function assertSeriesJourney(page) {
 	const settingsText = await page.getByRole('dialog').innerText();
 	if (!settingsText.includes('127.0.0.1:8395') || !settingsText.includes('dev')) {
 		console.error('the player settings modal does not expose the connected server facts');
+		failures++;
+	}
+	// The address can be taken out of the sheet. The row ellipsises its value, so
+	// what the button copied is asserted against the clipboard itself - and the
+	// sentence beside it, because a copy nobody can see has not happened as far
+	// as the person clicking it is concerned.
+	await page.getByRole('button', { name: /Copier l'adresse du serveur|Copy the server address/ }).click();
+	await page.waitForTimeout(150);
+	const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+	if (clipboard !== 'http://127.0.0.1:8395') {
+		console.error(`the copy button put ${JSON.stringify(clipboard)} in the clipboard, expected the server address`);
+		failures++;
+	}
+	const copyNote = await page.locator('.settings-copy-note').innerText().catch(() => '');
+	if (!/Adresse copiée|Address copied/.test(copyNote)) {
+		console.error(`the copy button said ${JSON.stringify(copyNote)} after copying`);
 		failures++;
 	}
 	if (!settingsText.includes('3.3.2') || !settingsText.includes('3.3.3') || (await page.getByRole('button', { name: /Installer la mise à jour|Install update/ }).count()) !== 1) {

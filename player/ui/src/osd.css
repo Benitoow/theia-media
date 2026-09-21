@@ -1784,6 +1784,49 @@ button.action:focus-visible {
 	white-space: nowrap;
 }
 
+/* The copy control beside the address (decision: the maintainer's request,
+   21 September 2026). The row ellipsises its value, so in a narrow sheet the
+   reader sometimes sees less than the button copies - which is most of the
+   point. The button keeps 2.75rem of hit area, the floor §9 sets, and the
+   negative block margin keeps that floor from growing the row around it. */
+.settings-address {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.settings-address-value {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.settings-copy {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 2.75rem;
+	height: 2.75rem;
+	margin-block: -0.7rem;
+	border: 0;
+	border-radius: var(--radius-row);
+	background: transparent;
+	color: var(--color-muted);
+	cursor: pointer;
+	transition: background var(--duration-fast) var(--ease-cine), color var(--duration-fast) var(--ease-cine);
+}
+
+.settings-copy:hover,
+.settings-copy:focus-visible {
+	background: rgb(var(--channel-bone) / 0.11);
+	color: var(--color-parchment);
+}
+
+.settings-section p.settings-copy-note--error {
+	color: var(--color-error);
+}
+
 .settings-update-row {
 	display: flex;
 	align-items: end;

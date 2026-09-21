@@ -664,6 +664,15 @@ a player.
   text), `.profile-edit` (icon only). `assertSeriesJourney` reads the active tab's
   colour against an inactive one, which needed a second season in the fixture
   before there was anything to compare it with.
+- **The settings sheet can copy the server address.** Its row ellipsises the
+  value, so in a narrow sheet the reader sometimes sees less than the whole
+  address; the button beside it copies the full one and says so in the active
+  language ("Adresse copiée." / "Address copied."). The target keeps §9's 44px
+  and a negative block margin so the floor does not inflate the row it sits in.
+  The write goes through the WebView's clipboard and a refused write is reported
+  rather than swallowed: a copy button that silently does nothing is worse than
+  none. `assertSeriesJourney` clicks it and reads the clipboard back, because the
+  sentence beside the button is not evidence that anything was copied.
 - **One filled control**, the play button, in `--bone` rather than gold: the
   accent still has to mean "look here" everywhere else on the screen.
 - **The furniture hides** after three seconds of no pointer, no key and no state

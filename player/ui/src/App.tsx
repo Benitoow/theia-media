@@ -19,6 +19,7 @@ import {
 	RotateCw,
 	Search,
 	Settings2,
+	Copy,
 	Tv,
 	UserRound,
 	Volume2,
@@ -1041,13 +1042,38 @@ function CardGrid({ children }: { children: React.ReactNode }) {
 function SettingsModal({ open, language, preferences, server, updateStatus, updateBusy, t, onClose, onSave, onCheckUpdate, onApplyUpdate }: { open: boolean; language: string; preferences: Preferences; server: Server | null; updateStatus: UpdateStatus | null; updateBusy: boolean; t: (key: string) => string; onClose: () => void; onSave: (language: string, preferences: Preferences) => void; onCheckUpdate: () => void; onApplyUpdate: () => void }) {
 	const [draftLanguage, setDraftLanguage] = useState(language);
 	const [draft, setDraft] = useState(preferences);
+	// What the copy button said last, and when it goes quiet again. The address
+	// is ellipsised in a narrow sheet, so what the button copies is sometimes
+	// more than the eye can read - which is the reason it exists.
+	const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
+	const copyTimer = useRef<number | null>(null);
 	const updateStateKey = updateStatus ? ({ idle: 'updateUnknown', checking: 'updateChecking', available: 'updateAvailable', downloading: 'updateInstalling', ready: 'updateReady', deferred: 'updateDeferred', failed: 'updateFailed', unsupported: 'updateUnsupported' } as Record<string, string>)[updateStatus.state] ?? 'updateUnknown' : 'updateUnknown';
 	useEffect(() => {
 		if (open) {
 			setDraftLanguage(language);
 			setDraft(preferences);
+			setCopyState('idle');
 		}
 	}, [language, open, preferences]);
+	useEffect(() => () => {
+		if (copyTimer.current !== null) window.clearTimeout(copyTimer.current);
+	}, []);
+
+	const copyAddress = async () => {
+		if (!server) return;
+		// The WebView2 origin is a secure context, which is what the asynchronous
+		// clipboard requires; a refused write is reported rather than swallowed,
+		// because a copy button that silently does nothing is worse than none.
+		let next: 'copied' | 'failed' = 'copied';
+		try {
+			await navigator.clipboard.writeText(server.url);
+		} catch {
+			next = 'failed';
+		}
+		setCopyState(next);
+		if (copyTimer.current !== null) window.clearTimeout(copyTimer.current);
+		copyTimer.current = window.setTimeout(() => setCopyState('idle'), 2600);
+	};
 
 	return (
 		<Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -1075,7 +1101,17 @@ function SettingsModal({ open, language, preferences, server, updateStatus, upda
 					<div className="settings-separator" />
 					<section className="settings-section settings-section--connection">
 						<div className="settings-section-copy"><h3>{t('server')}</h3><p>{server ? t('serverConnectedHint') : t('serverDisconnectedHint')}</p></div>
-						{server && <dl className="settings-server"><div><dt>{t('address')}</dt><dd>{server.url}</dd></div><div><dt>{t('version')}</dt><dd>{server.health.version}</dd></div></dl>}
+						{server && <dl className="settings-server">
+							<div>
+								<dt>{t('address')}</dt>
+								<dd className="settings-address">
+									<span className="settings-address-value">{server.url}</span>
+									<button type="button" className="settings-copy" onClick={() => void copyAddress()} aria-label={t('copyAddress')} title={t('copyAddress')}><Copy size={15} strokeWidth={1.8} /></button>
+								</dd>
+							</div>
+							<div><dt>{t('version')}</dt><dd>{server.health.version}</dd></div>
+						</dl>}
+						{copyState !== 'idle' && <p className={`settings-copy-note${copyState === 'failed' ? ' settings-copy-note--error' : ''}`} role="status">{copyState === 'copied' ? t('addressCopied') : t('addressCopyFailed')}</p>}
 					</section>
 					<div className="settings-separator" />
 					<section className="settings-section settings-update">
