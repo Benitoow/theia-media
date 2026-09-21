@@ -2311,6 +2311,14 @@ async function assertSeriesJourney(page) {
 	const openSettingsSection = async (name) => {
 		await page.locator('.settings-nav-item', { hasText: name }).click();
 		await page.waitForTimeout(180);
+		// Nothing inside a panel may stick out of it. The update row used to draw
+		// a horizontal scrollbar under itself at the sheet's old width, and a
+		// scrollbar is exactly what a screenshot does not name.
+		const overflow = await page.locator('.settings-panel').evaluate((node) => node.scrollWidth - node.clientWidth);
+		if (overflow > 1) {
+			console.error(`the settings panel overflows sideways by ${overflow}px on ${name}`);
+			failures++;
+		}
 	};
 	await page.getByRole('button', { name: /Réglages|Settings/ }).click();
 	await page.waitForTimeout(250);

@@ -1627,6 +1627,11 @@ button.action:focus-visible {
 
 .settings-dialog {
 	display: grid;
+	/* Wider than the profile dialog it shares a component with: this one carries
+	   a rail and a panel, and 42rem left the update row sticking out of the
+	   panel with a horizontal scrollbar under it (the maintainer's screenshot,
+	   21 September 2026). */
+	width: min(48rem, calc(100vw - 2rem));
 	max-height: min(48rem, calc(100vh - 2rem));
 	grid-template-rows: auto minmax(0, 1fr) auto;
 	overflow: hidden;
@@ -1680,7 +1685,7 @@ button.action:focus-visible {
 .settings-panes {
 	display: grid;
 	min-height: 0;
-	grid-template-columns: 11rem minmax(0, 1fr);
+	grid-template-columns: 12rem minmax(0, 1fr);
 	overflow: hidden;
 }
 
@@ -1930,11 +1935,16 @@ button.action:focus-visible {
 	display: flex;
 	align-items: end;
 	justify-content: space-between;
+	flex-wrap: wrap;
 	gap: 1rem;
 }
 
+/* Flexible, not fixed: `min(24rem, 100%)` was wider than the panel the rail
+   left it, and the overflow showed up as a scrollbar under the row rather than
+   as anything a screenshot names. */
 .settings-update-versions {
-	min-width: min(24rem, 100%);
+	min-width: 0;
+	flex: 1 1 22rem;
 }
 
 .profiles-dialog {

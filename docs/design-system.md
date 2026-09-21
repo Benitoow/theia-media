@@ -683,7 +683,12 @@ a player.
   The footer wears the reference's own pair: a bordered, quiet Cancel beside a
   filled Save, both `--radius-row` rectangles rather than the pills the player's
   controls wear, because a dialog's footer is not a control on the picture.
-  `assertSeriesJourney` walks all four sections and checks what each one holds.
+  `assertSeriesJourney` walks all four sections and checks what each one holds,
+  and **measures each panel's sideways overflow**: at the dialog's first width
+  the update row stuck 25px out of its panel and drew a scrollbar under itself,
+  which is what the maintainer's screenshot showed and what the arithmetic
+  (24rem box + button + gap in a 27.5rem panel) already said. The sheet is 48rem
+  wide now, and no panel may scroll sideways.
 - **A picture lights the wall behind it.** The home hero and the library's first
   card are large pictures, and the page under them was a flat near-black that
   made them sit on it like posters on a wall. `lib/ambient.ts` reads the
