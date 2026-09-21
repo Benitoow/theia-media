@@ -3346,7 +3346,7 @@ dependencies = [
 
 [[package]]
 name = "theia-player"
-version = "3.3.2"
+version = "3.3.3"
 dependencies = [
  "libloading 0.8.9",
  "mdns-sd",

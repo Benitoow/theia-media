@@ -4,7 +4,7 @@ Theia is a personal media server: no configuration, no account, no paywall. One
 user, their own films, their own machine.
 
 **V3.3 is the current release line.** `v3.2.0` is the last single-binary
-release; `v3.3.0` introduced the native generation and `v3.3.2` is the current
+release; `v3.3.0` introduced the native generation and `v3.3.3` is the current
 maintenance release. V3.3 splits the product into three artifacts:
 `theia-server` (Go, headless, still serving the frozen Svelte interface as
 fallback playback), `theia-player` (Tauri 2 + Rust + libmpv - the native player,
@@ -254,7 +254,7 @@ with EPERM while cleaning up.
 ## Building the release archive
 
 ```bash
-./build-release.ps1 -Version 3.3.2     # -> dist/theia-3.3.2-windows-amd64.zip
+./build-release.ps1 -Version 3.3.3     # -> dist/theia-3.3.3-windows-amd64.zip
 ```
 
 The archive is **the offline path**: everything in one zip - the installer, the

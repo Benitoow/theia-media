@@ -4,7 +4,7 @@
 #   .\build-player.ps1 -Release     -> release build
 #   .\build-player.ps1 -Release -Bundle
 #                                   -> and a distribution directory to ship
-#   .\build-player.ps1 -Release -Version v3.3.2
+#   .\build-player.ps1 -Release -Version v3.3.3
 #                                   -> and a binary that names that build in
 #                                      --diagnostics. Without it the build says
 #                                      'dev', which is the same answer the

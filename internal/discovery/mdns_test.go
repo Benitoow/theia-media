@@ -34,7 +34,7 @@ func TestAnnouncementIsDiscoverable(t *testing.T) {
 	// A distinct instance name, so a real Theia already running on this machine
 	// can never be mistaken for the one under test.
 	const hostname = "theia-mdns-test"
-	const version = "3.3.2-test"
+	const version = "3.3.3-test"
 	port := freePort(t)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 
