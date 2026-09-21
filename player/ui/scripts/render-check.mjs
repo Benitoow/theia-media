@@ -39,6 +39,14 @@ const frameCandidates = [
 const FRAME_BYTES = frameCandidates.length ? readFileSync(frameCandidates[0]) : null;
 const FRAME = FRAME_BYTES ? 'data:image/png;base64,' + FRAME_BYTES.toString('base64') : null;
 
+// A flat, saturated picture for the one assertion that reads the ambient glow's
+// colour: the glow takes its light from the artwork, and the frame the cards use
+// has no single dominant colour to check against. Served only where a journey
+// asks for it (openPage's heroBackdrop), so every other picture stays the frame.
+const TEAL_BACKDROP = Buffer.from(
+	'<svg xmlns="http://www.w3.org/2000/svg" width="96" height="54"><rect width="96" height="54" fill="#0f7d78"/></svg>'
+);
+
 // What mpv reports for a film with two audio tracks and two subtitle tracks.
 //
 // The external one is what the player itself adds: the server's sidecar for
@@ -1550,6 +1558,53 @@ async function showFilm(page) {
 	}, FRAME);
 }
 
+// The colour a picture throws on the wall behind it: the home hero's own
+// backdrop, read pixel by pixel, spread around the picture, and dropped back to
+// the page's ink with distance. The claim is not "a glow exists" - it is "the
+// glow is the picture's colour", which needs a picture whose colour is known:
+// the hero's backdrop is served as one flat teal here.
+async function assertAmbientGlow() {
+	const page = await openPage({ width: 1280, height: 720 }, { heroBackdrop: TEAL_BACKDROP });
+	await page.fill('#theia-address', 'http://127.0.0.1:8395');
+	await page.click('button[type=submit]');
+	const glow = page.locator('.ambient-glow--hero');
+	for (let attempt = 0; attempt < 40 && (await glow.getAttribute('data-ready').catch(() => null)) !== 'true'; attempt++) {
+		await page.waitForTimeout(100);
+	}
+	if ((await glow.count()) !== 1) {
+		console.error('the home hero threw no colour: no ambient glow layer was drawn');
+		failures++;
+		await page.close();
+		return;
+	}
+	const computed = await glow.evaluate((node) => {
+		const style = getComputedStyle(node);
+		return {
+			first: style.getPropertyValue('--ambient-a').trim(),
+			second: style.getPropertyValue('--ambient-b').trim(),
+			background: style.backgroundImage,
+			layer: Number(style.zIndex),
+			opacity: Number(style.opacity),
+		};
+	});
+	const channels = computed.first.split(/\s+/).map(Number);
+	if (channels.length !== 3 || channels.some((channel) => !Number.isFinite(channel))) {
+		console.error(`the glow's colour is not three channels: ${JSON.stringify(computed.first)}`);
+		failures++;
+	} else if (!(channels[1] > channels[0] + 20 && channels[2] > channels[0] + 20 && Math.abs(channels[1] - channels[2]) < 44)) {
+		// The picture is #0f7d78. A grey answer - the frame's letterboxing, the
+		// page's own ink - fails here, which is the whole question.
+		console.error(`the glow took "${computed.first}" from a teal picture`);
+		failures++;
+	}
+	if (!/radial-gradient/.test(computed.background) || computed.layer !== 0 || computed.opacity <= 0) {
+		console.error(`the glow is not a radial layer under the page: z-index ${computed.layer}, opacity ${computed.opacity}`);
+		failures++;
+	}
+	await page.screenshot({ path: join(OUT, '11-ambient-glow.png') });
+	await page.close();
+}
+
 async function openPage(
 	viewport,
 	{
@@ -1574,6 +1629,9 @@ async function openPage(
 		// different products. en-US here, fr-FR where the system-French rule
 		// is the point.
 		locale = 'en-US',
+		// The hero's backdrop, when a journey needs a known colour rather than a
+		// picture: the home fixture's hero (MOVIES[2]) is the one that carries it.
+		heroBackdrop = null,
 	} = {}
 ) {
 	const page = await browser.newPage({
@@ -1593,6 +1651,11 @@ async function openPage(
 		await page.route('**/api/images/**', (route) =>
 			route.fulfill({ contentType: 'image/png', body: FRAME_BYTES })
 		);
+	}
+	if (heroBackdrop) {
+		// Registered after the frame's own route on purpose: Playwright checks
+		// route handlers newest first, so this one answers for the hero alone.
+		await page.route('**/resume.jpg', (route) => route.fulfill({ contentType: 'image/svg+xml', body: heroBackdrop }));
 	}
 	// The clip is answered from memory here for the same reason the artwork is:
 	// a real server is not running beside the harness, and a 404 would send the
@@ -2658,6 +2721,10 @@ async function assertSeriesJourney(page) {
 		failures++;
 	}
 	await filmPlay.close();
+
+	// (q) the colour a picture throws on the wall: the hero's own backdrop, read
+	//     pixel by pixel, spread around the picture and dropped back to the ink.
+	await assertAmbientGlow();
 }
 
 // The player's own window, at the scale a real display gives it.

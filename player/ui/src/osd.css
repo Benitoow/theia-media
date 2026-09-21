@@ -1153,9 +1153,49 @@ button.action:focus-visible {
 	isolation: isolate;
 }
 
-.library > *:not(.library-ambient) {
+.library > *:not(.library-ambient):not(.ambient-glow) {
 	position: relative;
 	z-index: 1;
+}
+
+/* The colour a picture throws on the wall (lib/ambient.js, called from
+   AmbientGlow): two circles of the artwork's own loudest colours, centred where
+   the picture is, and every stop outside them transparent - so the ink the
+   player sits on is what distance turns to (design system 6b, the OLED floor).
+   Drawn under everything, and it never takes a pointer. */
+.ambient-glow {
+	position: absolute;
+	z-index: 0;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 900ms var(--ease-cine);
+	background-image:
+		radial-gradient(66% 62% at var(--ambient-x) var(--ambient-y), rgb(var(--ambient-a) / 0.5), transparent 72%),
+		radial-gradient(46% 48% at calc(var(--ambient-x) + 15%) calc(var(--ambient-y) + 16%), rgb(var(--ambient-b) / 0.32), transparent 70%);
+}
+
+.ambient-glow[data-ready='true'] {
+	opacity: 1;
+}
+
+/* The home hero is full-bleed at the top of the scroller, so its light spreads
+   from the middle of the picture downwards, where the rows are. The height is
+   capped at the scroller's own box (100% of it, not of the content): an
+   absolutely positioned child that reached past the content would add empty
+   scroll space below the last row. */
+.ambient-glow--hero {
+	inset: 0 0 auto 0;
+	height: min(58rem, 100%);
+	--ambient-x: 50%;
+	--ambient-y: 26%;
+}
+
+/* The library's first card is the picture in the top-right corner. */
+.ambient-glow--corner {
+	inset: 0 0 auto 0;
+	height: min(46rem, 100%);
+	--ambient-x: 74%;
+	--ambient-y: 16%;
 }
 
 .library-ambient {

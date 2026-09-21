@@ -673,6 +673,18 @@ a player.
   rather than swallowed: a copy button that silently does nothing is worse than
   none. `assertSeriesJourney` clicks it and reads the clipboard back, because the
   sentence beside the button is not evidence that anything was copied.
+- **A picture lights the wall behind it.** The home hero and the library's first
+  card are large pictures, and the page under them was a flat near-black that
+  made them sit on it like posters on a wall. `lib/ambient.ts` reads the
+  artwork's own pixels - thirty-two by eighteen of them, bucketed and weighted by
+  saturation, so a coloured patch outranks the dark a film still is mostly made
+  of - and answers up to two colours. The layers spread them around the picture,
+  centred where the picture is, and every gradient ends transparent: distance is
+  the ink the player sits on, which is the OLED black §3 asks for. A picture
+  whose pixels cannot be read (a refused origin, a CDN that sends no CORS header)
+  throws no light: no glow, not a guess. `assertAmbientGlow` in `check:render`
+  serves the hero a flat teal backdrop and fails on a grey answer, because "a
+  glow exists" is not the claim - "the glow is the picture's colour" is.
 - **One filled control**, the play button, in `--bone` rather than gold: the
   accent still has to mean "look here" everywhere else on the screen.
 - **The furniture hides** after three seconds of no pointer, no key and no state
