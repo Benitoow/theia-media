@@ -18,6 +18,7 @@ if ($directories.Count -gt 0) {
 
 $expected = @(
     "theia-$Version-windows-amd64.zip"
+    'theia-launcher-windows-amd64.exe'
     'theia-player-windows-amd64.zip'
     'theia-server-darwin-amd64'
     'theia-server-darwin-arm64'

@@ -102,6 +102,17 @@ var french = Catalogue{
 	"actNotInstalled":   "aucune installation dans :",
 	"uninstallKeptData": "Vos données n'ont pas été touchées :",
 
+	// The two places Windows looks a command up by name. They are reported like
+	// everything else the installation changes, because "theia is a command now"
+	// is the answer to the question that started this: how does one launch it.
+	"actPath":             "dossier ajouté au PATH :",
+	"actPathGone":         "dossier retiré du PATH :",
+	"actAppPath":          "commande theia enregistrée pour Windows :",
+	"actAppPathGone":      "commande theia retirée de Windows :",
+	// The launcher's code is "theia" - the installer names it the way the file
+	// is named - and the word is what the thing is.
+	"program.theia": "le lanceur",
+
 	// Where the programs come from, as codes: what a person needs to know is
 	// whether the installer copied something already on the machine or fetched
 	// it from the release page.
@@ -244,6 +255,12 @@ var english = Catalogue{
 	"actRemaining":      "some files could not be removed:",
 	"actNotInstalled":   "nothing installed in:",
 	"uninstallKeptData": "Your data was not touched:",
+
+	"actPath":             "directory added to PATH:",
+	"actPathGone":         "directory removed from PATH:",
+	"actAppPath":          "theia registered as a command for Windows:",
+	"actAppPathGone":      "theia removed as a command for Windows:",
+	"program.theia":       "the launcher",
 
 	"originAlreadyInstalled": "already in place",
 	"originBesideInstaller":  "beside the installer",

@@ -108,10 +108,22 @@ type program struct {
 	// release pipeline checks before publishing, because a player bundle missing
 	// its licence is a licence breach rather than an incomplete download.
 	files []string
+	// names is what this program may be called on disk, when the published name
+	// is not derived from the installed one. Empty means the pair artifactNames
+	// builds: the short name a working tree produces, and the platform one the
+	// release publishes.
+	names []string
 }
 
 // Label is the code the interface turns into a word: "server", "player".
 func (p program) Label() string { return strings.TrimPrefix(p.base, "theia-") }
+
+// launcherBase is the name of the `theia` command inside the installation. The
+// program's own name is `theia`; the release publishes it under a name that says
+// what it is, because `theia-windows-amd64.exe` was the server's retired alias
+// (decision 119) and a folder still holding that download must never be read as
+// a launcher.
+const launcherBase = "theia"
 
 // programsFor lists what a role needs on a platform, in the order a person would
 // install them: the server first, because it is the thing that serves.
@@ -131,6 +143,17 @@ func programsFor(role Role, goos, goarch string) []program {
 			files:  bundleFiles(goos),
 		}
 		wanted = append(wanted, entry)
+	}
+	if goos == "windows" {
+		// The launcher is Windows-only, like the player and for the same reason:
+		// it is published for the one platform V3.3 has been run on. It goes
+		// last - the server and the player are what the machine is for, and a
+		// launcher that failed to arrive should not be why neither is installed.
+		wanted = append(wanted, program{
+			base:  launcherBase,
+			asset: release.LauncherName(goos, goarch),
+			names: []string{launcherBase + ".exe", release.LauncherName(goos, goarch)},
+		})
 	}
 	return wanted
 }
@@ -248,6 +271,10 @@ func executableName(want program) string {
 	return want.base
 }
 
+// programExecutable is the file name a program has inside the installation,
+// for the callers that name one without describing what it needs.
+func programExecutable(base string) string { return executableName(program{base: base}) }
+
 // findProgram reports whether the program is already in place, and if not, puts
 // it there from a local source when there is one.
 //
@@ -323,6 +350,9 @@ func hasProgram(dir string, want program) bool {
 // acceptedNames is every name the executable may have on disk, most specific
 // first: the short name a working tree produces, and the published one.
 func acceptedNames(want program) []string {
+	if len(want.names) > 0 {
+		return want.names
+	}
 	return artifactNames(want.base)
 }
 
@@ -578,6 +608,23 @@ func Install(ctx context.Context, plan Plan, source Source, text Catalogue, repo
 			Path:   applicationKeyPath(registeredName),
 			Detail: application.Version,
 		})
+	}
+
+	// The names a person types, in the two places Windows looks them up: PATH
+	// for a terminal, App Paths for the Run dialog and the launchers that read
+	// it. Without these the programs exist and their names do not.
+	if added, err := addToUserPath(plan.InstallDir); err != nil {
+		applied.ShortcutsError = joinReasons(applied.ShortcutsError, err.Error())
+	} else if added {
+		applied.Actions = append(applied.Actions, Action{Kind: "added-to-path", Path: plan.InstallDir})
+	}
+	launcher := filepath.Join(plan.InstallDir, programExecutable(launcherBase))
+	if fileExists(launcher) {
+		if err := registerAppPath(programExecutable(launcherBase), launcher); err != nil {
+			applied.ShortcutsError = joinReasons(applied.ShortcutsError, err.Error())
+		} else {
+			applied.Actions = append(applied.Actions, Action{Kind: "registered-app-path", Path: launcher})
+		}
 	}
 	return applied, nil
 }

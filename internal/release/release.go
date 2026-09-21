@@ -65,6 +65,16 @@ func PlayerName(goos, goarch string) string {
 	return fmt.Sprintf("theia-player-%s-%s.zip", goos, goarch)
 }
 
+// LauncherName is the `theia` command: a bare executable, installed under that
+// name, whose published name says what it is.
+//
+// It is deliberately not `theia-<os>-<arch>`. Decision 119 retired that name,
+// and it belonged to the *server*: a folder still holding a v3.2 download would
+// otherwise offer a server to the installer that asked for a launcher.
+func LauncherName(goos, goarch string) string {
+	return withExtension(fmt.Sprintf("theia-launcher-%s-%s", goos, goarch), goos)
+}
+
 // ArchiveName is the one file a person downloads by hand: everything, in one
 // zip, for the platforms that have a player.
 func ArchiveName(version, goos, goarch string) string {

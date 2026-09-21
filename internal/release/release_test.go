@@ -67,6 +67,7 @@ func TestTheNamesMatchWhatTheReleaseWorkflowPublishes(t *testing.T) {
 		SetupName("windows", "amd64"):            "theia-setup-windows-amd64.exe",
 		SetupName("darwin", "arm64"):             "theia-setup-darwin-arm64",
 		PlayerName("windows", "amd64"):           "theia-player-windows-amd64.zip",
+		LauncherName("windows", "amd64"):         "theia-launcher-windows-amd64.exe",
 		ArchiveName("3.3.0", "windows", "amd64"): "theia-3.3.0-windows-amd64.zip",
 	}
 	for got, want := range cases {

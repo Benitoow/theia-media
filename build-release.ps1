@@ -11,10 +11,10 @@
 # report them missing. Measured by putting the release assets in an empty folder
 # and following the instructions literally.
 #
-# This archive closes that: the three programs, the pinned engine, its licence,
-# and a line telling somebody which file to run. It stays a single download that
-# needs no network at install time, which is also what "it works on my own
-# machine" means.
+# This archive closes that: the programs, the pinned engine, its licence, and a
+# line telling somebody which file to run. It stays a single download that needs
+# no network at install time, which is also what "it works on my own machine"
+# means.
 #
 # The published assets are still published separately, with their platform
 # names, for people who want one piece and for the updater, which selects
@@ -60,10 +60,15 @@ try {
     # is not in std" - which is how the first version of this failed.
     foreach ($target in @(
         @{ path = './cmd/theia-server'; out = 'theia-server.exe'; key = 'main.tmdbAPIKey' },
-        @{ path = './cmd/theia-setup'; out = 'theia-setup.exe'; key = '' }
+        @{ path = './cmd/theia-setup'; out = 'theia-setup.exe'; key = '' },
+        # The launcher is built windowed: it is what the Start Menu entry starts,
+        # and a console subsystem build would flash a black rectangle every time
+        # somebody clicked Theia. See cmd/theia/main.go.
+        @{ path = './cmd/theia'; out = 'theia.exe'; key = ''; gui = $true }
     )) {
         $ldflags = "-s -w -X main.version=$Version"
         if ($target.key -and $env:TMDB_API_KEY) { $ldflags += " -X $($target.key)=$($env:TMDB_API_KEY)" }
+        if ($target.gui) { $ldflags += ' -H=windowsgui' }
         & $go build -buildvcs=false -trimpath -ldflags $ldflags -o (Join-Path $stage $target.out) $target.path
         if ($LASTEXITCODE -ne 0) { throw "building $($target.out) failed" }
     }
@@ -94,11 +99,14 @@ EN - Run theia-setup.exe. Its first question is which language Theia should
      the film metadata open in. Then it asks what this machine is for, where to
      keep its data, which port it listens on and which folders hold your films,
      and it shows the whole plan before writing anything. It installs the
-     programs into %LOCALAPPDATA%\Programs\Theia and creates entries in the
-     Start Menu and on the Desktop (Theia, Theia Server, Theia Player), so they
-     can be launched by name. Nothing is downloaded: everything is in this
-     folder. It installs autostart only if you ask, and never requests
-     administrator rights.
+     programs into %LOCALAPPDATA%\Programs\Theia, puts that folder on your PATH
+     and creates entries in the Start Menu and on the Desktop (Theia, Theia
+     Server, Theia Player), so they can be launched by name. From a terminal,
+     `theia` starts the server and opens the player, `theia server` and
+     `theia player` start one half, and `theia-server` and `theia-player` run
+     them in the console. Nothing is downloaded: everything is in this folder.
+     It installs autostart only if you ask, and never requests administrator
+     rights.
 
 FR - Lancez theia-setup.exe. Sa premiere question est la langue que Theia doit
      parler - l'anglais et le francais sont livres, et la reponse est celle dans
@@ -106,11 +114,14 @@ FR - Lancez theia-setup.exe. Sa premiere question est la langue que Theia doit
      demande ensuite a quoi sert cette machine, ou garder ses donnees, sur quel
      port elle ecoute et quels dossiers contiennent vos films, puis il affiche
      le plan complet avant d'ecrire quoi que ce soit. Il installe les programmes
-     dans %LOCALAPPDATA%\Programs\Theia et pose des raccourcis dans le menu
-     Demarrer et sur le bureau (Theia, Theia Server, Theia Player), pour qu'ils
-     se lancent par leur nom. Rien n'est telecharge : tout est dans ce dossier.
-     Il installe un demarrage automatique seulement si vous le demandez, et ne
-     reclame jamais de droits administrateur.
+     dans %LOCALAPPDATA%\Programs\Theia, met ce dossier dans votre PATH et pose
+     des raccourcis dans le menu Demarrer et sur le bureau (Theia, Theia Server,
+     Theia Player), pour qu'ils se lancent par leur nom. Dans un terminal,
+     `theia` demarre le serveur et ouvre le lecteur, `theia server` et
+     `theia player` en lancent une moitie, et `theia-server` et `theia-player`
+     les executent dans la console. Rien n'est telecharge : tout est dans ce
+     dossier. Il installe un demarrage automatique seulement si vous le
+     demandez, et ne reclame jamais de droits administrateur.
 
 LICENSE-libmpv.txt is the licence of the media engine (libmpv, LGPL-2.1+).
 NOTICE.md names the exact build and its SHA-256.

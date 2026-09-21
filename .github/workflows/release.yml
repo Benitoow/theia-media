@@ -94,6 +94,14 @@ jobs:
               -ldflags "-s -w -X main.version=${version}" \
               -o "dist/theia-setup-windows-amd64.exe" \
               ./cmd/theia-setup
+            # The `theia` command: windowed, because it is what the product's
+            # Start Menu entry starts and a console build would flash a black
+            # rectangle on every click. The published name says what it is; the
+            # installed one is `theia.exe` (internal/release.LauncherName).
+            go build -buildvcs=false -trimpath \
+              -ldflags "-s -w -H=windowsgui -X main.version=${version}" \
+              -o "dist/theia-launcher-windows-amd64.exe" \
+              ./cmd/theia
           fi
           ls -l dist
 
@@ -194,7 +202,7 @@ jobs:
         run: |
           $version = '${{ github.ref_name }}'.TrimStart('v')
           $dir = "dist\theia-$version-windows-amd64"
-          foreach ($required in 'theia-setup.exe', 'theia-server.exe', 'theia-player.exe',
+          foreach ($required in 'theia-setup.exe', 'theia-server.exe', 'theia-player.exe', 'theia.exe',
                                 'libmpv-2.dll', 'LICENSE-libmpv.txt', 'NOTICE.md', 'START-HERE.txt') {
             if (-not (Test-Path (Join-Path $dir $required))) {
               Write-Error "the archive is missing $required"
@@ -207,6 +215,20 @@ jobs:
           Write-Host "archive server reports: $reported"
           if ($reported -notmatch [regex]::Escape($version)) {
             Write-Error "the archive's server reports '$reported', expected $version"
+            exit 1
+          }
+          # And the launcher is run the way Windows would run it - started and
+          # waited for, with its output redirected - because it is a windowed
+          # build: a subsystem or console-attach mistake would print nothing at
+          # all, and the Start Menu entry that starts it would look like a
+          # program that does nothing.
+          $launcherLog = Join-Path $env:TEMP 'theia-launcher-version.log'
+          Start-Process -FilePath (Join-Path $dir 'theia.exe') -ArgumentList '-version' `
+            -Wait -NoNewWindow -RedirectStandardOutput $launcherLog
+          $launcherSaid = (Get-Content $launcherLog -Raw).Trim()
+          Write-Host "archive launcher reports: $launcherSaid"
+          if ($launcherSaid -notmatch [regex]::Escape($version)) {
+            Write-Error "the archive's launcher reports '$launcherSaid', expected $version"
             exit 1
           }
           Get-ChildItem $dir | Select-Object Name, Length
@@ -292,6 +314,7 @@ jobs:
             "staging/theia-setup-windows-amd64.exe#DOWNLOAD — Theia ${version} for Windows x64" \
             "staging/theia-${version}-windows-amd64.zip#OFFLINE — Complete Windows x64 bundle" \
             "staging/theia-player-windows-amd64.zip#Component — Windows x64 player bundle (installer-managed)" \
+            "staging/theia-launcher-windows-amd64.exe#Component — Windows x64 theia command (installer-managed)" \
             "staging/theia-server-windows-amd64.exe#Component — Windows x64 server (updater-managed)" \
             "staging/theia-server-windows-arm64.exe#Component — Windows ARM64 server (updater-managed)" \
             "staging/theia-server-linux-amd64#Component — Linux x64 server (updater-managed)" \

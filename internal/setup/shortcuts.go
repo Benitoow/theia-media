@@ -57,14 +57,22 @@ func entriesFor(plan Plan, text Catalogue) []shortcutEntry {
 	}
 
 	// The product entry comes first: it is the one somebody looks for by name,
-	// and the only one that also goes on the Desktop.
-	// The product entry is what somebody opens to watch something. On an
-	// all-in-one machine the server is infrastructure started in the background;
-	// making it the primary shortcut exposed a console and left the actual player
-	// as a second application the viewer had to discover.
+	// and the only one that also goes on the Desktop. It starts `theia` when
+	// that command is installed, which brings the server up if it is not already
+	// answering and then opens the player - so the entry a person clicks cannot
+	// land on a search that cannot succeed.
+	//
+	// Without it the entry falls back to the half this machine is for, which is
+	// what an installation made before the launcher existed keeps doing: the
+	// server is infrastructure on an all-in-one machine, and making it the
+	// primary shortcut exposed a console and left the player as a second
+	// application the viewer had to discover.
 	primary := "theia-server"
 	if plan.Role.WantsPlayer() {
 		primary = "theia-player"
+	}
+	if fileExists(executable(launcherBase)) {
+		primary = launcherBase
 	}
 	entries := []shortcutEntry{{
 		name: text["shortcutTheiaName"],

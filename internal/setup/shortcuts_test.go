@@ -95,6 +95,23 @@ func TestTheEntriesShowTheProductsMarkWithoutBorrowingOne(t *testing.T) {
 	}
 }
 
+func TestTheProductEntryOpensTheLauncherWhenItIsInstalled(t *testing.T) {
+	// The entry a person clicks must not land on a search that cannot succeed:
+	// `theia` brings the server up if it is not answering and only then opens
+	// the player, and on a one-program machine it opens that program.
+	french, _ := CatalogueFor("fr")
+	install := t.TempDir()
+	for _, name := range []string{installed("theia-server"), installed("theia-player"), installed("theia")} {
+		write(t, filepath.Join(install, name), "MZ")
+	}
+
+	entries := entriesFor(Plan{Role: RoleAllInOne, InstallDir: install}, french)
+	want := filepath.Join(install, installed("theia"))
+	if !strings.EqualFold(entries[0].link.Target, want) {
+		t.Errorf("Theia opens %q, want the launcher %q", entries[0].link.Target, want)
+	}
+}
+
 func TestTheProductEntryOpensTheViewerForAnAllInOne(t *testing.T) {
 	french, _ := CatalogueFor("fr")
 	install := t.TempDir()

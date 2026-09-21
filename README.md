@@ -40,8 +40,11 @@ external database or separate web app to install.
 > `theia-server` (the headless Go backend you already run, which keeps serving
 > the web interface for administration and fallback playback), `theia-player`
 > (a native desktop player built on Tauri and libmpv) and `theia-setup` (the
-> installer, and the one file you download). `v3.2.0` was the last release of
-> the single-binary line, and an installed v3.2 updates into this one by itself.
+> installer, and the one file you download). A fourth command, `theia`, is what
+> you type: it starts the server if it is not answering and then opens the
+> player, and the installer puts it and its siblings on your `PATH`. `v3.2.0`
+> was the last release of the single-binary line, and an installed v3.2 updates
+> into this one by itself.
 
 The reason is not novelty. A browser cannot hand an untouched Dolby TrueHD,
 DTS-HD MA or Atmos stream to an amplifier, renders only the HDR10 base layer of
@@ -130,13 +133,16 @@ you an installation you would later resent.
 2. It fetches what this machine needs - the server, the native player, and the
    media engine the player uses - checking the SHA-256 digest GitHub publishes for
    each file and refusing anything that does not match. The programs are copied
-   into `%LOCALAPPDATA%\Programs\Theia`, entries appear in the Start Menu under
-   **Theia** and on the Desktop, and Theia is registered as an installed
-   application: it can be launched by name from the Start Menu or a launcher such
-   as Flow Launcher, and removed from **Settings → Apps** like anything else.
+   into `%LOCALAPPDATA%\Programs\Theia`, that folder is added to your `PATH`,
+   entries appear in the Start Menu under **Theia** and on the Desktop, and Theia
+   is registered as an installed application: it can be launched by name from the
+   Start Menu or a launcher such as Flow Launcher, and removed from
+   **Settings → Apps** like anything else.
 3. Start the server from that entry, or let the installer start it automatically:
    it offers an autostart entry, and asks for no administrator rights to put one in
-   place.
+   place. From a terminal, `theia` starts the server if it is not answering and
+   then opens the player; `theia server` and `theia player` start one half alone,
+   and `theia-server` / `theia-player` run them in the console.
 4. Open **Settings**, add or confirm your media folders, then start the scan.
 
 To remove it later, `theia-setup --uninstall` takes away the programs, the entries
@@ -163,11 +169,13 @@ mirror, or the updater:
 | `theia-server-<os>-<arch>[.exe]` | The server alone. This is what the updater selects by name, and what the installer fetches. |
 | `theia-setup-windows-amd64.exe` | The one supported installer and the only executable a person downloads. It fetches the programs above, or copies them from beside itself or from `--from <folder\|zip>`. |
 | `theia-player-<os>-<arch>.zip` | The player and its engine, with the engine's licence and notice. |
+| `theia-launcher-<os>-<arch>.exe` | The `theia` command, installed as `theia.exe`: it starts the server if it is not answering and then opens the player. |
 | `theia-<version>-<os>-<arch>.zip` | Everything, for an install with no network. |
 
 The release page labels the installer and offline bundle as the two human
-downloads. Everything named `server` or `player` is installer/updater plumbing,
-published separately because an existing installation selects it by exact name.
+downloads. Everything named `server`, `player` or `launcher` is
+installer/updater plumbing, published separately because an existing installation
+selects it by exact name.
 
 Release binaries are unsigned and run in the foreground. Windows may show a
 reputation warning; macOS may require **Privacy & Security → Open Anyway** after

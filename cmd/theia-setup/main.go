@@ -540,10 +540,18 @@ func printResult(result setup.Result, text setup.Catalogue) {
 			fmt.Printf("  %s %s\n", text["actTool"], action.Path)
 		case "registered-application":
 			fmt.Printf("  %s %s (%s)\n", text["actRegistered"], action.Path, action.Detail)
+		case "added-to-path":
+			fmt.Printf("  %s %s\n", text["actPath"], action.Path)
+		case "registered-app-path":
+			fmt.Printf("  %s %s\n", text["actAppPath"], action.Path)
 		case "removed-shortcut":
 			fmt.Printf("  %s %s\n", text["actShortcutGone"], action.Path)
 		case "unregistered-application":
 			fmt.Printf("  %s\n", text["actUnregistered"])
+		case "removed-from-path":
+			fmt.Printf("  %s %s\n", text["actPathGone"], action.Path)
+		case "unregistered-app-path":
+			fmt.Printf("  %s %s\n", text["actAppPathGone"], action.Path)
 		case "removed-service":
 			fmt.Printf("  %s %s\n", text["actServGone"], action.Detail)
 		case "removed-program":

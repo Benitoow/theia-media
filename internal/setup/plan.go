@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -170,23 +171,19 @@ type Artifact struct {
 // Artifacts lists what the chosen role needs and whether it is present, looking
 // beside the installer, then in the installation directory, then on PATH.
 //
+// The list comes from programsFor, which is the same list InstallPrograms puts
+// there: two hand-written lists would be the second convention this file exists
+// to avoid, and the day they drifted is the day --check reported a machine
+// complete without the command the product's own entry starts.
+//
 // The names it accepts are the ones a person actually has on disk, which for a
 // downloaded release is `theia-server-windows-amd64.exe` and not
 // `theia-server.exe`. See artifactNames.
 func (p Plan) Artifacts(self string) []Artifact {
-	wanted := []struct {
-		name   string
-		needed bool
-	}{
-		{"theia-server", p.Role.WantsServer()},
-		{"theia-player", p.Role.WantsPlayer()},
-	}
+	wanted := programsFor(p.Role, runtime.GOOS, runtime.GOARCH)
 	found := make([]Artifact, 0, len(wanted))
 	for _, want := range wanted {
-		if !want.needed {
-			continue
-		}
-		names := artifactNames(want.name)
+		names := acceptedNames(want)
 		artifact := Artifact{Name: names[0], Names: names}
 		if beside, err := besideInstallerRelative(self, names); err == nil {
 			artifact.Path = beside

@@ -4,6 +4,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -191,11 +192,13 @@ func TestInspectSaysWhetherTheMachineIsConfigured(t *testing.T) {
 func TestArtifactsSayWhatIsMissingRatherThanFetchingIt(t *testing.T) {
 	root := t.TempDir()
 	// A role that watches needs a player; nothing is beside the fake installer,
-	// so it must be reported missing rather than downloaded.
+	// so it must be reported missing rather than downloaded. The count is asked
+	// of the product's own program list, because --check and the installation
+	// have to describe the same machine.
 	plan := Plan{Role: RolePlayer}
 	artifacts := plan.Artifacts(filepath.Join(root, "theia-setup"))
-	if len(artifacts) != 1 {
-		t.Fatalf("a player-only machine asked for %d artifacts, want 1", len(artifacts))
+	if want := len(programsFor(RolePlayer, runtime.GOOS, runtime.GOARCH)); len(artifacts) != want {
+		t.Fatalf("a player-only machine asked for %d artifacts, want %d", len(artifacts), want)
 	}
 	if artifacts[0].Name != "theia-player" && artifacts[0].Name != "theia-player.exe" {
 		t.Errorf("artifact = %q, want the player", artifacts[0].Name)

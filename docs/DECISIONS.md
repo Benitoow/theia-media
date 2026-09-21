@@ -4785,6 +4785,104 @@ digest `7a66e6190b2ebec1a1b0ebbd52372c1d30c47d286a6edb61936249653cdf00a6`
 and reported `theia-setup v3.3.1`. This closes the release boundary with public
 evidence rather than treating a green upload step as proof.
 
+## 139. Theia is a command, and the machine knows where it put it
+
+**Decided 21 September 2026**, on the maintainer's instruction, the morning after
+installing 3.3.1: *"quand on installe, faudrait l'ajouter dans les applications...
+parce que là je ne sais pas comment la lancer, et aussi dans le terminal : lancer
+via `theia server` ou `theia player`; `theia` seul lance les deux."*
+
+**What was wrong.** Decisions 122 and 123 gave an installation a Start Menu
+folder, a Desktop entry and a record in the applications list, and those work.
+What they did not give it was a **name**. Nothing was on `PATH`, so no terminal
+could run the programs at all; nothing was registered under App Paths, so the
+Run dialog did not know the word either; and the product's own entry started
+`theia-player` - which finds a server, and cannot start one. On an all-in-one
+whose server is not running, the entry somebody clicks lands on a search that
+cannot succeed. The founding spec even names the binary `theia` (§11); splitting
+the product into three programs is what lost the name.
+
+**Decided.**
+
+- **`theia` is a program**, `cmd/theia`, published as a component and installed
+  beside the others. It is built for Windows only, like the player and for the
+  same reason, and its asset is `theia-launcher-<os>-<arch>.exe`. That published
+  name is deliberately *not* `theia-<os>-<arch>`: that was the server's retired
+  alias (decision 119), and a folder still holding a v3.2 download must never be
+  read as a launcher. This is the one program whose accepted names are written
+  out rather than derived.
+- **It is built windowed** (`-H=windowsgui`). A console program started from the
+  Start Menu opens a black window for as long as it runs, and this one is what
+  the product's entry starts. It borrows the terminal it was started from when
+  there is one - so `theia -version` prints where somebody typed it - and says
+  nothing at all when there is not, which is what a double-click deserves.
+- **What it does.** `theia` starts the server if nothing answers on its
+  configured port, waits for it (bounded, eight seconds), then opens the player;
+  `theia server` and `theia player` start one half alone. The port is read
+  through `internal/config`, so the command and the server cannot disagree about
+  where it listens, and *what is installed* decides: a player-only machine opens
+  the player, a server-only machine the server. The raw executables keep their
+  names for anybody who wants a console - the server prints its log there.
+- **PATH.** The installer writes `%LOCALAPPDATA%\Programs\Theia` into
+  `HKCU\Environment\Path` - once, per user, no elevation (decision 120) - and
+  `--uninstall` takes exactly that entry back out. The value's own type is
+  preserved (`REG_EXPAND_SZ` stays expandable: a `%USERPROFILE%` inside
+  somebody's PATH has to keep expanding), every other entry is written back
+  exactly as it was read including its stray separators, and removing the last
+  entry deletes the value rather than leaving an empty one. The change is
+  broadcast with `WM_SETTINGCHANGE`, because a PATH that is only in the registry
+  reads as an installation that did not work to whoever opens a terminal a
+  second later.
+- **App Paths.** `HKCU\...\App Paths\theia.exe` is registered with its working
+  directory. It is what the Run dialog reads, and what a dock or a launcher that
+  resolves a name reads: the same question decision 123 answered for the Start
+  Menu, asked by the two surfaces that do not read menus.
+- **The product's entry starts `theia`**, not the player, and falls back to the
+  old rule when the launcher is not installed, so an installation made before
+  this decision keeps working.
+- **The release surface is ten files.** Decision 138's allowlist gains
+  `theia-launcher-windows-amd64.exe`, `scripts/check-release-assets.ps1` refuses
+  anything else, the offline archive carries `theia.exe` beside the programs it
+  starts, and `--check` lists it because that list now comes from the same
+  `programsFor` the installation uses rather than a second hand-written one.
+
+**And the first empty library broke the player's home screen.** The 3.3.1 server
+encoded a home screen with no rows as `"rows": null` - a Go nil slice - and the
+player decodes rows into a Vec, so serde answered `invalid type: null, expected a
+sequence` and the window said "the home screen could not be loaded". Every
+previous run had films in the library; the first run against an *empty* one -
+which is what a fresh installation has, and what `theia` now leads to - hit it
+immediately. Fixed on both sides, because two programs that update separately
+cannot assume they were built together: the server sends `[]`
+(`internal/library.HomeScreen`), and the player tolerates a null list from a
+server that is already published (`de_null_as_empty`, proven against the 3.3.1
+binary itself).
+
+**Verified, on the maintainer's machine (Windows 11, 21 September 2026).** A
+staged folder built from this tree was installed for real, then read back with
+Windows rather than with anything this repository wrote: `theia`, `theia-server`,
+`theia-player` and `theia-setup` all resolve to `%LOCALAPPDATA%\Programs\Theia`
+from the user's PATH; App Paths holds the command and its directory; the
+applications list names Theia, its version (asked of the installed server, as
+decision 123 requires), its location and its uninstall command; and the three
+Start Menu entries plus the Desktop one, read through `WScript.Shell`, point at
+`theia.exe`, `theia-server.exe` and `theia-player.exe`. Run from a terminal with
+nothing else running, `theia` started the server (`/api/health` answered,
+`{"status":"ok",...}`) and opened the player, whose window drew "This library
+holds no films yet" - the state that used to be "could not be loaded". The
+registered uninstall command removed the four shortcuts, the applications entry,
+the PATH entry, the App Paths entry and the folder, and kept
+`%APPDATA%\Theia` with its database in it; reinstalling put all of it back, and
+the PATH entry was added once rather than twice. The compatibility half was
+measured separately: the published 3.3.1 server, on its own port, answering
+`{"hero":null,"rows":null,"total":0}`, with this tree's player pointed at it -
+the empty-library screen, not the failure.
+
+**Not verified here**: the launcher typed into Flow Launcher or the Windows
+search box. Both read exactly the Start Menu folder and the applications-list
+entry that were read back above (decision 123 drove Flow Launcher by hand over
+the same two sources), and the launcher's own entry was not driven again.
+
 ## 8. Logistics
 
 - **Repository:** public, `theia-media`, from M0.

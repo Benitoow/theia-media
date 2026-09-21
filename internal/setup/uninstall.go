@@ -60,6 +60,23 @@ func Uninstall(plan Plan, targets ShortcutTargets, text Catalogue) (Result, erro
 		result.Actions = append(result.Actions, Action{Kind: "unregistered-application", Path: keyPath})
 	}
 
+	// The two names on the machine go with the programs: a PATH entry pointing
+	// at a folder that is about to be deleted is a command that exists and
+	// fails, and an App Paths entry is the same promise in the Run dialog.
+	if removed, err := removeFromUserPath(plan.InstallDir); err != nil {
+		result.ShortcutsError = joinReasons(result.ShortcutsError, err.Error())
+	} else if removed {
+		result.Actions = append(result.Actions, Action{Kind: "removed-from-path", Path: plan.InstallDir})
+	}
+	launcher := programExecutable(launcherBase)
+	if appPathIsRegistered(launcher) {
+		if err := unregisterAppPath(launcher); err != nil {
+			result.ShortcutsError = joinReasons(result.ShortcutsError, err.Error())
+		} else {
+			result.Actions = append(result.Actions, Action{Kind: "unregistered-app-path", Path: launcher})
+		}
+	}
+
 	result.Actions = append(result.Actions, removePrograms(plan, text)...)
 
 	// And what was deliberately left alone, as an action like everything else:

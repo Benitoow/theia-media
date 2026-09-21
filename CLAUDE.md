@@ -9,7 +9,10 @@ maintenance release. V3.3 splits the product into three artifacts:
 `theia-server` (Go, headless, still serving the frozen Svelte interface as
 fallback playback), `theia-player` (Tauri 2 + Rust + libmpv - the native player,
 and where films are now meant to be watched) and `theia-setup` (Go + Charm, the
-installer and maintenance tool). The reason is a platform ceiling: a browser
+installer and maintenance tool). A fourth program travels with them: `theia`,
+the command somebody types - the installer puts it and its siblings on the
+user's PATH - which starts the server if it is not answering and then opens the
+player (decision 139). The reason is a platform ceiling: a browser
 cannot pass TrueHD/Atmos or DTS-HD MA to an amplifier, does not carry Dolby
 Vision profile 7, and does not read Matroska natively.
 
@@ -187,6 +190,16 @@ launcher and *Settings → Apps* can all see and remove it, and copies itself in
 the installation as the maintenance tool the registered uninstall command points
 at. See decisions 122 and 123.
 
+**The names are commands.** The installer puts `%LOCALAPPDATA%\Programs\Theia` on
+the user's PATH - `HKCU\Environment`, removed again by `--uninstall`, and every
+other entry written back exactly as it was - and registers `theia.exe` under App
+Paths, which is what the Run dialog and several launchers read. The `Theia` entry
+starts `cmd/theia` rather than the player, so it cannot land on a search that
+cannot succeed. From a terminal: `theia` starts the server if it is not answering
+and then opens the player, `theia server` and `theia player` start one half,
+`theia-server` and `theia-player` run their own in the console, and
+`theia -version` prints the build. See decision 139.
+
 ```bash
 go test ./internal/setup/ -v        # roles, plan validation, the form, the entries
 ./theia-setup.exe                   # the form
@@ -257,8 +270,10 @@ README said to do first, got a configuration and nothing to run it.
 platform verified on real hardware. It fetches the rest, verified. The server
 assets for six targets and the Windows player bundle are published as labelled
 components for the updater and installer; setup executables for an unverified
-player platform are not published as if they were a complete product. Decision
-138 fixes the exact nine-file release surface.
+player platform are not published as if they were a complete product. Decisions
+138 and 139 fix the exact release surface: the installer, the offline bundle, the
+six server binaries, the player bundle and the `theia` command, and
+`scripts/check-release-assets.ps1` refuses anything else.
 
 ## Building the native player
 

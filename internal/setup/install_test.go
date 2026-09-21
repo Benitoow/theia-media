@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -28,6 +29,12 @@ import (
 func fakeRelease(t *testing.T, dir string, withPlayer bool) {
 	t.Helper()
 	write(t, filepath.Join(dir, installed("theia-server")), "MZ the server")
+	if runtime.GOOS == "windows" {
+		// The launcher is published for Windows only, under its own name inside
+		// the installation: an archive of this platform holds one, and an
+		// archive of any other platform holds none.
+		write(t, filepath.Join(dir, installed(launcherBase)), "MZ the launcher")
+	}
 	if !withPlayer {
 		return
 	}
@@ -35,6 +42,16 @@ func fakeRelease(t *testing.T, dir string, withPlayer bool) {
 	for _, member := range bundleExtras() {
 		write(t, filepath.Join(dir, member), bundleBody(member))
 	}
+}
+
+// installedNames is what a role leaves in the installation directory, read from
+// the product's own list so that a program added to it cannot be forgotten here.
+func installedNames(role Role) []string {
+	names := make([]string, 0, 4)
+	for _, want := range programsFor(role, runtime.GOOS, runtime.GOARCH) {
+		names = append(names, executableName(want))
+	}
+	return names
 }
 
 // installed is the name a program carries once it is in place. It is the
@@ -128,7 +145,7 @@ func TestAReleaseFolderBesideTheInstallerIsInstalledWhole(t *testing.T) {
 	if err != nil {
 		t.Fatalf("InstallPrograms: %v", err)
 	}
-	for _, name := range append([]string{installed("theia-server"), installed("theia-player")}, bundleExtras()...) {
+	for _, name := range append(installedNames(RoleAllInOne), bundleExtras()...) {
 		if _, err := os.Stat(filepath.Join(install, name)); err != nil {
 			t.Errorf("%s was not installed: %v", name, err)
 		}
@@ -136,8 +153,8 @@ func TestAReleaseFolderBesideTheInstallerIsInstalledWhole(t *testing.T) {
 	if read(t, filepath.Join(install, installed("theia-server"))) != "MZ the server" {
 		t.Error("the installed server is not the file that was copied")
 	}
-	if len(actions) != 2 {
-		t.Errorf("the installation reported %d programs, want 2: %+v", len(actions), actions)
+	if want := len(installedNames(RoleAllInOne)); len(actions) != want {
+		t.Errorf("the installation reported %d programs, want %d: %+v", len(actions), want, actions)
 	}
 	if report.phases[0] != PhaseChecking || report.phases[len(report.phases)-1] != PhaseDone {
 		t.Errorf("the phases do not begin and end where they should: %v", report.phases)
@@ -152,10 +169,9 @@ func TestAReleaseArchiveIsInstalledWithoutUnpackingItFirst(t *testing.T) {
 	// The other thing a person has: the zip itself, untouched, because Windows
 	// opens archives rather than extracting them half the time.
 	archive := filepath.Join(t.TempDir(), "theia-3.3.0-"+runtime.GOOS+"-"+runtime.GOARCH+".zip")
-	members := map[string]string{
-		installed("theia-server"): "MZ the server",
-		installed("theia-player"): "MZ the player",
-		"START-HERE.txt":          "read me first",
+	members := map[string]string{"START-HERE.txt": "read me first"}
+	for _, name := range installedNames(RoleAllInOne) {
+		members[name] = "MZ " + name
 	}
 	for _, member := range bundleExtras() {
 		members[member] = bundleBody(member)
@@ -167,7 +183,7 @@ func TestAReleaseArchiveIsInstalledWithoutUnpackingItFirst(t *testing.T) {
 	if _, err := InstallPrograms(context.Background(), plan, Source{From: archive}, nil); err != nil {
 		t.Fatalf("InstallPrograms from an archive: %v", err)
 	}
-	for _, name := range append([]string{installed("theia-server"), installed("theia-player")}, bundleExtras()...) {
+	for _, name := range append(installedNames(RoleAllInOne), bundleExtras()...) {
 		if _, err := os.Stat(filepath.Join(install, name)); err != nil {
 			t.Errorf("%s was not installed from the archive: %v", name, err)
 		}
@@ -216,7 +232,9 @@ func TestAnInstalledProgramIsNotDownloadedAgain(t *testing.T) {
 	defer server.Close()
 
 	install := t.TempDir()
-	write(t, filepath.Join(install, installed("theia-server")), "MZ already here")
+	for _, name := range installedNames(RoleServer) {
+		write(t, filepath.Join(install, name), "MZ already here")
+	}
 	plan := Plan{Role: RoleServer, DataDir: t.TempDir(), InstallDir: install, Port: 8395, Hostname: "theia"}
 
 	actions, err := InstallPrograms(context.Background(), plan, Source{APIBase: server.URL}, nil)
@@ -226,8 +244,13 @@ func TestAnInstalledProgramIsNotDownloadedAgain(t *testing.T) {
 	if asked {
 		t.Error("the installer asked the release page for a program it already had")
 	}
-	if len(actions) != 1 || actions[0].Detail != "already-installed" {
-		t.Errorf("the action does not say the program was already there: %+v", actions)
+	if want := len(installedNames(RoleServer)); len(actions) != want {
+		t.Errorf("the installation reported %d programs, want %d: %+v", len(actions), want, actions)
+	}
+	for _, action := range actions {
+		if action.Detail != "already-installed" {
+			t.Errorf("the action does not say the program was already there: %+v", action)
+		}
 	}
 }
 
@@ -241,9 +264,13 @@ func TestTheInstallerFetchesAndVerifiesWhatIsMissing(t *testing.T) {
 		player[member] = bundleBody(member)
 	}
 	makeZip(t, bundle, player)
-	payloads := map[string][]byte{
-		release.ServerName(runtime.GOOS, runtime.GOARCH): []byte("MZ the server, downloaded"),
-		release.PlayerName(runtime.GOOS, runtime.GOARCH): mustRead(t, bundle),
+	payloads := map[string][]byte{}
+	for _, want := range programsFor(RoleAllInOne, runtime.GOOS, runtime.GOARCH) {
+		if want.bundle {
+			payloads[want.asset] = mustRead(t, bundle)
+			continue
+		}
+		payloads[want.asset] = []byte("MZ " + want.base + ", downloaded")
 	}
 	server := stubReleasePage(t, "v3.3.0", payloads)
 
@@ -254,7 +281,7 @@ func TestTheInstallerFetchesAndVerifiesWhatIsMissing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("InstallPrograms: %v", err)
 	}
-	if read(t, filepath.Join(install, installed("theia-server"))) != "MZ the server, downloaded" {
+	if read(t, filepath.Join(install, installed("theia-server"))) != "MZ theia-server, downloaded" {
 		t.Error("the server was not installed from the release")
 	}
 	for _, member := range bundleExtras() {
@@ -271,8 +298,14 @@ func TestTheInstallerFetchesAndVerifiesWhatIsMissing(t *testing.T) {
 	if report.progress == 0 {
 		t.Error("the download reported no progress at all")
 	}
-	if report.total != int64(len(payloads[release.ServerName(runtime.GOOS, runtime.GOARCH)])) && report.total != int64(len(payloads[release.PlayerName(runtime.GOOS, runtime.GOARCH)])) {
-		t.Errorf("progress total = %d, which is neither payload", report.total)
+	// The number on the bar is one of the payloads it fetched, and a download
+	// with no size at all (-1) would leave the bar empty.
+	sizes := map[int64]bool{}
+	for _, payload := range payloads {
+		sizes[int64(len(payload))] = true
+	}
+	if !sizes[report.total] {
+		t.Errorf("progress total = %d, which is none of the payloads", report.total)
 	}
 	var sawDownload, sawExtract bool
 	for _, phase := range report.phases {
@@ -390,6 +423,35 @@ func stubReleasePage(t *testing.T, tag string, payloads map[string][]byte) *http
 	}))
 	t.Cleanup(server.Close)
 	return server
+}
+
+// TestTheLauncherIsInstalledWhereItIsPublished pins the two names apart. The
+// `theia` command is installed under its own name and published under one that
+// says what it is - never `theia-windows-amd64.exe`, which was the server's
+// retired alias (decision 119) and is still sitting in folders people
+// downloaded a v3.2 release into.
+func TestTheLauncherIsInstalledWhereItIsPublished(t *testing.T) {
+	wanted := programsFor(RoleAllInOne, "windows", "amd64")
+	last := wanted[len(wanted)-1]
+	if last.base != "theia" || last.asset != release.LauncherName("windows", "amd64") {
+		t.Fatalf("the Windows installation ends with %+v", last)
+	}
+	if names := acceptedNames(last); !slices.Contains(names, "theia.exe") ||
+		!slices.Contains(names, release.LauncherName("windows", "amd64")) {
+		t.Errorf("the launcher accepts %v", names)
+	} else if slices.Contains(names, "theia-windows-amd64.exe") {
+		t.Error("the launcher accepts the retired server alias name")
+	}
+
+	// Only where it is published: the launcher is a Windows program, like the
+	// player, and a platform nobody has run it on gets nothing.
+	for _, platform := range []string{"linux", "darwin"} {
+		for _, entry := range programsFor(RoleAllInOne, platform, "amd64") {
+			if entry.base == "theia" {
+				t.Errorf("the %s installation asks for a launcher", platform)
+			}
+		}
+	}
 }
 
 // TestTheInstallationDirectoryIsPerUser guards the promise that this installer
