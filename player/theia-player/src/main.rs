@@ -267,34 +267,22 @@ const PLATFORM_OPTIONS: &[(&str, &str)] = &[
     ("ao", "wasapi"),
 ];
 
-/// macOS: the renderer the pinned engine ships, VideoToolbox decoding, CoreAudio.
-/// `videotoolbox` is in this engine (its pin builds `videotoolbox-gl=enabled`,
-/// which is what compiles the hwdec registering that name) and `coreaudio` is its
-/// `coreaudio=enabled`.
+/// macOS: the film is drawn by this program, not by mpv.
 ///
-/// **No `gpu-api` and no `gpu-context` here, and that is a finding, not an
-/// omission. This is the Mac's first check.**
+/// `vo=libmpv` means "no video output at all": the host creates a GL context and
+/// calls `mpv_render_context_render` for every frame, which is the only way a
+/// frame can reach a window on macOS with this engine - its build disables
+/// `vulkan`, `macos-cocoa-cb` and `swift-build`, so none of mpv's own outputs can
+/// present, and `--wid` is gone in 0.41. `RENDER-MACOS.md` is the specification
+/// and the list of what the Mac still has to settle.
 ///
-/// mpv 0.41 has no `metal` GPU API. The names it accepts come from the context
-/// table in `video/out/gpu/context.c` - `auto`, `opengl`, `vulkan`, `d3d11` - and
-/// `gpu-api` is a settings list whose unknown entries are *refused*
-/// (`options/m_option.c`), so `gpu-api=metal` would stop the option loop in
-/// `start_engine` and the player would never open. `metal` appears nowhere in
-/// mpv 0.41.0's source except as the `CAMetalLayer` its Vulkan-on-Metal context
-/// presents into, and this engine has no Vulkan at all: its pin is built with
-/// `vulkan=disabled`, which is why the one macOS context in that table, `macvk`,
-/// is not compiled in, and with `macos-cocoa-cb=disabled`, the libmpv path this
-/// player does not use anyway.
-///
-/// So there is no pair of names this engine can honour, and the consequence has
-/// to be written down rather than papered over: with this pin, on macOS, mpv's
-/// own video outputs have no context to get a frame onto - the engine's one video
-/// path is the libmpv render API over OpenGL (`plain-gl=enabled` in the pin),
-/// where the *host* owns the GL context and draws each frame. `player/README.md`
-/// has the two commands that settle it on a Mac and the two ways out.
+/// `videotoolbox` is the engine's hardware decoder (`videotoolbox-gl=enabled` in
+/// its pin) and `coreaudio` its audio output. Nothing here asks for bitstream
+/// passthrough: CoreAudio has no path for TrueHD, Atmos or DTS-HD MA, so the
+/// session starts in PCM and stays there (`apply_audio_mode` is a no-op on macOS).
 #[cfg(target_os = "macos")]
 const PLATFORM_OPTIONS: &[(&str, &str)] = &[
-    ("vo", "gpu-next"),
+    ("vo", "libmpv"),
     ("hwdec", "videotoolbox"),
     ("ao", "coreaudio"),
 ];
@@ -327,7 +315,17 @@ const PLATFORM_OPTIONS: &[(&str, &str)] = &[
 /// is hostile in a shared room - and because every automated run of this
 /// program has no business producing sound on somebody's machine.
 fn base_options(wid: isize, silent: bool) -> Vec<(&'static str, String)> {
-    let mut options: Vec<(&'static str, String)> = vec![("wid", wid.to_string())];
+    let mut options: Vec<(&'static str, String)> = Vec::new();
+    // `wid` is the handle the platform gave us: an `HWND` on Windows, and nothing
+    // on macOS any more - the film there is drawn by this program into its own GL
+    // context (`vo=libmpv`, see RENDER-MACOS.md), so mpv is given no window at
+    // all. mpv 0.41 stopped reading `wid` on macOS anyway: the paragraph
+    // documenting an `NSView*` left the manual after 0.36 and no macOS file in
+    // 0.41.0 reads the option.
+    #[cfg(not(target_os = "macos"))]
+    options.push(("wid", wid.to_string()));
+    #[cfg(target_os = "macos")]
+    let _ = wid;
     options.extend(PLATFORM_OPTIONS.iter().map(|(k, v)| (*k, (*v).to_string())));
     options.extend([
         ("audio-channels", "auto".into()),
