@@ -299,20 +299,20 @@ test('the control bar fits every width it can be given',async({page})=>{
    await page.mouse.move(4,4);
   }
   // The sweep takes tens of seconds and the fixture is forty-five seconds long,
-  // so the film can reach its end while the widths are being measured - and an
-  // ended video is a paused one, which is the state the first Space below would
-  // then *leave*, inverting both assertions. Measured on the guard's first CI
-  // run: firefox failed here with "expected true, received false", because the
-  // test was reading the fixture's length as if it were a state. Put the film
-  // back at five seconds and playing, and wait for it rather than assuming it.
-  await page.evaluate(()=>{
-   const video=document.querySelector('video');
-   video.currentTime=5;
-   video.play();
+  // so the film may have ended by the time these keys are pressed - and an ended
+  // video is a paused one. What the two Spaces below are for is that the
+  // keyboard still drives playback after seven widths of measuring, so they
+  // assert that Space *changes* the state rather than assuming which state it
+  // found. The first version assumed the film was still playing, then - after
+  // that failed in CI while passing locally - called play() on the element,
+  // which left the OSD's own state disagreeing with it and failed a different
+  // way. A 45-second fixture inside a two-minute test is not a state.
+  await page.locator('video').evaluate(v=>{
+   if(v.ended)v.currentTime=5;
   });
-  await expect.poll(()=>page.locator('video').evaluate(v=>v.paused),{timeout:10000}).toBe(false);
+  const wasPaused=await page.locator('video').evaluate(v=>v.paused);
   await page.keyboard.press('Space');
-  await expect.poll(()=>page.locator('video').evaluate(v=>v.paused)).toBe(true);
+  await expect.poll(()=>page.locator('video').evaluate(v=>v.paused),{timeout:10000}).toBe(!wasPaused);
   await page.evaluate(()=>{
    const clock=document.querySelector('.player-time');
    clock.querySelector('.player-time-now').textContent='2:59:59';
@@ -320,7 +320,7 @@ test('the control bar fits every width it can be given',async({page})=>{
   });
   fits(await measure(),`${width}px with a three-hour film's clock`);
   await page.keyboard.press('Space');
-  await expect.poll(()=>page.locator('video').evaluate(v=>v.paused)).toBe(false);
+  await expect.poll(()=>page.locator('video').evaluate(v=>v.paused)).toBe(wasPaused);
  }
  await page.keyboard.press('Escape');
 });
