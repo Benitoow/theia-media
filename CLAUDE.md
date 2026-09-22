@@ -212,15 +212,24 @@ and then opens the player, `theia server` and `theia player` start one half,
 go test ./internal/setup/ -v        # roles, plan validation, the form, the entries
 ./theia-setup.exe                   # the form
 ./theia-setup.exe --check --lang en # what this machine is, changing nothing
+./theia-setup.exe --check-update    # what the server's release page says
+./theia-setup.exe --update          # the server, through its own updater
+./theia-setup.exe --check-player    # what the player's release page says
+./theia-setup.exe --update-player   # the player's bundle; refuses while it runs
 ./theia-setup.exe --role player --install-dir <dir> --data-dir <dir> --yes
 ./theia-setup.exe --role all-in-one --from <folder|zip> --force --yes
 ./theia-setup.exe --uninstall       # programs and entries out, data kept
 ```
 
-`--force` reinstalls the programs even when they are already there, which is the
-only way to refresh the player: the server updates itself through the updater and
-the player has no such path. `--uninstall` keeps `%APPDATA%\Theia` - that is
-somebody's library and watch history - and prints where it is.
+`--force` reinstalls the programs even when they are already there. It used to be
+the only way to refresh the player - the server updates itself through the updater
+and the player had no path of its own - and since decision 143 the player has one:
+`theia-setup --check-player` asks GitHub Releases what is published, and
+`--update-player` verifies the bundle's digest, proves the player inside it runs
+and names itself, then swaps the four files with a rollback if any step fails.
+`--force` remains what it was for: an installation that is wrong on disk.
+`--uninstall` keeps `%APPDATA%\Theia` - that is somebody's library and watch
+history - and prints where it is.
 
 The terminal form is checked by driving the real Huh model with key messages,
 which is the only way to test a TUI without a terminal - and it is how the

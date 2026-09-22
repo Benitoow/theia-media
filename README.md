@@ -116,7 +116,10 @@ expensive fan-fiction.
   relay, rendezvous server or control plane.
 - **Updates with a way back.** Theia verifies release digests, waits for playback
   to stop, swaps the executable atomically and keeps the previous version for
-  rollback.
+  rollback. The player's bundle is updated by the installer the same way:
+  `theia-setup --check-player` asks, `--update-player` verifies the published
+  digest, runs the new player before replacing anything, and refuses while the
+  player is open.
 
 Theia deliberately has no live TV, DVR, music library, plugins or multi-user
 permissions. A native desktop player arrived in V3.3 - Windows only for now; a

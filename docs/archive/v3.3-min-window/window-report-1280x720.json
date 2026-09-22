@@ -1,0 +1,41 @@
+{
+  "logical": {
+    "height": 360.0,
+    "width": 640.0
+  },
+  "minimumTrackSize": {
+    "height": 720,
+    "width": 1280
+  },
+  "outer": {
+    "height": 720,
+    "width": 1280
+  },
+  "page": {
+    "bar": {
+      "bottom": 360,
+      "controls": 7,
+      "controlsVisible": 4,
+      "display": "flex",
+      "height": 128,
+      "hidden": false,
+      "left": 0,
+      "opacity": "1",
+      "top": 232,
+      "width": 640
+    },
+    "devicePixelRatio": 2,
+    "idle": "false",
+    "innerHeight": 360,
+    "innerWidth": 640
+  },
+  "physical": {
+    "height": 720,
+    "width": 1280
+  },
+  "requested": {
+    "height": 720,
+    "width": 1280
+  },
+  "scaleFactor": 2.0
+}

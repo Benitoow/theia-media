@@ -747,9 +747,11 @@ a player.
   nobody is holding. The native player's row has no shortcuts button and carries
   three things the web bar does not - the language chip, which the web
   application keeps in its settings rather than in its player, the codec badge,
-  which is a diagnostic and not a control, and the ten-second pair, which is a
-  remote's affordance: on a touch screen the scrub bar is the seek instrument.
-  That last one is arithmetic, not taste. Six 3.25rem targets are 312px of the
+  which is a diagnostic and not a control, and the way out, which the web player
+  keeps in its own top bar. **Corrected 22 September 2026:** this sentence listed
+  the ten-second pair as one of those three, and it is not - the web bar draws it
+  too (`Player.svelte`), and the 44rem rule below is one both surfaces now share.
+  The pair is arithmetic, not taste. Six 3.25rem targets are 312px of the
   342px content box a 390px window gives at the standard gutter, and no
   arrangement of a two-number clock fits beside them, so the row either drops a
   target under the 44px floor or drops a control. Dropping the skips rather than
@@ -770,6 +772,25 @@ a player.
   stays until 30rem** - the native player has nowhere else to switch it, unlike
   the web application, and at 550px there is room for it. At 390px the row is
   unchanged from the measurement above.
+
+  **The web bar drops the same pair at the same width, and nothing had ever
+  measured it below 1280 (22 September 2026).** `layout.spec.js` leaves the player
+  out on purpose, because it needs a real file, and the playback suite ran at one
+  viewport - so the bar the browser fallback draws had never been measured at a
+  phone width at all, while the native one had. Measured with the clock wearing a
+  three-hour film's numbers, which is the case a 45-second fixture cannot produce
+  and the strings were therefore injected into the live DOM: at 320px the row left
+  the clock 53px for the 100px it needed, so its text left its own box and drew
+  over fullscreen, and at 550px with the volume slider expanded - what happens when
+  the pointer crosses it - the clock had 98px for the same 100px. Both were real
+  and both are gone: below 44rem the web bar drops the ten-second pair, the same
+  control the native bar drops at the same width and for the same reason, and the
+  clock keeps both its numbers. With the pair gone the same 320px window gives the
+  clock 157px. The playback suite now sweeps 320 to 768 with the bar at rest, with
+  the volume expanded and with the three-hour clock, because a fault that appears
+  at one width and one film length is what this section keeps finding.
+  Everything that stays keeps its 3.25rem target: what changed is which controls
+  are in the row, never their size.
 - **Amended 15 September 2026 (decision D1), on the paragraph above.**
   "The native player has nowhere else to switch it" was true when it was written
   and is no longer the whole truth. With nothing loaded the control bar is **not
@@ -785,9 +806,12 @@ a player.
   time is the other two subtracted, and it was printed in `--faint`.
 - **Amended 16 September 2026 (decision 124), then simplified by decision 127:
   below 30rem it shows one.** The
-  window's declared minimum of `minWidth: 640` is **320x180 CSS pixels** at this
-  machine's 200% scaling, and there the row asks for **314px of a 272px content
-  box** in the former layout - play 52, clock 106, tracks 52, fullscreen 52,
+  window's declared minimum of `minWidth: 640` is in **logical** pixels, so it is
+  **640x360 CSS** - 1280x720 real at this machine's 200% scaling - and 320x180 CSS
+  is a size *below* it, which a program reaches by asking (Tauri's own `set_size`,
+  or moving the OS window) and a viewer cannot reach by dragging an edge. At that
+  smaller size the row asks for **314px of a 272px content box** in the former
+  layout - play 52, clock 106, tracks 52, fullscreen 52,
   close 52, with every
   control already at the 3.25rem floor. Section 6b forbids wrapping the row and
   section 9 forbids dropping a target under 44px, so what gives is information:

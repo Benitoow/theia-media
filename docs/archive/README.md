@@ -9,6 +9,14 @@ documents courants indexés dans [`../README.md`](../README.md).
 Les plans de modernisation, mesures A/B et validations sur médias réels de la
 3.2 sont regroupés dans [`v3.2/`](v3.2/README.md).
 
+## Cycle V3.3
+
+Les campagnes de la 3.3 sont ici : [`v3.3/`](v3.3/) tient la phase 0 et ses
+preuves (dont la bibliothèque réelle et les mesures de l'interface), et
+[`v3.3-min-window/`](v3.3-min-window/) la fenêtre du lecteur à sa taille
+minimale - les photographies, et les rapports JSON que le lecteur a écrits
+lui-même. Terminées elles aussi : l'état courant est [`../v3.3.md`](../v3.3.md).
+
 ## Cycle V2
 
 These five documents ran the V2 cycle, from the roadmap interview in July 2026 to
