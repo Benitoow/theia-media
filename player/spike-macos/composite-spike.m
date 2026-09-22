@@ -211,7 +211,10 @@ int main(void)
                 [timer invalidate];
                 printf("\n--- verdict ---\n");
                 printf("GL swaps in ten seconds: %ld (the surface kept drawing: %s)\n", gSwaps,
-                       gSwaps > 100 ? "yes" : "NO - look at the GL side first");
+                       gSwaps > 0 ? "yes" : "NO - the surface never drew");
+                printf("Twenty swaps is two a second: this spike paints from a half-second timer\n"
+                       "and a virtualised runner has no GPU worth the name, so the count is not a\n"
+                       "performance claim. What matters is that it is not zero.\n");
                 printf("Look at the window: is the title and the bar drawn OVER the moving colour?\n");
                 printf("Click the picture: does the counter in the top right increase, with the\n"
                        "coordinates of the click? That is the OSD receiving a press through its\n"

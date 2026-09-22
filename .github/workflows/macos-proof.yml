@@ -126,6 +126,24 @@ jobs:
           echo "composite-spike exit: $?" | tee -a out/composite-spike.log
           tail -30 out/composite-spike.log
 
+      # The three Go programs, cross-compiled for the machine the verifier runs
+      # on. They are built for darwin/arm64 in the release matrix too; here they
+      # are what lets the verifier's server, installer and entry checks actually
+      # run instead of reporting five absences.
+      - name: Build the macOS Go programs
+        if: always()
+        run: |
+          set -o pipefail
+          export GOOS=darwin GOARCH=arm64 CGO_ENABLED=0
+          mkdir -p dist
+          go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=proof" \
+            -o dist/theia-server-darwin-arm64 ./cmd/theia-server
+          go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=proof" \
+            -o dist/theia-setup-darwin-arm64 ./cmd/theia-setup
+          go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=proof" \
+            -o dist/theia-launcher-darwin-arm64 ./cmd/theia
+          ls -l dist
+
       # And the product itself: the bundle builds, the app carries the OSD it
       # was built with, the signature verifies, and the engine is the pinned one.
       - name: Build the player bundle

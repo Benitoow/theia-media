@@ -5846,11 +5846,23 @@ the Mac run in `scripts/verify-macos.sh` passes; the guard that refuses any name
 outside the contract now knows fourteen names, and the pipeline builds all of them
 on a dispatch without publishing anything (decision 140).
 
-**Nothing here is verified yet.** The engine pin is measured, the code is written,
-and the only claim this entry makes about macOS is that the work exists and is
-unverified - which is what decision 117's validation boundary requires. The
-verification record in [`v3.3.md`](v3.3.md) carries the state, and it changes when
-the Mac says so.
+**What has been verified since, and what has not.** On 22 September 2026 a
+GitHub-hosted `macos-14` runner - real Apple Silicon, and the substitute for a Mac
+this project does not have - answered the two questions this entry was written
+around, and the evidence is a photograph each: `mpv_render_context_create`
+succeeded with `MPV_RENDER_API_TYPE_OPENGL` and advanced control, the host drew
+frames into its own `NSOpenGLView` and **the film appeared in a window it owns**;
+and a transparent page's control bar was photographed **over** that GL surface in
+the same window. The engine pin therefore holds and no self-built engine is
+needed. What the runner could not answer is equally recorded: VideoToolbox was
+accepted and then refused by the virtualised machine (`Failed setup for format
+videotoolbox_vld: hwaccel initialisation returned error`), so hardware decoding
+still needs a Mac, as does a real audio endpoint. The bundle was not built on the
+first attempts - `tauri::generate_context!` wanted `icons/icon.png`, which the
+repository did not have, and the two shell scripts had no executable bit in git -
+and both are fixed. **Nothing about macOS is claimed as a finished product yet**:
+the row in [`v3.3.md`](v3.3.md) carries the state, and it changes when the bundle
+builds and a Mac plays a film.
 
 ## 8. Logistics
 **Status:** living · **Topics:** process

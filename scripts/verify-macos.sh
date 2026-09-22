@@ -115,7 +115,11 @@ fi
 
 echo
 echo "== The player over a real film =="
-if [ -n "$media" ] && [ -x "$app/Contents/MacOS/theia-player" ]; then
+if [ ! -x "$app/Contents/MacOS/theia-player" ]; then
+	bad "no player at $app, so playback was not checked at all (build it with scripts/build-player-macos.sh -Release -Bundle)"
+elif [ -z "$media" ]; then
+	human "no -Media given: pass a film to check playback, VideoToolbox and the OSD over the picture"
+else
 	report="$work/window-report.json"
 	"$app/Contents/MacOS/theia-player" --media "$media" --mute --diagnostics \
 		--window 1280x720 --window-report "$report" >"$work/diagnostics.txt" 2>&1 &
@@ -158,8 +162,6 @@ if [ -n "$media" ] && [ -x "$app/Contents/MacOS/theia-player" ]; then
 	else
 		human "no window report was written; check the OSD by eye"
 	fi
-else
-	human "no -Media given: pass a film to check playback, VideoToolbox and the OSD over the picture"
 fi
 
 echo
