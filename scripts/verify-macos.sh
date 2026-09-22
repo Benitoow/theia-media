@@ -85,7 +85,12 @@ human "Gatekeeper: a downloaded copy must be refused once (unsigned, not notaris
 
 echo
 echo "== The server, on a throwaway data directory =="
+# Three places, because three things produce them: a release archive, the proof
+# workflow, and a working tree. The first version of this script only knew the
+# first two and reported "no darwin server binary" about a directory that held
+# one.
 server="$root/theia-server-darwin-arm64"
+[ -x "$server" ] || server="$root/dist/theia-server-darwin-arm64"
 [ -x "$server" ] || server="$root/dist/theia-3.3.4-darwin-arm64/theia-server"
 if [ -x "$server" ]; then
 	data="$work/data"
@@ -167,6 +172,7 @@ fi
 echo
 echo "== The installer, into a throwaway home =="
 setup="$root/dist/theia-3.3.4-darwin-arm64/theia-setup"
+[ -x "$setup" ] || setup="$root/dist/theia-setup-darwin-arm64"
 [ -x "$setup" ] || setup="$root/theia-setup"
 if [ -x "$setup" ]; then
 	fake_home="$work/home"

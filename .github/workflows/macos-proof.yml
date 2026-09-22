@@ -155,6 +155,20 @@ jobs:
           echo "build-player-macos exit: $?" | tee -a out/bundle.log
           tail -30 out/bundle.log
 
+      # The one-file download a person gets, assembled rather than built - and
+      # the first real run of the darwin branch of build-release.ps1. PowerShell
+      # is on the runner; the archive needs the player bundle, which the step
+      # above has just made.
+      - name: Assemble the offline archive
+        if: always()
+        run: |
+          set +e
+          pwsh -NoProfile -File ./build-release.ps1 -Version proof -Target darwin-arm64 \
+            >out/archive.log 2>&1
+          echo "build-release exit: $?" | tee -a out/archive.log
+          tail -20 out/archive.log
+          ls -la dist/*.zip 2>/dev/null | tail -3
+
       # The verifier the Mac would run. Its player and OSD steps need a film and
       # an eye; its server, installer and signature steps do not.
       - name: Run the macOS verifier
