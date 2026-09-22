@@ -9,6 +9,13 @@ on:
   # own timing is measured.
   workflow_dispatch:
 
+# The version every job names its artifacts after. On a pushed tag it is the
+# tag; on a dispatch - which publishes nothing - it is 0.0.0, so the artifacts
+# and the surface guard agree and a dry run proves the pipeline without claiming
+# a release number.
+env:
+  THEIA_VERSION: ${{ github.event_name == 'push' && github.ref_name || '0.0.0' }}
+
 permissions:
   contents: write
 
@@ -48,7 +55,7 @@ jobs:
       - name: Build the endurance candidate
         env:
           CGO_ENABLED: '0'
-        run: go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=${{ github.ref_name }}-release-gate" -o theia-release-gate.exe ./cmd/theia-server
+        run: go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=${{ env.THEIA_VERSION }}-release-gate" -o theia-release-gate.exe ./cmd/theia-server
 
       - name: Exercise 100 cancellations and one complete stream
         run: go run ./scripts/verify-endurance -theia .\theia-release-gate.exe -cycles 100 -long-minutes 30 -port 8395
@@ -95,7 +102,7 @@ jobs:
           CGO_ENABLED: '0'
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: |
-          version="${GITHUB_REF_NAME}"
+          version="${THEIA_VERSION}"
           mkdir -p dist
           asset="theia-server-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}"
           go build -buildvcs=false -trimpath \
@@ -147,8 +154,8 @@ jobs:
           reported=$(./dist/theia-server-linux-amd64 -version)
           echo "reported: $reported"
           case "$reported" in
-            *"${GITHUB_REF_NAME#v}"*) echo "version matches the tag" ;;
-            *) echo "::error::binary reports '$reported', expected ${GITHUB_REF_NAME}" ; exit 1 ;;
+            *"${THEIA_VERSION#v}"*) echo "version matches the tag" ;;
+            *) echo "::error::binary reports '$reported', expected ${THEIA_VERSION}" ; exit 1 ;;
           esac
 
       # A Windows binary cannot be started on this runner, so what it carries is
@@ -223,7 +230,7 @@ jobs:
       - name: Build the player and its bundle
         env:
           CGO_ENABLED: '0'
-        run: .\build-player.ps1 -Release -Bundle -Version ${{ github.ref_name }}
+        run: .\build-player.ps1 -Release -Bundle -Version ${{ env.THEIA_VERSION }}
 
       # A bundle without the engine plays nothing; one without the licence
       # breaches the LGPL that allows us to ship the engine at all. Both are
@@ -257,14 +264,14 @@ jobs:
           # The same secret the build job injects into the published server.
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: |
-          $version = '${{ github.ref_name }}'.TrimStart('v')
+          $version = '${{ env.THEIA_VERSION }}'.TrimStart('v')
           .\build-release.ps1 -Version $version -SkipPlayer
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Check the archive holds everything
         shell: pwsh
         run: |
-          $version = '${{ github.ref_name }}'.TrimStart('v')
+          $version = '${{ env.THEIA_VERSION }}'.TrimStart('v')
           $dir = "dist\theia-$version-windows-amd64"
           foreach ($required in 'theia-setup.exe', 'theia-server.exe', 'theia-player.exe', 'theia.exe',
                                 'libmpv-2.dll', 'LICENSE-libmpv.txt', 'NOTICE.md', 'START-HERE.txt') {
@@ -306,7 +313,7 @@ jobs:
       - name: Check the archived server serves the interface and carries the key
         shell: pwsh
         run: |
-          $version = '${{ github.ref_name }}'.TrimStart('v')
+          $version = '${{ env.THEIA_VERSION }}'.TrimStart('v')
           $dir = (Resolve-Path "dist\theia-$version-windows-amd64").Path
           $port = 8397
           $dataDir = Join-Path $env:TEMP 'theia-archive-server-check'
@@ -390,8 +397,8 @@ jobs:
           if (-not $build) { Write-Error 'the player never printed its build version'; Get-Content $log; exit 1 }
           $reported = $build.Line -replace '^theia-player: version ', ''
           Write-Host "build:         $reported"
-          if ($reported -ne '${{ github.ref_name }}') {
-            Write-Error "the player reports build '$reported', expected ${{ github.ref_name }}"
+          if ($reported -ne '${{ env.THEIA_VERSION }}') {
+            Write-Error "the player reports build '$reported', expected ${{ env.THEIA_VERSION }}"
             exit 1
           }
 
@@ -435,7 +442,7 @@ jobs:
       # Contents/Frameworks, then the pinned engine by digest, then the bundle,
       # an ad-hoc signature and the zip.
       - name: Build the player and its app bundle
-        run: ./scripts/build-player-macos.sh -Release -Bundle -Version ${{ github.ref_name }}
+        run: ./scripts/build-player-macos.sh -Release -Bundle -Version ${{ env.THEIA_VERSION }}
 
       # A bundle without its engine plays nothing, and one without the licence
       # breaches the LGPL that allows us to ship the engine at all. Both are
@@ -480,7 +487,7 @@ jobs:
           echo "$pin" | grep -qE '"loaded": *true' || { echo 'the player loaded no engine'; exit 1; }
           echo "$pin" | grep -q '028e5c8aaf035cd6d8db0e6d02061c81655e4ebf6dfbd54e2c7b917c02c60e3e' ||
             { echo 'the player reports an unexpected engine digest'; exit 1; }
-          grep -m1 '^theia-player: version ' "$log" | grep -qF '${{ github.ref_name }}' ||
+          grep -m1 '^theia-player: version ' "$log" | grep -qF '${{ env.THEIA_VERSION }}' ||
             { echo 'the player does not report the tagged build'; cat "$log"; exit 1; }
           echo 'the bundle names its engine and its build'
 
@@ -520,11 +527,11 @@ jobs:
           ditto -x -k dist/theia-player-darwin-arm64.zip dist/theia-player-darwin-arm64
 
       - name: Assemble the archive
-        run: pwsh ./build-release.ps1 -Version ${{ github.ref_name }} -Target darwin-arm64
+        run: pwsh ./build-release.ps1 -Version ${{ env.THEIA_VERSION }} -Target darwin-arm64
 
       - name: Check the archive holds everything
         run: |
-          version='${{ github.ref_name }}'
+          version='${{ env.THEIA_VERSION }}'
           version="${version#v}"
           dir="dist/theia-${version}-darwin-arm64"
           for required in \
@@ -547,13 +554,14 @@ jobs:
           path: dist/theia-*-darwin-arm64.zip
           retention-days: 1
 
-  publish:
-    name: Publish the release
-    # Every gate, explicitly: the jobs no longer chain through each other, so
-    # this is the one place that says what a release requires.
-    needs: [validate, release-gates, build, player, player-macos, package-macos]
-    # A dispatch measures the pipeline; only a pushed tag publishes.
-    if: github.event_name == 'push'
+  # The exact public release surface, checked on every run of this file - a
+  # dispatch included. It used to live inside `publish`, which a dispatch skips,
+  # so the one guard that says whether the fourteen names are right could only
+  # ever be tried by publishing something. What a dry run is for is exactly this.
+  surface:
+    name: Check the exact public release surface
+    needs: [build, player, player-macos, package-macos]
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -567,8 +575,25 @@ jobs:
       - name: Check the exact public release surface
         shell: pwsh
         run: |
-          $version = '${{ github.ref_name }}'.TrimStart('v')
+          $version = '${{ env.THEIA_VERSION }}'.TrimStart('v')
           ./scripts/check-release-assets.ps1 -Directory staging -Version $version
+
+  publish:
+    name: Publish the release
+    # Every gate, explicitly: the jobs no longer chain through each other, so
+    # this is the one place that says what a release requires.
+    needs: [validate, release-gates, build, player, player-macos, package-macos, surface]
+    # A dispatch measures the pipeline; only a pushed tag publishes.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: staging
+          pattern: theia-*
+          merge-multiple: true
 
       # No separate checksum file: GitHub reports a sha256 digest for every
       # uploaded asset through its API, and that is what the updater verifies
