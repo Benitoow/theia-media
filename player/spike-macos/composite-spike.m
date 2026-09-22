@@ -198,12 +198,14 @@ int main(void)
         [NSApp activateIgnoringOtherApps:YES];
         step("window created; on screen: %s", [compositor.window isVisible] ? "yes" : "NO (no window session)");
 
-        __block int elapsed = 0;
+        __block double elapsed = 0;
+        __block int ticks = 0;
         [NSTimer scheduledTimerWithTimeInterval:0.5 repeats:YES block:^(NSTimer *timer) {
             [compositor.surface setNeedsDisplay:YES];
             elapsed += 0.5;
-            if (elapsed % 2 == 0) {
-                NSLog(@"GL swaps: %ld", gSwaps);
+            ticks += 1;
+            if (ticks % 4 == 0) {
+                NSLog(@"GL swaps: %ld (elapsed %.1fs)", gSwaps, elapsed);
             }
             if (elapsed >= 10) {
                 [timer invalidate];

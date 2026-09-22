@@ -248,7 +248,13 @@ int main(int argc, char *argv[])
         // A timer rather than a display link: the spike is about whether frames
         // arrive, not about pacing. mpv_render_context_update says when there is
         // one, and it is the documented way to ask.
-        __block int elapsed = 0;
+        // A double, not an int: the first version counted in halves of a second
+        // into an integer, so it stayed at zero for ever, the ten-second exit
+        // never came, and the watchdog ended the run instead. The frames were
+        // real and the verdict was a false alarm - which is the kind of thing a
+        // spike exists to get wrong once, on a machine, rather than in the
+        // product.
+        __block double elapsed = 0;
         NSTimer *tick = [NSTimer scheduledTimerWithTimeInterval:0.5 repeats:YES block:^(NSTimer *timer) {
             (void)timer;
             uint64_t flags = mpv_render_context_update(gRender);
@@ -256,9 +262,7 @@ int main(int argc, char *argv[])
                 [view setNeedsDisplay:YES];
             }
             elapsed += 0.5;
-            if (elapsed % 1 == 0) {
-                report(gMpv, elapsed);
-            }
+            report(gMpv, elapsed);
             if (elapsed >= gSeconds) {
                 [timer invalidate];
                 printf("\n--- verdict ---\n");

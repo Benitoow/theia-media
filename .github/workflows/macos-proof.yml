@@ -99,11 +99,18 @@ jobs:
         if: always()
         run: |
           set +e
+          # In the background, so the photograph is taken while the film is on
+          # screen. The first run photographed a desktop: the picture was taken
+          # after the process had gone, which is a measurement fault of exactly
+          # the kind this campaign keeps finding.
           DYLD_LIBRARY_PATH=player/vendor-darwin out/render-spike out/fixture.mp4 10 \
-            >out/render-spike.log 2>&1
-          echo "render-spike exit: $?" | tee -a out/render-spike.log
+            >out/render-spike.log 2>&1 &
+          spike=$!
+          sleep 6
           screencapture -x out/render-spike-screen.png 2>>out/render-spike.log
-          tail -25 out/render-spike.log
+          wait $spike
+          echo "render-spike exit: $?" | tee -a out/render-spike.log
+          tail -30 out/render-spike.log
 
       # The second: does a transparent WKWebView composite above an NSOpenGLView,
       # and does the page still receive clicks through its transparent areas?
@@ -111,10 +118,13 @@ jobs:
         if: always()
         run: |
           set +e
-          out/composite-spike >out/composite-spike.log 2>&1
-          echo "composite-spike exit: $?" | tee -a out/composite-spike.log
+          out/composite-spike >out/composite-spike.log 2>&1 &
+          spike=$!
+          sleep 5
           screencapture -x out/composite-spike-screen.png 2>>out/composite-spike.log
-          tail -25 out/composite-spike.log
+          wait $spike
+          echo "composite-spike exit: $?" | tee -a out/composite-spike.log
+          tail -30 out/composite-spike.log
 
       # And the product itself: the bundle builds, the app carries the OSD it
       # was built with, the signature verifies, and the engine is the pinned one.

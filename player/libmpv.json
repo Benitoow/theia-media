@@ -103,7 +103,7 @@
 			"licence_file": "LICENSE-libmpv.txt",
 			"source_offer": "https://github.com/178meorg/libmpv-macos-build",
 			"build": {
-				"mpv": "v0.41.4",
+				"mpv": "v0.41.0-dev-gd97d68da9",
 				"ffmpeg": "8.1.2",
 				"libplacebo": "7.360.1",
 				"libass": "0.17.5",
@@ -119,8 +119,10 @@
 				"the archive's SHA-256 matches the one the release page advertises, measured on 22 September 2026 before anything else was decided",
 				"the archive holds 19 dylibs and 11 symlinks, and every load command resolves to a sibling (@rpath/lib*.dylib) or to a system framework",
 				"the rpaths are @loader_path, @loader_path/../lib and @loader_path/../Frameworks - no build-machine path survives, which is what lets the libraries live in Theia.app/Contents/Frameworks",
-				"the binary contains gpu-next and libplacebo, so the renderer on macOS is the same one Windows uses",
-				"what the Mac still has to confirm: Metal rendering, VideoToolbox decoding, CoreAudio output, and that no GPL-only component is linked - see docs/v3.3.md"
+				"**on an Apple Silicon runner, 22 September 2026**: the fetch verified the archive and all 19 libraries by digest, and `mpv_render_context_create` succeeded with MPV_RENDER_API_TYPE_OPENGL and advanced control - the render path this pin was chosen for works",
+				"**and the film played**: 36 frames rendered by the host into its own NSOpenGLView, position advancing 0.00 to 9.29 s, `vo=libmpv`, `ao=coreaudio`, on a runner whose window session reported itself visible",
+				"the engine's own version string is `mpv v0.41.0-dev-gd97d68da9`, read from `mpv-version` on the runner - the release is *tagged* v0.41.4, and the tag is not the version. The same generation as the Windows pin (v0.41.0-1049), which is why the two platforms can be compared at all",
+				"what the runner could not answer: `hwdec=videotoolbox` was accepted and then refused by the machine - `[ffmpeg/video] h264: Failed setup for format videotoolbox_vld: hwaccel initialisation returned error`, which is what a virtualised runner without GPU-backed VideoToolbox does - and the film fell back to software decoding and played. Hardware decoding therefore needs a Mac, and the OSD over the film needs eyes"
 			]
 		}
 	}
