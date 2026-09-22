@@ -489,18 +489,31 @@ static ENGINE_VERSION: std::sync::OnceLock<Option<String>> = std::sync::OnceLock
 
 /// The manifest's key for this machine.
 ///
-/// Rust says `x86_64` where a release asset says `amd64`, and the manifest is
-/// keyed the way assets are named because it describes an asset. Left unmapped,
-/// the lookup found nothing and the diagnostics printed a page of nulls - which
-/// is how the first run of this reported itself: the pin was there, correct, and
-/// silently not the one being asked about.
+/// Rust says `x86_64` where a release asset says `amd64`, and `macos` where it
+/// says `darwin`; the manifest is keyed the way assets are named because it
+/// describes an asset. Left unmapped, the lookup found nothing and the
+/// diagnostics printed a page of nulls - which is how the first run of this
+/// reported itself, for the architecture, and how the first run of the macOS
+/// release job reported it again on 22 September 2026, for the operating
+/// system: the pin was there, correct, under `darwin/arm64`, and the player
+/// asked for `macos/arm64`.
 fn manifest_platform() -> String {
-    let arch = match std::env::consts::ARCH {
+    manifest_key(std::env::consts::OS, std::env::consts::ARCH)
+}
+
+/// The rule itself, with the platform passed in, because the bug above is a
+/// mapping and a mapping is testable without the machine that has the problem.
+fn manifest_key(os: &str, arch: &str) -> String {
+    let os = match os {
+        "macos" => "darwin",
+        other => other,
+    };
+    let arch = match arch {
         "x86_64" => "amd64",
         "aarch64" => "arm64",
         other => other,
     };
-    format!("{}/{}", std::env::consts::OS, arch)
+    format!("{os}/{arch}")
 }
 
 #[tauri::command]
@@ -2077,7 +2090,35 @@ fn supervise_audio(app: &tauri::WebviewWindow) {
 
 #[cfg(test)]
 mod player_window_tests {
-    use super::fitted_window_size;
+    use super::{fitted_window_size, manifest_key};
+
+    #[test]
+    fn the_manifest_is_keyed_the_way_assets_are_named() {
+        // The three keys player/libmpv.json actually holds, asked the way Rust
+        // would ask for them on each machine. The macOS row is the one that was
+        // wrong: `std::env::consts::OS` says "macos" and the manifest says
+        // "darwin", and the diagnostics printed a page of nulls because of it.
+        assert_eq!(manifest_key("macos", "aarch64"), "darwin/arm64");
+        assert_eq!(manifest_key("windows", "x86_64"), "windows/amd64");
+        assert_eq!(manifest_key("linux", "aarch64"), "linux/arm64");
+    }
+
+    #[test]
+    fn every_key_this_machine_could_produce_is_in_the_manifest() {
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("../../libmpv.json")).expect("the manifest parses");
+        let platforms = manifest
+            .get("platforms")
+            .and_then(|value| value.as_object())
+            .expect("the manifest has platforms");
+        for (os, arch) in [("macos", "aarch64"), ("windows", "x86_64")] {
+            let key = manifest_key(os, arch);
+            assert!(
+                platforms.contains_key(&key),
+                "the manifest has no entry for {key}, so this machine's diagnostics would print nulls"
+            );
+        }
+    }
 
     #[test]
     fn high_dpi_small_logical_monitor_stays_on_screen() {

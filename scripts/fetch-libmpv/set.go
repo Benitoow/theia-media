@@ -120,8 +120,8 @@ func verifySet(version platformVersion, dir string) error {
 			return fmt.Errorf("%s is not %s", name, target)
 		}
 	}
-	if version.EngineLibrary != "" && !fileExists(filepath.Join(dir, version.EngineLibrary)) {
-		return fmt.Errorf("%s is missing: that is the library the player loads", version.EngineLibrary)
+	if version.Library != "" && !fileExists(filepath.Join(dir, version.Library)) {
+		return fmt.Errorf("%s is missing: that is the library the player loads", version.Library)
 	}
 	return nil
 }

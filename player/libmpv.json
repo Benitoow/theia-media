@@ -58,9 +58,9 @@
 			"archive_sha256": "584210a193e8925a7a2fcb6bb89bbcaa450937caf9601c1304a8d34698da3765",
 			"profile": "enhanced-lgpl",
 			"layout": "lib/*.dylib beside each other, every dependency's licence text in licenses/, headers in include/mpv/",
-			"engine_library": "libmpv.2.dylib",
-			"engine_library_sha256": "028e5c8aaf035cd6d8db0e6d02061c81655e4ebf6dfbd54e2c7b917c02c60e3e",
-			"engine_library_bytes": 3846352,
+			"library": "libmpv.2.dylib",
+			"library_sha256": "028e5c8aaf035cd6d8db0e6d02061c81655e4ebf6dfbd54e2c7b917c02c60e3e",
+			"library_bytes": 3846352,
 			"runtime_libraries": {
 				"libarchive.13.8.2.dylib": "2fab2314d1ecacb9b1dabefb2218d6789cb7abfcb20ad39791a95165f34f91c0",
 				"libass.9.dylib": "6ae5c5c73a71acbd00bd3d7b430174dffd991cc02574bdc60d7ae05520eb0d50",

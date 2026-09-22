@@ -59,10 +59,13 @@ type platformVersion struct {
 
 	// A macOS engine is a set of dylibs rather than one file: mpv loads
 	// libavcodec, libplacebo, libass and their own dependencies from beside
-	// itself. The manifest names every one with its digest, because "the archive
-	// verified" says nothing about what came out of it - and the interesting
-	// failure is an archive that verifies and an extraction that did not.
-	EngineLibrary    string            `json:"engine_library"`
+	// itself. `Library` is the one the player loads - the same field, and the
+	// same meaning, as on Windows - and the manifest names every other member
+	// with its digest too, because "the archive verified" says nothing about
+	// what came out of it, and the interesting failure is an archive that
+	// verifies and an extraction that did not. The set used to call the engine
+	// `engine_library`, which meant the player's own diagnostics - which read
+	// `library` - printed nulls on a Mac.
 	RuntimeLibraries map[string]string `json:"runtime_libraries"`
 	RuntimeSymlinks  map[string]string `json:"runtime_symlinks"`
 	LicenceDir       string            `json:"licence_dir"`
@@ -107,7 +110,7 @@ func main() {
 		fmt.Printf("asset    %s\n", version.Asset)
 		fmt.Printf("archive  sha256:%s\n", version.ArchiveSHA256)
 		if version.isSet() {
-			fmt.Printf("library  %s sha256:%s\n", version.EngineLibrary, version.RuntimeLibraries[version.EngineLibrary])
+			fmt.Printf("library  %s sha256:%s\n", version.Library, version.RuntimeLibraries[version.Library])
 			fmt.Printf("         and the %d libraries it loads, each pinned by digest\n", len(version.RuntimeLibraries)-1)
 		} else {
 			fmt.Printf("library  %s sha256:%s\n", version.Library, version.LibrarySHA256)
@@ -142,8 +145,8 @@ func main() {
 		if !*keepArchive {
 			_ = os.Remove(archivePath)
 		}
-		engine, _, _ := digestOf(filepath.Join(*outDir, version.EngineLibrary))
-		fmt.Printf("fetched %s and the %d libraries it loads\n", version.EngineLibrary, len(version.RuntimeLibraries)-1)
+		engine, _, _ := digestOf(filepath.Join(*outDir, version.Library))
+		fmt.Printf("fetched %s and the %d libraries it loads\n", version.Library, len(version.RuntimeLibraries)-1)
 		fmt.Printf("  engine sha256:%s\n", engine)
 		fmt.Printf("licence %s: every dependency's text is in %s/\n", version.Licence, version.LicenceDir)
 		return
