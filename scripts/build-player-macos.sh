@@ -161,14 +161,22 @@ fi
 
 # The OSD is embedded at compile time, and a build that used the previous dist
 # looks perfect and carries the interface before the change. The Windows script
-# checks the same thing for the same reason.
-asset="$(sed -n 's/.*\/assets\/\([A-Za-z0-9._-]*\.js\).*/\1/p' "$root/player/ui/dist/index.html" | head -1)"
-if [ -n "$asset" ]; then
-	if ! strings "$app/Contents/MacOS/theia-player" | grep -q "$asset"; then
-		echo "the executable does not carry $asset: it embeds an OSD that is not the one just built" >&2
+# greps the executable for the hashed asset name it just built, and that check
+# does **not** transfer: measured on the proof runner, a macOS bundle whose OSD
+# was the one just built - the engine verified by digest, the signature verified
+# by codesign - does not carry the name in plain text, because Tauri's asset
+# blob is compressed on this platform. So the guard is the one this project
+# already uses for the same question in web/tests/serve-playback.mjs: the built
+# interface must not be older than the sources it was built from.
+sources="$root/player/ui/src"
+built="$root/player/ui/dist/index.html"
+if [ -d "$sources" ] && [ -f "$built" ]; then
+	newest=$(find "$sources" -type f -newer "$built" | head -1)
+	if [ -n "$newest" ]; then
+		echo "player/ui/src is newer than player/ui/dist ($newest): this bundle embeds an OSD from before that edit" >&2
 		exit 1
 	fi
-	echo "    the executable carries $asset"
+	echo "    the embedded OSD is not older than player/ui/src"
 fi
 
 echo "==> Packing the bundle"

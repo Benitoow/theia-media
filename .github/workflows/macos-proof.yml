@@ -169,6 +169,23 @@ jobs:
           tail -20 out/archive.log
           ls -la dist/*.zip 2>/dev/null | tail -3
 
+      # The installer installs the programs it finds beside itself, and refuses
+      # when one is missing rather than shipping half a product. In a release
+      # the player arrives as the published bundle; here it is one directory
+      # away, so it is staged flat for the verifier to find.
+      - name: Stage the player beside the other programs
+        if: always()
+        run: |
+          set +e
+          if [ -d dist/theia-player-darwin-arm64/Theia.app ]; then
+            rm -rf dist/Theia.app
+            cp -R dist/theia-player-darwin-arm64/Theia.app dist/Theia.app
+            echo "staged dist/Theia.app"
+          else
+            echo "no player bundle to stage"
+          fi
+          ls -d dist/Theia.app dist/theia-* 2>/dev/null
+
       # The verifier the Mac would run. Its player and OSD steps need a film and
       # an eye; its server, installer and signature steps do not.
       - name: Run the macOS verifier
@@ -179,6 +196,12 @@ jobs:
             -App dist/theia-player-darwin-arm64/Theia.app >out/verify.log 2>&1
           echo "verify-macos exit: $?" | tee -a out/verify.log
           cat out/verify.log
+          # The verifier's own working files: the installer's log and the window
+          # report live there, and a failure that cannot be read cannot be fixed.
+          if [ -n "$(find /tmp -maxdepth 1 -name 'theia-verify.*' 2>/dev/null)" ]; then
+            cp -R /tmp/theia-verify.*/ out/verifier-work/ 2>/dev/null || true
+            find out/verifier-work -type f | head -20
+          fi
 
       # A summary a person can read without opening eight logs.
       - name: Summarise
