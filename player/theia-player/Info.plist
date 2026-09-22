@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The app bundle's own description of itself.
+
+  macOS needs this file for three things Theia cannot get any other way: a
+  bundle identity (so the window has a Dock icon, a menu bar and a name), the
+  version a person reads in Get Info, and the sentence the system shows when the
+  player asks for the local network - which it does, because finding a server on
+  the LAN is mDNS.
+
+  @VERSION@ is replaced by scripts/build-player-macos.sh with the version the
+  release was tagged with, the same value build.rs compiles into the binary, so
+  `theia-player -version` and Get Info cannot disagree.
+
+  No icon yet: an icon is an .icns built from the maintainer's licence-checked
+  artwork, and shipping a generated placeholder would be a second visual identity
+  for the product rather than a smaller version of the first one.
+-->
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>Theia</string>
+	<key>CFBundleDisplayName</key>
+	<string>Theia</string>
+	<key>CFBundleIdentifier</key>
+	<string>media.theia.player</string>
+	<key>CFBundleExecutable</key>
+	<string>theia-player</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>@VERSION@</string>
+	<key>CFBundleVersion</key>
+	<string>@VERSION@</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>11.0</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.video</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Theia looks for your own server on this network.</string>
+</dict>
+</plist>

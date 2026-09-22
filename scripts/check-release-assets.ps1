@@ -16,9 +16,21 @@ if ($directories.Count -gt 0) {
     throw "release staging contains directories: $names"
 }
 
+# The whole product is published for Windows x64 and, from V3.3.4, for macOS
+# Apple Silicon: those platforms have a player and an installer, so they publish
+# an offline archive, a player bundle, a launcher and a setup program beside the
+# server. The other four targets publish the server alone, because a platform
+# nobody has run the product on gets a component and not a product.
+#
+# macOS Intel is the case that looks like an omission and is not: it has a
+# published server, and no player, launcher, installer or archive, because there
+# is no pinned engine and no verified build for it.
 $expected = @(
+    "theia-$Version-darwin-arm64.zip"
     "theia-$Version-windows-amd64.zip"
+    'theia-launcher-darwin-arm64'
     'theia-launcher-windows-amd64.exe'
+    'theia-player-darwin-arm64.zip'
     'theia-player-windows-amd64.zip'
     'theia-server-darwin-amd64'
     'theia-server-darwin-arm64'
@@ -26,6 +38,7 @@ $expected = @(
     'theia-server-linux-arm64'
     'theia-server-windows-amd64.exe'
     'theia-server-windows-arm64.exe'
+    'theia-setup-darwin-arm64'
     'theia-setup-windows-amd64.exe'
 ) | Sort-Object
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -244,8 +245,13 @@ type Status struct {
 	// InstalledAt is when this machine's role was last declared. It answers the
 	// first question of a support conversation - "when did you last run the
 	// installer?" - and until now it was recorded and never read.
-	InstalledAt *time.Time        `json:"installed_at,omitempty"`
-	Update      *UpdateStatusView `json:"update,omitempty"`
+	InstalledAt *time.Time `json:"installed_at,omitempty"`
+	// PathNotice is the line somebody has to add when the command is installed
+	// and the directory holding it is not on PATH. It is nil on Windows, which
+	// adds the directory itself, and nil when there is nothing to say. It is what
+	// makes `--check` answer the question the installation could not act on.
+	PathNotice *PathNotice       `json:"path_notice,omitempty"`
+	Update     *UpdateStatusView `json:"update,omitempty"`
 }
 
 // Inspect reads the machine's current state and changes nothing.
@@ -293,5 +299,8 @@ func Inspect(self string) (Status, error) {
 	}
 	status.Artifacts = plan.Artifacts(self)
 	status.Autostart = autostartStatus()
+	// The one thing a check can say that an installation cannot do: whether the
+	// command it put in place will be found by a shell.
+	status.PathNotice = pathNoticeFor(runtime.GOOS)
 	return status, nil
 }

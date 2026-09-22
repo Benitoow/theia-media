@@ -60,25 +60,24 @@ func installedNames(role Role) []string {
 // pinned by TestTheInstallerAcceptsTheNamesTheReleasePublishes. Writing .exe
 // into a fixture on Linux is how nine of these tests came to fail there while
 // passing on the machine they were written on.
-func installed(base string) string { return executableName(program{base: base}) }
+func installed(base string) string { return executablePath(base, runtime.GOOS) }
 
 // bundleExtras is what the player's published bundle carries on this platform
 // besides the executable itself, read from the product's own list: Windows
-// ships the engine and its licences beside the player, and every other platform
-// ships the executable alone. That difference is real - the player is built for
-// Windows only in this release - and the tests that need a second member say so
-// instead of pretending the Windows list is universal.
+// ships the engine and its licences as three flat files, macOS ships the
+// application tree the engine and the licences live inside, and the tests that
+// need a second member say so instead of pretending one list is universal.
 func bundleExtras() []string { return bundleFiles(runtime.GOOS)[1:] }
 
 // bundleBody is what a fixture writes into a bundle member, so an assertion can
 // prove the member came out of the bundle rather than from somewhere else.
 func bundleBody(member string) string {
 	switch member {
-	case "libmpv-2.dll":
+	case "libmpv-2.dll", darwinPlayerEngine:
 		return "engine"
-	case "LICENSE-libmpv.txt":
+	case "LICENSE-libmpv.txt", darwinPlayerLicence:
 		return "LGPL"
-	case "NOTICE.md":
+	case "NOTICE.md", darwinPlayerNotice:
 		return "notice"
 	}
 	return "bundle member"
@@ -443,13 +442,26 @@ func TestTheLauncherIsInstalledWhereItIsPublished(t *testing.T) {
 		t.Error("the launcher accepts the retired server alias name")
 	}
 
-	// Only where it is published: the launcher is a Windows program, like the
-	// player, and a platform nobody has run it on gets nothing.
-	for _, platform := range []string{"linux", "darwin"} {
+	// Only where it is published. The launcher is a Windows and macOS program,
+	// like the player: a platform the release publishes neither for gets neither,
+	// and asking for an asset that is not there is a failed installation rather
+	// than a missing feature.
+	for _, platform := range []string{"linux"} {
 		for _, entry := range programsFor(RoleAllInOne, platform, "amd64") {
-			if entry.base == "theia" {
+			if entry.base == launcherBase {
 				t.Errorf("the %s installation asks for a launcher", platform)
 			}
+		}
+	}
+	for _, platform := range []string{"windows", "darwin"} {
+		found := false
+		for _, entry := range programsFor(RoleAllInOne, platform, "amd64") {
+			if entry.base == launcherBase {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("the %s installation does not ask for a launcher", platform)
 		}
 	}
 }

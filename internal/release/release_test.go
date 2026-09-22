@@ -235,6 +235,9 @@ func TestExtractRefusesAnEntryOutsideTheDestination(t *testing.T) {
 	}
 }
 
+// makeArchive writes a zip holding the members given. A name ending in "/" is
+// written as a directory entry, which is what an archiver produces for the
+// directory of an application bundle.
 func makeArchive(t *testing.T, files map[string]string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "bundle.zip")

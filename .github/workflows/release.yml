@@ -102,24 +102,40 @@ jobs:
             -ldflags "-s -w -X main.version=${version} -X main.tmdbAPIKey=${TMDB_API_KEY}" \
             -o "dist/${asset}" \
             ./cmd/theia-server
-          # Only Windows x64 has a released, hardware-verified native player.
-          # Publishing setup programs for the five server-only targets made
-          # them look like complete products when they are not. The installer
-          # joins a platform's release only when that whole product is verified.
-          if [ "${{ matrix.goos }}/${{ matrix.goarch }}" = "windows/amd64" ]; then
-            go build -buildvcs=false -trimpath \
-              -ldflags "-s -w -X main.version=${version}" \
-              -o "dist/theia-setup-windows-amd64.exe" \
-              ./cmd/theia-setup
-            # The `theia` command: windowed, because it is what the product's
-            # Start Menu entry starts and a console build would flash a black
-            # rectangle on every click. The published name says what it is; the
-            # installed one is `theia.exe` (internal/release.LauncherName).
-            go build -buildvcs=false -trimpath \
-              -ldflags "-s -w -H=windowsgui -X main.version=${version}" \
-              -o "dist/theia-launcher-windows-amd64.exe" \
-              ./cmd/theia
-          fi
+          # Only the platforms whose *whole* product has been run on real
+          # hardware publish a setup program: publishing one for a target with no
+          # player made five of them look like complete products when they are
+          # not (decision 138). V3.3.4 adds macOS Apple Silicon, whose player is
+          # built on a macOS runner below.
+          case "${{ matrix.goos }}/${{ matrix.goarch }}" in
+            windows/amd64)
+              go build -buildvcs=false -trimpath \
+                -ldflags "-s -w -X main.version=${version}" \
+                -o "dist/theia-setup-windows-amd64.exe" \
+                ./cmd/theia-setup
+              # The `theia` command: windowed, because it is what the product's
+              # Start Menu entry starts and a console build would flash a black
+              # rectangle on every click. The published name says what it is; the
+              # installed one is `theia.exe` (internal/release.LauncherName).
+              go build -buildvcs=false -trimpath \
+                -ldflags "-s -w -H=windowsgui -X main.version=${version}" \
+                -o "dist/theia-launcher-windows-amd64.exe" \
+                ./cmd/theia
+              ;;
+            darwin/arm64)
+              # No -H=windowsgui and no .exe: the macOS command is an ordinary
+              # executable, and `open` is what the launcher uses to start the
+              # player's app bundle.
+              go build -buildvcs=false -trimpath \
+                -ldflags "-s -w -X main.version=${version}" \
+                -o "dist/theia-setup-darwin-arm64" \
+                ./cmd/theia-setup
+              go build -buildvcs=false -trimpath \
+                -ldflags "-s -w -X main.version=${version}" \
+                -o "dist/theia-launcher-darwin-arm64" \
+                ./cmd/theia
+              ;;
+          esac
           ls -l dist
 
       # The binary has to actually run, and report the version it was tagged
@@ -389,11 +405,153 @@ jobs:
             dist/theia-player-windows-amd64.zip
           retention-days: 1
 
+  # The macOS player. Its own runner because it needs a macOS SDK to link, and
+  # its own script because the two platforms ship different shapes: an app bundle
+  # whose engine is a set of dylibs, rather than four files in a folder.
+  player-macos:
+    name: Player (darwin/arm64)
+    needs: interface
+    runs-on: macos-14
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.6'
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: player
+
+      # The same script a maintainer runs on their own Mac: the OSD first
+      # (tauri-build embeds it), then cargo with an rpath that reaches
+      # Contents/Frameworks, then the pinned engine by digest, then the bundle,
+      # an ad-hoc signature and the zip.
+      - name: Build the player and its app bundle
+        run: ./scripts/build-player-macos.sh -Release -Bundle -Version ${{ github.ref_name }}
+
+      # A bundle without its engine plays nothing, and one without the licence
+      # breaches the LGPL that allows us to ship the engine at all. Both are
+      # checked rather than trusted, because both failures are silent.
+      - name: Check the bundle is complete
+        run: |
+          app='dist/theia-player-darwin-arm64/Theia.app'
+          test -x "$app/Contents/MacOS/theia-player" || { echo 'the bundle holds no executable'; exit 1; }
+          count=$(ls "$app/Contents/Frameworks"/*.dylib 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$count" -lt 18 ]; then echo "only $count dylibs: the engine is incomplete"; exit 1; fi
+          for required in \
+            'Contents/Frameworks/libmpv.2.dylib' \
+            'Contents/Resources/LICENSE-libmpv.txt' \
+            'Contents/Resources/NOTICE.md' \
+            'Contents/Resources/licenses/mpv-LICENSE.LGPL'
+          do
+            test -e "$app/$required" || { echo "the bundle is missing $required"; exit 1; }
+          done
+          echo "bundle version: $(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")"
+          codesign --verify --strict "$app"
+          du -sm "$app"
+
+      # The engine pin says which library is loaded; the build version says which
+      # Theia is drawing the picture. The second is the silent one: 'dev' here
+      # means the tag never reached build.rs.
+      - name: Check the player names its build and its engine
+        run: |
+          app='dist/theia-player-darwin-arm64/Theia.app'
+          "$app/Contents/MacOS/theia-player" -version
+          log=$(mktemp)
+          "$app/Contents/MacOS/theia-player" --mute --diagnostics >"$log" 2>&1 &
+          pid=$!
+          pin=''
+          for _ in $(seq 1 90); do
+            sleep 1
+            pin=$(grep -m1 '^engine-pin: ' "$log" || true)
+            [ -n "$pin" ] && break
+          done
+          kill "$pid" 2>/dev/null || true
+          if [ -z "$pin" ]; then echo 'the player never printed its engine pin'; cat "$log"; exit 1; fi
+          echo "$pin"
+          echo "$pin" | grep -qE '"loaded": *true' || { echo 'the player loaded no engine'; exit 1; }
+          echo "$pin" | grep -q '028e5c8aaf035cd6d8db0e6d02061c81655e4ebf6dfbd54e2c7b917c02c60e3e' ||
+            { echo 'the player reports an unexpected engine digest'; exit 1; }
+          grep -m1 '^theia-player: version ' "$log" | grep -qF '${{ github.ref_name }}' ||
+            { echo 'the player does not report the tagged build'; cat "$log"; exit 1; }
+          echo 'the bundle names its engine and its build'
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: theia-player-darwin-arm64
+          path: dist/theia-player-darwin-arm64.zip
+          retention-days: 1
+
+  # The macOS one-file download: everything in one archive, assembled rather than
+  # built, exactly as the Windows one is (decision 121). The player comes from the
+  # macOS runner; the three Go programs come from the build matrix, which already
+  # cross-compiles them for darwin/arm64.
+  package-macos:
+    name: The macOS one-file download
+    needs: [build, player-macos]
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: theia-server-darwin-arm64
+          path: dist
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: theia-player-darwin-arm64
+          path: dist
+
+      # The player travels zipped because an artifact does not promise to keep a
+      # bundle's symlinks and executable bits. ditto is what recreates them.
+      - name: Unpack the player bundle
+        run: |
+          mkdir -p dist/theia-player-darwin-arm64
+          ditto -x -k dist/theia-player-darwin-arm64.zip dist/theia-player-darwin-arm64
+
+      - name: Assemble the archive
+        run: pwsh ./build-release.ps1 -Version ${{ github.ref_name }} -Target darwin-arm64
+
+      - name: Check the archive holds everything
+        run: |
+          version='${{ github.ref_name }}'
+          version="${version#v}"
+          dir="dist/theia-${version}-darwin-arm64"
+          for required in \
+            'Theia.app/Contents/MacOS/theia-player' \
+            'Theia.app/Contents/Frameworks/libmpv.2.dylib' \
+            'Theia.app/Contents/Resources/licenses/mpv-LICENSE.LGPL' \
+            'theia-server' 'theia-setup' 'theia' 'START-HERE.txt'
+          do
+            test -e "$dir/$required" || { echo "the archive is missing $required"; exit 1; }
+          done
+          # The server inside must report the tag it was built from, or the
+          # archive holds a build nobody can identify.
+          "$dir/theia-server" -version
+          "$dir/Theia.app/Contents/MacOS/theia-player" -version
+          du -sm "$dir"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: theia-release-darwin-arm64
+          path: dist/theia-*-darwin-arm64.zip
+          retention-days: 1
+
   publish:
     name: Publish the release
     # Every gate, explicitly: the jobs no longer chain through each other, so
     # this is the one place that says what a release requires.
-    needs: [validate, release-gates, build, player]
+    needs: [validate, release-gates, build, player, player-macos, package-macos]
     # A dispatch measures the pipeline; only a pushed tag publishes.
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -433,4 +591,8 @@ jobs:
             "staging/theia-server-linux-amd64#Component — Linux x64 server (updater-managed)" \
             "staging/theia-server-linux-arm64#Component — Linux ARM64 server (updater-managed)" \
             "staging/theia-server-darwin-amd64#Component — macOS Intel server (updater-managed)" \
-            "staging/theia-server-darwin-arm64#Component — macOS Apple Silicon server (updater-managed)"
+            "staging/theia-server-darwin-arm64#Component — macOS Apple Silicon server (updater-managed)" \
+            "staging/theia-setup-darwin-arm64#DOWNLOAD — Theia ${version} for macOS Apple Silicon" \
+            "staging/theia-${version}-darwin-arm64.zip#OFFLINE — Complete macOS Apple Silicon bundle" \
+            "staging/theia-player-darwin-arm64.zip#Component — macOS Apple Silicon player bundle (installer-managed)" \
+            "staging/theia-launcher-darwin-arm64#Component — macOS Apple Silicon theia command (installer-managed)"

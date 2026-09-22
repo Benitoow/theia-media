@@ -303,9 +303,19 @@ func copyWithProgress(dst io.Writer, src io.Reader, hash io.Writer, total int64,
 // player bundle missing its licence is a licence breach, not an incomplete
 // download, so half an extraction is a failure rather than a partial success.
 //
+// A requested name that is a directory in the archive means "everything under
+// it", which is what a macOS application is: `Theia.app` is a tree, and its
+// executable is useless without the Frameworks and Resources beside it. Asking
+// for the tree *and* for the members that matter is what makes both questions
+// answerable in one pass - that the tree arrived, and that nothing required
+// inside it went missing. Nothing else changes: a name that is a file is still
+// one file, and the flat bundles the Windows player ships as are untouched by
+// this.
+//
 // The extraction directory is built by this machine, but the archive comes from
 // somewhere else. An entry whose name climbs out of the destination is refused
-// rather than unpacked over whatever it reaches.
+// rather than unpacked over whatever it reaches - including every entry a tree
+// brings with it, not only the names that were asked for.
 func Extract(archive, dir string, names []string) ([]string, error) {
 	reader, err := zip.OpenReader(archive)
 	if err != nil {
@@ -313,13 +323,29 @@ func Extract(archive, dir string, names []string) ([]string, error) {
 	}
 	defer reader.Close()
 
-	wanted := make(map[string]bool, len(names))
+	// A request is answered by *any* entry it names or contains, and stays open
+	// for the whole walk: a tree is answered by its first member and would
+	// otherwise be closed before the second arrives, taking one file and leaving
+	// the rest of the application behind. What is tracked as answered is separate
+	// from what matches, and only the first is consumed.
+	requested := make(map[string]bool, len(names))
 	for _, name := range names {
-		wanted[name] = true
+		requested[name] = true
 	}
 	written := make([]string, 0, len(names))
 	for _, entry := range reader.File {
-		if !wanted[entry.Name] {
+		answers := answeredBy(entry.Name, names)
+		if len(answers) == 0 {
+			continue
+		}
+		if strings.HasSuffix(entry.Name, "/") {
+			// A directory entry says the tree is there; the files inside it are
+			// written when their own entries arrive. Writing this one would put a
+			// zero-byte file where a directory has to be, and every file below it
+			// would then fail to be created.
+			for _, name := range answers {
+				delete(requested, name)
+			}
 			continue
 		}
 		target, err := safeJoin(dir, entry.Name)
@@ -329,13 +355,15 @@ func Extract(archive, dir string, names []string) ([]string, error) {
 		if err := writeEntry(entry, target); err != nil {
 			return nil, err
 		}
-		delete(wanted, entry.Name)
+		for _, name := range answers {
+			delete(requested, name)
+		}
 		written = append(written, entry.Name)
 	}
-	if len(wanted) > 0 {
-		missing := make([]string, 0, len(wanted))
+	if len(requested) > 0 {
+		missing := make([]string, 0, len(requested))
 		for _, name := range names {
-			if wanted[name] {
+			if requested[name] {
 				missing = append(missing, name)
 			}
 		}
@@ -343,6 +371,28 @@ func Extract(archive, dir string, names []string) ([]string, error) {
 			filepath.Base(archive), strings.Join(missing, ", "))
 	}
 	return written, nil
+}
+
+// answeredBy reports which of the requested names one archive entry answers.
+//
+// An entry answers a request when its name is exactly that name - one file, the
+// flat case every bundle used to be - or when it lives *inside* it, which is what
+// makes a requested directory mean "everything under it". The separator is what
+// keeps the two apart: `Theia.app.backup` is not inside `Theia.app`, and a name
+// that only begins with the request is not taken.
+//
+// The requests are a slice rather than a map because the answer is used in the
+// order the caller asked, and a map would make which name a missing entry is
+// reported against depend on hashing.
+func answeredBy(entry string, names []string) []string {
+	trimmed := strings.TrimSuffix(entry, "/")
+	var answered []string
+	for _, name := range names {
+		if trimmed == name || strings.HasPrefix(entry, name+"/") {
+			answered = append(answered, name)
+		}
+	}
+	return answered
 }
 
 // safeJoin refuses an entry that would be written outside dir.

@@ -59,15 +59,107 @@ func launchCommand(plan Plan, server string) []string {
 // published file sitting in one folder reported the server as missing and could
 // not install its autostart entry. Found by downloading the release assets into
 // an empty directory and running the installer the way a person would.
+//
+// The rule itself lives in diskNames, which takes the platform as an argument;
+// this is the same rule asked about the machine the code is running on.
 func artifactNames(base string) []string {
-	extension := ""
-	if runtime.GOOS == "windows" {
-		extension = ".exe"
+	return diskNames(base, runtime.GOOS, runtime.GOARCH)
+}
+
+// A startup entry on macOS and Linux: where it goes, and what it says.
+//
+// Both are text files written under the user's home directory, and the only part
+// of installing one that is genuinely specific to its platform is the command
+// that loads it - `launchctl load`, `systemctl --user enable`. So the two
+// questions worth pinning, *where* the file goes and *what is in it*, are
+// answered here rather than in service_unix.go, which is compiled on Unix only:
+// this suite runs on Windows, and a claim about a launchd agent that no test on
+// this machine can reach is a claim nobody has checked.
+//
+// Everything here is unverified on a real Mac. What it pins is that the file says
+// what the code says it says; the Mac has to confirm that launchd agrees.
+const (
+	// launchAgentLabel names the job: reverse-DNS, the way launchd names them.
+	launchAgentLabel = "media.theia.server"
+
+	// systemdUnitName is the unit's file name, which is also the name
+	// `systemctl --user enable` is given.
+	systemdUnitName = "theia.service"
+)
+
+// launchAgentPathIn is where this user's launchd agent belongs: LaunchAgents,
+// which launchd reads when the user logs in - per-user, never /Library/LaunchDaemons,
+// which would need administrator rights and would start before anybody is there.
+func launchAgentPathIn(home string) string {
+	return filepath.Join(home, "Library", "LaunchAgents", launchAgentLabel+".plist")
+}
+
+// systemdUnitPathIn is where this user's systemd unit belongs.
+func systemdUnitPathIn(home string) string {
+	return filepath.Join(home, ".config", "systemd", "user", systemdUnitName)
+}
+
+// launchAgentPlist is the agent, as text.
+//
+// It runs the same argument vector the Windows startup entry and the systemd unit
+// run, because all three have to start exactly the same thing. RunAtLoad starts
+// it at login, and KeepAlive restarts it only when it failed - a server that
+// exited cleanly is a server somebody stopped.
+func launchAgentPlist(args []string) string {
+	var list strings.Builder
+	list.WriteString("\t\t<array>\n")
+	list.WriteString("\t\t\t<string>" + args[0] + "</string>\n")
+	for _, arg := range args[1:] {
+		list.WriteString("\t\t\t<string>" + arg + "</string>\n")
 	}
-	return []string{
-		base + extension,
-		fmt.Sprintf("%s-%s-%s%s", base, runtime.GOOS, runtime.GOARCH, extension),
+	list.WriteString("\t\t</array>\n")
+
+	return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>` + launchAgentLabel + `</string>
+	<key>ProgramArguments</key>
+` + list.String() + `	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+</dict>
+</plist>
+`
+}
+
+// systemdUnit is the unit, as text. Restart=on-failure and RestartSec are the
+// same decision the launchd agent makes with KeepAlive.
+func systemdUnit(args []string) string {
+	return fmt.Sprintf(`[Unit]
+Description=Theia media server
+Documentation=https://github.com/Benitoow/theia-media
+
+[Service]
+ExecStart=%s
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+`, strings.Join(args, " "))
+}
+
+// writeAutostartFile writes one startup entry, creating the folder it lives in.
+//
+// It is here rather than beside the platforms that call it because writing a text
+// file is not a platform-specific act, and a test that runs on Windows should be
+// able to prove that the plist lands where launchd looks for it.
+func writeAutostartFile(path, body string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
 	}
+	return os.WriteFile(path, []byte(body), 0o644)
 }
 
 // findArtifact returns the first of those names that is installed, beside the

@@ -105,10 +105,16 @@ var french = Catalogue{
 	// The two places Windows looks a command up by name. They are reported like
 	// everything else the installation changes, because "theia is a command now"
 	// is the answer to the question that started this: how does one launch it.
-	"actPath":             "dossier ajouté au PATH :",
-	"actPathGone":         "dossier retiré du PATH :",
-	"actAppPath":          "commande theia enregistrée pour Windows :",
-	"actAppPathGone":      "commande theia retirée de Windows :",
+	"actPath":        "dossier ajouté au PATH :",
+	"actPathGone":    "dossier retiré du PATH :",
+	"actAppPath":     "commande theia enregistrée pour Windows :",
+	"actAppPathGone": "commande theia retirée de Windows :",
+	// PATH on Unix: the installer writes no shell profile - which file a shell
+	// reads is not something a program can know - so it says the exact line to
+	// add instead. The line is not a sentence but a shell command, identical in
+	// both languages, so only the sentence that introduces it lives here.
+	"pathNotSet": "%s n'est pas dans votre PATH ; ajoutez cette ligne à votre profil :",
+	"statusPath": "Commande theia",
 	// The launcher's code is "theia" - the installer names it the way the file
 	// is named - and the word is what the thing is.
 	"program.theia": "le lanceur",
@@ -267,11 +273,16 @@ var english = Catalogue{
 	"actNotInstalled":   "nothing installed in:",
 	"uninstallKeptData": "Your data was not touched:",
 
-	"actPath":             "directory added to PATH:",
-	"actPathGone":         "directory removed from PATH:",
-	"actAppPath":          "theia registered as a command for Windows:",
-	"actAppPathGone":      "theia removed as a command for Windows:",
-	"program.theia":       "the launcher",
+	"actPath":        "directory added to PATH:",
+	"actPathGone":    "directory removed from PATH:",
+	"actAppPath":     "theia registered as a command for Windows:",
+	"actAppPathGone": "theia removed as a command for Windows:",
+	// PATH on Unix: the installer writes no shell profile, so it says the exact
+	// line to add. The line is a shell command and is not translated; this is
+	// the sentence that introduces it.
+	"pathNotSet":    "%s is not on your PATH; add this line to your shell profile:",
+	"statusPath":    "theia command",
+	"program.theia": "the launcher",
 
 	"originAlreadyInstalled": "already in place",
 	"originBesideInstaller":  "beside the installer",

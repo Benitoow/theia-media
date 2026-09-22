@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -62,20 +63,28 @@ func Uninstall(plan Plan, targets ShortcutTargets, text Catalogue) (Result, erro
 
 	// The two names on the machine go with the programs: a PATH entry pointing
 	// at a folder that is about to be deleted is a command that exists and
-	// fails, and an App Paths entry is the same promise in the Run dialog.
-	if removed, err := removeFromUserPath(plan.InstallDir); err != nil {
-		result.ShortcutsError = joinReasons(result.ShortcutsError, err.Error())
-	} else if removed {
-		result.Actions = append(result.Actions, Action{Kind: "removed-from-path", Path: plan.InstallDir})
-	}
-	launcher := programExecutable(launcherBase)
-	if appPathIsRegistered(launcher) {
-		if err := unregisterAppPath(launcher); err != nil {
+	// fails, and an App Paths entry is the same promise in the Run dialog. Both
+	// are Windows mechanisms; elsewhere the names are the two entries above.
+	if isWindowsPath() {
+		if removed, err := removeFromUserPath(plan.InstallDir); err != nil {
 			result.ShortcutsError = joinReasons(result.ShortcutsError, err.Error())
-		} else {
-			result.Actions = append(result.Actions, Action{Kind: "unregistered-app-path", Path: launcher})
+		} else if removed {
+			result.Actions = append(result.Actions, Action{Kind: "removed-from-path", Path: plan.InstallDir})
+		}
+		launcher := programExecutable(launcherBase)
+		if appPathIsRegistered(launcher) {
+			if err := unregisterAppPath(launcher); err != nil {
+				result.ShortcutsError = joinReasons(result.ShortcutsError, err.Error())
+			} else {
+				result.Actions = append(result.Actions, Action{Kind: "unregistered-app-path", Path: launcher})
+			}
 		}
 	}
+
+	// And the entries under the home directory, which is where a macOS
+	// installation keeps them: a symlink pointing at a folder that is about to be
+	// deleted is the same broken promise.
+	result.Actions = append(result.Actions, removeEntries(runtime.GOOS)...)
 
 	result.Actions = append(result.Actions, removePrograms(plan, text)...)
 

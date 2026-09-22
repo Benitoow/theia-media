@@ -378,6 +378,15 @@ func reportStatus(jsonOutput bool, text setup.Catalogue) error {
 		autostart = status.Autostart.Kind + " (" + status.Autostart.Path + ")"
 	}
 	fmt.Printf("  %-18s %s\n", text["statusAuto"], autostart)
+	if status.PathNotice != nil {
+		// Where the command is and whether the shell can find it. A machine can
+		// hold a perfectly installed product whose command nobody can type, and
+		// that is worth a line rather than a shrug.
+		fmt.Printf("  %-18s %s\n", text["statusPath"], status.PathNotice.Dir)
+		if status.PathNotice.Line != "" {
+			fmt.Printf("      %s\n", status.PathNotice.Line)
+		}
+	}
 	if len(status.Artifacts) > 0 {
 		// The label once, then the list under it: a repeated label on every line
 		// reads as a table that lost its column, and the second one is always the
@@ -647,6 +656,15 @@ func printResult(result setup.Result, text setup.Catalogue) {
 			fmt.Printf("  %s %s (%s)\n", text["actRegistered"], action.Path, action.Detail)
 		case "added-to-path":
 			fmt.Printf("  %s %s\n", text["actPath"], action.Path)
+		case "path-not-set":
+			// The command was installed where the shell will not look for it. The
+			// sentence names the directory and the exact line to add goes under
+			// it: one line to copy beats a paragraph about shells, and this
+			// installer never edits somebody's shell profile.
+			fmt.Printf("  %s\n", fmt.Sprintf(text["pathNotSet"], action.Path))
+			if action.Detail != "" {
+				fmt.Printf("      %s\n", action.Detail)
+			}
 		case "registered-app-path":
 			fmt.Printf("  %s %s\n", text["actAppPath"], action.Path)
 		case "removed-shortcut":

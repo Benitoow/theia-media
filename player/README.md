@@ -41,9 +41,9 @@ go run ./scripts/fetch-libmpv -out player/vendor
 ```
 
 The upstream project keeps thirty days of builds, so `THEIA_LIBMPV_MIRROR` points
-the fetch at a mirror first; the digest is what decides, not the URL. Only
-`windows/amd64` is pinned, because Windows is the only platform the player has
-been run and verified on.
+the fetch at a mirror first; the digest is what decides, not the URL. Both
+`windows/amd64` and `darwin/arm64` are pinned; only Windows has been run and
+verified, and the macOS pin's first run is on a Mac (see [On macOS](#on-macos)).
 
 ### How an installed player is updated
 
@@ -65,6 +65,68 @@ digests are named by `theia-player --diagnostics`, and Theia's own source is
 public. A bundle missing any of those is a licence breach rather than an
 incomplete download, which is why the release pipeline checks for all four files
 before publishing anything.
+
+## On macOS
+
+The player ships as an app bundle, which is what gives it a Dock icon, a menu bar
+and a name:
+
+```bash
+./scripts/build-player-macos.sh -Release -Bundle
+# -> dist/theia-player-darwin-arm64/Theia.app
+```
+
+| Inside the bundle | What it is |
+|---|---|
+| `Contents/Info.plist` | what gives the window a Dock icon, a menu bar and a name; the version in it is the one `build.rs` compiled in, so Get Info and `-version` cannot disagree |
+| `Contents/MacOS/theia-player` | the player itself |
+| `Contents/Frameworks/` | the engine: `libmpv.2.dylib` and the eighteen dylibs it loads, found through the bundle's own rpath |
+| `Contents/Resources/licenses/` | the licence texts that came with the engine set - decision 118 is not optional |
+| `Contents/Resources/` | `LICENSE-libmpv.txt` and `NOTICE.md`, beside those |
+
+**The bundle is ad-hoc signed and not notarised** - there is no Apple certificate
+behind it - so Gatekeeper refuses the first launch of a copy that came off the
+network: right-click the app, *Open*, then *Open* again, or
+`xattr -dr com.apple.quarantine Theia.app` for a scripted one. And **a zip does
+not carry Unix permission bits**, which is what the download is: after
+extracting, `Theia.app/Contents/MacOS/theia-player` can arrive not executable, so
+`chmod +x` it (`START-HERE.txt` in the archive says so, and `build-release.ps1`
+writes it). CI unpacks the same zip with `ditto -x -k`, which is what recreates
+the bits and the symlinks.
+
+The engine and the audio differ from Windows in three places, and each is in
+`src/main.rs` beside the value it belongs to: the platform table asks for
+`hwdec=videotoolbox` and `ao=coreaudio` and names no `gpu-api`/`gpu-context`,
+the audio mode starts at PCM because CoreAudio has no passthrough for the formats
+the Windows path asks for, and the window handle is the NSView Tauri hands over.
+
+### The first check, and the one thing that is already known
+
+The `darwin/arm64` pin has never been run. One thing about it is known from the
+engine's own build configuration and from mpv 0.41's source, and it is written
+into the code rather than left for the first person to discover: **nothing in
+mpv's video outputs can draw a frame on macOS with this engine.** mpv 0.41 has no
+`metal` GPU API - the names it accepts are `auto`, `opengl`, `vulkan`, `d3d11` -
+the pin is built with `vulkan=disabled`, so the one macOS context in that table,
+`macvk`, is not compiled in, and mpv 0.41 no longer reads `wid` on macOS at all:
+the `NSView*` embedding mpv 0.36 documented went with `video/out/cocoa_common.m`.
+The engine's one video path is the libmpv render API over OpenGL
+(`plain-gl=enabled` in the pin), where the *host* owns the GL context and draws
+each frame - an architecture change for this player, not a port.
+
+So the first Mac run answers it, and the answer is in the player's own output:
+
+```bash
+./scripts/verify-macos.sh -Media /path/to/a/film
+dist/theia-player-darwin-arm64/Theia.app/Contents/MacOS/theia-player \
+  --media /path/to/a/film --mute --diagnostics
+```
+
+`--diagnostics` prints the session state once a second, and `vo`, `hwdec` and
+`ao` in it are mpv's own answers (`current-vo`, `hwdec-current`, `current-ao`) -
+so a film that plays says what it played through, and a film that does not shows
+`pos` standing still. The other thing no program here can answer is the picture:
+whether the OSD draws over the film, which is a person's look.
 
 ## Looking at the OSD without playing anything
 
@@ -173,7 +235,10 @@ The engine is looked for in this order:
 
 1. `THEIA_LIBMPV`, an explicit path, which also exists so anyone may substitute
    their own build - which the LGPL requires us to allow;
-2. `libmpv-2.dll` (Windows) or `libmpv.so.2` next to the executable.
+2. `libmpv-2.dll` (Windows) or `libmpv.so.2` next to the executable;
+3. on macOS, `Contents/Frameworks/libmpv.2.dylib` - the bundle's own place for
+   it, one of the rpaths the engine's load commands carry - tried after the copy
+   beside the binary, so a development build dropped next to it still wins.
 
 A missing engine is a sentence in the interface, not a crash: the process starts,
 the window appears and says what is wrong.

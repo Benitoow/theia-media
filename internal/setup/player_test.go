@@ -122,7 +122,7 @@ func TestPlayerUpdateRefusesABundleThatFailsItsDigest(t *testing.T) {
 		map[string][]byte{name: bundle},
 		map[string]string{name: "sha256:" + digestOf([]byte("something else"))})
 
-	target := PlayerTarget{Dir: dir, ExecPath: filepath.Join(dir, playerExecutableName()), Version: "1.0.0"}
+	target := PlayerTarget{Dir: dir, ExecPath: filepath.Join(dir, playerExecutablePath(runtime.GOOS)), Version: "1.0.0"}
 	view, err := ApplyPlayerUpdate(context.Background(), server.Client(), server.URL, target, nil)
 	if err == nil {
 		t.Fatal("a bundle that failed its digest was accepted")
@@ -148,7 +148,7 @@ func TestPlayerUpdateRefusesAPlayerThatDoesNotRun(t *testing.T) {
 		map[string][]byte{name: bundle},
 		map[string]string{name: "sha256:" + digestOf(bundle)})
 
-	target := PlayerTarget{Dir: dir, ExecPath: filepath.Join(dir, playerExecutableName()), Version: "1.0.0"}
+	target := PlayerTarget{Dir: dir, ExecPath: filepath.Join(dir, playerExecutablePath(runtime.GOOS)), Version: "1.0.0"}
 	view, err := ApplyPlayerUpdate(context.Background(), server.Client(), server.URL, target, nil)
 	if err == nil {
 		t.Fatal("a player that does not run was accepted")
@@ -168,7 +168,7 @@ func TestPlayerUpdateReportsAReleaseWithoutABundle(t *testing.T) {
 		map[string][]byte{release.ServerName(runtime.GOOS, runtime.GOARCH): []byte("server")},
 		map[string]string{release.ServerName(runtime.GOOS, runtime.GOARCH): "sha256:" + digestOf([]byte("server"))})
 
-	target := PlayerTarget{Dir: dir, ExecPath: filepath.Join(dir, playerExecutableName()), Version: "1.0.0"}
+	target := PlayerTarget{Dir: dir, ExecPath: filepath.Join(dir, playerExecutablePath(runtime.GOOS)), Version: "1.0.0"}
 	view, err := CheckForPlayerUpdate(context.Background(), server.Client(), server.URL, target)
 	if err != nil {
 		t.Fatalf("Check: %v", err)

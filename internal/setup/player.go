@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -62,7 +63,7 @@ func ResolvePlayerTarget(installDir string) (PlayerTarget, error) {
 		}
 		dir = standard
 	}
-	path := filepath.Join(dir, playerExecutableName())
+	path := filepath.Join(dir, playerExecutablePath(runtime.GOOS))
 	if !fileExists(path) {
 		return PlayerTarget{}, fmt.Errorf("%w: %s", ErrPlayerNotInstalled, path)
 	}
@@ -94,13 +95,55 @@ func serverVersionBeside(dir string) (string, error) {
 	return binaryVersion(path)
 }
 
-// playerExecutableName is the name the bundle gives the player on disk. It is
-// the member the release zip carries, so the two cannot drift.
-func playerExecutableName() string {
-	if runtime.GOOS == "windows" {
+// playerExecutablePath is the file that answers `-version` inside an
+// installation, relative to its directory.
+//
+// On Windows and Linux the player is a program beside its engine. On macOS it is
+// an app bundle - which is what gives a window an identity and a Dock icon - and
+// the file a shell can run is the one inside Contents/MacOS. This is the file the
+// update path asks for a version, and the one a running player holds open.
+func playerExecutablePath(goos string) string {
+	if goos == "darwin" {
+		return path.Join("Theia.app", "Contents", "MacOS", "theia-player")
+	}
+	if goos == "windows" {
 		return "theia-player.exe"
 	}
 	return "theia-player"
+}
+
+// playerBundleMembers is what an installation of the player consists of, as
+// paths relative to the installation directory.
+//
+// The list itself lives in install.go, beside the code that asks the archive for
+// it and checks an installation against it: one place, because a bundle missing
+// its engine or its licence looks installed and is not.
+func playerBundleMembers(goos string) []string {
+	return bundleFiles(goos)
+}
+
+// swapMembers reduces a member list to what a replacement has to move: a member
+// that contains others replaces them all, and moving it aside once is also the
+// only way a directory can be replaced. On macOS that leaves `Theia.app` alone;
+// on Windows it changes nothing, because no member contains another.
+func swapMembers(names []string) []string {
+	kept := make([]string, 0, len(names))
+	for _, name := range names {
+		contained := false
+		for _, other := range names {
+			if other == name {
+				continue
+			}
+			if strings.HasPrefix(name, strings.TrimSuffix(other, "/")+"/") {
+				contained = true
+				break
+			}
+		}
+		if !contained {
+			kept = append(kept, name)
+		}
+	}
+	return kept
 }
 
 // CheckForPlayerUpdate asks GitHub Releases for the latest player. Nothing is
@@ -137,7 +180,7 @@ func ApplyPlayerUpdate(ctx context.Context, client *http.Client, apiBase string,
 		return view, nil
 	}
 
-	names := bundleFiles(runtime.GOOS)
+	names := playerBundleMembers(runtime.GOOS)
 	if blocker, held := bundleBlocker(target.Dir, names); blocker != "" {
 		// Nothing was downloaded and nothing was touched, so the answer is not
 		// "an update is available": leaving that flag set is how this line once
@@ -203,7 +246,7 @@ func fetchAndSwap(ctx context.Context, target PlayerTarget, asset release.Asset,
 		return errBundleIncomplete{err}
 	}
 
-	staged := filepath.Join(staging, playerExecutableName())
+	staged := filepath.Join(staging, playerExecutablePath(runtime.GOOS))
 	reported, err := binaryVersion(staged)
 	if err != nil {
 		return errPlayerDidNotRun{err}
@@ -213,7 +256,10 @@ func fetchAndSwap(ctx context.Context, target PlayerTarget, asset release.Asset,
 	}
 
 	phase(report, PhaseInstalling, "player")
-	if err := swapBundle(staging, target.Dir, names); err != nil {
+	// What is extracted and what is moved aside are not the same list: every
+	// member has to come out of the archive, and the ones a bundle root contains
+	// are replaced with it.
+	if err := swapBundle(staging, target.Dir, swapMembers(names)); err != nil {
 		return errReplaceFailed{err}
 	}
 	return nil
@@ -269,23 +315,52 @@ func swapBundle(staged, dir string, names []string) error {
 //
 // It is a probe rather than a guess, and it happens before the download: an
 // executing Windows image is opened with sharing that allows deletion but not
-// writing, so an O_RDWR open fails exactly when something holds the file.
-// Finding that out after a hundred megabytes have arrived would be a wasted
+// writing, so an O_RDWR open fails exactly when something holds the file. On
+// macOS the same rule applies to the Mach-O image inside the app bundle.
+// Finding this out after a hundred megabytes have arrived would be a wasted
 // minute and a worse sentence.
+//
+// A member that is a directory - the engine's own directory, on macOS - is
+// walked: the file that matters is whichever library a running player has
+// mapped, and a directory cannot be opened for writing at all.
 func bundleBlocker(dir string, names []string) (name string, held bool) {
 	for _, candidate := range names {
 		path := filepath.Join(dir, candidate)
-		if !fileExists(path) {
+		info, err := os.Stat(path)
+		if err != nil {
 			continue
 		}
-		file, err := os.OpenFile(path, os.O_RDWR, 0)
-		if err == nil {
-			file.Close()
+		if info.IsDir() {
+			entries, err := os.ReadDir(path)
+			if err != nil {
+				continue
+			}
+			for _, entry := range entries {
+				if entry.IsDir() {
+					continue
+				}
+				if blocked, isHeld := fileIsBlocked(filepath.Join(path, entry.Name())); blocked {
+					return filepath.Join(candidate, entry.Name()), isHeld
+				}
+			}
 			continue
 		}
-		return candidate, fileIsHeld(err)
+		if blocked, isHeld := fileIsBlocked(path); blocked {
+			return candidate, isHeld
+		}
 	}
 	return "", false
+}
+
+// fileIsBlocked reports whether a file cannot be opened for writing, and whether
+// that is because something is using it.
+func fileIsBlocked(path string) (blocked, held bool) {
+	file, err := os.OpenFile(path, os.O_RDWR, 0)
+	if err == nil {
+		file.Close()
+		return false, false
+	}
+	return true, fileIsHeld(err)
 }
 
 // fileIsHeld reports whether Windows refused an open because something is using

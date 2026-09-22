@@ -56,6 +56,21 @@ type platformVersion struct {
 	Licence       string `json:"licence"`
 	LicenceFile   string `json:"licence_file"`
 	SourceOffer   string `json:"source_offer"`
+
+	// A macOS engine is a set of dylibs rather than one file: mpv loads
+	// libavcodec, libplacebo, libass and their own dependencies from beside
+	// itself. The manifest names every one with its digest, because "the archive
+	// verified" says nothing about what came out of it - and the interesting
+	// failure is an archive that verifies and an extraction that did not.
+	EngineLibrary    string            `json:"engine_library"`
+	RuntimeLibraries map[string]string `json:"runtime_libraries"`
+	RuntimeSymlinks  map[string]string `json:"runtime_symlinks"`
+	LicenceDir       string            `json:"licence_dir"`
+}
+
+// isSet reports whether this pin is a set of libraries rather than one file.
+func (v platformVersion) isSet() bool {
+	return len(v.RuntimeLibraries) > 0
 }
 
 func main() {
@@ -91,7 +106,12 @@ func main() {
 		fmt.Printf("engine   %s from %s %s\n", pinned.Engine, version.Provider, version.Release)
 		fmt.Printf("asset    %s\n", version.Asset)
 		fmt.Printf("archive  sha256:%s\n", version.ArchiveSHA256)
-		fmt.Printf("library  %s sha256:%s\n", version.Library, version.LibrarySHA256)
+		if version.isSet() {
+			fmt.Printf("library  %s sha256:%s\n", version.EngineLibrary, version.RuntimeLibraries[version.EngineLibrary])
+			fmt.Printf("         and the %d libraries it loads, each pinned by digest\n", len(version.RuntimeLibraries)-1)
+		} else {
+			fmt.Printf("library  %s sha256:%s\n", version.Library, version.LibrarySHA256)
+		}
 		fmt.Printf("licence  %s (%s)\n", version.Licence, version.LicenceFile)
 		fmt.Printf("source   %s\n", version.SourceOffer)
 		return

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
 )
@@ -16,9 +15,13 @@ import (
 // installing a machine-wide service is a decision about somebody's computer that
 // an installer has no business making on its own.
 //
-// Neither path is verified. Windows is the only platform V3.3 can be validated
-// on (spec-fondatrice §14.2), so this file is written and reported as unverified
-// rather than presented as working.
+// What is verified here is what can be verified on the machine this project is
+// developed on: the path each entry is written to and the text it contains are
+// built in autostart.go, where the Windows test suite reaches them
+// (TestTheLaunchdAgentSaysWhatTheInstallationDoes). What is **not** verified is
+// the platform's half - that launchd and systemd accept these files, and that
+// `launchctl load` and `systemctl --user enable` succeed - which only a Mac and a
+// Linux machine can confirm.
 const (
 	autostartSystemdUnit = "systemd-user-unit"
 	autostartLaunchAgent = "launchd-agent"
@@ -95,22 +98,7 @@ func writeSystemdUnit(plan Plan, server string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	unit := fmt.Sprintf(`[Unit]
-Description=Theia media server
-Documentation=https://github.com/Benitoow/theia-media
-
-[Service]
-ExecStart=%s
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=default.target
-`, strings.Join(quoteAll(launchCommand(plan, server)), " "))
-	if err := os.WriteFile(path, []byte(unit), 0o644); err != nil {
+	if err := writeAutostartFile(path, systemdUnit(launchCommand(plan, server))); err != nil {
 		return err
 	}
 	// Enabled when a session bus is there to talk to. Over SSH, or before the
@@ -122,52 +110,31 @@ WantedBy=default.target
 	if out, err := exec.Command("systemctl", "--user", "daemon-reload").CombinedOutput(); err != nil {
 		return fmt.Errorf("systemctl --user daemon-reload: %w: %s", err, strings.TrimSpace(string(out)))
 	}
-	if out, err := exec.Command("systemctl", "--user", "enable", "--now", "theia.service").CombinedOutput(); err != nil {
+	if out, err := exec.Command("systemctl", "--user", "enable", "--now", systemdUnitName).CombinedOutput(); err != nil {
 		return fmt.Errorf("systemctl --user enable: %w: %s", err, strings.TrimSpace(string(out)))
 	}
 	return nil
 }
 
+// writeLaunchAgent writes the agent and hands it to launchd.
+//
+// The text and the path are built in autostart.go, where a test on any platform
+// can reach them; what is left here is the part that needs a Mac: the file itself
+// and `launchctl`, which loads it now so that installing the autostart entry does
+// not require a reboot to mean anything.
 func writeLaunchAgent(plan Plan, server string) error {
 	path, err := launchAgentPath()
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	args := launchCommand(plan, server)
-	var list strings.Builder
-	list.WriteString("\t\t<array>\n")
-	list.WriteString("\t\t\t<string>" + args[0] + "</string>\n")
-	for _, arg := range args[1:] {
-		list.WriteString("\t\t\t<string>" + arg + "</string>\n")
-	}
-	list.WriteString("\t\t</array>\n")
-
-	plist := `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>Label</key>
-	<string>media.theia.server</string>
-	<key>ProgramArguments</key>
-` + list.String() + `	<key>RunAtLoad</key>
-	<true/>
-	<key>KeepAlive</key>
-	<dict>
-		<key>SuccessfulExit</key>
-		<false/>
-	</dict>
-</dict>
-</plist>
-`
-	if err := os.WriteFile(path, []byte(plist), 0o644); err != nil {
+	if err := writeAutostartFile(path, launchAgentPlist(launchCommand(plan, server))); err != nil {
 		return err
 	}
 	if _, err := exec.LookPath("launchctl"); err != nil {
 		return nil
 	}
+	// Unload first, best effort: a machine that already had this agent loaded
+	// would otherwise keep running the copy the file used to describe.
 	_ = exec.Command("launchctl", "unload", path).Run()
 	if out, err := exec.Command("launchctl", "load", path).CombinedOutput(); err != nil {
 		return fmt.Errorf("launchctl load: %w: %s", err, strings.TrimSpace(string(out)))
@@ -176,23 +143,21 @@ func writeLaunchAgent(plan Plan, server string) error {
 }
 
 func systemdUnitPath() (string, error) {
-	home, err := os.UserHomeDir()
+	home, err := homeDirectory()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".config", "systemd", "user", "theia.service"), nil
+	return systemdUnitPathIn(home), nil
 }
 
 func launchAgentPath() (string, error) {
-	home, err := os.UserHomeDir()
+	home, err := homeDirectory()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, "Library", "LaunchAgents", "media.theia.server.plist"), nil
+	return launchAgentPathIn(home), nil
 }
 
 func serverExecutable() (string, error) {
 	return findArtifact("theia-server")
 }
-
-func quoteAll(args []string) []string { return args }

@@ -47,9 +47,28 @@ pub struct Engine {
 unsafe impl Send for Engine {}
 unsafe impl Sync for Engine {}
 
+/// The engine's file name on this platform, named once so the search and the
+/// error message cannot drift apart. macOS ships `libmpv.2.dylib`, and the
+/// archive beside it also carries a `libmpv.dylib` symlink to that file; the
+/// versioned name is the one to load.
+#[cfg(windows)]
+const ENGINE_FILE_NAME: &str = "libmpv-2.dll";
+#[cfg(target_os = "macos")]
+const ENGINE_FILE_NAME: &str = "libmpv.2.dylib";
+#[cfg(not(any(windows, target_os = "macos")))]
+const ENGINE_FILE_NAME: &str = "libmpv.so.2";
+
 /// Where the engine is looked for. `THEIA_LIBMPV` exists for development and
 /// for anyone who prefers their own build - which the LGPL requires us to
-/// allow anyway.
+/// allow anyway - and it wins on every platform.
+///
+/// Where the file sits differs by platform, and on macOS it is not beside the
+/// executable at all. Windows ships a folder; macOS ships an app bundle whose
+/// executable is `Theia.app/Contents/MacOS/theia-player` and whose engine is
+/// `Theia.app/Contents/Frameworks/libmpv.2.dylib`, together with the eighteen
+/// other dylibs it loads. That directory is one of the rpaths the engine's own
+/// load commands carry (`@loader_path/../Frameworks` in player/libmpv.json), so
+/// the engine finds its own dependencies there once it has been loaded by path.
 pub fn engine_path() -> Result<PathBuf, String> {
     if let Ok(explicit) = std::env::var("THEIA_LIBMPV") {
         let path = PathBuf::from(&explicit);
@@ -63,18 +82,28 @@ pub fn engine_path() -> Result<PathBuf, String> {
 
     let exe = std::env::current_exe().map_err(|e| format!("locating the executable: {e}"))?;
     let dir = exe.parent().ok_or("the executable has no parent directory")?;
-    let candidate = dir.join(if cfg!(windows) {
-        "libmpv-2.dll"
-    } else {
-        "libmpv.so.2"
-    });
-    if candidate.is_file() {
-        return Ok(candidate);
+    // The bundle layout is tried second, so a copy dropped next to the binary -
+    // how development runs - still wins.
+    #[cfg(target_os = "macos")]
+    let candidates = {
+        let mut paths = vec![dir.join(ENGINE_FILE_NAME)];
+        paths.push(dir.join("..").join("Frameworks").join(ENGINE_FILE_NAME));
+        paths
+    };
+    #[cfg(not(target_os = "macos"))]
+    let candidates = vec![dir.join(ENGINE_FILE_NAME)];
+
+    if let Some(found) = candidates.iter().find(|p| p.is_file()) {
+        return Ok(found.clone());
     }
 
     Err(format!(
-        "no media engine found. Looked for {} next to the executable, and for THEIA_LIBMPV",
-        candidate.display()
+        "no media engine found. Looked for {}, and for THEIA_LIBMPV",
+        candidates
+            .iter()
+            .map(|p| p.display().to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
     ))
 }
 

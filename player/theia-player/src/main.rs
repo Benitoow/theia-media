@@ -39,8 +39,11 @@ use tauri::{Emitter, Manager};
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum AudioMode {
     /// Asking for the untouched stream. May be refused by the endpoint.
+    /// Never reached on macOS: nothing is asked for there (`apply_audio_mode`),
+    /// so the session starts in PCM and has nothing to withdraw.
     Passthrough,
-    /// Decoding to PCM, because the endpoint would not take the raw stream.
+    /// Decoding to PCM, because the endpoint would not take the raw stream -
+    /// and, on macOS, because there is no request to make in the first place.
     Pcm,
 }
 
@@ -246,20 +249,87 @@ enum Playing {
 /// not one polymorphic endpoint pretending the distinction does not exist.
 static CURRENT_MEDIA: Mutex<Option<Playing>> = Mutex::new(None);
 
+/// The engine options that differ by platform: how the picture reaches the
+/// window, and how the sound leaves the machine.
+///
+/// Windows is exactly what this player has always set - D3D11 through gpu-next,
+/// WASAPI for sound - and nothing here changes it. The shape is identical on
+/// every platform on purpose: `start_engine` sets these options one by one and
+/// treats a refusal as fatal, so a value mpv does not know becomes a player that
+/// says why it will not start rather than one that renders on another backend in
+/// silence.
+#[cfg(windows)]
+const PLATFORM_OPTIONS: &[(&str, &str)] = &[
+    ("vo", "gpu-next"),
+    ("gpu-api", "d3d11"),
+    ("gpu-context", "d3d11"),
+    ("hwdec", "d3d11va"),
+    ("ao", "wasapi"),
+];
+
+/// macOS: the renderer the pinned engine ships, VideoToolbox decoding, CoreAudio.
+/// `videotoolbox` is in this engine (its pin builds `videotoolbox-gl=enabled`,
+/// which is what compiles the hwdec registering that name) and `coreaudio` is its
+/// `coreaudio=enabled`.
+///
+/// **No `gpu-api` and no `gpu-context` here, and that is a finding, not an
+/// omission. This is the Mac's first check.**
+///
+/// mpv 0.41 has no `metal` GPU API. The names it accepts come from the context
+/// table in `video/out/gpu/context.c` - `auto`, `opengl`, `vulkan`, `d3d11` - and
+/// `gpu-api` is a settings list whose unknown entries are *refused*
+/// (`options/m_option.c`), so `gpu-api=metal` would stop the option loop in
+/// `start_engine` and the player would never open. `metal` appears nowhere in
+/// mpv 0.41.0's source except as the `CAMetalLayer` its Vulkan-on-Metal context
+/// presents into, and this engine has no Vulkan at all: its pin is built with
+/// `vulkan=disabled`, which is why the one macOS context in that table, `macvk`,
+/// is not compiled in, and with `macos-cocoa-cb=disabled`, the libmpv path this
+/// player does not use anyway.
+///
+/// So there is no pair of names this engine can honour, and the consequence has
+/// to be written down rather than papered over: with this pin, on macOS, mpv's
+/// own video outputs have no context to get a frame onto - the engine's one video
+/// path is the libmpv render API over OpenGL (`plain-gl=enabled` in the pin),
+/// where the *host* owns the GL context and draws each frame. `player/README.md`
+/// has the two commands that settle it on a Mac and the two ways out.
+#[cfg(target_os = "macos")]
+const PLATFORM_OPTIONS: &[(&str, &str)] = &[
+    ("vo", "gpu-next"),
+    ("hwdec", "videotoolbox"),
+    ("ao", "coreaudio"),
+];
+
+/// Every other Unix, unchanged: these are exactly the values the player set on
+/// these platforms before macOS joined the product, and `player/libmpv.json`
+/// pins no engine for them, so there is nothing here to check against.
+#[cfg(not(any(windows, target_os = "macos")))]
+const PLATFORM_OPTIONS: &[(&str, &str)] = &[
+    ("vo", "gpu-next"),
+    ("gpu-api", "d3d11"),
+    ("gpu-context", "d3d11"),
+    ("hwdec", "d3d11va"),
+    ("ao", "wasapi"),
+];
+
 /// The options the player starts with. Kept in one place so the policy is
 /// readable rather than scattered through the setup closure.
+///
+/// `wid` comes first and is the handle the platform gave us: an `HWND` on
+/// Windows, an `NSView*` on macOS, nothing on the other Unix. mpv calls it `wid`
+/// everywhere, so the entry itself does not vary; what varies is what the handle
+/// is, and `main` decides that in one place. On macOS this entry is the Mac's
+/// first check: mpv 0.41 no longer reads `wid` there at all - the paragraph
+/// documenting an `NSView*` left the manual after 0.36, and no macOS file in
+/// 0.41.0 reads the option - so the film is expected to appear in a window mpv
+/// opens itself. `start_engine` keeps the player alive either way.
 ///
 /// `silent` starts muted. It exists because a player that always makes a noise
 /// is hostile in a shared room - and because every automated run of this
 /// program has no business producing sound on somebody's machine.
-fn base_options(hwnd: isize, silent: bool) -> Vec<(&'static str, String)> {
-    vec![
-        ("wid", hwnd.to_string()),
-        ("vo", "gpu-next".into()),
-        ("gpu-api", "d3d11".into()),
-        ("gpu-context", "d3d11".into()),
-        ("hwdec", "d3d11va".into()),
-        ("ao", "wasapi".into()),
+fn base_options(wid: isize, silent: bool) -> Vec<(&'static str, String)> {
+    let mut options: Vec<(&'static str, String)> = vec![("wid", wid.to_string())];
+    options.extend(PLATFORM_OPTIONS.iter().map(|(k, v)| (*k, (*v).to_string())));
+    options.extend([
         ("audio-channels", "auto".into()),
         ("mute", if silent { "yes".into() } else { "no".into() }),
         ("terminal", "no".into()),
@@ -277,14 +347,41 @@ fn base_options(hwnd: isize, silent: bool) -> Vec<(&'static str, String)> {
         // mpv paints this surface black instead, from startup, and it stays at
         // the bottom of the child z-order where the picture already goes.
         ("force-window", "yes".into()),
-    ]
+    ]);
+    options
 }
 
 /// The passthrough request, kept apart from the options above because it is
 /// withdrawn at runtime when the endpoint refuses it.
+///
+/// Named for what it is: the WASAPI bitstream path, `audio-spdif` plus
+/// `audio-exclusive`. CoreAudio has no equivalent - mpv's own manual documents
+/// the only macOS passthrough as `--coreaudio-spdif-hack`, which sends AC-3 and
+/// DTS core as float PCM and *disables* normal AC-3 passthrough even on a device
+/// that reports it, and neither it nor the `coreaudio` driver's redirection to
+/// `coreaudio_exclusive` carries TrueHD, Atmos or DTS-HD MA - so macOS asks for
+/// nothing at all and its audio mode is PCM.
+#[cfg(not(target_os = "macos"))]
 const SPDIF_CODECS: &str = "ac3,eac3,dts,dts-hd,truehd";
 
+/// Asks the engine for the audio path its mode names.
+///
+/// Windows and the other Unix do exactly what they have always done: a
+/// passthrough request, and PCM when it has to be withdrawn.
+///
+/// macOS does nothing, deliberately and in one place, because it has no request
+/// to make and therefore none to withdraw: `SPDIF_CODECS` names formats
+/// CoreAudio cannot carry (see above). The mode the session *starts* in is the
+/// other half of that decision and lives in `start_engine`.
 fn apply_audio_mode(engine: &Engine, mode: AudioMode) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        // The two arms would be the same no-op, so there is one: writing a
+        // `audio-spdif` request here and relying on mpv to refuse it is the
+        // silent request this port exists to remove.
+        let _ = (engine, mode);
+    }
+    #[cfg(not(target_os = "macos"))]
     match mode {
         AudioMode::Passthrough => {
             engine.set_option("audio-spdif", SPDIF_CODECS)?;
@@ -718,7 +815,10 @@ fn start_local_server(server: &Path, data_dir: &Path) -> Result<(), String> {
     {
         use std::os::windows::process::CommandExt;
         // CREATE_NO_WINDOW: an all-in-one player starts its server as product
-        // infrastructure, not as a console the viewer has to dismiss.
+        // infrastructure, not as a console the viewer has to dismiss. macOS has
+        // no equivalent and needs none: a process started from the app bundle
+        // has no console window to suppress (its output goes wherever the
+        // bundle's own was sent).
         command.creation_flags(0x0800_0000);
     }
     command
@@ -1235,6 +1335,12 @@ fn apply_round_region(hwnd: isize, width: u32, height: u32, scale: f64, rounded:
     unsafe { SetWindowRgn(hwnd as HWND, region, 1) };
 }
 
+/// macOS and the other Unix: no equivalent, and none is invented. There is no
+/// window region to set - on macOS the window is a plain `NSWindow`, its corners
+/// are the system's business, and the icon and the menu bar come from the app
+/// bundle rather than from this code. The page's own `border-radius` still
+/// rounds what the page paints; what is missing here is the clipping of the
+/// surface below it, which only Windows offers.
 #[cfg(not(windows))]
 fn apply_round_region(_hwnd: isize, _width: u32, _height: u32, _scale: f64, _rounded: bool) {}
 
@@ -1258,6 +1364,10 @@ fn round_webview_window(window: &tauri::WebviewWindow) {
     let full = window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false);
     apply_round_region(hwnd.0 as isize, size.width, size.height, scale, !full);
 }
+
+// The two stubs below exist so the setup and event hooks read the same on every
+// platform. On macOS and the other Unix they have nothing to do: the rounding is
+// `SetWindowRgn`, and the window is a normal `NSWindow`.
 
 #[cfg(not(windows))]
 fn round_window(_window: &tauri::Window) {}
@@ -1386,8 +1496,12 @@ fn minimum_track_size(hwnd: isize) -> Option<(i32, i32)> {
     (width > 0 && height > 0).then_some((width, height))
 }
 
+/// macOS and the other Unix: `WM_GETMINMAXINFO` is a Win32 message with no
+/// counterpart. There is nothing to ask, and nothing is invented: the window is
+/// a normal `NSWindow` and the minimum a person feels while dragging an edge is
+/// the one tao applies from `minWidth`/`minHeight` in logical points.
 #[cfg(not(windows))]
-fn minimum_track_size(_hwnd: isize) -> Option<(i32, i32)> {
+fn minimum_track_size(_wid: isize) -> Option<(i32, i32)> {
     None
 }
 
@@ -1405,7 +1519,11 @@ fn minimum_track_size(_hwnd: isize) -> Option<(i32, i32)> {
 /// It keeps writing because the picture is taken seconds after the window opens
 /// and after the pointer has been nudged: a report written once at startup would
 /// describe the window at load and not the moment the photograph shows.
-fn start_window_probe(window: tauri::WebviewWindow, hwnd: isize, requested: (u32, u32), path: PathBuf) {
+///
+/// `wid` is the platform's window handle from `main`; only the Windows path uses
+/// it, for [`minimum_track_size`], and on macOS and the other Unix it is read by
+/// nothing.
+fn start_window_probe(window: tauri::WebviewWindow, wid: isize, requested: (u32, u32), path: PathBuf) {
     std::thread::spawn(move || {
         // Twenty seconds at two beats a second: long enough for a script to
         // launch the player, wait for the film to draw and photograph it, and
@@ -1434,7 +1552,7 @@ fn start_window_probe(window: tauri::WebviewWindow, hwnd: isize, requested: (u32
             let physical = window.inner_size().unwrap_or_default();
             let outer = window.outer_size().unwrap_or_default();
             let scale = window.scale_factor().unwrap_or(1.0);
-            let minimum = minimum_track_size(hwnd);
+            let minimum = minimum_track_size(wid);
             let report = serde_json::json!({
                 "requested": { "width": requested.0, "height": requested.1 },
                 "physical": { "width": physical.width, "height": physical.height },
@@ -1505,16 +1623,49 @@ fn save_progress() {
 
 /// Starts the engine, or reports why it could not start. Called from setup so
 /// a missing DLL becomes a message rather than a crash.
-fn start_engine(hwnd: isize, media: Option<&str>, silent: bool) -> Result<(), String> {
+///
+/// `wid` is the platform's window handle, the value [`base_options`] passes to
+/// mpv as `wid`.
+fn start_engine(wid: isize, media: Option<&str>, silent: bool) -> Result<(), String> {
     let dll = mpv::engine_path()?;
     let engine = Engine::load(&dll)?;
 
-    for (name, value) in base_options(hwnd, silent) {
-        // hwdec and the passthrough request are allowed to fail on a machine
-        // that cannot honour them; everything else failing is fatal.
-        engine.set_option(name, &value)?;
+    for (name, value) in base_options(wid, silent) {
+        match engine.set_option(name, &value) {
+            Ok(()) => {}
+            // One exception, and only on macOS: the window handle. mpv 0.41 does
+            // not read `wid` there (see `base_options`), and what is expected is
+            // an option accepted and ignored - but if the shipped engine refuses
+            // the option outright instead, the player still has to start. That is
+            // the Mac's first check, and this arm is what keeps a refusal from
+            // being the answer. A film that plays that way plays in mpv's own
+            // window, with the OSD in a window of its own rather than over the
+            // picture, because the two are no longer the same window.
+            Err(e) if cfg!(target_os = "macos") && name == "wid" => {
+                eprintln!(
+                    "theia-player: mpv would not take {name}={value} ({e}); \
+                     a film will play in mpv's own window if it can draw one"
+                );
+            }
+            // Everything else failing is fatal, which is the behaviour this loop
+            // has always had: a vo, an ao or a hwdec this engine cannot honour
+            // stops the player rather than letting it play something worse in
+            // silence. (The comment this replaces said hwdec was allowed to fail;
+            // it has never been allowed to.)
+            Err(e) => return Err(e),
+        }
     }
-    apply_audio_mode(&engine, AudioMode::Passthrough)?;
+    // Windows, and every other Unix, start by asking for passthrough and fall
+    // back to PCM when the endpoint refuses. macOS has no passthrough to ask for
+    // - CoreAudio cannot carry what `SPDIF_CODECS` names - so it starts in PCM,
+    // and the audio watchdog that watches for a refused bitstream has nothing to
+    // watch there (`supervise_audio` returns unless the mode is Passthrough).
+    let audio = if cfg!(target_os = "macos") {
+        AudioMode::Pcm
+    } else {
+        AudioMode::Passthrough
+    };
+    apply_audio_mode(&engine, audio)?;
     engine.initialize()?;
     // What the loaded library says it is, recorded once: the pin in
     // player/libmpv.json is a claim about a file, and this is the observation
@@ -1528,7 +1679,9 @@ fn start_engine(hwnd: isize, media: Option<&str>, silent: bool) -> Result<(), St
 
     let mut session = Session {
         engine,
-        audio: AudioMode::Passthrough,
+        // The mode the engine was just configured for, not a second opinion:
+        // `audio` is PCM on macOS and a passthrough request elsewhere.
+        audio,
         media: None,
         title: None,
         loaded_at: None,
@@ -1667,12 +1820,24 @@ fn main() {
         ])
         .setup(move |app| {
             let window = app.get_webview_window("main").expect("the main window");
-            let hwnd = {
+            // The handle mpv draws into, and the one place it is chosen. mpv
+            // calls it `wid` on every platform; what it *is* does not travel: an
+            // `HWND` on Windows, an `NSView*` on macOS (mpv 0.36's manual asked
+            // for exactly that, `NSView*` cast to `intptr_t`; 0.41 no longer
+            // reads the option at all - see `base_options`), and nothing on the
+            // other Unix, where no window embedding has ever been attempted.
+            let wid = {
                 #[cfg(windows)]
                 {
                     window.hwnd().expect("a window handle").0 as isize
                 }
-                #[cfg(not(windows))]
+                #[cfg(target_os = "macos")]
+                {
+                    // The window's content view: the NSView the WebView is
+                    // drawn in, which is where a film would have to go.
+                    window.ns_view().expect("the window's content view") as isize
+                }
+                #[cfg(not(any(windows, target_os = "macos")))]
                 {
                     0isize
                 }
@@ -1694,10 +1859,10 @@ fn main() {
             round_webview_window(&window);
 
             if let (Some(requested), Some(path)) = (window_size, window_report.clone()) {
-                start_window_probe(window.clone(), hwnd, requested, PathBuf::from(path));
+                start_window_probe(window.clone(), wid, requested, PathBuf::from(path));
             }
 
-            match start_engine(hwnd, media.as_deref(), silent) {
+            match start_engine(wid, media.as_deref(), silent) {
                 Ok(()) => {
                     let version = player_version().unwrap_or_else(|| "unknown".into());
                     println!("theia-player: engine {version}");

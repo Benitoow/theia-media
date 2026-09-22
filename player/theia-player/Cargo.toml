@@ -12,7 +12,16 @@ publish = false
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+# `macos-private-api` is not decoration: `tauri.conf.json` declares the window
+# `transparent: true`, and on macOS tauri-runtime-wry applies that flag only
+# under `any(not(target_os = "macos"), feature = "macos-private-api")`
+# (tauri-runtime-wry 2.11.4, src/lib.rs; without the feature it prints a warning
+# at startup and draws an opaque window, which is the one thing the OSD cannot be
+# over). The matching `app.macOSPrivateApi: true` in `tauri.conf.json` is the
+# other half: tauri-utils reads that key to decide whether the feature is
+# allowed, and `AppConfig` denies unknown keys, so the reason lives here rather
+# than in a JSON file that cannot hold a comment. On Windows the feature is inert.
+tauri = { version = "2", features = ["macos-private-api"] }
 libloading = "0.8"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
