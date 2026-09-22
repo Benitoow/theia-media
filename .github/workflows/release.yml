@@ -531,6 +531,16 @@ jobs:
           name: theia-player-darwin-arm64
           path: dist
 
+      # An artifact does not promise to keep a file's mode, and it does not: the
+      # three Go programs arrive readable but not runnable, so the check below
+      # could not run the server at all - it failed with `Permission denied` on
+      # a file that was there. The archive is a different question, and the
+      # archive is checked as a download below.
+      - name: Make the downloaded programs runnable
+        run: |
+          chmod +x dist/theia-server-darwin-arm64 dist/theia-setup-darwin-arm64 dist/theia-launcher-darwin-arm64
+          ls -l dist/theia-server-darwin-arm64 dist/theia-setup-darwin-arm64 dist/theia-launcher-darwin-arm64
+
       # The player travels zipped because an artifact does not promise to keep a
       # bundle's symlinks and executable bits. ditto is what recreates them.
       - name: Unpack the player bundle
@@ -559,6 +569,42 @@ jobs:
           "$dir/theia-server" -version
           "$dir/Theia.app/Contents/MacOS/theia-player" -version
           du -sm "$dir"
+
+      # What a person actually downloads, unzipped by the tool a person would
+      # use. The staged directory is not the archive: a zip is what a Mac user
+      # gets, and until V3.3.4 it arrived readable but not runnable - the
+      # START-HERE.txt had to teach four chmods. `zip` writes the permission
+      # bits and `-y` keeps the bundle's symlinks, and this is the step that
+      # says whether it really did, rather than the comment that says it should.
+      - name: Unzip the download the way a person does
+        run: |
+          version='${{ env.THEIA_VERSION }}'
+          version="${version#v}"
+          rm -rf "$RUNNER_TEMP/download"
+          mkdir -p "$RUNNER_TEMP/download"
+          ditto -x -k "dist/theia-${version}-darwin-arm64.zip" "$RUNNER_TEMP/download"
+          cd "$RUNNER_TEMP/download"
+          for program in theia theia-server theia-setup Theia.app/Contents/MacOS/theia-player
+          do
+            test -x "$program" || { echo "the download's $program is not executable"; ls -l "$program"; exit 1; }
+            echo "executable: $program"
+          done
+          # The engine is reached through a symlink; a zip that stored the
+          # target under both names would ship it twice and change the bundle.
+          test -L Theia.app/Contents/Frameworks/libmpv.dylib ||
+            { echo 'the bundle symlink did not survive the archive'; ls -l Theia.app/Contents/Frameworks | head; exit 1; }
+          echo "symlink kept: $(readlink Theia.app/Contents/Frameworks/libmpv.dylib)"
+          # And it runs from where a person would run it.
+          ./theia-server -version
+          # The START-HERE must not still teach a step it no longer needs. An
+          # `if`, not `grep -q … && …`: the list's status would be grep's, and
+          # a step whose last command returns 1 fails the job for the *right*
+          # reason.
+          if grep -q 'chmod' START-HERE.txt; then
+            echo 'START-HERE still teaches chmod, which the archive no longer needs'
+            exit 1
+          fi
+          echo 'the download starts and its instructions match it'
 
       - uses: actions/upload-artifact@v7
         with:

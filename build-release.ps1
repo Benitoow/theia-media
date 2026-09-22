@@ -58,10 +58,16 @@ $root = $PSScriptRoot
 # The one step both platforms take: everything standing in the stage becomes
 # dist\theia-<version>-<platform>.zip, and the sizes are printed.
 #
-# `Compress-Archive` writes no Unix permission bits, and no switch on it puts
-# them back, so the macOS archive's programs arrive readable but not runnable.
-# That is why the macOS START-HERE.txt says to chmod them: a download that says
-# what is wrong with it is the honest fix, and one that conceals it is not.
+# On Windows that is `Compress-Archive`, which writes no Unix permission bits -
+# and none are wanted there, where an `.exe` is runnable by its name.
+#
+# On macOS the same call was the wrong tool, and the archive said so out loud: a
+# zip download arrived readable but not runnable, and the START-HERE.txt had to
+# teach a person to chmod four files before the product would start. That was
+# honest and it was also avoidable: `zip` is on every Mac and writes the
+# permission bits, and `-y` keeps the symlinks inside the bundle as symlinks
+# instead of turning each one into a second copy of a 3.8 MB dylib. So the
+# darwin path uses it, and what a Mac user unzips now runs.
 function Publish-OfflineArchive {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
@@ -70,7 +76,21 @@ function Publish-OfflineArchive {
 
     $archive = Join-Path $root "dist/$Name.zip"
     if (Test-Path $archive) { Remove-Item -Force $archive }
-    Compress-Archive -Path (Join-Path $Stage '*') -DestinationPath $archive
+    if ($IsMacOS) {
+        # `-y` is not an optimisation: the engine is reached through symlinks
+        # (libmpv.dylib -> libmpv.2.dylib), and a zip that stores the target
+        # under both names ships the library twice and changes what the bundle
+        # is. Run from the stage so the archive's members are relative.
+        Push-Location $Stage
+        try {
+            & zip -r -y $archive .
+            if ($LASTEXITCODE -ne 0) { throw "zip failed with exit code $LASTEXITCODE" }
+        } finally {
+            Pop-Location
+        }
+    } else {
+        Compress-Archive -Path (Join-Path $Stage '*') -DestinationPath $archive
+    }
 
     $total = [math]::Round(((Get-ChildItem $Stage -Recurse -File | Measure-Object -Property Length -Sum).Sum) / 1MB, 1)
     $zipped = [math]::Round((Get-Item $archive).Length / 1MB, 1)
@@ -179,10 +199,8 @@ EN - Unzip this archive, open Terminal in the folder it made, and run
      broken download. Allow it once, the way Apple documents it: Control-click
      Theia.app, choose Open, then choose Open again in the dialog - and for the
      Terminal programs, let the first run be refused and then allow it in
-     System Settings > Privacy & Security > Open Anyway. And a zip download
-     loses the executable bit, so the programs arrive readable but not
-     runnable: once, in this folder, run
-         chmod +x theia theia-server theia-setup Theia.app/Contents/MacOS/theia-player
+     System Settings > Privacy & Security > Open Anyway. The programs arrive
+     executable, so ./theia-setup runs as it is; nothing here needs chmod.
      The installer's first question is which language Theia should speak -
      English and French ship, and the answer is what both interfaces and the
      film metadata open in. Then it asks what this machine is for, where to keep
@@ -207,10 +225,8 @@ FR - Decompressez cette archive, ouvrez un Terminal dans le dossier obtenu et
      documente : Control-clic sur Theia.app, Ouvrir, puis Ouvrir encore dans la
      boite de dialogue - et pour les programmes en ligne de commande, laissez le
      premier lancement echouer puis autorisez-les dans Reglages du systeme >
-     Confidentialite et securite > Ouvrir quand meme. Et un telechargement zip
-     perd le droit d'execution : les programmes arrivent lisibles mais pas
-     lancables, donc une fois, dans ce dossier, lancez
-         chmod +x theia theia-server theia-setup Theia.app/Contents/MacOS/theia-player
+     Confidentialite et securite > Ouvrir quand meme. Les programmes arrivent
+     executables : ./theia-setup se lance tel quel, rien ici ne demande chmod.
      La premiere question de l'installateur est la langue que Theia doit parler
      - l'anglais et le francais sont livres, et la reponse est celle dans
      laquelle s'ouvrent les deux interfaces comme les fiches des films. Il
