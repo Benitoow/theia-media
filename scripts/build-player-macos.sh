@@ -135,7 +135,22 @@ if [ -z "$(ls -A "$vendor"/*.dylib 2>/dev/null)" ]; then
 	echo "$vendor holds no dylibs; the engine was not fetched" >&2
 	exit 1
 fi
-cp "$vendor"/*.dylib "$app/Contents/Frameworks/"
+# `-R`, and the reason is measured rather than stylistic: `cp` copies what a
+# symlink points at, and the engine's set is 19 libraries with 11 symlinks
+# between them - libavcodec.62.dylib is a link to libavcodec.62.28.102.dylib.
+# Copied flat, every link became a second copy of its target: the release
+# runner's Frameworks directory listed libavcodec twice at 11.8 MB each, and the
+# bundle was 25 MB larger than the engine it ships. A flattened set looks
+# completely normal, which is why the count below exists.
+cp -R "$vendor"/*.dylib "$app/Contents/Frameworks/"
+want_links=$(python3 -c "import json;m=json.load(open('$root/player/libmpv.json'));print(len(m['platforms']['darwin/arm64'].get('runtime_symlinks',{})))")
+have_links=$(find "$app/Contents/Frameworks" -type l | wc -l | tr -d ' ')
+if [ "$want_links" -gt 0 ] && [ "$have_links" -ne "$want_links" ]; then
+	echo "the Frameworks directory holds $have_links symlinks where the pin names $want_links:" >&2
+	echo "the engine's set was flattened into copies, so the bundle ships each of them twice" >&2
+	exit 1
+fi
+echo "    the engine's $have_links symlinks survived the copy"
 if [ -d "$vendor/licenses" ]; then
 	# The engine's own licence texts, which are the LGPL obligation: the text
 	# travels with the library. Theia's notice points here.
