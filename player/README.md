@@ -45,6 +45,17 @@ the fetch at a mirror first; the digest is what decides, not the URL. Only
 `windows/amd64` is pinned, because Windows is the only platform the player has
 been run and verified on.
 
+### How an installed player is updated
+
+Not by itself, and not by this crate: `theia-setup --update-player` replaces the
+four files of this bundle from the release GitHub publishes, after verifying the
+digest GitHub reports, extracting all four members and **running the new player
+to hear it name the version the release announces**. It refuses while the player
+is open rather than fighting a running program for its own engine, and a failure
+puts back what it had already moved. Decision 143 has the measurements.
+`theia-player -version` exists for that check, and for anybody else who needs to
+ask a build what it is.
+
 ### The licence, which is not optional
 
 Decision 118 accepts the LGPL's obligations in exchange for redistributing the
@@ -153,7 +164,10 @@ Options that exist today:
 | `--discover` | Browses the network for servers, prints what answered, and exits. |
 | `--mute` | Starts muted. Every automated run of this program uses it: a test that plays a tone on somebody's machine while they are working is a test that gets the project turned off. |
 | `--audio <id>` / `--sub <id>` | Chooses a track shortly after the file opens, through the same command the OSD's menu calls. `--sub 0` turns subtitles off. |
+| `--version` / `-version` | Prints `theia-player <version>` on one line and exits. It needs no window, no server and no engine, because it is how a shell - or the installer's smoke test - asks a build what it is (decision 24). Without `-Version` at build time the answer is `dev`, which is what a local build is. |
 | `--diagnostics` | Prints the session state once a second as JSON, and the track list whenever it changes. |
+| `--window <W>x<H>` | Sizes the window to that many **real** pixels - not logical ones - through Tauri's own window API, and writes what the window and the page inside it measured to the file `--window-report` names. It is the verification path for the window's declared minimum: resizing the OS window from outside bypasses Tauri's own sizing, which is exactly the interference the check exists to remove (open risk 6 in [`docs/v3.3.md`](../docs/v3.3.md)), and the picture it produces is taken with `scripts/capture-window.ps1 -NoResize -Wake`. The measurement includes the page's own `innerWidth`/`innerHeight`, because the window's size and the size the OSD lays itself out against differ by the scaling factor, and only the second one answers the question. |
+| `--window-report <path>` | Where `--window` writes that measurement, twice a second for twenty seconds. Without it nothing is written and the window is still resized. |
 
 The engine is looked for in this order:
 

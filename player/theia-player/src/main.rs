@@ -10,7 +10,15 @@
 //!   theia-player --media <path>   play one local file, for development
 //!   theia-player                  browse the network for a server, or be told
 //!                                 an address by the OSD
+//!   theia-player --version        print which build this is and exit
 //!   theia-player --diagnostics    print the session state once a second
+//!   theia-player --window 640x360 --window-report <path>
+//!                                 size the window to that many *real* pixels
+//!                                 through Tauri's own API, and write what the
+//!                                 window and the page inside it measured to
+//!                                 that file. The verification path for the
+//!                                 window's declared minimum (open risk 6 in
+//!                                 docs/v3.3.md); it changes nothing else.
 
 mod mpv;
 mod server;
@@ -1283,6 +1291,181 @@ fn fit_initial_window(window: &tauri::WebviewWindow) {
     let _ = window.center();
 }
 
+/// Reads `--window 640x360`: a size in **physical** pixels.
+///
+/// Physical and not logical on purpose. The question this exists for - what the
+/// OSD makes of the window at its declared minimum - is a question about real
+/// pixels, because the page counts CSS pixels and the scaling factor is what
+/// sits between the two. A logical request would be the number the page already
+/// sees, which is the answer, not the question.
+///
+/// A size that does not parse is treated as no size at all rather than as a
+/// failure: the player still has to start, and a window at the designed size
+/// with a report saying nothing was asked for is a better answer than a process
+/// that refuses to open.
+fn parse_window_size(value: &str) -> Option<(u32, u32)> {
+    let (width, height) = value.split_once(['x', 'X'])?;
+    let width = width.trim().parse().ok()?;
+    let height = height.trim().parse().ok()?;
+    (width > 0 && height > 0).then_some((width, height))
+}
+
+/// The one question this player cannot answer by looking at its own window:
+/// what the page inside it believes it is drawing into.
+///
+/// The window's size is what Tauri was asked for; the document's is what the
+/// OSD lays itself out against, and the two differ by exactly the scaling
+/// factor. Reading it back needs no command in the interface - the page is
+/// asked directly, and `eval_with_callback` hands the answer back as JSON.
+///
+/// The `try` is not decoration: on Windows a throw reaches the callback as an
+/// empty string rather than as an error, and an empty string is not a
+/// measurement. The bar is measured as well as the viewport, because "the
+/// control bar is not in the picture" has three possible causes - it is not
+/// drawn, it is drawn off the edge, or the furniture faded - and a photograph
+/// cannot tell them apart on its own.
+const VIEWPORT_PROBE: &str = r#"(function () {
+  try {
+    const bar = document.querySelector('.controls');
+    const rect = bar ? bar.getBoundingClientRect() : null;
+    const style = bar ? getComputedStyle(bar) : null;
+    const controls = bar ? Array.from(bar.querySelectorAll('button.control')) : [];
+    return {
+      innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
+      devicePixelRatio: window.devicePixelRatio,
+      idle: document.querySelector('.osd')?.dataset.idle ?? null,
+      bar: bar && rect && style ? {
+        hidden: bar.classList.contains('controls--hidden'),
+        display: style.display,
+        opacity: style.opacity,
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+        bottom: rect.bottom,
+        controls: controls.length,
+        controlsVisible: controls.filter((b) => getComputedStyle(b).display !== 'none').length
+      } : null
+    };
+  } catch (e) {
+    return { error: String(e) };
+  }
+})()"#;
+
+/// The size the window itself says it will not go below, in **real** pixels.
+///
+/// `WM_GETMINMAXINFO` is where Windows asks a window for its tracking limits,
+/// and it is the only place the declared minimum actually exists: the config's
+/// `minWidth`/`minHeight` reach tao as *logical* units and are multiplied by the
+/// monitor's factor right there. So this answers, by measurement rather than by
+/// reading somebody else's source, the question the whole check turns on - is
+/// "the declared minimum" 640 real pixels, or 640 CSS pixels, which at 200%
+/// scaling is 1280 of them?
+///
+/// It also says what the `--window` request does *not* get clamped by: the
+/// constraint lives in this message alone, and Windows sends it while a person
+/// drags an edge, not when the program resizes itself.
+#[cfg(windows)]
+fn minimum_track_size(hwnd: isize) -> Option<(i32, i32)> {
+    use windows_sys::Win32::Foundation::HWND;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{SendMessageW, MINMAXINFO, WM_GETMINMAXINFO};
+
+    let mut info: MINMAXINFO = unsafe { std::mem::zeroed() };
+    // The window is in this process, so the pointer needs no marshalling: the
+    // same call from outside would be a different question.
+    unsafe {
+        SendMessageW(
+            hwnd as HWND,
+            WM_GETMINMAXINFO,
+            0,
+            &mut info as *mut MINMAXINFO as isize,
+        );
+    }
+    let (width, height) = (info.ptMinTrackSize.x, info.ptMinTrackSize.y);
+    (width > 0 && height > 0).then_some((width, height))
+}
+
+#[cfg(not(windows))]
+fn minimum_track_size(_hwnd: isize) -> Option<(i32, i32)> {
+    None
+}
+
+/// Writes what the window and the page measured, twice a second, to the file
+/// `--window-report` named.
+///
+/// Open risk 6 in docs/v3.3.md is a picture nobody could trust: the shipped
+/// player was resized to the minimum from *outside*, which bypasses Tauri's own
+/// sizing, and the picture showed no control bar - a product fault or a
+/// measurement fault, and the record says so rather than guessing. This is the
+/// other half of settling it. The size is applied through Tauri, and the numbers
+/// are written down where a probe can read them, because this is a GUI binary
+/// with no console anybody can read.
+///
+/// It keeps writing because the picture is taken seconds after the window opens
+/// and after the pointer has been nudged: a report written once at startup would
+/// describe the window at load and not the moment the photograph shows.
+fn start_window_probe(window: tauri::WebviewWindow, hwnd: isize, requested: (u32, u32), path: PathBuf) {
+    std::thread::spawn(move || {
+        // Twenty seconds at two beats a second: long enough for a script to
+        // launch the player, wait for the film to draw and photograph it, and
+        // frequent enough that the file on disk describes the picture's own
+        // moment rather than the moment the window opened.
+        for _ in 0..40 {
+            let (tx, rx) = std::sync::mpsc::channel();
+            let asked = window.eval_with_callback(
+                VIEWPORT_PROBE,
+                move |answer| {
+                    let _ = tx.send(answer);
+                },
+            );
+            // The answer is waited for before the file is written, so the report
+            // never says the page did not answer about a page that did.
+            let page: serde_json::Value = match asked {
+                Ok(()) => match rx.recv_timeout(Duration::from_millis(400)) {
+                    Ok(answer) if !answer.is_empty() => {
+                        serde_json::from_str(&answer).unwrap_or(serde_json::Value::Null)
+                    }
+                    Ok(_) => serde_json::Value::String("the page threw".into()),
+                    Err(_) => serde_json::Value::Null,
+                },
+                Err(e) => serde_json::Value::String(format!("the page could not be asked: {e}")),
+            };
+            let physical = window.inner_size().unwrap_or_default();
+            let outer = window.outer_size().unwrap_or_default();
+            let scale = window.scale_factor().unwrap_or(1.0);
+            let minimum = minimum_track_size(hwnd);
+            let report = serde_json::json!({
+                "requested": { "width": requested.0, "height": requested.1 },
+                "physical": { "width": physical.width, "height": physical.height },
+                "outer": { "width": outer.width, "height": outer.height },
+                "scaleFactor": scale,
+                "logical": {
+                    "width": physical.width as f64 / scale,
+                    "height": physical.height as f64 / scale,
+                },
+                // What the window itself answers to `WM_GETMINMAXINFO`: the
+                // floor Windows enforces while an edge is dragged, in real
+                // pixels. Null when the window did not answer.
+                "minimumTrackSize": match minimum {
+                    Some((width, height)) => serde_json::json!({ "width": width, "height": height }),
+                    None => serde_json::Value::Null,
+                },
+                "page": page,
+            });
+            match serde_json::to_string_pretty(&report) {
+                Ok(text) => {
+                    if let Err(e) = std::fs::write(&path, text) {
+                        eprintln!("theia-player: could not write {}: {e}", path.display());
+                    }
+                }
+                Err(e) => eprintln!("theia-player: could not serialise the window report: {e}"),
+            }
+            std::thread::sleep(Duration::from_millis(500));
+        }
+    });
+}
+
 
 /// Writes the playhead back to the server. Deliberately the same call the
 /// browser player makes, so a film started in one is resumable in the other.
@@ -1375,6 +1558,17 @@ fn flag(name: &str) -> Option<String> {
 }
 
 fn main() {
+    // A build that cannot name itself can never be updated by anything that
+    // asks, which is decision 24 applied to the player: the installer next door
+    // runs exactly this command to find out what is installed. Answered first,
+    // before discovery, before the engine is looked for and before Tauri starts,
+    // so it works with no display, no server and no engine present - and so a
+    // caller gets a version and not a window.
+    if std::env::args().any(|a| a == "--version" || a == "-version") {
+        println!("theia-player {}", env!("THEIA_VERSION"));
+        return;
+    }
+
     // Discovery answers on stdout and exits: it needs no window, and it is the
     // only way to tell "no server is announced" from "the player cannot see
     // one" on a machine nobody can look at.
@@ -1421,6 +1615,12 @@ fn main() {
     }
 
     let media = flag("--media").filter(|p| std::path::Path::new(p).is_file());
+    // The verification path for the window's declared minimum: a size in real
+    // pixels, applied through Tauri's own API, and the measurement written to a
+    // file because a GUI binary has no console to print it on. See
+    // start_window_probe.
+    let window_size = flag("--window").and_then(|value| parse_window_size(&value));
+    let window_report = flag("--window-report");
     // Prints the session state once a second. It exists so a smoke test, or a
     // person debugging a machine they cannot see, has something to read instead
     // of a window that may or may not be drawing.
@@ -1482,7 +1682,20 @@ fn main() {
             // opened mostly off-screen; size against this monitor before the
             // hidden window is ever shown.
             fit_initial_window(&window);
+
+            // `--window` is applied after the fitting and before anything is
+            // drawn into the window, so mpv's surface is created at the final
+            // size rather than resized into it. The request goes through
+            // Tauri's own window API: reaching this size the way the product
+            // reaches it is the whole point of the check (open risk 6).
+            if let Some((width, height)) = window_size {
+                let _ = window.set_size(tauri::PhysicalSize::new(width, height));
+            }
             round_webview_window(&window);
+
+            if let (Some(requested), Some(path)) = (window_size, window_report.clone()) {
+                start_window_probe(window.clone(), hwnd, requested, PathBuf::from(path));
+            }
 
             match start_engine(hwnd, media.as_deref(), silent) {
                 Ok(()) => {

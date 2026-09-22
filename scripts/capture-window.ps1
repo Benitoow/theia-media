@@ -30,6 +30,25 @@ param(
     # Photograph the whole screen rather than the window, to judge what a person
     # actually sees - including whatever is in front.
     [switch]$FullScreen,
+    # Photograph the window exactly where the program put it. Without this the
+    # script resizes the window first, and that resize is the very interference
+    # this switch exists to remove: moving the OS window from outside bypasses
+    # the program's own sizing, so a picture taken that way cannot say whether
+    # the program puts the window at the size it asked for, or whether the probe
+    # did it. Written for the window's declared minimum (open risk 6 in
+    # docs/v3.3.md), where exactly that ambiguity cost a whole attempt: the
+    # shipped player was resized to 640x360 from outside and the picture showed
+    # no control bar, and nothing in the method could tell a product fault from
+    # a measurement fault. The size now comes from the program's own `--window`
+    # argument, and this switch stops the script from touching it afterwards.
+    [switch]$NoResize,
+    # Send one keystroke to the window once it holds the foreground. The OSD
+    # fades its furniture out after three seconds without input, so a picture of
+    # a window nobody has touched shows the film and not the control bar - which
+    # is a second way to take a picture that answers nothing. The key is `x`,
+    # which the OSD binds to nothing and which therefore only wakes the
+    # furniture. Off by default, like every other switch here.
+    [switch]$Wake,
     # Leave the program running instead of closing it when the picture is taken.
     [switch]$Keep
 )
@@ -60,6 +79,19 @@ Add-Type -Namespace Shot -Name Win -MemberDefinition @'
 public struct RECT { public int Left, Top, Right, Bottom; }
 '@
 
+# For -Wake: one keystroke, through SendInput rather than PostMessage, because
+# the OSD listens on the window the browser owns and a posted message would go
+# to the frame instead. The union is declared in full because SendInput refuses
+# a struct whose size it does not recognise.
+Add-Type -Namespace Key -Name Input -MemberDefinition @'
+[DllImport("user32.dll")] public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+[StructLayout(LayoutKind.Sequential)] public struct MOUSEINPUT { public int dx; public int dy; public uint mouseData; public uint dwFlags; public uint time; public IntPtr dwExtraInfo; }
+[StructLayout(LayoutKind.Sequential)] public struct KEYBDINPUT { public ushort wVk; public ushort wScan; public uint dwFlags; public uint time; public IntPtr dwExtraInfo; }
+[StructLayout(LayoutKind.Sequential)] public struct HARDWAREINPUT { public uint uMsg; public ushort wParamL; public ushort wParamH; }
+[StructLayout(LayoutKind.Explicit)] public struct InputUnion { [FieldOffset(0)] public MOUSEINPUT mi; [FieldOffset(0)] public KEYBDINPUT ki; [FieldOffset(0)] public HARDWAREINPUT hi; }
+[StructLayout(LayoutKind.Sequential)] public struct INPUT { public uint type; public InputUnion U; }
+'@
+
 $started = Get-Date
 if ($Arguments -ne '') {
     $process = Start-Process -FilePath $Exe -ArgumentList $Arguments -PassThru
@@ -80,9 +112,11 @@ if ($window -eq [IntPtr]::Zero) {
 $dpi = [Shot.Win]::GetDpiForWindow($window)
 Write-Host "pid $($target.Id)  window $window  dpi $dpi  (scale $([math]::Round($dpi / 96 * 100))%)"
 
-if (-not $FullScreen) {
+if (-not $FullScreen -and -not $NoResize) {
     [Shot.Win]::ShowWindow($window, 9) | Out-Null   # SW_RESTORE
     [Shot.Win]::MoveWindow($window, 40, 40, $Width, $Height, $true) | Out-Null
+} elseif ($NoResize) {
+    Write-Host "leaving the window where the program put it (-NoResize)"
 }
 
 # Take the foreground by attaching to whoever holds it: an unattached call is
@@ -95,6 +129,27 @@ $mine = [Shot.Win]::GetCurrentThreadId()
 [Shot.Win]::BringWindowToTop($window) | Out-Null
 [Shot.Win]::SetForegroundWindow($window) | Out-Null
 [Shot.Win]::AttachThreadInput($mine, $holderThread, $false) | Out-Null
+
+if ($Wake) {
+    # VK 0x58 is `x`, which the OSD binds to nothing: the keystroke wakes the
+    # furniture and does nothing else. Sent after the foreground, because
+    # SendInput goes to whichever window holds it.
+    $size = [System.Runtime.InteropServices.Marshal]::SizeOf([type][Key.Input+INPUT])
+    foreach ($flags in 0, 2) {   # 0 = key down, 2 = KEYEVENTF_KEYUP
+        $stroke = New-Object Key.Input+KEYBDINPUT
+        $stroke.wVk = 0x58
+        $stroke.dwFlags = $flags
+        $union = New-Object Key.Input+InputUnion
+        $union.ki = $stroke
+        $input = New-Object Key.Input+INPUT
+        $input.type = 1   # INPUT_KEYBOARD
+        $input.U = $union
+        [Key.Input]::SendInput(1, @($input), $size) | Out-Null
+        Start-Sleep -Milliseconds 60
+    }
+    Write-Host "woke the OSD furniture with one keystroke (-Wake)"
+}
+
 Start-Sleep -Milliseconds 900
 
 $rect = New-Object Shot.Win+RECT
