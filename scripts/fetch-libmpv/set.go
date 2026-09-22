@@ -126,8 +126,15 @@ func verifySet(version platformVersion, dir string) error {
 	return nil
 }
 
-// runTar unpacks a whole archive: a set of libraries is only usable together,
-// and tar is what can recreate the symlinks between them.
+// runTar unpacks a whole archive, and does not treat tar's own exit status as
+// the answer.
+//
+// On Windows, bsdtar cannot create the symlinks a macOS engine ships - the
+// filesystem refuses them without elevation - so it exits non-zero *after*
+// extracting every regular file. That is the case this tolerates, and it is the
+// tool's own doctrine: the members are checked by name and then by digest, so an
+// extractor that produced something wrong is caught either way. Only a staging
+// directory that holds nothing at all is an error.
 func runTar(archive, dir string) error {
 	binary, err := exec.LookPath("tar")
 	if err != nil {
@@ -135,7 +142,12 @@ func runTar(archive, dir string) error {
 	}
 	out, err := exec.Command(binary, "-xf", archive, "-C", dir).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("tar: %w: %s", err, strings.TrimSpace(string(out)))
+		entries, readErr := os.ReadDir(dir)
+		if readErr != nil || len(entries) == 0 {
+			return fmt.Errorf("tar: %w: %s", err, strings.TrimSpace(string(out)))
+		}
+		fmt.Fprintf(os.Stderr,
+			"note: tar reported %v - a link it could not create on this filesystem; every member is verified by digest below\n", err)
 	}
 	return nil
 }

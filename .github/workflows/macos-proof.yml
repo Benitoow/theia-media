@@ -51,15 +51,26 @@ jobs:
       # licences and not the include/ directory.
       - name: Fetch the pinned engine
         run: |
+          # pipefail, because `| tee` reports tee's exit status: the first run of
+          # this step said "success" while the fetch had failed, and the whole
+          # job then failed somewhere less informative.
+          set -o pipefail
           mkdir -p out
           go run ./scripts/fetch-libmpv -platform darwin/arm64 \
             -out player/vendor-darwin -keep-archive 2>&1 | tee out/engine-fetch.log
           tar -xzf player/vendor-darwin/libmpv-*.tar.gz -C player/vendor-darwin \
             --strip-components=1 '*/include' 2>/dev/null || true
           ls player/vendor-darwin | head -30
-          ls player/vendor-darwin/include/mpv 2>/dev/null || echo 'NO HEADERS: the spikes cannot compile'
+          # The two names the next step needs: the headers the spikes compile
+          # against, and `libmpv.dylib` because `-lmpv` looks for exactly that.
+          test -f player/vendor-darwin/include/mpv/render_gl.h || {
+            echo 'NO HEADERS: the spikes cannot compile'; exit 1; }
+          test -e player/vendor-darwin/libmpv.dylib || {
+            echo 'NO libmpv.dylib: -lmpv cannot link'; exit 1; }
+          echo 'headers and the link name are in place'
 
       - name: Build the two spikes
+        if: always()
         run: |
           set -o pipefail
           clang -fobjc-arc -framework Cocoa -framework OpenGL \
@@ -72,6 +83,7 @@ jobs:
       # A film to play. A runner has no library, and a colour bar with a sine
       # wave is enough to see whether frames arrive.
       - name: Make a fixture film
+        if: always()
         run: |
           brew install ffmpeg >out/brew.log 2>&1 || true
           ffmpeg -hide_banner -y -f lavfi -i testsrc=size=640x360:rate=24 \
@@ -84,6 +96,7 @@ jobs:
       # possible - macOS runners run as a logged-in user with a WindowServer -
       # but if there is no session the spike says so instead of pretending.
       - name: Run the render spike
+        if: always()
         run: |
           set +e
           DYLD_LIBRARY_PATH=player/vendor-darwin out/render-spike out/fixture.mp4 10 \
@@ -95,6 +108,7 @@ jobs:
       # The second: does a transparent WKWebView composite above an NSOpenGLView,
       # and does the page still receive clicks through its transparent areas?
       - name: Run the composite spike
+        if: always()
         run: |
           set +e
           out/composite-spike >out/composite-spike.log 2>&1
@@ -105,6 +119,7 @@ jobs:
       # And the product itself: the bundle builds, the app carries the OSD it
       # was built with, the signature verifies, and the engine is the pinned one.
       - name: Build the player bundle
+        if: always()
         run: |
           set +e
           ./scripts/build-player-macos.sh -Release -Bundle -Version proof \
@@ -115,6 +130,7 @@ jobs:
       # The verifier the Mac would run. Its player and OSD steps need a film and
       # an eye; its server, installer and signature steps do not.
       - name: Run the macOS verifier
+        if: always()
         run: |
           set +e
           ./scripts/verify-macos.sh -Media out/fixture.mp4 \

@@ -126,6 +126,29 @@ func main() {
 		fail(err)
 	}
 
+	// A macOS engine is a set of libraries rather than one file, and it takes a
+	// different path from here: everything the manifest pins is unpacked, every
+	// digest is checked, and the licence texts come out with it. The branch was
+	// missing when the darwin pin was added - the tool took the Windows path and
+	// failed on a Mac with "rename ... file exists", which is what running it on
+	// a real machine found and no amount of reading would have.
+	if version.isSet() {
+		if err := extractSet(archivePath, version, *outDir); err != nil {
+			fail(err)
+		}
+		if err := verifySet(version, *outDir); err != nil {
+			fail(err)
+		}
+		if !*keepArchive {
+			_ = os.Remove(archivePath)
+		}
+		engine, _, _ := digestOf(filepath.Join(*outDir, version.EngineLibrary))
+		fmt.Printf("fetched %s and the %d libraries it loads\n", version.EngineLibrary, len(version.RuntimeLibraries)-1)
+		fmt.Printf("  engine sha256:%s\n", engine)
+		fmt.Printf("licence %s: every dependency's text is in %s/\n", version.Licence, version.LicenceDir)
+		return
+	}
+
 	libraryPath := filepath.Join(*outDir, version.Library)
 	if err := extract(archivePath, version.Library, libraryPath); err != nil {
 		fail(err)
