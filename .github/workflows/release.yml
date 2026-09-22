@@ -490,15 +490,13 @@ jobs:
           # which the field has never been: measured on the Windows player, the
           # same field reads "mpv v0.41.0-1049-g0b7ed670f". The check could not
           # pass whatever the engine did.
-          echo "$pin" | python3 -c '
-import json, sys
-pin = json.loads(sys.stdin.read().removeprefix("engine-pin: "))
-loaded = pin.get("loaded")
-if not loaded:
-    print("the player loaded no engine (loaded=%r)" % (loaded,))
-    sys.exit(1)
-print("engine loaded:", loaded)
-' || { cat "$log"; exit 1; }
+          loaded=$(echo "$pin" | sed 's/^engine-pin: //' | python3 -c 'import json,sys; print(json.load(sys.stdin).get("loaded") or "")')
+          if [ -z "$loaded" ]; then
+            echo 'the player loaded no engine'
+            cat "$log"
+            exit 1
+          fi
+          echo "engine loaded: $loaded"
           echo "$pin" | grep -q '028e5c8aaf035cd6d8db0e6d02061c81655e4ebf6dfbd54e2c7b917c02c60e3e' ||
             { echo 'the player reports an unexpected engine digest'; exit 1; }
           grep -m1 '^theia-player: version ' "$log" | grep -qF '${{ env.THEIA_VERSION }}' ||
