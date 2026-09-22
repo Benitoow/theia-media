@@ -26,6 +26,10 @@
 #import <Cocoa/Cocoa.h>
 #import <OpenGL/gl3.h>
 #import <dlfcn.h>
+#import <signal.h>
+#import <stdarg.h>
+#import <stdlib.h>
+#import <unistd.h>
 #import <mpv/client.h>
 #import <mpv/render.h>
 #import <mpv/render_gl.h>
@@ -35,6 +39,36 @@ static mpv_render_context *gRender;
 static long gFrames;
 static int gSeconds = 8;
 static NSString *gMedia;
+
+// Every step announces itself, and sixty seconds without a verdict *is* a
+// verdict.
+//
+// The first run of this spike on a headless runner printed nothing and never
+// returned: stdout was block buffered, so the lines saying how far it had got
+// were sitting in a buffer while the process waited for a window session that
+// does not exist on a machine like that. A diagnostic that hangs is worse than
+// one that fails, so nothing here is silent and nothing here is unbounded.
+static void step(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    printf("step: ");
+    vprintf(format, args);
+    printf("\n");
+    va_end(args);
+    fflush(stdout);
+}
+
+static void watchdog(int signal)
+{
+    (void)signal;
+    printf("\n--- verdict (watchdog) ---\n");
+    printf("sixty seconds without a verdict; frames rendered so far: %ld\n", gFrames);
+    printf("if the last step above is the window or the run loop, then this machine has\n");
+    printf("no window session and cannot answer the window questions at all - a finding,\n");
+    printf("not a failure, and the reason a person with a Mac is still needed.\n");
+    _exit(3);
+}
 
 // mpv asks for every GL entry point it needs through this callback, and the
 // answer has to be the *same* GL context's function - which on macOS is simply
@@ -114,7 +148,18 @@ int main(int argc, char *argv[])
         gSeconds = atoi(argv[2]);
     }
 
+    // Unbuffered, and a watchdog. The first run of this spike on a headless
+    // runner printed nothing at all and never returned: stdout was block
+    // buffered, so the lines that say how far it got were sitting in a buffer
+    // while the process waited for a window session that does not exist. A
+    // diagnostic that hangs is worse than one that fails, so every step below
+    // announces itself, and sixty seconds without a verdict is a verdict.
+    setvbuf(stdout, NULL, _IONBF, 0);
+    signal(SIGALRM, watchdog);
+    alarm(60);
+
     @autoreleasepool {
+        step("starting: asking AppKit for an application");
         [NSApplication sharedApplication];
         [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
 
@@ -122,6 +167,7 @@ int main(int argc, char *argv[])
         // path, not the window. The real player draws into a transparent Tauri
         // window with the OSD above it.
         NSRect frame = NSMakeRect(80, 80, 960, 540);
+        step("creating the window");
         NSWindow *window = [[NSWindow alloc] initWithContentRect:frame
                                                        styleMask:NSWindowStyleMaskTitled |
                                                                  NSWindowStyleMaskClosable |
@@ -137,6 +183,7 @@ int main(int argc, char *argv[])
             NSOpenGLPFAAlphaSize, 8,
             0,
         };
+        step("choosing a pixel format (OpenGL 3.2 core)");
         NSOpenGLPixelFormat *format = [[NSOpenGLPixelFormat alloc] initWithAttributes:attributes];
         if (!format) {
             fprintf(stderr, "no OpenGL 3.2 core pixel format: this Mac cannot run the spike\n");
@@ -146,8 +193,10 @@ int main(int argc, char *argv[])
         [window setContentView:view];
         [window makeKeyAndOrderFront:nil];
         [NSApp activateIgnoringOtherApps:YES];
+        step("window created; on screen: %s", [window isVisible] ? "yes" : "NO (no window session)");
 
         // The engine, loaded from wherever DYLD_LIBRARY_PATH points.
+        step("creating the mpv handle");
         gMpv = mpv_create();
         if (!gMpv) {
             fprintf(stderr, "mpv_create failed\n");
@@ -162,6 +211,7 @@ int main(int argc, char *argv[])
         mpv_set_option_string(gMpv, "terminal", "yes");
         mpv_set_option_string(gMpv, "msg-level", "all=warn,vo=v");
 
+        step("initialising the engine");
         int result = mpv_initialize(gMpv);
         if (result < 0) {
             fprintf(stderr, "mpv_initialize failed: %s\n", mpv_error_string(result));
@@ -170,6 +220,7 @@ int main(int argc, char *argv[])
         printf("engine: %s\n", mpv_get_property_string(gMpv, "mpv-version"));
         printf("options accepted: vo=libmpv hwdec=videotoolbox ao=coreaudio\n");
 
+        step("making the GL context current");
         [[view openGLContext] makeCurrentContext];
         mpv_opengl_init_params gl_init = {.get_proc_address = get_proc_address,
                                           .get_proc_address_ctx = NULL};
@@ -180,6 +231,7 @@ int main(int argc, char *argv[])
             {MPV_RENDER_PARAM_ADVANCED_CONTROL, &advanced},
             {0},
         };
+        step("creating the mpv render context (the question this spike exists for)");
         result = mpv_render_context_create(&gRender, gMpv, create_params);
         if (result < 0) {
             fprintf(stderr, "mpv_render_context_create failed: %s\n", mpv_error_string(result));
@@ -189,6 +241,7 @@ int main(int argc, char *argv[])
         printf("render context created (OpenGL, advanced control)\n");
         mpv_render_context_set_update_callback(gRender, on_mpv_render_update, NULL);
 
+        step("loading the film");
         const char *command[] = {"loadfile", [gMedia UTF8String], NULL};
         mpv_command(gMpv, command);
 
@@ -216,7 +269,9 @@ int main(int argc, char *argv[])
             }
         }];
         (void)tick;
+        step("entering the run loop (%d seconds, or the watchdog)", gSeconds);
         [NSApp run];
+        printf("run loop returned with %ld frames\n", gFrames);
     }
     return gFrames > 0 ? 0 : 1;
 }

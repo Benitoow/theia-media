@@ -27,9 +27,37 @@
 #import <Cocoa/Cocoa.h>
 #import <OpenGL/gl3.h>
 #import <WebKit/WebKit.h>
+#import <signal.h>
+#import <stdarg.h>
+#import <stdlib.h>
+#import <unistd.h>
 
 static long gSwaps;
-static NSTextField *gVerdict;
+
+// Same discipline as the render spike: nothing silent, nothing unbounded. The
+// first version of that one hung on a headless runner with its output still in a
+// buffer, and this one is asked the same kind of question on the same kind of
+// machine.
+static void step(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    printf("step: ");
+    vprintf(format, args);
+    printf("\n");
+    va_end(args);
+    fflush(stdout);
+}
+
+static void watchdog(int signal)
+{
+    (void)signal;
+    printf("\n--- verdict (watchdog) ---\n");
+    printf("sixty seconds without a verdict; GL swaps so far: %ld\n", gSwaps);
+    printf("if the last step above is the window or the run loop, this machine has no\n");
+    printf("window session: the composite question needs a person with a Mac.\n");
+    _exit(3);
+}
 
 // The "film": a colour that moves, so a photograph shows whether the surface
 // underneath is still being drawn while the page is up.
@@ -154,14 +182,21 @@ static NSTextField *gVerdict;
 
 int main(void)
 {
+    setvbuf(stdout, NULL, _IONBF, 0);
+    signal(SIGALRM, watchdog);
+    alarm(60);
+
     @autoreleasepool {
+        step("asking AppKit for an application");
         [NSApplication sharedApplication];
         [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
 
         Compositor *compositor = [[Compositor alloc] init];
+        step("building the window: a GL surface below, a transparent page above");
         [compositor build];
         [compositor.window makeKeyAndOrderFront:nil];
         [NSApp activateIgnoringOtherApps:YES];
+        step("window created; on screen: %s", [compositor.window isVisible] ? "yes" : "NO (no window session)");
 
         __block int elapsed = 0;
         [NSTimer scheduledTimerWithTimeInterval:0.5 repeats:YES block:^(NSTimer *timer) {
