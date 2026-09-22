@@ -3051,6 +3051,29 @@
 		opacity: 1;
 	}
 
+	/* The ten-second pair leaves the web bar below 44rem, which is the width the
+	   native bar already drops it at, and for its own reason: the skips are a
+	   remote's affordance and the scrub bar is the seek instrument on a touch
+	   screen. What the row needed, measured on 22 September 2026 - the first
+	   time anybody measured this bar below 1280 - is not the same thing at every
+	   width, because a film's clock is not always 45 seconds long. With a
+	   three-hour film the clock is 100px wide, and:
+
+	     - at 320px the row left it 53px, so its text left its own box and drew
+	       over fullscreen. With the pair gone the same window gives it 157px.
+	     - at 550px with the volume slider expanded - which is what happens when
+	       the pointer crosses it - the clock had 98px for the same 100px.
+
+	   Measured by the playback suite's own guard, which sweeps 320 to 768 with
+	   the clock wearing injected three-hour strings, since the suite's fixtures
+	   are all 45 seconds. What changes is which controls are in the row, never
+	   their size: every one that stays keeps its 3.25rem target. */
+	@media (max-width: 44rem) {
+		.player-icon-button--skip {
+			display: none;
+		}
+	}
+
 	/* A phone is not a small desktop. Refusing to wrap keeps the play button
 	   under the same thumb from one second to the next, but at 390px the row
 	   then overflowed: the volume icon sat on top of the clock and fullscreen

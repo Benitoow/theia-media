@@ -1598,10 +1598,10 @@
 					<Icon name={paused ? 'play' : 'pause'} size={26} label={paused ? t.player.play : t.player.pause} />
 				</button>
 
-				<button type="button" onclick={() => seekTo(position - 10)} class="player-icon-button">
+				<button type="button" onclick={() => seekTo(position - 10)} class="player-icon-button player-icon-button--skip">
 					<Icon name="back10" label={t.player.back10} />
 				</button>
-				<button type="button" onclick={() => seekTo(position + 10)} class="player-icon-button">
+				<button type="button" onclick={() => seekTo(position + 10)} class="player-icon-button player-icon-button--skip">
 					<Icon name="forward10" label={t.player.forward10} />
 				</button>
 

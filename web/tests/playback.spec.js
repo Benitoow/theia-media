@@ -247,3 +247,67 @@ test('a fresh info snapshot is reloaded when ffmpeg becomes ready during the fir
  await expect.poll(()=>page.locator('video').getAttribute('data-stream-source'),{timeout:10000}).toContain('video=transcode');
  await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime).catch(()=>0),{timeout:25000}).toBeGreaterThan(1);
 });
+// The web player keeps a bar with more in it than the native one - the
+// ten-second pair and the two-number clock are deliberate here (design system
+// §6b) - and nothing had ever measured it at a phone width: layout.spec.js
+// leaves the player out on purpose, because it needs a real file, and this
+// suite ran at 1280 only. The row never wraps, so the failure shape is overlap
+// rather than a second line: the clock is the item that shrinks (min-width: 0),
+// so its text is what leaves its own box and paints over its neighbour.
+//
+// Three states per width, because a single one answers a narrower question than
+// it looks: the bar at rest, the bar with the volume slider expanded by the
+// pointer (it grows on hover and only the row's slack decides what happens
+// next), and the clock wearing a long film's numbers. The last one is injected
+// into the live DOM rather than played: the fixture films are 45 seconds long,
+// and the failure this guard exists for is "0:12 / 2:59:59" in a 320px window,
+// which no 45-second film can produce. The film is paused for it so no
+// timeupdate overwrites the strings mid-measurement.
+test('the control bar fits every width it can be given',async({page})=>{
+ const movie=movies.find(m=>m.file_name.includes('Direct'));
+ await openPlayer(page,`/movie/${movie.id}`);
+ const measure=()=>page.evaluate(()=>{
+  const bar=document.querySelector('.player-buttons');
+  const clock=document.querySelector('.player-time');
+  const boxes=[...bar.children].filter(el=>el.offsetParent!==null).map(el=>{
+   const rect=el.getBoundingClientRect();
+   return {name:el.className,left:Math.round(rect.left),right:Math.round(rect.right)};
+  });
+  return {viewport:window.innerWidth,page:document.documentElement.scrollWidth,clock:[clock.clientWidth,clock.scrollWidth],boxes};
+ });
+ const fits=(measured,where)=>{
+  // Soft, because a sweep that stops at the first bad width hides the shape of
+  // the fault: which widths fail and by how much is the measurement. The test
+  // still fails if any of them does.
+  expect.soft(measured.page,`the page scrolls sideways at ${where}`).toBeLessThanOrEqual(measured.viewport);
+  for(const box of measured.boxes){
+   expect.soft(box.left,`${box.name} starts left of the window at ${where}`).toBeGreaterThanOrEqual(0);
+   expect.soft(box.right,`${box.name} runs past the window at ${where}`).toBeLessThanOrEqual(measured.viewport);
+  }
+  expect.soft(measured.clock[1],`the clock's text leaves its own box at ${where}: it needs ${measured.clock[1]}px and its box is ${measured.clock[0]}px`).toBeLessThanOrEqual(measured.clock[0]+1);
+ };
+ for(const width of [320,375,390,480,550,704,768]){
+  await page.setViewportSize({width,height:812});
+  await page.mouse.move(4,4);
+  fits(await measure(),`${width}px`);
+  const volume=page.locator('.player-volume button');
+  const box=await volume.boundingBox();
+  if(box){
+   await page.mouse.move(box.x+box.width/2,box.y+box.height/2);
+   await expect(page.locator('.volume-slider')).toHaveCSS('opacity','1');
+   fits(await measure(),`${width}px with the volume expanded`);
+   await page.mouse.move(4,4);
+  }
+  await page.keyboard.press('Space');
+  await expect.poll(()=>page.locator('video').evaluate(v=>v.paused)).toBe(true);
+  await page.evaluate(()=>{
+   const clock=document.querySelector('.player-time');
+   clock.querySelector('.player-time-now').textContent='2:59:59';
+   clock.querySelector('.player-time-total').textContent='3:00:00';
+  });
+  fits(await measure(),`${width}px with a three-hour film's clock`);
+  await page.keyboard.press('Space');
+  await expect.poll(()=>page.locator('video').evaluate(v=>v.paused)).toBe(false);
+ }
+ await page.keyboard.press('Escape');
+});
