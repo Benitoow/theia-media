@@ -53,12 +53,32 @@ func extractSet(archive string, version platformVersion, outDir string) error {
 		}
 	}
 
-	// The archive ships the unversioned names as symlinks to the versioned ones.
-	// Where tar created them, nothing is left to do; where the filesystem cannot
-	// hold a symlink, the target is already beside it and a copy does the same
-	// job for a loader that only wants the name to resolve.
+	// The archive ships the unversioned names as symlinks to the versioned ones,
+	// and the link is what travels: tar created it in the staging directory, and
+	// a loader only wants the name to resolve, so a copy would do the same job -
+	// and did, on every platform, for two releases of this pin. The branch below
+	// that was supposed to skip a link tar had already made looked for it in
+	// outDir, where nothing but the nineteen real libraries is ever copied, so
+	// the copy path ran every time and the bundle carried 25 MB of the same
+	// libraries twice. Measured on the release runner: Frameworks held
+	// libavcodec.62.28.102.dylib and libavcodec.62.dylib, both 11862800 bytes,
+	// both regular files.
 	for name, target := range version.RuntimeSymlinks {
 		destination := filepath.Join(outDir, name)
+		from := filepath.Join(root, "lib", name)
+		if info, err := os.Lstat(from); err == nil && info.Mode()&os.ModeSymlink != 0 {
+			link, err := os.Readlink(from)
+			if err != nil {
+				return err
+			}
+			_ = os.Remove(destination)
+			if err := os.Symlink(link, destination); err == nil {
+				continue
+			}
+			// A filesystem that cannot hold a symlink - Windows without
+			// elevation, which is why this tool has a fallback at all - falls
+			// through to the copy below.
+		}
 		if fileExists(destination) {
 			continue
 		}
