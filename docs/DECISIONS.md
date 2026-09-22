@@ -5854,15 +5854,23 @@ succeeded with `MPV_RENDER_API_TYPE_OPENGL` and advanced control, the host drew
 frames into its own `NSOpenGLView` and **the film appeared in a window it owns**;
 and a transparent page's control bar was photographed **over** that GL surface in
 the same window. The engine pin therefore holds and no self-built engine is
-needed. What the runner could not answer is equally recorded: VideoToolbox was
+needed. **The product followed the spikes onto that machine**: the Rust compiled
+for darwin-arm64, the bundle assembled with 30 dylibs and the engine's licences,
+`codesign --verify` accepted it, the bundle's own player played a film
+(`ao=coreaudio`, the audio mode honestly `pcm`), the darwin server answered
+`/api/health` and served its home screen on a throwaway data directory, the
+installer installed into a throwaway home without a password, wrote both the
+`~/Applications/Theia.app` and `~/.local/bin/theia` links, wrote the launchd agent
+when `--service` asked for it - naming the *installed* server, not the copy it was
+installed from - and `--uninstall` removed the agent while keeping the data
+directory. `scripts/verify-macos.sh` reports 16 of its 17 checks passing.
+What the runner could not answer is equally recorded: VideoToolbox was
 accepted and then refused by the virtualised machine (`Failed setup for format
 videotoolbox_vld: hwaccel initialisation returned error`), so hardware decoding
-still needs a Mac, as does a real audio endpoint. The bundle was not built on the
-first attempts - `tauri::generate_context!` wanted `icons/icon.png`, which the
-repository did not have, and the two shell scripts had no executable bit in git -
-and both are fixed. **Nothing about macOS is claimed as a finished product yet**:
-the row in [`v3.3.md`](v3.3.md) carries the state, and it changes when the bundle
-builds and a Mac plays a film.
+still needs a Mac, as do a real audio endpoint, Gatekeeper's first refusal of an
+unsigned download, and the one question no program can settle - whether the OSD
+reads well over a moving film. **No macOS binary is published yet**, and the row
+in [`v3.3.md`](v3.3.md) carries the state.
 
 ## 8. Logistics
 **Status:** living · **Topics:** process

@@ -197,14 +197,39 @@ if [ -x "$setup" ]; then
 		sed 's/^/      /' "$work/install.log" | tail -25
 	fi
 	if [ "$installed" = 1 ]; then
-		[ -f "$fake_home/Library/LaunchAgents/media.theia.server.plist" ] &&
-			ok "the launchd agent was written" ||
-			bad "no launchd plist under Library/LaunchAgents"
+		# The autostart entry is opt-in, and that is the contract, not an
+		# oversight: `Plan.Service` is off unless asked for, because the founding
+		# spec's §11.7 keeps a hand-started server as the default and installing
+		# a service is a decision about somebody's machine (decision 120). So
+		# both halves are checked - nothing without --service, and a launchd
+		# agent that names the *installed* server with it.
+		plist="$fake_home/Library/LaunchAgents/media.theia.server.plist"
+		[ ! -f "$plist" ] && ok "no autostart entry was installed, because none was asked for" ||
+			bad "an autostart entry appeared without --service"
+		if HOME="$fake_home" "$setup" --role all-in-one --service --install-dir "$fake_home/.local/lib/theia" \
+			--data-dir "$fake_home/.theia" --library "$work/data/library" --yes >"$work/install-service.log" 2>&1; then
+			ok "the installer ran again with --service"
+		else
+			bad "the installer failed with --service:"
+			sed 's/^/      /' "$work/install-service.log" | tail -20
+		fi
+		if [ -f "$plist" ]; then
+			ok "the launchd agent was written when it was asked for"
+			if grep -q "$fake_home/.local/lib/theia/theia-server" "$plist"; then
+				ok "the agent starts the installed server, not the copy it was installed from"
+			else
+				bad "the agent does not name the installed server:"
+				sed 's/^/      /' "$plist" | head -20
+			fi
+		else
+			bad "no launchd plist under Library/LaunchAgents after --service"
+		fi
 		[ -L "$fake_home/Applications/Theia.app" ] && ok "~/Applications/Theia.app is a link to the installation" || bad "no Theia.app link"
 		[ -L "$fake_home/.local/bin/theia" ] && ok "the theia command is linked into ~/.local/bin" || bad "no theia link"
 		HOME="$fake_home" "$setup" --check --lang en | head -20
 		HOME="$fake_home" "$setup" --uninstall --yes >"$work/uninstall.log" 2>&1 &&
 			ok "the uninstall ran" || bad "the uninstall failed; see $work/uninstall.log"
+		[ -f "$plist" ] && bad "the uninstall left the launchd agent behind" || ok "the uninstall removed the launchd agent"
 		[ -d "$fake_home/.theia" ] && ok "the uninstall kept the data directory" || bad "the uninstall removed the data directory"
 	fi
 else
