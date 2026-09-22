@@ -181,6 +181,17 @@ var french = Catalogue{
 	"reasonNoBinary":         "la version publiée n'a pas de binaire pour cette machine.",
 	"reasonOther":            "raison :",
 
+	// The player's own update path. The server has an updater inside it; the
+	// player does not, so `theia-setup` replaces its bundle - and every refusal
+	// below means the same thing: the installation was not touched.
+	"updateAppliedPlayer":    "Mise à jour installée. Le lecteur l'utilisera à son prochain démarrage.",
+	"playerNotInstalled":     "aucun lecteur n'est installé : installez-le, puis redemandez.",
+	"reasonNotVerified":      "le paquet téléchargé ne correspond pas à l'empreinte publiée. Rien n'a été installé.",
+	"reasonBundleIncomplete": "le paquet du lecteur est incomplet : un fichier du lot manque. Rien n'a été installé.",
+	"reasonPlayerDidNotRun":  "le lecteur téléchargé n'a pas pu démarrer. Rien n'a été installé.",
+	"reasonPlayerInUse":      "le lecteur est en cours d'exécution : fermez-le, puis redemandez.",
+	"reasonReplaceFailed":    "le remplacement a échoué ; l'ancienne version a été remise en place.",
+
 	"serviceInstalled": "Démarrage automatique installé :",
 	"serviceRemoved":   "Démarrage automatique retiré :",
 	"serviceNone":      "Aucun démarrage automatique n'était installé.",
@@ -320,6 +331,17 @@ var english = Catalogue{
 	"reasonGitHub":           "GitHub did not answer.",
 	"reasonNoBinary":         "the published release has no binary for this machine.",
 	"reasonOther":            "reason:",
+
+	// The player's own update path. The server has an updater inside it; the
+	// player does not, so `theia-setup` replaces its bundle - and every refusal
+	// below means the same thing: the installation was not touched.
+	"updateAppliedPlayer":    "Update installed. The player will use it the next time it starts.",
+	"playerNotInstalled":     "no player is installed: install it, then ask again.",
+	"reasonNotVerified":      "the downloaded bundle does not match the published digest. Nothing was installed.",
+	"reasonBundleIncomplete": "the player bundle is incomplete: a file of the set is missing. Nothing was installed.",
+	"reasonPlayerDidNotRun":  "the downloaded player did not run. Nothing was installed.",
+	"reasonPlayerInUse":      "the player is running: close it, then ask again.",
+	"reasonReplaceFailed":    "the replacement failed; the previous version was put back.",
 
 	"serviceInstalled": "Autostart installed:",
 	"serviceRemoved":   "Autostart removed:",

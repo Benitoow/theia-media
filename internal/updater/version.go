@@ -84,6 +84,28 @@ func comparePrerelease(a, b string) int {
 	return sign(len(aParts) - len(bParts))
 }
 
+// Comparable reports whether a version string can be compared with a release
+// tag at all.
+//
+// Exported with IsNewer and for the same caller: the setup tool must refuse to
+// replace a build that cannot name itself *before* it asks the network
+// anything, which is decision 24 and also the cheaper order.
+func Comparable(current string) bool {
+	_, ok := parseVersion(current)
+	return ok
+}
+
+// IsNewer reports whether latest is a version worth updating to, and whether
+// the comparison could be made at all.
+//
+// Exported because a second program needs the same answer: `theia-setup` updates
+// the player, which carries no updater of its own. Two version comparisons that
+// disagree is a bug nobody finds until a machine is a release behind and every
+// tool says it is current.
+func IsNewer(latest, current string) (newer, comparable bool) {
+	return isNewer(latest, current)
+}
+
 // isNewer reports whether latest is a version worth updating to, and whether
 // the comparison could be made at all.
 func isNewer(latest, current string) (newer, comparable bool) {

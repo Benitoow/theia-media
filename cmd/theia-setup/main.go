@@ -63,6 +63,8 @@ func run() error {
 		check       = flag.Bool("check", false, "print what this machine is, changing nothing")
 		checkUpdate = flag.Bool("check-update", false, "ask GitHub Releases what the latest version is, downloading nothing")
 		update      = flag.Bool("update", false, "install the latest version of the server, verifying its digest")
+		checkPlayer = flag.Bool("check-player", false, "ask GitHub Releases what the latest player is, downloading nothing")
+		updatePl    = flag.Bool("update-player", false, "install the latest player bundle, verifying its digest")
 		jsonOutput  = flag.Bool("json", false, "print the result as JSON")
 		language    = flag.String("lang", "", "en or fr; English by default")
 		showVersion = flag.Bool("version", false, "print the version and exit")
@@ -111,6 +113,13 @@ func run() error {
 		// `--update` updates. A flag that only checked would be a flag whose name
 		// lies, which is why `--check-update` exists beside it.
 		return updateAction(true, *jsonOutput, text)
+	case *checkPlayer:
+		return playerAction(false, *installDir, *jsonOutput, text)
+	case *updatePl:
+		// The player has no updater of its own: the server updates itself, and
+		// until now the player was refreshed by re-running the installer, which
+		// is a thing people do once. See decision 143.
+		return playerAction(true, *installDir, *jsonOutput, text)
 	case *serviceCmd != "":
 		return serviceAction(*serviceCmd, *jsonOutput, text)
 	case isInteractive(*role, *library):
@@ -466,6 +475,13 @@ func reasonSentence(status setup.UpdateStatusView, text setup.Catalogue) string 
 		"no_release":             "reasonNoRelease",
 		"github_unreachable":     "reasonGitHub",
 		"no_binary_for_platform": "reasonNoBinary",
+		// The player's own refusals. Each one means the same thing to the
+		// installation - nothing was touched - and says what was wrong instead.
+		"download_not_verified": "reasonNotVerified",
+		"bundle_incomplete":     "reasonBundleIncomplete",
+		"binary_did_not_run":    "reasonPlayerDidNotRun",
+		"player_in_use":         "reasonPlayerInUse",
+		"replace_failed":        "reasonReplaceFailed",
 	}
 	if key, ok := known[status.Reason]; ok {
 		return text[key]
@@ -474,6 +490,95 @@ func reasonSentence(status setup.UpdateStatusView, text setup.Catalogue) string 
 		return text["reasonOther"] + " " + status.Reason
 	}
 	return status.Message
+}
+
+// playerAction checks the player, and replaces its bundle only when told to.
+//
+// It is the same shape as the server's own update, one program over: the same
+// sentence for a check, the same three outcomes, the same rule that a failure
+// leaves what was installed exactly as it was. The difference is who does the
+// work - the server updates itself, the player is updated by this tool, because
+// a program that replaces itself while it runs has no way back.
+func playerAction(install bool, installDir string, jsonOutput bool, text setup.Catalogue) error {
+	target, err := setup.ResolvePlayerTarget(installDir)
+	if err != nil {
+		if errors.Is(err, setup.ErrPlayerNotInstalled) {
+			// The English line names the path, which is a fact worth keeping;
+			// the sentence is what the person reads.
+			fmt.Fprintf(os.Stderr, "theia-setup: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%s %s\n", text["errorPrefix"], text["playerNotInstalled"])
+			return errAlreadyReported
+		}
+		return err
+	}
+	// Generous, because the bundle carries the engine: a hundred megabytes on a
+	// slow line is minutes.
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	apiBase := os.Getenv("THEIA_UPDATE_API")
+
+	if !jsonOutput {
+		fmt.Println(text["updateChecking"])
+	}
+
+	if !install {
+		status, err := setup.CheckForPlayerUpdate(ctx, nil, apiBase, target)
+		if err != nil {
+			return playerFailure(status, err, text)
+		}
+		if jsonOutput {
+			return printJSON(status)
+		}
+		printPlayerStatus(status, text)
+		return nil
+	}
+
+	var status setup.UpdateStatusView
+	work := func(ctx context.Context, report setup.Reporter) error {
+		var err error
+		status, err = setup.ApplyPlayerUpdate(ctx, nil, apiBase, target, report)
+		return err
+	}
+	if jsonOutput {
+		if err := work(ctx, nil); err != nil {
+			return playerFailure(status, err, text)
+		}
+		return printJSON(status)
+	}
+	// The bar the installer already uses for a download: a hundred megabytes
+	// arriving in silence is indistinguishable from a hang.
+	if err := setup.RunProgress(os.Stdout, text, work); err != nil {
+		return playerFailure(status, err, text)
+	}
+	if status.State != "ready" {
+		printPlayerStatus(status, text)
+		return nil
+	}
+	fmt.Printf("%s %s\n", text["updateAppliedPlayer"], status.Current)
+	return nil
+}
+
+// printPlayerStatus says where the player stands, in the three shapes the
+// server's update already uses: an update is available, it is up to date, or it
+// is held for a reason.
+func printPlayerStatus(status setup.UpdateStatusView, text setup.Catalogue) {
+	switch {
+	case status.Available:
+		fmt.Printf("%s %s -> %s\n", text["updateAvailable"], status.Current, status.Latest)
+	case status.State == "idle" && status.Reason == "up_to_date":
+		fmt.Printf("%s %s (%s)\n", text["updateNewest"], status.Current, status.Latest)
+	default:
+		fmt.Printf("%s %s\n", text["updateHeld"], reasonSentence(status, text))
+	}
+}
+
+// playerFailure reports an update that did not happen, in the two registers this
+// tool uses everywhere: the English line for the log, the sentence for the
+// person, and a non-zero exit for a script.
+func playerFailure(status setup.UpdateStatusView, err error, text setup.Catalogue) error {
+	fmt.Fprintf(os.Stderr, "theia-setup: player update failed: %v\n", err)
+	fmt.Fprintf(os.Stderr, "%s %s\n", text["updateFailed"], reasonSentence(status, text))
+	return errAlreadyReported
 }
 
 // installFailure explains an installation that stopped.

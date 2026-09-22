@@ -82,10 +82,11 @@ type Source struct {
 	From string
 
 	// Force installs the programs again even when the installation already holds
-	// them. It exists because an installation has no other way to refresh the
-	// player: the server updates itself through the updater and the player has
-	// no such path, so re-running the installer is what a person does - and it
-	// used to do nothing at all.
+	// them. It explains itself as "the player had no other way to be refreshed",
+	// and since decision 143 the player does: `--update-player`. What remains is
+	// what it always claimed to be - a reinstall - for an installation that is
+	// wrong on disk: a build from a working tree, a bundle somebody unpacked by
+	// hand, files that disagree with each other.
 	Force bool
 
 	// APIBase points at a mirror instead of GitHub. Tests point it at a stub,
@@ -649,8 +650,12 @@ func firstInstalled(dir string, bases ...string) string {
 // It is asked of the installed server rather than taken from this tool, because
 // the two are not always the same number: an older installer fetches the current
 // release, and a list that said 3.3.0 about a 3.4.0 server would be wrong in the
-// one place somebody looks to find out what they have. Only the server is asked -
-// the player has no way to report a version without opening its window.
+// one place somebody looks to find out what they have. Only the server is asked.
+// The player can be asked too since decision 143 - `theia-player -version` - and
+// is not, because a Windows applications list wants one version and the server is
+// the component that maintains its own: a list showing two numbers would be a
+// worse answer to a simpler question. What the player carries is asked where it
+// matters, by `--check-player`.
 func installedVersion(plan Plan) string {
 	if path := firstInstalled(plan.InstallDir, "theia-server"); path != "" {
 		if reported, err := binaryVersion(path); err == nil && reported != "" {
