@@ -165,7 +165,25 @@ if ($Target -eq 'darwin-arm64') {
     if ($engines.Count -eq 0) {
         throw "the macOS player bundle holds no libmpv*.dylib in $frameworks. The engine and the application are one thing to ship: a bundle without it looks complete and plays nothing."
     }
-    Copy-Item -Recurse -Force (Join-Path $bundle 'Theia.app') $stage
+    # `ditto`, not `Copy-Item -Recurse`: PowerShell's copy follows a symlink and
+    # writes the file it points at, and the bundle's engine is reached through
+    # eleven of them - libavcodec.62.dylib is a link to
+    # libavcodec.62.28.102.dylib, and libmpv.dylib to libmpv.2.dylib. Copied
+    # that way the stage held nineteen libraries and no links at all, so `zip -y`
+    # had nothing left to preserve and the archive shipped each of them twice:
+    # measured on the release runner, 25 MB of the download were the same
+    # libraries under two names. The count below is the guard, because the
+    # archive looks entirely normal either way.
+    & ditto (Join-Path $bundle 'Theia.app') (Join-Path $stage 'Theia.app')
+    if ($LASTEXITCODE -ne 0) { throw "ditto failed with exit code $LASTEXITCODE" }
+    $pin = Get-Content (Join-Path $root 'player/libmpv.json') -Raw | ConvertFrom-Json
+    $wantLinks = @($pin.platforms.'darwin/arm64'.runtime_symlinks.PSObject.Properties).Count
+    $haveLinks = @(Get-ChildItem -Path (Join-Path $stage 'Theia.app/Contents/Frameworks') -Recurse -Force |
+        Where-Object { $_.LinkType -eq 'SymbolicLink' }).Count
+    if ($wantLinks -gt 0 -and $haveLinks -ne $wantLinks) {
+        throw "the staged bundle holds $haveLinks symlinks where the pin names $wantLinks. The engine's set was flattened into copies, which ships every one of them twice."
+    }
+    Write-Host "    the engine's $haveLinks symlinks survived the staging"
 
     # Short names inside the archive, exactly as the Windows archive does it:
     # the archive name already carries the platform, and the installer looks for
