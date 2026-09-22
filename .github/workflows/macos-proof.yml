@@ -1,0 +1,149 @@
+name: macOS proof
+
+# What a real Apple Silicon machine would answer, run on a runner instead.
+#
+# The maintainer has no Mac. Everything else about the macOS line - the engine
+# pin, the installer, the player's options, the specification in
+# player/theia-player/RENDER-MACOS.md - is written and measured, and by decision
+# 117 and 138 none of it may be claimed until it has run on real hardware. A
+# GitHub-hosted `macos-14` runner **is** real Apple Silicon hardware, and this
+# repository is public, so it costs nothing. What it cannot do is look at a
+# window or listen to an amplifier, and those two questions stay with a person.
+#
+# Dispatch it by hand; it never runs on a push:
+#
+#   gh workflow run macos-proof.yml
+#
+# It publishes nothing. Its output is the artifact `macos-proof`, holding every
+# log, the window reports and whatever the screen could be photographed into.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    name: The spikes, the bundle and the verifier on Apple Silicon
+    runs-on: macos-14
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.6'
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: player
+
+      # The pinned engine, by digest, plus the headers the spikes compile
+      # against. `-keep-archive` leaves the tarball where the headers can be
+      # taken out of it, because the fetch tool lays out the libraries and the
+      # licences and not the include/ directory.
+      - name: Fetch the pinned engine
+        run: |
+          mkdir -p out
+          go run ./scripts/fetch-libmpv -platform darwin/arm64 \
+            -out player/vendor-darwin -keep-archive 2>&1 | tee out/engine-fetch.log
+          tar -xzf player/vendor-darwin/libmpv-*.tar.gz -C player/vendor-darwin \
+            --strip-components=1 '*/include' 2>/dev/null || true
+          ls player/vendor-darwin | head -30
+          ls player/vendor-darwin/include/mpv 2>/dev/null || echo 'NO HEADERS: the spikes cannot compile'
+
+      - name: Build the two spikes
+        run: |
+          set -o pipefail
+          clang -fobjc-arc -framework Cocoa -framework OpenGL \
+            -Iplayer/vendor-darwin/include \
+            player/spike-macos/render-spike.m \
+            -Lplayer/vendor-darwin -lmpv -o out/render-spike 2>&1 | tee out/render-spike-build.log
+          clang -fobjc-arc -framework Cocoa -framework OpenGL -framework WebKit \
+            player/spike-macos/composite-spike.m -o out/composite-spike 2>&1 | tee out/composite-spike-build.log
+
+      # A film to play. A runner has no library, and a colour bar with a sine
+      # wave is enough to see whether frames arrive.
+      - name: Make a fixture film
+        run: |
+          brew install ffmpeg >out/brew.log 2>&1 || true
+          ffmpeg -hide_banner -y -f lavfi -i testsrc=size=640x360:rate=24 \
+            -f lavfi -i sine=frequency=440 -t 20 -c:v libx264 -preset veryfast \
+            -pix_fmt yuv420p -c:a aac out/fixture.mp4 2>&1 | tail -3
+          ls -l out/fixture.mp4
+
+      # The first question: does mpv_render_context_create succeed with this pin,
+      # and do frames arrive in a GL view we own? A window on a runner is
+      # possible - macOS runners run as a logged-in user with a WindowServer -
+      # but if there is no session the spike says so instead of pretending.
+      - name: Run the render spike
+        run: |
+          set +e
+          DYLD_LIBRARY_PATH=player/vendor-darwin out/render-spike out/fixture.mp4 10 \
+            >out/render-spike.log 2>&1
+          echo "render-spike exit: $?" | tee -a out/render-spike.log
+          screencapture -x out/render-spike-screen.png 2>>out/render-spike.log
+          tail -25 out/render-spike.log
+
+      # The second: does a transparent WKWebView composite above an NSOpenGLView,
+      # and does the page still receive clicks through its transparent areas?
+      - name: Run the composite spike
+        run: |
+          set +e
+          out/composite-spike >out/composite-spike.log 2>&1
+          echo "composite-spike exit: $?" | tee -a out/composite-spike.log
+          screencapture -x out/composite-spike-screen.png 2>>out/composite-spike.log
+          tail -25 out/composite-spike.log
+
+      # And the product itself: the bundle builds, the app carries the OSD it
+      # was built with, the signature verifies, and the engine is the pinned one.
+      - name: Build the player bundle
+        run: |
+          set +e
+          ./scripts/build-player-macos.sh -Release -Bundle -Version proof \
+            >out/bundle.log 2>&1
+          echo "build-player-macos exit: $?" | tee -a out/bundle.log
+          tail -30 out/bundle.log
+
+      # The verifier the Mac would run. Its player and OSD steps need a film and
+      # an eye; its server, installer and signature steps do not.
+      - name: Run the macOS verifier
+        run: |
+          set +e
+          ./scripts/verify-macos.sh -Media out/fixture.mp4 \
+            -App dist/theia-player-darwin-arm64/Theia.app >out/verify.log 2>&1
+          echo "verify-macos exit: $?" | tee -a out/verify.log
+          cat out/verify.log
+
+      # A summary a person can read without opening eight logs.
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "## macOS proof on $(sw_vers -productVersion), $(uname -m)"
+            echo
+            echo "| step | evidence |"
+            echo "|---|---|"
+            echo "| engine | $(grep -c 'sha256' out/engine-fetch.log 2>/dev/null || echo 0) digest lines in the fetch log |"
+            echo "| render spike | $(grep -m1 'frames rendered' out/render-spike.log 2>/dev/null || echo 'no verdict line') |"
+            echo "| composite spike | $(grep -m1 'GL swaps in ten seconds' out/composite-spike.log 2>/dev/null || echo 'no verdict line') |"
+            echo "| bundle | $(grep -m1 'ready (' out/bundle.log 2>/dev/null || echo 'not built') |"
+            echo "| verifier | $(grep -c '^PASS' out/verify.log 2>/dev/null || echo 0) passed, $(grep -c '^FAIL' out/verify.log 2>/dev/null || echo 0) failed |"
+            echo
+            echo "What no runner can answer: whether the OSD is visible over the film,"
+            echo "and whether sound reaches anything. Look at the two screenshots."
+          } | tee out/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: macos-proof
+          path: out/
+          retention-days: 14
