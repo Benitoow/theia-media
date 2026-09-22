@@ -298,6 +298,19 @@ test('the control bar fits every width it can be given',async({page})=>{
    fits(await measure(),`${width}px with the volume expanded`);
    await page.mouse.move(4,4);
   }
+  // The sweep takes tens of seconds and the fixture is forty-five seconds long,
+  // so the film can reach its end while the widths are being measured - and an
+  // ended video is a paused one, which is the state the first Space below would
+  // then *leave*, inverting both assertions. Measured on the guard's first CI
+  // run: firefox failed here with "expected true, received false", because the
+  // test was reading the fixture's length as if it were a state. Put the film
+  // back at five seconds and playing, and wait for it rather than assuming it.
+  await page.evaluate(()=>{
+   const video=document.querySelector('video');
+   video.currentTime=5;
+   video.play();
+  });
+  await expect.poll(()=>page.locator('video').evaluate(v=>v.paused),{timeout:10000}).toBe(false);
   await page.keyboard.press('Space');
   await expect.poll(()=>page.locator('video').evaluate(v=>v.paused)).toBe(true);
   await page.evaluate(()=>{
