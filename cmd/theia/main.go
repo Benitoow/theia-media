@@ -44,6 +44,7 @@ var version = "dev"
 const usage = `theia starts Theia.
 
   theia           start the server if it is not answering, then open the player
+                  - or the web interface, on a machine that has no player
   theia server    start the server alone
   theia player    open the player alone
   theia -version  print the version and exit
@@ -56,13 +57,14 @@ The programs are started from the folder this command was installed in.
 // check in ensureServer answers on the first try and nothing is spawned.
 const serverWait = 8 * time.Second
 
-// The three things this program does to the machine, as variables so that a test
+// The four things this program does to the machine, as variables so that a test
 // can watch them without starting anything. They are the whole of its behaviour
 // besides deciding what to start and in which order.
 var (
-	spawn     = spawnDetached
-	reachable = portAnswers
-	waitReady = waitForPort
+	spawn       = spawnDetached
+	reachable   = portAnswers
+	waitReady   = waitForPort
+	openBrowser = openInBrowser
 )
 
 func main() {
@@ -141,6 +143,19 @@ func launch(dir string, want request, out io.Writer) int {
 	if hasPlayer && (want.bare || want.player) {
 		if err := spawn(player, dir); err != nil {
 			return fail(out, fmt.Errorf("starting %s: %w", filepath.Base(player), err))
+		}
+		return 0
+	}
+	if want.bare && hasServer {
+		// A server with no player beside it: the web interface is the way in.
+		// The address is printed before anything is opened, because on a machine
+		// with no graphical session the opener refuses and the address is then
+		// the whole answer. It is not an error either way - the server is up,
+		// which is what this command promised.
+		url := "http://" + serverAddress() + "/"
+		fmt.Fprintf(out, "theia: %s\n", url)
+		if err := openBrowser(url); err != nil {
+			fmt.Fprintf(out, "theia: no browser to open it with (%v)\n", err)
 		}
 	}
 	return 0

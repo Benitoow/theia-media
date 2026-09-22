@@ -17,7 +17,7 @@ import (
 
 // event is one thing the program did, in the order it did it.
 type event struct {
-	kind string // "reachable", "spawn" or "wait"
+	kind string // "reachable", "spawn", "wait" or "open"
 	name string
 }
 
@@ -27,13 +27,21 @@ type event struct {
 type watching struct {
 	events    []event
 	answering bool
+	// openFails is the machine with no graphical session: the opener refuses,
+	// which must not be an error for a command whose promise was to start the
+	// server.
+	openFails bool
 }
 
 func watch(t *testing.T, answering bool) *watching {
 	t.Helper()
 	w := &watching{answering: answering}
 	previousSpawn, previousReachable, previousWait := spawn, reachable, waitReady
-	t.Cleanup(func() { spawn, reachable, waitReady = previousSpawn, previousReachable, previousWait })
+	previousOpen := openBrowser
+	t.Cleanup(func() {
+		spawn, reachable, waitReady = previousSpawn, previousReachable, previousWait
+		openBrowser = previousOpen
+	})
 
 	spawn = func(path, _ string) error {
 		w.events = append(w.events, event{kind: "spawn", name: filepath.Base(path)})
@@ -46,6 +54,13 @@ func watch(t *testing.T, answering bool) *watching {
 	waitReady = func(address string, _ time.Duration) bool {
 		w.events = append(w.events, event{kind: "wait", name: address})
 		return true
+	}
+	openBrowser = func(url string) error {
+		w.events = append(w.events, event{kind: "open", name: url})
+		if w.openFails {
+			return errors.New("no graphical session")
+		}
+		return nil
 	}
 	return w
 }
@@ -188,6 +203,84 @@ func TestABareCommandOnAOneProgramMachineOpensThatOne(t *testing.T) {
 		}
 		if spawned != 1 {
 			t.Errorf("theia with only %s started %d programs: %v", only, spawned, w.order())
+		}
+	}
+}
+
+// A machine with a server and no player is the cupboard, the NAS, and the Mac
+// whose player has not been installed yet. Starting the server and saying
+// nothing was a command that looked like it had done nothing; the web interface
+// is what a browser can reach, and the address is printed before anything is
+// opened because on a machine with no graphical session the opener is what
+// fails.
+func TestAServerWithNoPlayerOpensTheWebInterface(t *testing.T) {
+	dir := installation(t, "theia-server")
+	w := watch(t, false)
+
+	code, output := runIn(dir)
+	if code != 0 {
+		t.Fatalf("theia exited %d: %s", code, output)
+	}
+	want := []string{
+		"reachable:127.0.0.1:8383",
+		"spawn:" + programName("theia-server"),
+		"wait:127.0.0.1:8383",
+		"open:http://127.0.0.1:8383/",
+	}
+	if !w.equal(want...) {
+		t.Errorf("the order was %v, want %v", w.order(), want)
+	}
+	if !strings.Contains(output, "http://127.0.0.1:8383/") {
+		t.Errorf("the address was not printed: %q", output)
+	}
+}
+
+// And an opener that refuses is not a failure: the server is up, which is what
+// the command promised, and the printed address is then the whole answer.
+func TestACommandWhoseBrowserRefusesStillSucceeds(t *testing.T) {
+	dir := installation(t, "theia-server")
+	w := watch(t, true)
+	w.openFails = true
+
+	code, output := runIn(dir)
+	if code != 0 {
+		t.Fatalf("theia exited %d with no browser available: %s", code, output)
+	}
+	if !strings.Contains(output, "http://127.0.0.1:8383/") {
+		t.Errorf("the address was not printed: %q", output)
+	}
+}
+
+// A machine that has the player opens the player and nothing else: a browser
+// beside it would be a second window nobody asked for.
+func TestAMachineWithAPlayerOpensNoBrowser(t *testing.T) {
+	for _, args := range [][]string{nil, {"player"}} {
+		dir := installation(t, "theia-server", "theia-player")
+		w := watch(t, true)
+
+		if code, output := runIn(dir, args...); code != 0 {
+			t.Fatalf("theia %v exited %d: %s", args, code, output)
+		}
+		for _, one := range w.events {
+			if one.kind == "open" {
+				t.Errorf("theia %v opened a browser at %s", args, one.name)
+			}
+		}
+	}
+}
+
+// `theia server` is the headless form: whoever typed it is either in a terminal
+// or starting a service, and neither wants a browser on that machine.
+func TestTheServerVerbOpensNoBrowser(t *testing.T) {
+	dir := installation(t, "theia-server")
+	w := watch(t, true)
+
+	if code, output := runIn(dir, "server"); code != 0 {
+		t.Fatalf("theia server exited %d: %s", code, output)
+	}
+	for _, one := range w.events {
+		if one.kind == "open" {
+			t.Errorf("theia server opened a browser at %s", one.name)
 		}
 	}
 }
