@@ -596,11 +596,13 @@ jobs:
           echo "symlink kept: $(readlink Theia.app/Contents/Frameworks/libmpv.dylib)"
           # And it runs from where a person would run it.
           ./theia-server -version
-          # The START-HERE must not still teach a step it no longer needs. An
-          # `if`, not `grep -q … && …`: the list's status would be grep's, and
-          # a step whose last command returns 1 fails the job for the *right*
-          # reason.
-          if grep -q 'chmod' START-HERE.txt; then
+          # The START-HERE must not still teach a step it no longer needs. The
+          # instruction, not the word: the texts say "nothing here needs chmod",
+          # which is worth saying to somebody who read the previous release's
+          # instructions, and this check's first version failed on its own
+          # sentence. An `if`, not `grep -q … && …`, whose status would be
+          # grep's and would fail the job for the wrong reason.
+          if grep -q 'chmod +x' START-HERE.txt; then
             echo 'START-HERE still teaches chmod, which the archive no longer needs'
             exit 1
           fi
