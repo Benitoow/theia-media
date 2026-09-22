@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"time"
 	"testing"
 
 	"github.com/Benitoow/theia-media/internal/activity"
@@ -201,9 +202,16 @@ func TestApplyInstallsAVerifiedRelease(t *testing.T) {
 	if status := u.Status(); status.State != StateReady {
 		t.Errorf("state = %q, want %q", status.State, StateReady)
 	}
+	// The restart is handed to a goroutine - apply.go starts it with `go
+	// u.restart()`, because the listener has to close before the replacement
+	// process starts - so it may not have run by the time Apply returns. A
+	// non-blocking check here is a race, and it failed on a loaded release
+	// runner while passing on a quiet one and on this machine. Wait for it, with
+	// a bound: a restart that never comes still fails this test, which is what
+	// the test is for.
 	select {
 	case <-restarted:
-	default:
+	case <-time.After(5 * time.Second):
 		t.Error("no restart was requested after a successful update")
 	}
 }
