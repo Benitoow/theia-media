@@ -19,7 +19,12 @@ Vision profile 7, and does not read Matroska natively.
 Read decision 117 and `docs/spec-fondatrice.md` §14 before touching anything.
 They record exactly which founding clauses were superseded and which still bind.
 Windows is the only platform V3.3 can be verified on; macOS, Linux, Android TV,
-Apple TV and iOS are unverified until they run on real hardware.
+Apple TV and iOS are unverified until they run on real hardware. **V3.3.4 adds
+macOS Apple Silicon** (decision 144) under exactly that rule: the engine is pinned
+and measured, the code exists, and nothing is claimed until a real Mac runs the two
+spikes in `player/spike-macos/`, plays a film with the player, and passes
+`scripts/verify-macos.sh`. Until then the macOS paths are written, build, and are
+described as unverified wherever they appear.
 
 **Publication is explicit.** `v3.3.0` is public; preparing a later release does
 not authorize publishing it. Never push, create or push a tag, create a release,
