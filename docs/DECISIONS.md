@@ -5863,7 +5863,7 @@ installer installed into a throwaway home without a password, wrote both the
 `~/Applications/Theia.app` and `~/.local/bin/theia` links, wrote the launchd agent
 when `--service` asked for it - naming the *installed* server, not the copy it was
 installed from - and `--uninstall` removed the agent while keeping the data
-directory. `scripts/verify-macos.sh` reports 16 of its 17 checks passing.
+directory. `scripts/verify-macos.sh` reports `21 passed, 0 failed, 2 for a person to look at`.
 What the runner could not answer is equally recorded: VideoToolbox was
 accepted and then refused by the virtualised machine (`Failed setup for format
 videotoolbox_vld: hwaccel initialisation returned error`), so hardware decoding
