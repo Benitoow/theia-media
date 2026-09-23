@@ -110,10 +110,15 @@ rm -rf "$stage"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Frameworks" "$app/Contents/Resources"
 cp "$binary" "$app/Contents/MacOS/theia-player"
 
-# The bundle's own description of itself, with the version the release was
-# tagged with - the same value build.rs compiled in, so Get Info and
-# `theia-player -version` cannot disagree.
-sed "s/@VERSION@/${version:-dev}/g" "$root/player/theia-player/Info.plist" >"$app/Contents/Info.plist"
+# The bundle's own description of itself. The binary reports the tag - the same
+# value build.rs compiled in, so `theia-player -version` prints v3.3.4 - and the
+# plist carries that tag without its leading `v`, because CFBundleShortVersionString
+# and CFBundleVersion are documented as dotted numbers and `v3.3.4` is not one.
+# They name one version, and the updater compares them that way: internal/setup's
+# sameVersion drops the `v` from both sides before comparing.
+plistVersion="${version:-dev}"
+plistVersion="${plistVersion#v}"
+sed "s/@VERSION@/${plistVersion}/g" "$root/player/theia-player/Info.plist" >"$app/Contents/Info.plist"
 
 # The engine, by digest. `fetch-libmpv` is the same tool Windows uses and it
 # reads the same manifest; on macOS the pin is a set of libraries, so it verifies

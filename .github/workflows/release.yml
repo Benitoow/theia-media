@@ -548,8 +548,18 @@ jobs:
           mkdir -p dist/theia-player-darwin-arm64
           ditto -x -k dist/theia-player-darwin-arm64.zip dist/theia-player-darwin-arm64
 
+      # `-Version` is the bare version on every path: the archive is
+      # `theia-3.3.4-darwin-arm64.zip`, and the check below, the surface guard
+      # and the published asset names all derive it from the tag by dropping the
+      # `v`. This step passed the tag straight through, which a dispatch hid -
+      # its version is `0.0.0`, with no `v` to drop - and a tagged run exposed:
+      # the archive was assembled as `theia-v3.3.4-darwin-arm64.zip`, and the
+      # step below looked for `theia-3.3.4-darwin-arm64` and found nothing.
       - name: Assemble the archive
-        run: pwsh ./build-release.ps1 -Version ${{ env.THEIA_VERSION }} -Target darwin-arm64
+        run: |
+          version='${{ env.THEIA_VERSION }}'
+          version="${version#v}"
+          pwsh ./build-release.ps1 -Version "$version" -Target darwin-arm64
 
       - name: Check the archive holds everything
         run: |

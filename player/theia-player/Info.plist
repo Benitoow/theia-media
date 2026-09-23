@@ -9,8 +9,9 @@
   the LAN is mDNS.
 
   @VERSION@ is replaced by scripts/build-player-macos.sh with the version the
-  release was tagged with, the same value build.rs compiles into the binary, so
-  `theia-player -version` and Get Info cannot disagree.
+  release was tagged with, minus its leading `v`: Get Info reads `3.3.4` where
+  `theia-player -version` prints `v3.3.4`, because these two keys are documented
+  as dotted numbers. It is one version, and internal/setup compares them that way.
 
   No icon yet: an icon is an .icns built from the maintainer's licence-checked
   artwork, and shipping a generated placeholder would be a second visual identity
