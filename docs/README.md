@@ -18,6 +18,19 @@ passer pour la documentation courante.
 
 ## Notes de version
 
+- [`Theia 3.3.4`](releases/v3.3.4.md) - la génération native atteint Apple
+  Silicon : le lecteur y dessine le film lui-même, l'archive s'exécute telle
+  qu'elle est téléchargée.
+- [`Theia 3.3.3`](releases/v3.3.3.md) - les réglages deviennent un rail et un
+  panneau, et le bundle hors-ligne cesse de servir un serveur qui n'est pas le
+  produit.
+- [`Theia 3.3.2`](releases/v3.3.2.md) - la commande `theia`, le `PATH`, App
+  Paths, et un `--uninstall` qui reprend ce que l'installation a écrit.
+- [`Theia 3.3.1`](releases/v3.3.1.md) - première maintenance de la génération
+  native : les alias d'assets V3.2 disparaissent, Windows x64 reste le seul
+  installeur publié.
+- [`Theia 3.3.0`](releases/v3.3.0.md) - la génération native : trois artefacts
+  exécutables, une identité visuelle.
 - [`Theia 3.2`](releases/v3.2.0.md) - refonte du moteur de lecture, fiabilité,
   performances et mises à jour transactionnelles.
 - [`Theia 3.1`](releases/v3.1.0.md) - dernière note de la phase précédente.
