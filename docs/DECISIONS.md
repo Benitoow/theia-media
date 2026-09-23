@@ -5869,8 +5869,24 @@ accepted and then refused by the virtualised machine (`Failed setup for format
 videotoolbox_vld: hwaccel initialisation returned error`), so hardware decoding
 still needs a Mac, as do a real audio endpoint, Gatekeeper's first refusal of an
 unsigned download, and the one question no program can settle - whether the OSD
-reads well over a moving film. **No macOS binary is published yet**, and the row
-in [`v3.3.md`](v3.3.md) carries the state.
+reads well over a moving film.
+
+**Published on 23 September 2026, and only after those gates passed.** V3.3.4
+carries fourteen assets, four of them macOS: `theia-setup-darwin-arm64`,
+`theia-3.3.4-darwin-arm64.zip` (`sha256:d1367f43…`),
+`theia-player-darwin-arm64.zip` and `theia-launcher-darwin-arm64`. Release run
+`35821865718` completed every job - both players, both archives, the macOS
+one-file download, the fourteen-name surface guard - and published. **The
+tagged run found a fault the dispatch had hidden**: `package-macos` passed the
+tag straight through where `build-release.ps1` takes the bare version, so the
+archive was assembled as `theia-v3.3.4-darwin-arm64.zip` while the step below,
+the surface guard and the published names all derived `theia-3.3.4-darwin-arm64`
+- a dispatch's version is `0.0.0`, which has no `v` to drop, so only a real tag
+exposed it. Fixed on 23 September 2026 (the assembly step strips the `v`, and the
+bundle's plist now carries `3.3.4` where the binary prints `v3.3.4`, which is
+what `CFBundleShortVersionString` documents), the tag was re-cut onto the fix,
+and the release published from it. Nothing was published by the first attempt:
+`publish` is downstream of both checks.
 
 ## 8. Logistics
 **Status:** living · **Topics:** process
