@@ -2101,6 +2101,158 @@ button.action:focus-visible {
 	white-space: nowrap;
 }
 
+/* What was watched, in the settings sheet (decision 146).
+   The layout is the one the maintainer brought on 24 September 2026: an
+   overview of tiles, the month on one line, the films/series ratio as a split
+   bar, and the ranking under it. The disposition is his and the colours are
+   this product's - the reference's gold numbers were declined, because the
+   sheet already spends an accent on the section it is showing and five more
+   would break the budget of design-system.md section 6. Numbers are bone, the
+   labels are muted, and no new colour enters the language. */
+.settings-stats-block {
+	display: grid;
+	gap: 0.5rem;
+}
+
+.settings-stats-block-title {
+	margin: 0;
+	color: var(--color-muted);
+	font-family: var(--font-label);
+	font-size: var(--text-micro);
+	letter-spacing: 0.13em;
+	text-transform: uppercase;
+}
+
+/* One tile per number, the number above its label: the eye reads the figure
+   first and the word only if it needs to know what the figure is. auto-fit
+   rather than a fixed count, because the sheet is as wide as the window is and
+   a phone-width sheet stacks them; 5.5rem is what puts the five of them on one
+   row at the sheet's width, and a label that wraps to two lines under its
+   number is the reference's own look rather than a fault. */
+.settings-stats-tiles {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+	gap: 0.5rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.settings-stats-tiles li {
+	display: grid;
+	justify-items: center;
+	gap: 0.3rem;
+	padding: 0.8rem 0.5rem;
+	border: 1px solid var(--color-line);
+	border-radius: var(--radius-row);
+	background: rgb(var(--channel-ink) / 0.5);
+	color: var(--color-muted);
+}
+
+.settings-stats-tiles b {
+	color: var(--color-bone);
+	font-size: 1.05rem;
+	font-weight: 500;
+	line-height: 1.1;
+}
+
+.settings-stats-tiles span {
+	color: var(--color-muted);
+	font-family: var(--font-label);
+	font-size: var(--text-micro);
+	letter-spacing: 0.1em;
+	text-align: center;
+	text-transform: uppercase;
+}
+
+/* The month, as the reference reads it: one sentence on one line, with the
+   clock carrying what "visionné" would otherwise repeat. */
+.settings-stats-month {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	margin: 0;
+	padding: 0.75rem 1rem;
+	border: 1px solid var(--color-line);
+	border-radius: var(--radius-row);
+	background: rgb(var(--channel-ink) / 0.5);
+	color: var(--color-muted);
+	font-size: var(--text-small);
+}
+
+/* The ranking. A poster rather than a name alone, because every other screen
+   in this application shows the series itself - and a progress rule under each
+   row, which is the one graphic that stays meaningful when there is a single
+   series to rank. */
+.settings-stats-ranking {
+	display: grid;
+	gap: 0.7rem;
+	margin: 0;
+	padding: 0.7rem 1rem;
+	border: 1px solid var(--color-line);
+	border-radius: var(--radius-row);
+	background: rgb(var(--channel-ink) / 0.5);
+	list-style: none;
+}
+
+.settings-stats-ranking li {
+	display: grid;
+	grid-template-columns: 2.5rem minmax(0, 1fr);
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.settings-stats-poster {
+	width: 2.5rem;
+	aspect-ratio: 2 / 3;
+	object-fit: cover;
+	border-radius: 0.2rem;
+	background: rgb(var(--channel-bone) / 0.06);
+}
+
+.settings-stats-row {
+	display: grid;
+	gap: 0.4rem;
+	min-width: 0;
+}
+
+.settings-stats-row-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 1rem;
+	min-width: 0;
+}
+
+.settings-stats-name {
+	min-width: 0;
+	overflow: hidden;
+	color: var(--color-parchment);
+	font-size: var(--text-small);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.settings-stats-detail {
+	flex: none;
+	color: var(--color-muted);
+	font-size: var(--text-small);
+	white-space: nowrap;
+}
+
+.settings-stats-progress {
+	height: 0.25rem;
+	overflow: hidden;
+	border-radius: 999px;
+	background: var(--color-line);
+}
+
+.settings-stats-progress span {
+	display: block;
+	height: 100%;
+	background: var(--color-parchment);
+}
+
 /* The copy control beside the address (decision: the maintainer's request,
    21 September 2026). The row ellipsises its value, so in a narrow sheet the
    reader sometimes sees less than the button copies - which is most of the

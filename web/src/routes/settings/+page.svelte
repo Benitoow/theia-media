@@ -5,12 +5,14 @@
 	import { i18n } from '$lib/i18n/index.svelte.js';
 	import { codecPlayback } from '$lib/codec-playback.svelte.js';
 	import { diagnosticClientContext } from '$lib/diagnostic-events.js';
-	import { strings as t, formatUptime, formatSize } from '$lib/strings.js';
+	import { strings as t, formatUptime, formatSize, formatRuntime } from '$lib/strings.js';
 	import ConnectPanel from '$lib/components/ConnectPanel.svelte';
+	import { profiles } from '$lib/profiles.svelte.js';
 
 	let health = $state(null);
 	let stats = $state(null);
 	let settings = $state(null);
+	let watching = $state(null);
 	let connect = $state(null);
 	let update = $state(null);
 	let updateBusy = $state(false);
@@ -127,7 +129,20 @@
 		const statsRequest = getJSON('/api/library/stats').then((value) => (stats = value));
 		const settingsRequest = getJSON('/api/settings').then((value) => (settings = value));
 		const updateRequest = getJSON('/api/update').then((value) => (update = value));
-		await Promise.allSettled([healthRequest, statsRequest, settingsRequest, updateRequest]);
+		// Watching is per viewer, so who is watching has to be settled first:
+		// without that the server would answer for the default profile and the
+		// block would put one person's name on another person's evening.
+		const watchingRequest = profiles
+			.ready()
+			.then(() => getJSON(profiles.url('/api/library/watching')))
+			.then((value) => (watching = value));
+		await Promise.allSettled([
+			healthRequest,
+			statsRequest,
+			settingsRequest,
+			updateRequest,
+			watchingRequest
+		]);
 	}
 
 	async function loadConnect() {
@@ -226,6 +241,20 @@
 	});
 
 	const busy = $derived(scanning || stats?.scanning);
+
+	// The share the films take of the watching time, and the reason the series
+	// side is the complement rather than a second rounding: rounded separately,
+	// two percentages of the same total can add up to 99 or 101.
+	const watchSeconds = $derived((watching?.movies.seconds ?? 0) + (watching?.series.seconds ?? 0));
+	const movieShare = $derived(
+		watchSeconds > 0 ? Math.round((watching.movies.seconds / watchSeconds) * 100) : null
+	);
+
+	// formatRuntime speaks minutes and the server reports seconds. Converting
+	// here keeps one duration formatter in the interface rather than two.
+	function runtime(seconds) {
+		return seconds > 0 ? formatRuntime(Math.round(seconds / 60)) : null;
+	}
 </script>
 
 <svelte:head>
@@ -467,6 +496,74 @@
 				{/if}
 			{/if}
 		</section>
+
+		{#if watching}
+			<!-- What was watched, as opposed to what the library holds: the
+			     positions the player reported, counted by the player's own rule
+			     for what counts as watched (decision 17), and per viewer,
+			     because that is how the server keeps a history (decision 32).
+			     The settings page is where measurements are shown rather than
+			     described (decision 70), including the empty ones. -->
+			<section class="mb-14 border-b border-line pb-14">
+				<h2 class="label mb-5">{t.settings.watching}</h2>
+				<p class="text-small mb-5 max-w-prose text-muted">
+					{t.settings.watchingHint(profiles.active?.name || t.profiles.defaultName)}
+				</p>
+
+				<dl class="grid gap-x-8 gap-y-3 sm:grid-cols-[11rem_1fr]">
+					<dt class="label">{t.settings.movieHours}</dt>
+					<dd class="text-small text-parchment">
+						{runtime(watching.movies.seconds) ?? t.settings.noTime}
+					</dd>
+
+					<dt class="label">{t.settings.seriesHours}</dt>
+					<dd class="text-small text-parchment">
+						{runtime(watching.series.seconds) ?? t.settings.noTime}
+					</dd>
+
+					<dt class="label">{t.settings.startedMovies}</dt>
+					<dd class="text-small text-parchment">{watching.movies.started}</dd>
+
+					<dt class="label">{t.settings.watchedMovies}</dt>
+					<dd class="text-small text-parchment">{watching.movies.finished}</dd>
+
+					<dt class="label">{t.settings.startedSeries}</dt>
+					<dd class="text-small text-parchment">{watching.series.started}</dd>
+
+					<dt class="label">{t.settings.watchedSeries}</dt>
+					<dd class="text-small text-parchment">{watching.series.finished}</dd>
+
+					<dt class="label">{t.settings.share}</dt>
+					<dd class="text-small text-parchment">
+						{movieShare === null
+							? t.settings.noTime
+							: t.settings.shareOf(movieShare, 100 - movieShare)}
+					</dd>
+				</dl>
+
+				{#if watching.top_series.length}
+					<div class="mt-8 border-t border-line pt-5">
+						<p class="label mb-3">{t.settings.topSeries}</p>
+						<ul class="space-y-3">
+							{#each watching.top_series as one (one.id)}
+								{@const spent = runtime(one.seconds)}
+								<li class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+									<span class="text-small text-parchment">{one.title}</span>
+									<span class="text-label text-muted">
+										{t.settings.episodesOf(one.episodes, one.total)}
+										{#if spent}· {spent}{/if}
+									</span>
+								</li>
+							{/each}
+						</ul>
+					</div>
+				{:else}
+					<p class="mt-8 border-t border-line pt-5 text-small text-muted">
+						{t.settings.nothingWatched}
+					</p>
+				{/if}
+			</section>
+		{/if}
 
 		{#if diagnostics}
 			<!-- What this machine measured about itself.

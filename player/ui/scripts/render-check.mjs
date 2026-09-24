@@ -130,6 +130,20 @@ const QUALITIES = {
 	transcode: { available: true, kind: 'hardware', busy: false },
 };
 
+// What the server answered for the maintainer's own library on 24 September
+// 2026: one film started and unfinished, one series started, nothing finished
+// on either side. A fixture with every number non-zero would pass while the
+// zero cases - the ones a young library actually shows - went unnoticed.
+const WATCHING = {
+	movies: { started: 1, finished: 0, seconds: 4132.295 },
+	series: { started: 1, finished: 0, seconds: 2079.958 },
+	episodes: { started: 1, finished: 0, seconds: 2079.958 },
+	// A month with something in it, so the line is asserted with a count, a
+	// singular and a duration rather than with three zeroes.
+	month: { movies: 1, episodes: 0, seconds: 900 },
+	top_series: [{ id: 1, title: 'Shōgun', poster_path: '/shogun.jpg', episodes: 1, finished: 0, total: 10, seconds: 2079.958 }],
+};
+
 const MOVIES = [
 	{
 		id: 1,
@@ -2035,7 +2049,7 @@ async function openPage(
 	}
 
 	await page.addInitScript(
-		({ tracks, ladder, movies, series, seriesDetail, season, status, discovered, home, seriesHome, preview }) => {
+		({ tracks, ladder, watching, movies, series, seriesDetail, season, status, discovered, home, seriesHome, preview }) => {
 			window.__handlers = {};
 			window.__profiles = [
 				{ id: 1, name: 'Alex', is_default: true, has_avatar: false, avatar_version: 0 },
@@ -2071,6 +2085,13 @@ async function openPage(
 						// The ladder a check wants to see, so the busy state can be
 						// exercised without a second page: null means "the fixture".
 						if (cmd === 'player_qualities') return JSON.stringify(window.__ladder ?? ladder);
+						// `__watching` narrows the payload and `__watchingFails` is the
+						// server without the route, which is a real state: the two
+						// programs update separately.
+						if (cmd === 'player_watch_stats') {
+							if (window.__watchingFails) throw new Error('unknown API endpoint');
+							return JSON.stringify(window.__watching ?? watching);
+						}
 						if (cmd === 'player_library') return JSON.stringify(movies);
 						if (cmd === 'player_series') return JSON.stringify(series);
 						if (cmd === 'player_home') return JSON.stringify(home);
@@ -2150,7 +2171,7 @@ async function openPage(
 			};
 			window.__status = status;
 		},
-		{ tracks, ladder, movies, series, seriesDetail, season, status: STATUS, discovered, home, seriesHome, preview }
+		{ tracks, ladder, watching: WATCHING, movies, series, seriesDetail, season, status: STATUS, discovered, home, seriesHome, preview }
 	);
 	await page.goto(URL, { waitUntil: 'networkidle' });
 	await page.waitForTimeout(400);
@@ -2693,8 +2714,8 @@ async function assertSeriesJourney(page) {
 	};
 	await page.getByRole('button', { name: /Réglages|Settings/ }).click();
 	await page.waitForTimeout(250);
-	if ((await page.getByRole('dialog').count()) !== 1 || (await page.locator('.settings-nav-item').count()) !== 4) {
-		console.error('the player settings sheet or its four sections are missing');
+	if ((await page.getByRole('dialog').count()) !== 1 || (await page.locator('.settings-nav-item').count()) !== 5) {
+		console.error('the player settings sheet or its five sections are missing');
 		failures++;
 	}
 	// The two real preference switches live behind Playback.
@@ -2726,7 +2747,96 @@ async function assertSeriesJourney(page) {
 		console.error(`the copy button said ${JSON.stringify(copyNote)} after copying`);
 		failures++;
 	}
-	// And the update state lives behind Update.
+	// What was watched lives behind Viewing. The section is the layout the
+	// maintainer brought on 24 September 2026 - an overview of tiles, the month on
+	// one line, the ratio as a split bar, the ranking under it - and each part is
+	// asserted with a number a plausible mistake would change: the total is the
+	// sum of both families (1 h 44, not 1 h 09), the completion rate is finished
+	// over started, the month reads as a sentence with its own singular, the two
+	// segments are the split, and the ranking keeps its poster and its rule.
+	await openSettingsSection(/Visionnage|Viewing/);
+	await page.waitForTimeout(700);
+	const watchingText = await page.getByRole('dialog').innerText();
+	for (const wanted of [
+		/1 h 44|1 hr 44 min/,
+		/TAUX DE COMPLÉTION|COMPLETION RATE/,
+		/1 film|1 movie/,
+		/0 épisodes|0 episodes/,
+		/15 min/,
+		/visionné|watched/,
+		/Shōgun/,
+		/1 sur 10 épisodes|1 of 10 episodes/,
+	]) {
+		if (!wanted.test(watchingText)) {
+			console.error(`the Viewing panel does not show ${wanted}: ${JSON.stringify(watchingText)}`);
+			failures++;
+		}
+	}
+	const segments = await page.locator('.partition-bar-segment').evaluateAll((nodes) => nodes.map((node) => node.style.flexBasis));
+	if (!segments.includes('67%') || !segments.includes('33%')) {
+		console.error(`the ratio bar is split ${JSON.stringify(segments)}, expected 67% and 33%`);
+		failures++;
+	}
+	const poster = await page.locator('.settings-stats-poster').first();
+	const posterSrc = await poster.getAttribute('src');
+	if (!posterSrc || !posterSrc.includes('/api/images/w185/shogun.jpg')) {
+		console.error(`the ranking drew its poster from ${JSON.stringify(posterSrc)}, expected the w185 image route`);
+		failures++;
+	}
+	// And it asks with its origin: the server admits an artwork read from the
+	// shell's own origin only when the request carries it, and an image element
+	// without crossOrigin sends none. The first version of this pane drew a
+	// broken picture in the real window for exactly that reason.
+	if ((await poster.getAttribute('crossorigin')) === null) {
+		console.error('the ranking poster does not ask with crossOrigin, so the server will refuse it');
+		failures++;
+	}
+	const progress = await page.locator('.settings-stats-progress span').first().evaluate((node) => node.style.width);
+	if (progress !== '10%') {
+		console.error(`the series rule is drawn at ${JSON.stringify(progress)}, expected 10% (one episode of ten)`);
+		failures++;
+	}
+	await page.screenshot({ path: join(OUT, '14-settings-watching.png') });
+	// The pane is taller than the sheet at this viewport and scrolls, so the
+	// ranking is photographed on its own: a picture of a row cut in half is how
+	// a fault hides.
+	await page.locator('.settings-panel').evaluate((node) => node.scrollTo({ top: node.scrollHeight }));
+	await page.waitForTimeout(200);
+	await page.screenshot({ path: join(OUT, '14b-settings-watching-ranking.png') });
+	await page.locator('.settings-panel').evaluate((node) => node.scrollTo({ top: 0 }));
+	// The sheet reads its numbers when it opens, so a second state is a second
+	// opening rather than another look at the answer it already has.
+	const reopenSettings = async (name) => {
+		await page.getByRole('button', { name: /Fermer les réglages|Close settings/ }).click();
+		await page.waitForTimeout(150);
+		await page.getByRole('button', { name: /Réglages|Settings/ }).click();
+		await page.waitForTimeout(250);
+		await openSettingsSection(name);
+	};
+	// A server without the route says so, rather than drawing tiles of zeroes
+	// that read as a measurement.
+	await page.evaluate(() => (window.__watchingFails = true));
+	await reopenSettings(/Visionnage|Viewing/);
+	const unavailable = await page.getByRole('dialog').innerText();
+	if (!/ne rapporte pas encore|does not report/.test(unavailable)) {
+		console.error(`the Viewing panel said ${JSON.stringify(unavailable)} with no route to ask`);
+		failures++;
+	}
+	// And a library nobody has watched yet is one sentence, not an empty
+	// ranking under a title.
+	await page.evaluate((nothing) => {
+		window.__watchingFails = false;
+		window.__watching = nothing;
+	}, { ...WATCHING, top_series: [] });
+	await reopenSettings(/Visionnage|Viewing/);
+	const nothing = await page.getByRole('dialog').innerText();
+	if (!/Aucune série|No series/.test(nothing) || /Séries les plus regardées|Most watched series/.test(nothing)) {
+		console.error(`the Viewing panel said ${JSON.stringify(nothing)} with nothing watched`);
+		failures++;
+	}
+	await page.evaluate(() => (window.__watching = undefined));
+	await reopenSettings(/Mise à jour|Update/);
+
 	await openSettingsSection(/Mise à jour|Update/);
 	const updateText = await page.getByRole('dialog').innerText();
 	if (!updateText.includes('3.3.3') || !updateText.includes('3.3.4') || (await page.getByRole('button', { name: /Installer la mise à jour|Install update/ }).count()) !== 1) {

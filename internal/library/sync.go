@@ -167,6 +167,12 @@ func (s *Service) SeriesHome(ctx context.Context, profileID int64, limit int) (*
 	return s.store.SeriesHome(ctx, profileID, limit)
 }
 
+// WatchStats reports what a profile has watched. See Store.WatchStats for what
+// the numbers do and do not mean.
+func (s *Service) WatchStats(ctx context.Context, profileID int64, topLimit int) (WatchStats, error) {
+	return s.store.WatchStats(ctx, profileID, topLimit)
+}
+
 func (s *Service) GetEpisodeFile(ctx context.Context, itemID, fileID int64) (EpisodeFile, error) {
 	return s.store.GetEpisodeFile(ctx, itemID, fileID)
 }

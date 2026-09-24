@@ -206,6 +206,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/library/series/{id}/match", s.handleSetSeriesMatch)
 	mux.HandleFunc("DELETE /api/library/series/{id}/match", s.handleClearSeriesMatch)
 	mux.HandleFunc("GET /api/library/stats", s.handleLibraryStats)
+	mux.HandleFunc("GET /api/library/watching", s.handleWatchStats)
 	mux.HandleFunc("POST /api/library/scan", s.handleScan)
 	mux.HandleFunc("GET /api/images/{size}/{name}", s.handleImage)
 	// Seek previews. The sheet is served from one route for every kind of item,

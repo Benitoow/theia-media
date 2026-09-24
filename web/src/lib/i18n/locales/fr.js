@@ -796,6 +796,22 @@ export const strings = {
 		keyHint:
 			'Facultatif. Laissez vide pour utiliser la clé fournie avec Theia. Une clé saisie ici est prioritaire.',
 		keyPlaceholder: 'Laisser vide pour utiliser la clé intégrée',
+		watching: 'Visionnage',
+		watchingHint: (who) =>
+			`Pour ${who} : les heures comptent le temps réellement passé, pas la durée des fichiers. Un film est vu quand il en reste moins de deux minutes ou cinq pour cent ; une série quand tous ses épisodes le sont.`,
+		movieHours: 'Heures de films',
+		seriesHours: 'Heures de séries',
+		startedMovies: 'Films commencés',
+		watchedMovies: 'Films vus',
+		startedSeries: 'Séries commencées',
+		watchedSeries: 'Séries vues',
+		share: 'Films / séries',
+		shareOf: (movies, series) => `${movies} % · ${series} %`,
+		topSeries: 'Séries les plus regardées',
+		episodesOf: (seen, total) =>
+			total === 1 ? `${seen} sur 1 épisode` : `${seen} sur ${total} épisodes`,
+		nothingWatched: 'Aucune série n’a encore été regardée.',
+		noTime: '—',
 		milestone: (version) => `Theia ${version}`
 	},
 

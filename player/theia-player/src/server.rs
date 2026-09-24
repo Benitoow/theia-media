@@ -104,6 +104,79 @@ pub struct Profile {
     pub avatar_version: i64,
 }
 
+/// What was watched, for the settings sheet's viewing section.
+///
+/// Every field defaults, for the reason the home screen's rows do: the two
+/// programs update separately, and a server without the route answers a 404
+/// rather than this shape. An unfilled section is a sentence; a settings sheet
+/// that refuses to open over a statistic would not be.
+/// The calendar month the server is in: what was watched whose last report
+/// falls inside it, which is the only sense "this month" has without a table
+/// that records each evening separately.
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct ThisMonth {
+    #[serde(default)]
+    pub movies: u32,
+    #[serde(default)]
+    pub episodes: u32,
+    #[serde(default)]
+    pub seconds: f64,
+}
+
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct WatchStats {
+    #[serde(default)]
+    pub movies: Watched,
+    #[serde(default)]
+    pub series: Watched,
+    #[serde(default)]
+    pub episodes: Watched,
+    #[serde(default)]
+    pub month: ThisMonth,
+    #[serde(default)]
+    pub top_series: Vec<SeriesWatch>,
+}
+
+/// How much of one kind of thing was watched: the time actually spent, and the
+/// two counts the server's own rule for "watched" produced.
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct Watched {
+    #[serde(default)]
+    pub started: u32,
+    #[serde(default)]
+    pub finished: u32,
+    #[serde(default)]
+    pub seconds: f64,
+}
+
+/// One line of the ranking: a series and how much of it was watched.
+///
+/// Episodes, not files - a file holding S01E01E02 counts as two - and `total`
+/// is every episode the series has, so the line reads "1 sur 10".
+///
+/// The poster arrives as the path TMDB writes and leaves as a URL against this
+/// server, the same division of labour the library's cards use: the interface
+/// never learns the server's address.
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct SeriesWatch {
+    #[serde(default)]
+    pub id: i64,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub poster_path: String,
+    #[serde(default)]
+    pub poster_url: String,
+    #[serde(default)]
+    pub episodes: u32,
+    #[serde(default)]
+    pub finished: u32,
+    #[serde(default)]
+    pub total: u32,
+    #[serde(default)]
+    pub seconds: f64,
+}
+
 /// The updater state already exposed by the server's settings page. The native
 /// shell mirrors that contract instead of inventing a second release checker.
 #[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
@@ -782,6 +855,22 @@ impl Client {
         Ok(home)
     }
 
+    /// What this profile has watched, for the settings sheet.
+    ///
+    /// Per viewer, because that is how the server keeps a history: the client
+    /// carries the profile on every call, so this asks for the one watching
+    /// here rather than for the household's total.
+    pub fn watch_stats(&self) -> Result<WatchStats, String> {
+        let mut stats: WatchStats = self.get_json("/api/library/watching")?;
+        for one in &mut stats.top_series {
+            // w185, the smallest poster TMDB serves: the ranking draws it at
+            // about forty pixels, and a card's w342 would be four times the
+            // bytes for the same picture.
+            one.poster_url = image_url(&self.base, &one.poster_path, "w185");
+        }
+        Ok(stats)
+    }
+
     pub fn season(&self, series_id: i64, season_number: i32) -> Result<Season, String> {
         let mut season: Season = self.get_json(&format!(
             "/api/library/series/{series_id}/seasons/{season_number}"
@@ -1059,6 +1148,61 @@ mod tests {
     }
 
     #[test]
+    #[test]
+    fn the_watching_payload_is_read_as_the_server_writes_it() {
+        // The literal is what the server answered on 24 September 2026, copied
+        // rather than paraphrased: the shape is the contract between the two
+        // programs, and a field the player forgets to read is a section that
+        // silently draws nothing - which is exactly how the ranking's poster
+        // showed a placeholder while the code looked right.
+        let payload = r#"{
+            "movies": {"started": 1, "finished": 0, "seconds": 4132.295},
+            "series": {"started": 1, "finished": 0, "seconds": 2079.958},
+            "episodes": {"started": 1, "finished": 0, "seconds": 2079.958},
+            "month": {"movies": 1, "episodes": 1, "seconds": 6212.253},
+            "top_series": [{"id": 1, "title": "Sh\u014dgun",
+                            "poster_path": "/7O4iVfOMQmdCSxhOg1WnzG1AgYT.jpg",
+                            "episodes": 1, "finished": 0, "total": 10,
+                            "seconds": 2079.958}]
+        }"#;
+        let stats: WatchStats = serde_json::from_str(payload).expect("the server's own answer");
+        assert_eq!(stats.month.movies, 1);
+        assert_eq!(stats.month.seconds, 6212.253);
+        assert_eq!(stats.top_series[0].title, "Shōgun");
+        assert_eq!(
+            stats.top_series[0].poster_path,
+            "/7O4iVfOMQmdCSxhOg1WnzG1AgYT.jpg"
+        );
+        // And the URL the interface is handed, built the way watch_stats builds
+        // it: an empty path means an empty URL, which is the placeholder.
+        assert_eq!(
+            image_url("http://127.0.0.1:8383", &stats.top_series[0].poster_path, "w185"),
+            "http://127.0.0.1:8383/api/images/w185/7O4iVfOMQmdCSxhOg1WnzG1AgYT.jpg"
+        );
+    }
+
+    #[test]
+    fn an_image_url_trims_both_ends_and_keeps_the_size() {
+        // The size is the caller's: the ranking draws a forty-pixel poster and
+        // asks for w185, the cards ask for w342 and w500, and the hero for
+        // w1280. Both ends are somebody else's - a connection's base carries no
+        // trailing slash, a TMDB path carries a leading one - and trusting
+        // either produced a double slash the server answers with a redirect,
+        // one wasted round trip per image.
+        assert_eq!(
+            image_url("http://host:8395", "/x.jpg", "w185"),
+            "http://host:8395/api/images/w185/x.jpg"
+        );
+        assert_eq!(
+            image_url("http://host:8395/", "x.jpg", "w342"),
+            "http://host:8395/api/images/w342/x.jpg"
+        );
+        // A series TMDB never matched has no path, and no URL is the honest
+        // answer: the interface draws its own placeholder rather than asking
+        // the server for an image that does not exist.
+        assert_eq!(image_url("http://host:8395", "", "w185"), "");
+    }
+
     fn the_profile_is_appended_without_breaking_a_query() {
         let mut client = Client::new("http://host:8395/");
         assert_eq!(client.url("/api/health"), "http://host:8395/api/health");

@@ -6,17 +6,21 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	Clapperboard,
+	Clock,
 	Cog,
 	Copy,
 	Download,
+	Film,
 	House,
 	ImagePlus,
 	Languages,
+	ListVideo,
 	type LucideIcon,
 	Maximize2,
 	Minimize2,
 	MonitorPlay,
 	Pause,
+	Percent,
 	Pencil,
 	Play,
 	RotateCcw,
@@ -24,6 +28,7 @@ import {
 	Search,
 	Server as ServerIcon,
 	Settings2,
+	BarChart3,
 	Tv,
 	UserRound,
 	Volume1,
@@ -48,12 +53,17 @@ import { TitleBar } from './components/TitleBar';
 import { TrackMenu, type TrackMenuHandle } from './components/TrackMenu';
 import { Button } from './components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from './components/ui/dialog';
+import PartitionBar, {
+	PartitionBarSegment,
+	PartitionBarSegmentTitle,
+	PartitionBarSegmentValue,
+} from './components/ui/partition-bar';
 import { Switch } from './components/ui/switch';
 import notFoundArt from './assets/media-not-found.png';
 import { catalogues, initialLanguage, storedLanguage, trackVocabulary } from './lib/catalogues.js';
-import { artworkCandidates, displayTitle, displayYear } from './lib/tmdb';
+import { artworkCandidates, displayTitle, displayYear, imageURL } from './lib/tmdb';
 import { formatRuntime } from './lib/utils';
-import type { DiscoveredServer, Home, HomeRow, Movie, PlayerStatus, Profile, QualityLadder, Season, Series, SeriesHome, Server, Track, TrackVocabulary, UpdateStatus } from './types';
+import type { DiscoveredServer, Home, HomeRow, Movie, PlayerStatus, Profile, QualityLadder, Season, Series, SeriesHome, Server, Track, TrackVocabulary, UpdateStatus, WatchStats } from './types';
 
 const invoke = async <T,>(command: string, args?: Record<string, unknown>): Promise<T> => {
 	const call = window.__TAURI__?.core?.invoke;
@@ -1170,7 +1180,7 @@ function CardGrid({ children }: { children: React.ReactNode }) {
 // The sections of the settings sheet, in the order its rail shows them. The
 // name is also the catalogue key of the panel's heading, so the rail, the panel
 // and the sentences cannot drift apart.
-type SettingsPane = 'interface' | 'playback' | 'server' | 'update';
+type SettingsPane = 'interface' | 'playback' | 'watching' | 'server' | 'update';
 
 function SettingsModal({ open, language, preferences, server, updateStatus, updateBusy, t, onClose, onSave, onCheckUpdate, onApplyUpdate }: { open: boolean; language: string; preferences: Preferences; server: Server | null; updateStatus: UpdateStatus | null; updateBusy: boolean; t: (key: string) => string; onClose: () => void; onSave: (language: string, preferences: Preferences) => void; onCheckUpdate: () => void; onApplyUpdate: () => void }) {
 	const [draftLanguage, setDraftLanguage] = useState(language);
@@ -1180,16 +1190,46 @@ function SettingsModal({ open, language, preferences, server, updateStatus, upda
 	// more than the eye can read - which is the reason it exists.
 	const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
 	const copyTimer = useRef<number | null>(null);
+	// What was watched, asked for when the sheet opens rather than kept: a
+	// viewer who has just finished an episode opens the settings panel to see
+	// the number move, and one request per opening is what that costs.
+	const [watching, setWatching] = useState<WatchStats | null>(null);
 	// Which section the sheet is showing. The maintainer asked for the shape of
 	// a reference from 21st.dev (v-card-17, 21 September 2026): a rail of
 	// sections on the left, the chosen one on the right. Four sections in one
 	// column was a page of switches and links with no way to see what was in it
 	// without scrolling past everything else.
 	const [pane, setPane] = useState<SettingsPane>('interface');
+	// The numbers are per viewer, so the sentence names one: the profile this
+	// player is set to, or the server's word for the profile it defaults to.
+	const viewer = server?.profiles.find((one) => one.id === server.profile)?.name || t('profileDefaultName');
+	// The server counts seconds and the formatter speaks minutes, which is the
+	// conversion the home screen's runtime already makes.
+	const spent = (seconds: number) => formatRuntime(Math.round(seconds / 60), language);
+	// A bar that draws itself says "this was measured", and one that draws
+	// itself while somebody has asked for less motion is a fault: the
+	// preference the sheet edits is honoured here as it is everywhere else.
+	const statsBarDuration = (reduced: boolean) => (reduced ? 0 : 0.5);
+	// The completion rate is the share of what was opened that was finished,
+	// across both families, and it is absent rather than zero on a library
+	// nobody has opened anything in: nought per cent of nothing is not a
+	// measurement.
+	const startedCount = (watching?.movies.started ?? 0) + (watching?.episodes.started ?? 0);
+	const finishedCount = (watching?.movies.finished ?? 0) + (watching?.episodes.finished ?? 0);
+	const completion = watching && startedCount > 0 ? Math.round((finishedCount / startedCount) * 100) : null;
+	// The month's line reads as a sentence rather than as three labels, so the
+	// two counts carry their own singular: "1 film", "2 épisodes".
+	const countFilms = (n: number) => (n === 1 ? t('countFilmsOne') : t('countFilms')).replace('{n}', String(n));
+	const countEpisodes = (n: number) => (n === 1 ? t('countEpisodesOne') : t('countEpisodes')).replace('{n}', String(n));
+	// One share and its complement, because two roundings of the same total can
+	// add up to 99 or 101.
+	const watchedSeconds = (watching?.movies.seconds ?? 0) + (watching?.series.seconds ?? 0);
+	const share = watching && watchedSeconds > 0 ? Math.round((watching.movies.seconds / watchedSeconds) * 100) : null;
 	const updateStateKey = updateStatus ? ({ idle: 'updateUnknown', checking: 'updateChecking', available: 'updateAvailable', downloading: 'updateInstalling', ready: 'updateReady', deferred: 'updateDeferred', failed: 'updateFailed', unsupported: 'updateUnsupported' } as Record<string, string>)[updateStatus.state] ?? 'updateUnknown' : 'updateUnknown';
 	const panes: Array<{ id: SettingsPane; icon: LucideIcon; label: string }> = [
 		{ id: 'interface', icon: Languages, label: t('interface') },
 		{ id: 'playback', icon: MonitorPlay, label: t('playback') },
+		{ id: 'watching', icon: BarChart3, label: t('watching') },
 		{ id: 'server', icon: ServerIcon, label: t('server') },
 		{ id: 'update', icon: Download, label: t('update') },
 	];
@@ -1206,6 +1246,17 @@ function SettingsModal({ open, language, preferences, server, updateStatus, upda
 	useEffect(() => () => {
 		if (copyTimer.current !== null) window.clearTimeout(copyTimer.current);
 	}, []);
+	useEffect(() => {
+		if (!open) return;
+		// A server without the route answers an error, and the pane says so
+		// instead of drawing six zeroes that look like a measurement.
+		let cancelled = false;
+		setWatching(null);
+		invoke<string>('player_watch_stats')
+			.then((json) => { if (!cancelled) setWatching(JSON.parse(json) as WatchStats); })
+			.catch(() => { if (!cancelled) setWatching(null); });
+		return () => { cancelled = true; };
+	}, [open]);
 
 	const copyAddress = async () => {
 		if (!server) return;
@@ -1263,6 +1314,74 @@ function SettingsModal({ open, language, preferences, server, updateStatus, upda
 									<Switch checked={draft.reducedMotion} onCheckedChange={(checked) => setDraft((current) => ({ ...current, reducedMotion: checked }))} aria-label={t('reducedMotion')} />
 								</section>
 							</>
+						)}
+						{pane === 'watching' && (
+							<section className="settings-section settings-stats">
+								<div className="settings-section-copy"><h3>{t('watching')}</h3><p>{t('watchingHint').replace('{who}', viewer)}</p></div>
+{watching ? (
+									<>
+										<div className="settings-stats-block">
+											<p className="settings-stats-block-title">{t('overview')}</p>
+											<ul className="settings-stats-tiles">
+												<li><Clock size={16} strokeWidth={1.8} aria-hidden="true" /><b>{spent(watchedSeconds) ?? t('noTime')}</b><span>{t('totalTime')}</span></li>
+												<li><Film size={16} strokeWidth={1.8} aria-hidden="true" /><b>{watching.movies.finished}</b><span>{t('watchedMovies')}</span></li>
+												<li><Tv size={16} strokeWidth={1.8} aria-hidden="true" /><b>{watching.series.finished}</b><span>{t('watchedSeries')}</span></li>
+												<li><ListVideo size={16} strokeWidth={1.8} aria-hidden="true" /><b>{watching.episodes.finished}</b><span>{t('watchedEpisodes')}</span></li>
+												<li><Percent size={16} strokeWidth={1.8} aria-hidden="true" /><b>{completion === null ? t('noTime') : `${completion}%`}</b><span>{t('completionRate')}</span></li>
+											</ul>
+										</div>
+										<div className="settings-stats-block">
+											<p className="settings-stats-block-title">{t('thisMonth')}</p>
+											<p className="settings-stats-month">
+												<Clock size={15} strokeWidth={1.8} aria-hidden="true" />
+												<span>{countFilms(watching.month.movies)} · {countEpisodes(watching.month.episodes)} · {spent(watching.month.seconds) ?? t('noTime')} {t('watchedWord')}</span>
+											</p>
+										</div>
+										{share !== null && (
+											<div className="settings-stats-block">
+												<p className="settings-stats-block-title">{t('ratio')}</p>
+												<PartitionBar size="md" gap={2}>
+													<PartitionBarSegment num={share} variant="default" alignment="left">
+														<PartitionBarSegmentTitle>{t('films')}</PartitionBarSegmentTitle>
+														<PartitionBarSegmentValue>{share}%</PartitionBarSegmentValue>
+													</PartitionBarSegment>
+													<PartitionBarSegment num={100 - share} variant="secondary" alignment="right">
+														<PartitionBarSegmentTitle>{t('series')}</PartitionBarSegmentTitle>
+														<PartitionBarSegmentValue>{100 - share}%</PartitionBarSegmentValue>
+													</PartitionBarSegment>
+												</PartitionBar>
+											</div>
+										)}
+										{watching.top_series.length > 0 ? (
+											<div className="settings-stats-block">
+												<p className="settings-stats-block-title">{t('topSeries')}</p>
+												<ul className="settings-stats-ranking">
+													{watching.top_series.map((one) => (
+														<li key={one.id}>
+															{/* crossOrigin, like the cards: the shell's origin is its own
+															    and the server admits an artwork read from it only when the
+															    request carries that origin, which a plain image element does
+															    not send. Without it the answer is a 403 the log never sees
+															    and the pane draws a broken picture - measured on 24
+															    September 2026, and the reason this line is commented. */}
+															<img className="settings-stats-poster" src={one.poster_url || imageURL(one.poster_path, 'w185') || notFoundArt} alt="" crossOrigin="anonymous" decoding="async" />
+															<div className="settings-stats-row">
+																<div className="settings-stats-row-head">
+																	<span className="settings-stats-name">{one.title}</span>
+																	<span className="settings-stats-detail">{(one.total === 1 ? t('episodesOfOne') : t('episodesOf')).replace('{seen}', String(one.episodes)).replace('{total}', String(one.total))}{spent(one.seconds) ? ` · ${spent(one.seconds)}` : ''}</span>
+																</div>
+																<div className="settings-stats-progress" role="img" aria-label={(one.total === 1 ? t('episodesOfOne') : t('episodesOf')).replace('{seen}', String(one.episodes)).replace('{total}', String(one.total))}>
+																	<motion.span initial={{ width: 0 }} animate={{ width: `${one.total > 0 ? Math.round((one.episodes / one.total) * 100) : 0}%` }} transition={{ duration: statsBarDuration(preferences.reducedMotion) }} />
+																</div>
+															</div>
+														</li>
+													))}
+												</ul>
+											</div>
+										) : <p>{t('nothingWatched')}</p>}
+									</>
+																) : <p>{t('watchingUnavailable')}</p>}
+							</section>
 						)}
 						{pane === 'server' && (
 							<section className="settings-section settings-section--connection">

@@ -1519,6 +1519,23 @@ fn player_home() -> Result<String, String> {
     serde_json::to_string(&home).map_err(|e| e.to_string())
 }
 
+/// What was watched, for the settings sheet's viewing section.
+///
+/// The numbers are the server's, computed from the positions this player
+/// reports: a player that counted for itself would be a second definition of
+/// "watched" to keep in step with the first.
+#[tauri::command]
+fn player_watch_stats() -> Result<String, String> {
+    let stats = {
+        let guard = CLIENT.lock().unwrap();
+        guard
+            .as_ref()
+            .ok_or("no server is connected")?
+            .watch_stats()?
+    };
+    serde_json::to_string(&stats).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn player_series_home() -> Result<String, String> {
     let home = {
@@ -2130,6 +2147,7 @@ fn main() {
             player_series,
             player_home,
             player_series_home,
+            player_watch_stats,
             player_series_detail,
             player_season,
             player_play,

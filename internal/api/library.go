@@ -87,6 +87,30 @@ func (s *Server) handleLibraryStats(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleWatchStats reports what one profile has watched: the numbers the
+// settings screen shows about use rather than about holdings.
+//
+// Deliberately not part of /api/library/stats. That one is library-wide and the
+// home screen polls it, so it answers "how much is there" cheaply; this one is
+// per viewer, changes with every few minutes of playback, and is asked for when
+// somebody is looking at it. Remote access refuses it by default, like the rest
+// of the settings screen: the household's evening stays on the LAN.
+func (s *Server) handleWatchStats(w http.ResponseWriter, r *http.Request) {
+	profileID, ok := s.resolveProfile(w, r)
+	if !ok {
+		return
+	}
+	top := clamp(intQuery(r, "top", 5), 1, 50)
+
+	stats, err := s.lib.WatchStats(r.Context(), profileID, top)
+	if err != nil {
+		s.log.Error("counting what was watched failed", "error", err)
+		writeJSONError(w, http.StatusInternalServerError, "could not read the library")
+		return
+	}
+	writeJSON(w, http.StatusOK, stats)
+}
+
 // handleScan runs a scan and returns its report.
 //
 // It blocks until the scan finishes, which is honest for a first version: a

@@ -791,6 +791,22 @@ export const strings = {
 		keyHint:
 			'Optional. Leave this blank to use the key provided with Theia. A key entered here takes priority.',
 		keyPlaceholder: 'Leave blank to use the built-in key',
+		watching: 'Viewing',
+		watchingHint: (who) =>
+			`For ${who}: hours count the time actually spent, not the length of what was watched. A film counts as watched under two minutes or five per cent from the end; a series when every episode does.`,
+		movieHours: 'Hours of movies',
+		seriesHours: 'Hours of series',
+		startedMovies: 'Movies started',
+		watchedMovies: 'Movies watched',
+		startedSeries: 'Series started',
+		watchedSeries: 'Series watched',
+		share: 'Movies / series',
+		shareOf: (movies, series) => `${movies}% · ${series}%`,
+		topSeries: 'Most watched series',
+		episodesOf: (seen, total) =>
+			total === 1 ? `${seen} of 1 episode` : `${seen} of ${total} episodes`,
+		nothingWatched: 'No series has been watched yet.',
+		noTime: '—',
 		milestone: (version) => `Theia ${version}`
 	},
 

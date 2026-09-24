@@ -202,6 +202,48 @@ export type UpdateStatus = {
 	checked_at?: string;
 };
 
+export type Watched = {
+	started: number;
+	finished: number;
+	seconds: number;
+};
+
+export type SeriesWatch = {
+	id: number;
+	title: string;
+	/** The TMDB path, and the URL this server answers for it: the ranking is
+	 *  drawn as the series, so it needs the picture and not only the name. */
+	poster_path?: string;
+	poster_url?: string;
+	episodes: number;
+	finished: number;
+	total: number;
+	seconds: number;
+};
+
+/**
+ * What a profile has watched, as the server counted it.
+ *
+ * The rules are the server's: a film is watched when it has under two minutes
+ * or five per cent left, a series when every one of its episodes is. The player
+ * asks and prints; a player that counted for itself would be a second
+ * definition of "watched" to keep in step with the first.
+ */
+export type ThisMonth = {
+	movies: number;
+	episodes: number;
+	seconds: number;
+};
+
+export type WatchStats = {
+	movies: Watched;
+	series: Watched;
+	episodes: Watched;
+	/** What was watched this calendar month, by the server's own clock. */
+	month: ThisMonth;
+	top_series: SeriesWatch[];
+};
+
 export type Server = {
 	url: string;
 	health: { version: string; status?: string; language?: string };
