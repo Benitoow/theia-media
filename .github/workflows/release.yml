@@ -315,6 +315,65 @@ jobs:
           }
           Get-ChildItem $dir | Select-Object Name, Length
 
+      # A unit test can prove how a registry helper writes a test key, but the
+      # downloaded installer must also put the real per-user entry and shortcuts
+      # where Windows looks. This runner is disposable, so run the exact archive
+      # against its own temporary program, data and library directories.
+      - name: Install the archived product and inspect Windows registration
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '${{ env.THEIA_VERSION }}'.TrimStart('v')
+          $testRoot = Join-Path $env:RUNNER_TEMP 'theia-install-acceptance'
+          $source = Join-Path $testRoot 'download'
+          $install = Join-Path $testRoot 'Programs\Theia'
+          $data = Join-Path $testRoot 'data'
+          $library = Join-Path $testRoot 'library'
+          New-Item -ItemType Directory -Force -Path $library | Out-Null
+          Expand-Archive -LiteralPath "dist\theia-$version-windows-amd64.zip" -DestinationPath $source
+          & (Join-Path $source 'theia-setup.exe') --role all-in-one --lang en `
+            --install-dir $install --data-dir $data --library $library --port 8398 `
+            --from $source --yes
+          if ($LASTEXITCODE -ne 0) { throw "the archived installer exited $LASTEXITCODE" }
+
+          foreach ($program in 'theia-server.exe', 'theia-player.exe', 'theia.exe', 'theia-setup.exe') {
+            if (-not (Test-Path -LiteralPath (Join-Path $install $program))) {
+              throw "the installation is missing $program"
+            }
+          }
+          $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Theia'
+          $entry = Get-ItemProperty -LiteralPath $uninstallKey
+          $expectedUninstall = '"' + (Join-Path $install 'theia-setup.exe') + '" --uninstall'
+          if ($entry.DisplayName -ne 'Theia' -or
+              $entry.DisplayVersion -ne '${{ env.THEIA_VERSION }}' -or
+              $entry.InstallLocation -ne $install -or
+              $entry.UninstallString -ne $expectedUninstall) {
+            throw "the Windows Apps entry does not describe the installed product: $($entry | Out-String)"
+          }
+          $launcher = Join-Path $install 'theia.exe'
+          $appPath = Get-Item -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\App Paths\theia.exe'
+          if ($appPath.GetValue('') -ne $launcher -or $appPath.GetValue('Path') -ne $install) {
+            throw 'the App Paths entry does not point at the installed launcher'
+          }
+          $menu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Theia'
+          $shell = New-Object -ComObject WScript.Shell
+          foreach ($linkName in @('Theia.lnk', 'Theia Server.lnk', 'Theia Player.lnk')) {
+            $linkPath = Join-Path $menu $linkName
+            if (-not (Test-Path -LiteralPath $linkPath)) { throw "missing Start Menu entry $linkName" }
+            $link = $shell.CreateShortcut($linkPath)
+            $program = switch ($linkName) {
+              'Theia.lnk' { 'theia.exe' }
+              'Theia Server.lnk' { 'theia-server.exe' }
+              'Theia Player.lnk' { 'theia-player.exe' }
+            }
+            if ($link.TargetPath -ne (Join-Path $install $program)) {
+              throw "$linkName points at $($link.TargetPath)"
+            }
+          }
+          $userPath = (Get-ItemProperty 'HKCU:\Environment').Path -split ';'
+          if ($userPath -notcontains $install) { throw 'the installed directory is absent from the user PATH' }
+          Write-Host 'the archived installer registered its programs, Windows Apps entry, App Paths entry and Start Menu links'
+
       # Reporting a version is not being the product, and this server is built
       # in this job: the two things it cannot take from the source are the
       # interface and the metadata key, and both went missing here for four
