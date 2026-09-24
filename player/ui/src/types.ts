@@ -108,11 +108,25 @@ export type PlayerStatus = {
 	title?: string | null;
 	pause?: boolean;
 	mute?: boolean;
+	/** The volume as a fraction of full scale, which is the unit
+	 * `player_set_volume` accepts: the engine's own percent is converted once,
+	 * in Rust, so no interface has to know about it. */
+	volume?: number;
 	pos?: number | null;
 	duration?: number | null;
+	/** Which rung of the quality ladder is loaded, `null` being the file itself.
+	 * Session state on the Rust side rather than an mpv property: the rung is a
+	 * fact about the address the film was fetched from. */
+	quality?: number | null;
 	audioMode?: 'pcm' | 'passthrough' | string;
 };
 
+/** One entry of mpv's `track-list`, passed through as it answers.
+ *
+ * The fields past `external` are the ones the menu reads to say *what* a track
+ * is: mpv names a channel layout `demux-channels` ("7.1", "stereo", and
+ * "unknown6" when the container wrote none), and a sidecar arrives as
+ * `external`. */
 export type Track = {
 	id: number;
 	type: 'audio' | 'sub' | 'video';
@@ -121,6 +135,51 @@ export type Track = {
 	codec?: string;
 	selected?: boolean;
 	external?: boolean;
+	forced?: boolean;
+	default?: boolean;
+	'audio-channels'?: number;
+	'demux-channels'?: string;
+	'demux-channel-count'?: number;
+};
+
+/** One rung of the server's quality ladder, as `/info` publishes it.
+ *
+ * `mode` is what playing it would do - "direct", "remux" or "transcode" - and
+ * the menu says what a choice costs from that word rather than from the height,
+ * because a rung is not always an encode. */
+export type VideoQuality = { height: number; mode?: string };
+
+/** What this machine can encode, and whether a slot is free. */
+export type TranscodeInfo = { available?: boolean; kind?: string; busy?: boolean };
+
+/** The answer to `player_qualities`: which rung is loaded, and what the others
+ * would cost. `null` means the server offered no ladder at all - no encoder, or
+ * a file it cannot measure - and the menu then has no quality tab to draw. */
+export type QualityLadder = {
+	current: number | null;
+	qualities: VideoQuality[];
+	transcode: TranscodeInfo | null;
+};
+
+/** The words a track's label is built from, per language. The shape of
+ * `vocabulary` in `lib/catalogues.js`, which cannot carry a type of its own. */
+export type TrackVocabulary = {
+	languages: Record<string, string>;
+	channels: Record<string, string>;
+	channelCount: string;
+	codecs: Record<string, string>;
+	commentary: string;
+	forced: string;
+	external: string;
+	unnamedAudio: string;
+	unnamedSubtitle: string;
+	/** The words a quality rung is said with. `qualityHeight` carries an {n}
+	 * for the same reason `channelCount` does: "720p" is a number and a letter,
+	 * and every language writes it that way. */
+	qualityHeight: string;
+	qualityReencoded: string;
+	qualityHardware: string;
+	qualitySoftware: string;
 };
 
 export type Profile = {

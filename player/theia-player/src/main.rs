@@ -103,6 +103,19 @@ struct Session {
     /// Why the player is not in passthrough, as a code the OSD turns into a
     /// sentence. None while nothing has gone wrong.
     audio_reason: Option<&'static str>,
+    /// Which rung of the quality ladder is loaded, None being the file as it
+    /// is. Kept with `start_at` and the track choices because every reload has
+    /// to open the stream that was chosen: the audio fallback reloads the film
+    /// too, and one that came back at another quality would undo a choice the
+    /// viewer made deliberately.
+    quality: Option<i64>,
+    /// How long the film is, when the stream cannot say.
+    ///
+    /// A converted stream is a pipe with no length, so the clock would have no
+    /// end and the scrub bar nothing to draw against. The server knows - it is
+    /// the same number the browser player's clock uses - and this is where the
+    /// answer waits.
+    duration_hint: Option<f64>,
 }
 
 impl Session {
@@ -123,6 +136,9 @@ impl Session {
         self.media = Some(source);
         self.title = title;
         self.start_at = start_at;
+        // A new film starts as the file is: the rung belonged to the one before
+        // it, and so did the tracks.
+        self.quality = None;
         self.aid = None;
         self.sid = None;
         self.sidecars = sidecars;
@@ -135,17 +151,34 @@ impl Session {
     /// Hands a file to mpv with everything this session has decided about it:
     /// where to start, which tracks, and the subtitle files beside the film.
     ///
-    /// The first load and the audio fallback's reload both come through here.
-    /// They must: a reload that forgot any of it would undo a viewer's choices,
-    /// which the resume point already taught this project once, and would take
-    /// the sidecar subtitles away the moment the endpoint refused a bitstream.
-    fn load(&mut self, url: &str) -> Result<(), String> {
+    /// The first load and every reload come through here. They must: a reload
+    /// that forgot any of it would undo a viewer's choices, which the resume
+    /// point already taught this project once, and would take the sidecar
+    /// subtitles away the moment the endpoint refused a bitstream.
+    ///
+    /// `pause` says what the film should do when it comes back, and only one
+    /// caller passes it: a film started from the library plays, whatever the
+    /// engine was doing before. Every reload passes `None` and inherits, which
+    /// is both what a viewer means and what the engine does anyway.
+    fn load(&mut self, url: &str, pause: Option<bool>) -> Result<(), String> {
         let options = self.load_options();
         let mut args: Vec<&str> = vec!["loadfile", url, "replace", "0"];
         if let Some(ref options) = options {
             args.push(options);
         }
         self.engine.command(&args)?;
+        // The pause state is a property, set after the load rather than passed
+        // with it. `loadfile`'s option list is for options that belong to a
+        // *file* - `start=`, `aid=`, `sid=` - and `pause` is the player's own
+        // state, which the load keeps from the file before it. Measured on
+        // 24 September 2026: with `pause=no` in that list the next film still
+        // came back paused, and a viewer who paused one film and opened another
+        // got a frozen picture. `None` leaves the state alone, which is what the
+        // audio fallback wants.
+        if let Some(pause) = pause {
+            self.engine
+                .set_property("pause", if pause { "yes" } else { "no" })?;
+        }
         // A reload drops everything that was added on top of the file, so the
         // two automatic steps below start again - from the same film, whose
         // sidecars this session still holds.
@@ -153,6 +186,69 @@ impl Session {
         self.sidecar_tries = 0;
         self.sidecar_decided = false;
         Ok(())
+    }
+
+    /// Where the film is, on the film's own clock.
+    ///
+    /// A converted stream is a pipe that starts at zero, so the `t=` it was
+    /// asked for is an offset every number from mpv needs: without it the clock,
+    /// the scrub bar and the resume point would each be short by however far in
+    /// the viewer was when they changed quality.
+    fn position(&self) -> Option<f64> {
+        let raw = self
+            .engine
+            .property("time-pos")
+            .and_then(|value| value.parse::<f64>().ok())?;
+        Some(if self.quality.is_some() {
+            self.start_at + raw
+        } else {
+            raw
+        })
+    }
+
+    /// How long the film is: mpv's own answer for a file, the server's for a
+    /// pipe.
+    fn duration(&self) -> Option<f64> {
+        if self.quality.is_some() {
+            return self.duration_hint;
+        }
+        self.engine
+            .property("duration")
+            .and_then(|value| value.parse::<f64>().ok())
+    }
+
+    /// Opens the film again at another rung of the ladder, or at the same one.
+    ///
+    /// Everything that belongs to the *film* stays - its title, its subtitle
+    /// files, the tracks the viewer chose - and only the stream address and
+    /// where to start change. `mark_loaded` is the wrong tool for this: it
+    /// forgets the track choices, and those belong to the film rather than to
+    /// the stream it happens to be fetched from.
+    ///
+    /// `start_at` is where the film is *now*, not where it was first asked to
+    /// start: a quality change ten minutes into a film that came back at the
+    /// resume point would be a viewer losing ten minutes.
+    fn reload_at(
+        &mut self,
+        source: String,
+        start_at: f64,
+        quality: Option<i64>,
+        duration_hint: Option<f64>,
+    ) -> Result<(), String> {
+        self.media = Some(source.clone());
+        self.start_at = start_at;
+        self.quality = quality;
+        self.duration_hint = duration_hint;
+        // The audio watchdog keys off this, and a reload it does not know about
+        // is a stalled film nobody recovers from.
+        self.loaded_at = Some(Instant::now());
+        // `None`: a reload keeps the pause state the engine already has, which
+        // is what a viewer means - measured in the real window, a film paused
+        // before a quality change came back paused and one playing came back
+        // playing. Forcing it either way is worse than inheriting: `pause=yes`
+        // set just after `loadfile` is lost when the new file starts, which was
+        // tried first and left a paused film playing.
+        self.load(&source, None)
     }
 
     /// Hands mpv the subtitle files that sit beside the film, keeping back the
@@ -197,9 +293,14 @@ impl Session {
     /// The file-local options this film should be opened with. Used for the
     /// first load and again by the audio fallback, so both open the same film
     /// the same way - which is the whole point of keeping them here.
+    ///
     fn load_options(&self) -> Option<String> {
         let mut options: Vec<String> = Vec::new();
-        if self.start_at > 0.0 {
+        // A converted stream already begins where it was asked to: its `t=` is
+        // in the address, and `start=` on top of it would decode and throw away
+        // the same seconds a second time - or, worse, on a pipe with no ranges,
+        // fail to skip at all.
+        if self.start_at > 0.0 && self.quality.is_none() {
             options.push(format!("start={:.3}", self.start_at));
         }
         if let Some(aid) = self.aid {
@@ -221,6 +322,8 @@ impl Session {
         self.title = None;
         self.loaded_at = None;
         self.start_at = 0.0;
+        self.quality = None;
+        self.duration_hint = None;
         self.aid = None;
         self.sid = None;
         self.sidecars.clear();
@@ -416,8 +519,15 @@ fn player_status() -> String {
         "title": session.title,
         "pause": flag("pause").unwrap_or(false),
         "mute": flag("mute").unwrap_or(false),
-        "pos": number("time-pos"),
-        "duration": number("duration"),
+        // The engine's own unit is percent; the interface works in fractions,
+        // so the conversion happens once, here, and `player_set_volume` accepts
+        // what this reports.
+        "volume": number("volume").map(|percent| percent / 100.0),
+        // The film's clock, not mpv's: on a converted stream the two differ by
+        // the `t=` the pipe was asked for. Every number the interface shows
+        // about position and length comes through these two.
+        "pos": session.position(),
+        "duration": session.duration(),
         "vo": text("current-vo"),
         "hwdec": text("hwdec-current"),
         "ao": text("current-ao"),
@@ -427,6 +537,10 @@ fn player_status() -> String {
         "startAt": session.start_at,
         "aid": integer("aid"),
         "sid": integer("sid"),
+        // Which rung of the quality ladder is loaded, null being the file as it
+        // is. Session state rather than an mpv property: the rung is a fact
+        // about the address the film was fetched from.
+        "quality": session.quality,
     })
     .to_string()
 }
@@ -534,22 +648,68 @@ fn player_set_muted(muted: bool) -> Result<(), String> {
         .set_property("mute", if muted { "yes" } else { "no" })
 }
 
+/// Sets the volume, as a fraction of full scale.
+///
+/// The engine keeps volume and mute as two properties; the rule that joins them
+/// belongs here rather than in whichever interface is asking. A slider dragged
+/// to the end is how somebody silences a film, and moving it off the end is how
+/// they bring it back - the same rule the web player applies to its own slider,
+/// so a thumb at either end of the track means the same thing in both players.
+/// It is also why the two properties are written together: two commands from
+/// the interface would leave a window where the sound is back but the icon
+/// still says muted.
+///
+/// mpv counts in percent, so the fraction is scaled at this boundary and
+/// nowhere else - the status frame answers in the unit this accepts.
+#[tauri::command]
+fn player_set_volume(volume: f64) -> Result<(), String> {
+    if !volume.is_finite() {
+        return Err(format!("volume {volume} is not a number"));
+    }
+    let fraction = volume.clamp(0.0, 1.0);
+    let guard = SESSION.lock().unwrap();
+    let session = guard.as_ref().ok_or("the engine is not running")?;
+    session
+        .engine
+        .set_property("volume", &format!("{:.1}", fraction * 100.0))?;
+    session
+        .engine
+        .set_property("mute", if fraction > 0.0 { "no" } else { "yes" })
+}
+
 /// Seeks, relative or absolute, in seconds. The mode is passed through rather
 /// than guessed: a scrub bar asks for an absolute position and a skip button
 /// asks for a relative one, and mixing them up lands in the wrong place in the
 /// film.
 #[tauri::command]
 fn player_seek(seconds: f64, mode: String) -> Result<(), String> {
-    let mode = match mode.as_str() {
-        "absolute" => "absolute",
-        "relative" => "relative",
+    let absolute = match mode.as_str() {
+        "absolute" => true,
+        "relative" => false,
         other => return Err(format!("unknown seek mode {other:?}")),
     };
+    {
+        let guard = SESSION.lock().unwrap();
+        let session = guard.as_ref().ok_or("the engine is not running")?;
+        // A converted stream cannot be seeked: it is a pipe with no length and
+        // no ranges, so the only way to another position is to ask the server
+        // for another one. A viewer scrubbing at 720p waits for a reload, which
+        // is exactly what the browser player does at the same moment.
+        if session.quality.is_some() {
+            let current = session.position().unwrap_or(session.start_at);
+            let target = if absolute { seconds } else { current + seconds }.max(0.0);
+            let quality = session.quality;
+            drop(guard);
+            return reload_stream(quality, target);
+        }
+    }
     let guard = SESSION.lock().unwrap();
     let session = guard.as_ref().ok_or("the engine is not running")?;
-    session
-        .engine
-        .command(&["seek", &format!("{seconds:.3}"), mode])
+    session.engine.command(&[
+        "seek",
+        &format!("{seconds:.3}"),
+        if absolute { "absolute" } else { "relative" },
+    ])
 }
 
 /// Chooses a subtitle file that was added from beside the film.
@@ -650,6 +810,146 @@ fn player_tracks() -> Result<String, String> {
         .engine
         .property("track-list")
         .ok_or_else(|| "the engine has no track list yet".to_string())
+}
+
+/// Which file of which record mpv is holding.
+///
+/// Both ids are needed to build a stream address, and both come from one
+/// request: the server decides which file is primary, so asking it again is what
+/// keeps a rung change on the file that is actually playing rather than on
+/// whichever one a list happened to put first.
+struct Playable {
+    movie: Option<i64>,
+    episode: Option<i64>,
+    file: i64,
+}
+
+fn current_playable() -> Result<Playable, String> {
+    let media = *CURRENT_MEDIA.lock().unwrap();
+    let guard = CLIENT.lock().unwrap();
+    let client = guard.as_ref().ok_or("no server is connected")?;
+    match media {
+        Some(Playing::Movie(id)) => {
+            let movie = client.movie(id)?;
+            let file = movie
+                .files
+                .iter()
+                .find(|f| f.is_primary)
+                .or_else(|| movie.files.first())
+                .ok_or("this film has no playable file")?;
+            Ok(Playable {
+                movie: Some(id),
+                episode: None,
+                file: file.id,
+            })
+        }
+        Some(Playing::Episode(id)) => {
+            let episode = client.episode(id)?;
+            let file = episode
+                .files
+                .iter()
+                .find(|f| f.is_primary)
+                .or_else(|| episode.files.first())
+                .ok_or("this episode has no playable file")?;
+            Ok(Playable {
+                movie: None,
+                episode: Some(id),
+                file: file.id,
+            })
+        }
+        None => Err("nothing is playing".into()),
+    }
+}
+
+impl Playable {
+    fn stream_url(&self, client: &server::Client, height: Option<i64>, start: f64) -> String {
+        match (self.movie, self.episode) {
+            (_, Some(episode)) => client.episode_stream_url(episode, self.file, height, start),
+            (Some(movie), _) => client.stream_url(movie, self.file, height, start),
+            _ => String::new(),
+        }
+    }
+}
+
+/// The rungs this machine can produce for what is playing, and what they cost.
+///
+/// Asked for when the menu opens rather than pushed with every status frame:
+/// the ladder belongs to the file and not to the moment, and the answer is the
+/// server's - including whether an encoder is free, which changes while
+/// somebody else's film is being converted.
+#[tauri::command]
+fn player_qualities() -> Result<String, String> {
+    let playable = current_playable()?;
+    let (qualities, transcode) = {
+        let guard = CLIENT.lock().unwrap();
+        let client = guard.as_ref().ok_or("no server is connected")?;
+        let info = match (playable.movie, playable.episode) {
+            (_, Some(episode)) => client.episode_stream_info(episode, playable.file)?,
+            (Some(movie), _) => client.stream_info(movie, playable.file)?,
+            _ => return Err("nothing is playing".into()),
+        };
+        (info.qualities, info.transcode)
+    };
+    let current = SESSION.lock().unwrap().as_ref().and_then(|s| s.quality);
+    Ok(serde_json::json!({
+        "current": current,
+        "qualities": qualities,
+        "transcode": transcode,
+    })
+    .to_string())
+}
+
+/// Opens what is playing again, at another rung or at another second of it.
+///
+/// One path for both, because they are the same operation: a converted stream
+/// carries its start position in its address, so "seek to 40 minutes" and
+/// "change to 720p" are both a new address and a reload. Everything the film
+/// owns - its title, its sidecar subtitles, the chosen tracks - is kept by
+/// `Session::reload_at`.
+fn reload_stream(height: Option<i64>, at: f64) -> Result<(), String> {
+    let playable = current_playable()?;
+    let (url, duration) = {
+        let guard = CLIENT.lock().unwrap();
+        let client = guard.as_ref().ok_or("no server is connected")?;
+        let url = playable.stream_url(client, height, at);
+        // A pipe carries no length of its own, so the film's length comes from
+        // the server - the same number the browser player's clock uses. Asked
+        // for only when there is a rung: a file knows its own duration.
+        let duration = if height.filter(|height| *height > 0).is_some() {
+            let info = match (playable.movie, playable.episode) {
+                (_, Some(episode)) => client.episode_stream_info(episode, playable.file),
+                (Some(movie), _) => client.stream_info(movie, playable.file),
+                _ => Err("nothing is playing".to_string()),
+            }?;
+            Some(info.duration_seconds).filter(|seconds| *seconds > 0.0)
+        } else {
+            None
+        };
+        (url, duration)
+    };
+    let mut guard = SESSION.lock().unwrap();
+    let session = guard.as_mut().ok_or("the engine is not running")?;
+    session.reload_at(url, at, height, duration)
+}
+
+/// Plays the same film at another rung of the ladder.
+///
+/// A rung is a different stream, not a property, so this is a reload: the film
+/// comes back at the second it left, with the tracks the viewer chose still
+/// applied - the discipline the audio fallback's reload already follows. `None`
+/// asks for the file as it is, which is the ladder's own first rung and the only
+/// one that reaches an amplifier untouched.
+#[tauri::command]
+fn player_set_quality(height: Option<i64>) -> Result<(), String> {
+    let at = {
+        let guard = SESSION.lock().unwrap();
+        let session = guard.as_ref().ok_or("the engine is not running")?;
+        // Where the film is *now*. A reload that used the original resume point
+        // would send somebody who changed quality an hour in back to the
+        // beginning.
+        session.position().unwrap_or(session.start_at)
+    };
+    reload_stream(height, at)
 }
 
 /// Chooses a track, or turns one off.
@@ -966,7 +1266,7 @@ fn play_movie(id: i64) -> Result<String, String> {
             }
         };
         (
-            client.stream_url(movie.id, file.id),
+            client.stream_url(movie.id, file.id, None, resume_at),
             movie.id,
             if movie.metadata.title.is_empty() {
                 movie.title.clone()
@@ -987,7 +1287,10 @@ fn play_movie(id: i64) -> Result<String, String> {
         // of this found the honest way. A file-local option belongs to the
         // loadfile command's own argument list, and that is where it goes.
         session.mark_loaded(url.clone(), Some(title), resume_at, sidecars);
-        if let Err(e) = session.load(&url) {
+        // A film started from the library plays. Without this it inherits the
+        // pause state of whatever was on screen before, which is how a viewer
+        // who paused one film and opened another got a frozen picture.
+        if let Err(e) = session.load(&url, Some(false)) {
             // Nothing was loaded, so the watchdog must not act on it.
             session.loaded_at = None;
             return Err(e);
@@ -1046,7 +1349,7 @@ fn play_episode(id: i64) -> Result<String, String> {
             )
         };
         (
-            client.episode_stream_url(episode.id, file.id),
+            client.episode_stream_url(episode.id, file.id, None, resume_at),
             episode.id,
             title,
             resume_at,
@@ -1058,7 +1361,10 @@ fn play_episode(id: i64) -> Result<String, String> {
         let mut session_guard = SESSION.lock().unwrap();
         let session = session_guard.as_mut().ok_or("the engine is not running")?;
         session.mark_loaded(url.clone(), Some(title), resume_at, sidecars);
-        if let Err(e) = session.load(&url) {
+        // A film started from the library plays. Without this it inherits the
+        // pause state of whatever was on screen before, which is how a viewer
+        // who paused one film and opened another got a frozen picture.
+        if let Err(e) = session.load(&url, Some(false)) {
             session.loaded_at = None;
             return Err(e);
         }
@@ -1605,14 +1911,13 @@ fn save_progress() {
     let (position, duration) = {
         let Ok(guard) = SESSION.lock() else { return };
         let Some(session) = guard.as_ref() else { return };
-        let number = |name: &str| {
-            session
-                .engine
-                .property(name)
-                .and_then(|v| v.parse::<f64>().ok())
-                .unwrap_or(0.0)
-        };
-        (number("time-pos"), number("duration"))
+        // The film's clock, not mpv's: on a converted stream they differ by the
+        // `t=` the pipe was asked for, and a resume point written short by that
+        // much is a viewer sent backwards every time they change quality.
+        (
+            session.position().unwrap_or(0.0),
+            session.duration().unwrap_or(0.0),
+        )
     };
     if position <= 0.5 {
         return; // Nothing has been watched yet; a zero would erase a position.
@@ -1704,6 +2009,8 @@ fn start_engine(wid: isize, media: Option<&str>, silent: bool) -> Result<(), Str
         sidecar_tries: 0,
         sidecar_decided: false,
         audio_reason: None,
+        quality: None,
+        duration_hint: None,
     };
     if let Some(path) = media {
         let title = std::path::Path::new(path)
@@ -1801,8 +2108,11 @@ fn main() {
             player_engine_pin,
             player_toggle_pause,
             player_set_muted,
+            player_set_volume,
             player_tracks,
             player_set_track,
+            player_qualities,
+            player_set_quality,
             player_seek,
             player_load,
             player_stop,
@@ -2077,7 +2387,7 @@ fn supervise_audio(app: &tauri::WebviewWindow) {
     // where it was asked to start, not from the beginning, and with the
     // subtitle files beside it, which are not part of the file being reloaded.
     if let Some(media) = session.media.clone() {
-        if let Err(e) = session.load(&media) {
+        if let Err(e) = session.load(&media, None) {
             eprintln!("theia-player: could not restart the film on the PCM path: {e}");
         }
     }

@@ -26,6 +26,7 @@ import {
 	Settings2,
 	Tv,
 	UserRound,
+	Volume1,
 	Volume2,
 	VolumeX,
 	X,
@@ -49,10 +50,10 @@ import { Button } from './components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from './components/ui/dialog';
 import { Switch } from './components/ui/switch';
 import notFoundArt from './assets/media-not-found.png';
-import { catalogues, initialLanguage, storedLanguage } from './lib/catalogues.js';
+import { catalogues, initialLanguage, storedLanguage, trackVocabulary } from './lib/catalogues.js';
 import { artworkCandidates, displayTitle, displayYear } from './lib/tmdb';
 import { formatRuntime } from './lib/utils';
-import type { DiscoveredServer, Home, HomeRow, Movie, PlayerStatus, Profile, Season, Series, SeriesHome, Server, Track, UpdateStatus } from './types';
+import type { DiscoveredServer, Home, HomeRow, Movie, PlayerStatus, Profile, QualityLadder, Season, Series, SeriesHome, Server, Track, TrackVocabulary, UpdateStatus } from './types';
 
 const invoke = async <T,>(command: string, args?: Record<string, unknown>): Promise<T> => {
 	const call = window.__TAURI__?.core?.invoke;
@@ -63,8 +64,33 @@ const listen = window.__TAURI__?.event?.listen ?? (async () => () => {});
 const getAppWindow = () => window.__TAURI__?.window?.getCurrentWindow?.();
 const IDLE_MS = 3000;
 
+/// How long the audio fallback explains itself.
+///
+/// The sentence is about 150 characters, which is read in six seconds; eight
+/// leaves the margin. It used to stay until the player was closed, and the
+/// maintainer met it sitting over the home screen's hero after a film had been
+/// left - a notice outliving the state that raised it.
+const AUDIO_NOTICE_MS = 8000;
+
+/// How long the interface's own volume outranks the engine's.
+///
+/// Status frames arrive twice a second, so a frame read while a thumb is being
+/// dragged is always older than the drag: without this window the thumb jumps
+/// back to where it was and forward again, twice a second, for as long as
+/// somebody holds it. Longer than one frame period, and short enough that a
+/// volume changed from anywhere else lands promptly.
+const VOLUME_SETTLE_MS = 900;
+
 type Section = 'home' | 'films' | 'series' | 'search';
 type Preferences = { reducedMotion: boolean; autoHideControls: boolean };
+
+/// What the OSD is saying, and for how long.
+///
+/// `label` is a catalogue key rather than a word, because the two notices are
+/// not about the same thing: a refused raw stream is "Son", an engine that will
+/// not start is not. A null `dwell` means the notice must not leave on its own -
+/// an engine that could not start is still not started.
+type Notice = { key: string; label: string; dwell: number | null };
 
 function initialPreferences(): Preferences {
 	try {
@@ -84,6 +110,7 @@ export default function App() {
 	const [language, setLanguage] = useState(initialLanguage());
 	const [preferences, setPreferences] = useState(initialPreferences);
 	const catalogue = catalogues[language as keyof typeof catalogues];
+	const words = trackVocabulary(language);
 	const t = useCallback((key: string) => (catalogue as Record<string, string>)[key] ?? key, [catalogue]);
 	const lastSection = useRef<Section>('home');
 	const routeSection: Section | null = location.pathname.startsWith('/home')
@@ -100,7 +127,14 @@ export default function App() {
 	const profilesOpen = location.pathname === '/profiles';
 
 	const [status, setStatus] = useState<PlayerStatus>({ ready: false });
-	const [noticeKey, setNoticeKey] = useState<string | null>(null);
+	// The engine owns the volume, but its answer arrives twice a second - too
+	// slow to drive a thumb that is being dragged, and always one frame behind
+	// it. The interface keeps its own copy and reconciles: a frame is adopted
+	// once the slider has not been touched for longer than a frame takes to
+	// arrive, and ignored while it is under the pointer.
+	const [volume, setVolume] = useState(1);
+	const volumeTouched = useRef(0);
+	const [notice, setNotice] = useState<Notice | null>(null);
 	const [idle, setIdle] = useState(false);
 	const [fullscreen, setFullscreen] = useState(false);
 	const [maximized, setMaximized] = useState(false);
@@ -123,9 +157,15 @@ export default function App() {
 	const [returning, setReturning] = useState(false);
 	const [errorKey, setErrorKey] = useState<string | null>(null);
 	const [tracks, setTracks] = useState<Track[]>([]);
+	// What the server says this machine can produce for the film playing. Asked
+	// for when the menu opens, like the tracks: the ladder belongs to the file
+	// and not to the moment, and whether an encoder is free changes while
+	// somebody else's film is being converted.
+	const [qualities, setQualities] = useState<QualityLadder | null>(null);
 	const [trackMenuOpen, setTrackMenuOpen] = useState(false);
 	const [focusInFurniture, setFocusInFurniture] = useState(false);
 	const idleTimer = useRef<number | null>(null);
+	const noticeTimer = useRef<number | null>(null);
 	const lastPointerDown = useRef(0);
 	const trackButton = useRef<HTMLButtonElement>(null);
 	const trackMenu = useRef<TrackMenuHandle>(null);
@@ -385,12 +425,33 @@ export default function App() {
 		};
 	}, [connect, findServers]);
 
+	/// A notice replaces the one before it, and only one of them is ever on the
+	/// clock: two timers would fight over the same screen.
+	const clearNotice = useCallback(() => {
+		if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
+		noticeTimer.current = null;
+		setNotice(null);
+	}, []);
+
+	const showNotice = useCallback((next: Notice) => {
+		if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
+		noticeTimer.current = null;
+		setNotice(next);
+		if (next.dwell === null) return;
+		noticeTimer.current = window.setTimeout(() => {
+			noticeTimer.current = null;
+			setNotice(null);
+		}, next.dwell);
+	}, []);
+
 	useEffect(() => {
 		const cleanups: Array<() => void> = [];
 		let disposed = false;
 		listen('player-status', (event) => {
 			try {
-				setStatus(JSON.parse(String(event.payload)) as PlayerStatus);
+				const frame = JSON.parse(String(event.payload)) as PlayerStatus;
+				setStatus(frame);
+				if (typeof frame.volume === 'number' && Date.now() - volumeTouched.current > VOLUME_SETTLE_MS) setVolume(frame.volume);
 			} catch {
 				// A malformed frame is ignored; the next one arrives in 500 ms.
 			}
@@ -398,8 +459,10 @@ export default function App() {
 		listen('player-event', (event) => {
 			try {
 				const value = JSON.parse(String(event.payload));
-				if (value.kind === 'audio' && value.mode === 'pcm') setNoticeKey('audioFallback');
-				if (value.kind === 'engine' && value.state === 'unavailable') setNoticeKey('engineUnavailable');
+				if (value.kind === 'audio' && value.mode === 'pcm')
+					showNotice({ key: 'audioFallback', label: 'audioFallbackLabel', dwell: AUDIO_NOTICE_MS });
+				if (value.kind === 'engine' && value.state === 'unavailable')
+					showNotice({ key: 'engineUnavailable', label: 'engineUnavailableLabel', dwell: null });
 			} catch {
 				// Same contract as status frames.
 			}
@@ -416,8 +479,9 @@ export default function App() {
 		return () => {
 			disposed = true;
 			cleanups.forEach((cleanup) => cleanup());
+			if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
 		};
-	}, []);
+	}, [showNotice]);
 
 	const wake = useCallback(() => {
 		if (idleTimer.current !== null) window.clearTimeout(idleTimer.current);
@@ -442,7 +506,10 @@ export default function App() {
 		};
 	}, [wake]);
 
+	// A notice belongs to the film that raised it, so a new film starts on a
+	// clean screen: the last one's sound is not this one's.
 	const playMovie = async (id: number) => {
+		clearNotice();
 		try {
 			await invoke('player_play', { id });
 		} catch {
@@ -450,6 +517,7 @@ export default function App() {
 		}
 	};
 	const playEpisode = async (id: number) => {
+		clearNotice();
 		try {
 			await invoke('player_play_episode', { id });
 		} catch {
@@ -492,6 +560,7 @@ export default function App() {
 		if (!status.media || returning) return;
 		setReturning(true);
 		setTrackMenuOpen(false);
+		clearNotice();
 		try {
 			await invoke('player_stop');
 			setStatus((current) => ({ ...current, media: null, title: null, pos: null, duration: null, pause: false }));
@@ -501,13 +570,21 @@ export default function App() {
 		} finally {
 			setReturning(false);
 		}
-	}, [loadHome, loadLibrary, returning, status.media]);
+	}, [clearNotice, loadHome, loadLibrary, returning, status.media]);
 
 	const refreshTracks = async () => {
 		try {
 			setTracks(JSON.parse(await invoke<string>('player_tracks')) as Track[]);
 		} catch {
 			setTracks([]);
+		}
+		try {
+			setQualities(JSON.parse(await invoke<string>('player_qualities')) as QualityLadder);
+		} catch {
+			// No ladder is not an error: a machine with no encoder, or a server
+			// too old to publish one, is a menu with no quality tab rather than a
+			// menu that fails to open.
+			setQualities(null);
 		}
 	};
 	const toggleTracks = async () => {
@@ -518,6 +595,19 @@ export default function App() {
 	const pickTrack = async (kind: 'audio' | 'sub', id: number | null) => {
 		try {
 			await invoke('player_set_track', { kind, id });
+			await refreshTracks();
+		} catch {
+			setErrorKey('trackFailed');
+		}
+	};
+	/// A rung is a different stream, so this is a reload: the film comes back at
+	/// the second it left. The menu stays open and the tick moves when the new
+	/// stream answers - the bar is drawn from session state on the Rust side, so
+	/// it never disappears while the pipe is being opened.
+	const pickQuality = async (height: number | null) => {
+		wake();
+		try {
+			await invoke('player_set_quality', { height });
 			await refreshTracks();
 		} catch {
 			setErrorKey('trackFailed');
@@ -535,8 +625,29 @@ export default function App() {
 		},
 		[wake]
 	);
+	const setVolumeTo = useCallback(
+		(next: number) => {
+			// Rounded to the slider's own step, so the value on the wire is the
+			// value on screen: a keyboard step of 0.1 lands on 0.5000000000000001
+			// otherwise, and every write would look like a different volume.
+			const value = Math.max(0, Math.min(1, Math.round(next * 100) / 100));
+			volumeTouched.current = Date.now();
+			setVolume(value);
+			wake();
+			void invoke('player_set_volume', { volume: value });
+		},
+		[wake]
+	);
 	const toggleMute = () => {
 		wake();
+		// Unmuting a slider sitting at zero would bring back a silent film, so
+		// the button restores a level instead - the rule the web player applies
+		// to its own button, and the reason the two agree when somebody mutes,
+		// drags to nothing, then presses play on the sound again.
+		if (status.mute && volume === 0) {
+			setVolumeTo(0.5);
+			return;
+		}
 		void invoke('player_set_muted', { muted: !status.mute });
 	};
 	const setFullscreenState = useCallback(async (next: boolean) => {
@@ -563,7 +674,12 @@ export default function App() {
 			if ((event.target as HTMLElement | null)?.closest('.scrub')) return;
 			if (trackMenuOpen && event.key.startsWith('Arrow')) {
 				event.preventDefault();
-				trackMenu.current?.moveFocus(event.key === 'ArrowDown' || event.key === 'ArrowRight' ? 1 : -1);
+				// Left and right change tab, up and down walk the rows of the tab
+				// that is open - the strip is above the rows, so the vertical axis
+				// is the one that moves within it.
+				if (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+					trackMenu.current?.moveTab(event.key === 'ArrowRight' ? 1 : -1);
+				else trackMenu.current?.moveFocus(event.key === 'ArrowDown' ? 1 : -1);
 				return;
 			}
 			if (event.key === ' ' || event.key === 'k') {
@@ -576,6 +692,12 @@ export default function App() {
 			// this gate the global handler would also fire a seek into the
 			// void on every arrow press.
 			else if (status.media && event.key === 'ArrowRight') seek(10);
+			// The vertical axis is the volume, which is what it does on a TV
+			// remote and in the web player. The scrub bar owns these two keys
+			// while it has focus - the handler returns early there - and in the
+			// library they belong to whichever row has focus.
+			else if (status.media && (event.key === 'ArrowUp' || event.key === 'ArrowDown'))
+				setVolumeTo(volume + (event.key === 'ArrowUp' ? 0.1 : -0.1));
 			else if (event.key === 'f') void toggleFullscreen();
 			else if (event.key === 'm') toggleMute();
 			else if (event.key === 'c') void toggleTracks();
@@ -594,7 +716,7 @@ export default function App() {
 		};
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
-	}, [fullscreen, profilesOpen, returnToLibrary, seek, selectedSeries, setFullscreenState, settingsOpen, status.media, switchLanguage, toggle, toggleFullscreen, trackMenuOpen, wake]);
+	}, [fullscreen, profilesOpen, returnToLibrary, seek, selectedSeries, setFullscreenState, setVolumeTo, settingsOpen, status.media, switchLanguage, toggle, toggleFullscreen, trackMenuOpen, volume, wake]);
 
 	const seconds = Number(status.pos) || 0;
 	const duration = Number(status.duration) || 0;
@@ -669,7 +791,7 @@ export default function App() {
 					onClose={() => getAppWindow()?.close()}
 				/>
 
-				{noticeKey && <div className="notice" role="status"><span className="label">{t('audioFallbackLabel')}</span>{t(noticeKey)}</div>}
+				{notice && <div className="notice" role="status"><span className="label">{t(notice.label)}</span>{t(notice.key)}</div>}
 				{status.media && !status.ready && <div className="notice" role="status"><span className="label">{t('loading')}</span></div>}
 
 				{!status.media && (
@@ -711,9 +833,12 @@ export default function App() {
 				/>
 
 				<PlaybackControls
-					visible={Boolean(status.media)} status={status} seconds={seconds} duration={duration} progress={progress}
+					visible={Boolean(status.media)} status={status} seconds={seconds} duration={duration} progress={progress} words={words}
+					volume={volume} onVolume={setVolumeTo}
 					fullscreen={fullscreen} language={language} tracks={tracks} trackMenuOpen={trackMenuOpen}
+					qualities={qualities} currentQuality={status.quality ?? null}
 					trackButton={trackButton} trackMenu={trackMenu} t={t} onToggle={toggle} onSeek={seek}
+					onPickQuality={(height) => void pickQuality(height)}
 					onSeekAbsolute={(value) => { wake(); void invoke('player_seek', { seconds: value, mode: 'absolute' }); }}
 					onMute={toggleMute} onTracks={() => void toggleTracks()} onPickTrack={pickTrack}
 					onLanguage={switchLanguage} onFullscreen={() => void toggleFullscreen()}
@@ -1251,7 +1376,9 @@ function ProfileDialog({ open, profiles, activeProfile, serverURL, busy, t, onCl
 
 type PlaybackProps = {
 	visible: boolean; status: PlayerStatus; seconds: number; duration: number; progress: number; fullscreen: boolean;
-	language: string; tracks: Track[]; trackMenuOpen: boolean; trackButton: React.RefObject<HTMLButtonElement | null>;
+	language: string; tracks: Track[]; words: TrackVocabulary; trackMenuOpen: boolean; trackButton: React.RefObject<HTMLButtonElement | null>;
+	qualities: QualityLadder | null; currentQuality: number | null; onPickQuality: (height: number | null) => void;
+	volume: number; onVolume: (value: number) => void;
 	trackMenu: React.RefObject<TrackMenuHandle | null>; t: (key: string) => string; onToggle: () => void;
 	onSeek: (seconds: number) => void; onSeekAbsolute: (seconds: number) => void; onMute: () => void;
 	onTracks: () => void; onPickTrack: (kind: 'audio' | 'sub', id: number | null) => void;
@@ -1283,10 +1410,26 @@ function PlaybackControls(props: PlaybackProps) {
 				<span className="clock"><span className="elapsed">{clock(props.seconds)}</span><span className="rule" /><span className="total">{clock(props.duration)}</span></span>
 				<span className="spacer" />
 				<div className="menu-anchor">
-					<Button ref={props.trackButton} className="control" variant="ghost" size="icon" onClick={props.onTracks} aria-label={props.t('tracks')} aria-haspopup="menu" aria-expanded={props.trackMenuOpen}><Settings2 size={21} /></Button>
-					<AnimatePresence>{props.trackMenuOpen && <TrackMenu ref={props.trackMenu} tracks={props.tracks} onPick={props.onPickTrack} t={props.t} />}</AnimatePresence>
+					<Button ref={props.trackButton} className="control" variant="ghost" size="icon" onClick={props.onTracks} aria-label={props.t('tracks')} aria-haspopup="dialog" aria-expanded={props.trackMenuOpen}><Settings2 size={21} /></Button>
+					<AnimatePresence>{props.trackMenuOpen && <TrackMenu ref={props.trackMenu} tracks={props.tracks} words={props.words} qualities={props.qualities} currentQuality={props.currentQuality} onPick={props.onPickTrack} onPickQuality={props.onPickQuality} t={props.t} />}</AnimatePresence>
 				</div>
-				<Button className="control control--mute" variant="ghost" size="icon" onClick={props.onMute} aria-label={props.status.mute ? props.t('unmute') : props.t('mute')}>{props.status.mute ? <VolumeX size={21} /> : <Volume2 size={21} />}</Button>
+				{/* The slider is the volume; the button is the mute. The engine
+				    keeps the two apart, so the thumb shows the level a press on
+				    the icon would bring back rather than reporting zero - the
+				    struck-through icon already says the sound is off. */}
+				<div className="player-volume">
+					<Button className="control control--mute" variant="ghost" size="icon" onClick={props.onMute} aria-label={props.status.mute ? props.t('unmute') : props.t('mute')}>{props.status.mute || props.volume === 0 ? <VolumeX size={21} /> : props.volume < 0.5 ? <Volume1 size={21} /> : <Volume2 size={21} />}</Button>
+					<input
+						type="range"
+						className="volume-slider"
+						min={0}
+						max={1}
+						step={0.02}
+						value={props.volume}
+						onChange={(event) => props.onVolume(Number(event.currentTarget.value))}
+						aria-label={props.t('volume')}
+					/>
+				</div>
 				{props.status.audioMode && <span className="label audio-mode">{props.status.audioMode === 'passthrough' ? 'BITSTREAM' : props.status.audioMode.toUpperCase()}</span>}
 				<Button className="control control--desktop" variant="ghost" size="icon" onClick={props.onLanguage} aria-label="Français / English"><Languages size={20} /><span className="sr-only">{props.language}</span></Button>
 				<Button className="control" variant="ghost" size="icon" onClick={props.onFullscreen} aria-label={props.fullscreen ? props.t('exitFullscreen') : props.t('fullscreen')} aria-pressed={props.fullscreen}>{props.fullscreen ? <Minimize2 size={21} /> : <Maximize2 size={21} />}</Button>

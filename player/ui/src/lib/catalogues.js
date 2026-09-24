@@ -9,6 +9,12 @@
 // expected to grow together. A parity check belongs here the moment this file
 // carries more than a screenful; the web application's own check is
 // web/scripts/check-locales.mjs.
+//
+// `vocabulary` is the other half of the same job: the words a *label* is built
+// from rather than sentences -- a language name, a channel layout, the readable
+// name of a codec. It is a map of maps because `catalogues` is flat and
+// `scripts/check-locales.mjs` asserts every value in it is a sentence, which a
+// language name is not.
 
 export const catalogues = {
 	fr: {
@@ -18,6 +24,7 @@ export const catalogues = {
 		forward10: 'Avancer de 10 secondes',
 		mute: 'Couper le son',
 		unmute: 'Rétablir le son',
+		volume: 'Volume',
 		fullscreen: 'Plein écran',
 		exitFullscreen: 'Quitter le plein écran',
 		close: 'Fermer le lecteur',
@@ -29,6 +36,7 @@ export const catalogues = {
 		loading: 'Chargement',
 		engineUnavailable:
 			"Le moteur de lecture n'a pas pu démarrer. Le lecteur ne peut pas ouvrir de film.",
+		engineUnavailableLabel: 'Lecture',
 		audioFallbackLabel: 'Son',
 		audioFallback:
 			"Le convertisseur HDMI a refusé le flux audio brut : le film est lu en PCM décodé. Rien n'est cassé, mais le son n'arrive pas tel quel à l'amplificateur.",
@@ -111,8 +119,9 @@ export const catalogues = {
 		audioTracks: 'Piste audio',
 		subtitleTracks: 'Sous-titres',
 		subtitlesOff: 'Aucun',
-		externalTrack: 'fichier externe',
-		trackNumber: 'Piste',
+		qualityTab: 'Qualité',
+		languagesTab: 'Langues',
+		qualityOriginal: 'Qualité du fichier',
 		trackFailed: "Cette piste n'a pas pu être choisie.",
 		settings: 'Réglages',
 		profiles: 'Profils',
@@ -175,6 +184,7 @@ export const catalogues = {
 		forward10: 'Forward 10 seconds',
 		mute: 'Mute',
 		unmute: 'Unmute',
+		volume: 'Volume',
 		fullscreen: 'Full screen',
 		exitFullscreen: 'Leave full screen',
 		close: 'Close the player',
@@ -185,6 +195,7 @@ export const catalogues = {
 		tracks: 'Audio and subtitles',
 		loading: 'Loading',
 		engineUnavailable: 'The playback engine could not start, so no film can be opened.',
+		engineUnavailableLabel: 'Playback',
 		audioFallbackLabel: 'Sound',
 		audioFallback:
 			'The HDMI endpoint refused the raw audio stream, so the film is playing as decoded PCM. Nothing is broken, but the sound is not reaching the amplifier untouched.',
@@ -261,8 +272,9 @@ export const catalogues = {
 		audioTracks: 'Audio track',
 		subtitleTracks: 'Subtitles',
 		subtitlesOff: 'None',
-		externalTrack: 'external file',
-		trackNumber: 'Track',
+		qualityTab: 'Quality',
+		languagesTab: 'Languages',
+		qualityOriginal: 'As the file is',
 		trackFailed: 'That track could not be selected.',
 		settings: 'Settings',
 		profiles: 'Profiles',
@@ -319,6 +331,116 @@ export const catalogues = {
 		save: 'Save',
 	},
 };
+
+/** The words a track's label is built from, per language.
+ *
+ * The language names mirror the web application's own map, code for code, so a
+ * track is called the same thing in both players; the channel words follow the
+ * same rule ffmpeg does -- it writes "stereo" and "mono", and everything else
+ * (5.1, 7.1, 3.0) already reads as itself. `channelCount` carries an {n} because
+ * a container that writes no layout leaves only the number of channels, and
+ * "6 canaux" is the honest thing to say about one. */
+export const vocabulary = {
+	fr: {
+		languages: {
+			fra: 'Français', fre: 'Français', fr: 'Français',
+			eng: 'Anglais', en: 'Anglais',
+			spa: 'Espagnol', es: 'Espagnol',
+			deu: 'Allemand', ger: 'Allemand', de: 'Allemand',
+			ita: 'Italien', it: 'Italien',
+			por: 'Portugais', pt: 'Portugais',
+			nld: 'Néerlandais', dut: 'Néerlandais', nl: 'Néerlandais',
+			jpn: 'Japonais', ja: 'Japonais',
+			zho: 'Chinois', chi: 'Chinois', zh: 'Chinois',
+			kor: 'Coréen', ko: 'Coréen',
+			rus: 'Russe', ru: 'Russe',
+			ara: 'Arabe', ar: 'Arabe',
+			pol: 'Polonais', pl: 'Polonais',
+			swe: 'Suédois', sv: 'Suédois',
+			dan: 'Danois', da: 'Danois',
+			nor: 'Norvégien', no: 'Norvégien',
+			fin: 'Finnois', fi: 'Finnois',
+			tur: 'Turc', tr: 'Turc',
+			ces: 'Tchèque', cze: 'Tchèque', cs: 'Tchèque',
+			ell: 'Grec', gre: 'Grec', el: 'Grec',
+			heb: 'Hébreu', he: 'Hébreu',
+			hin: 'Hindi', hi: 'Hindi',
+			und: 'Langue non précisée', mul: 'Multilingue',
+		},
+		channels: { mono: 'Mono', stereo: 'Stéréo' },
+		channelCount: '{n} canaux',
+		commentary: 'Commentaire',
+		forced: 'Forcés',
+		external: 'fichier joint',
+		unnamedAudio: 'Piste {n}',
+		unnamedSubtitle: 'Sous-titres {n}',
+		qualityHeight: '{n}p',
+		qualityReencoded: 'réencodée',
+		qualityHardware: 'carte graphique',
+		qualitySoftware: 'processeur',
+		codecs: {
+			ac3: 'AC-3', eac3: 'E-AC-3', dts: 'DTS', truehd: 'TrueHD', mlp: 'MLP',
+			pcm: 'PCM', aac: 'AAC', flac: 'FLAC', alac: 'ALAC', opus: 'Opus', vorbis: 'Vorbis',
+			mp3: 'MP3', mp2: 'MP2', wmav2: 'WMA', wmapro: 'WMA Pro',
+			subrip: 'SubRip', ass: 'ASS', ssa: 'SSA', webvtt: 'WebVTT',
+			hdmv_pgs_subtitle: 'PGS', dvd_subtitle: 'VobSub', dvdsub: 'VobSub',
+			mov_text: 'Texte', ttml: 'TTML', dvb_subtitle: 'DVB',
+		},
+	},
+	en: {
+		languages: {
+			fra: 'French', fre: 'French', fr: 'French',
+			eng: 'English', en: 'English',
+			spa: 'Spanish', es: 'Spanish',
+			deu: 'German', ger: 'German', de: 'German',
+			ita: 'Italian', it: 'Italian',
+			por: 'Portuguese', pt: 'Portuguese',
+			nld: 'Dutch', dut: 'Dutch', nl: 'Dutch',
+			jpn: 'Japanese', ja: 'Japanese',
+			zho: 'Chinese', chi: 'Chinese', zh: 'Chinese',
+			kor: 'Korean', ko: 'Korean',
+			rus: 'Russian', ru: 'Russian',
+			ara: 'Arabic', ar: 'Arabic',
+			pol: 'Polish', pl: 'Polish',
+			swe: 'Swedish', sv: 'Swedish',
+			dan: 'Danish', da: 'Danish',
+			nor: 'Norwegian', no: 'Norwegian',
+			fin: 'Finnish', fi: 'Finnish',
+			tur: 'Turkish', tr: 'Turkish',
+			ces: 'Czech', cze: 'Czech', cs: 'Czech',
+			ell: 'Greek', gre: 'Greek', el: 'Greek',
+			heb: 'Hebrew', he: 'Hebrew',
+			hin: 'Hindi', hi: 'Hindi',
+			und: 'Language not stated', mul: 'Multiple languages',
+		},
+		channels: { mono: 'Mono', stereo: 'Stereo' },
+		channelCount: '{n} channels',
+		commentary: 'Commentary',
+		forced: 'Forced',
+		external: 'external file',
+		unnamedAudio: 'Track {n}',
+		unnamedSubtitle: 'Subtitle {n}',
+		qualityHeight: '{n}p',
+		qualityReencoded: 're-encoded',
+		qualityHardware: 'graphics card',
+		qualitySoftware: 'processor',
+		codecs: {
+			ac3: 'AC-3', eac3: 'E-AC-3', dts: 'DTS', truehd: 'TrueHD', mlp: 'MLP',
+			pcm: 'PCM', aac: 'AAC', flac: 'FLAC', alac: 'ALAC', opus: 'Opus', vorbis: 'Vorbis',
+			mp3: 'MP3', mp2: 'MP2', wmav2: 'WMA', wmapro: 'WMA Pro',
+			subrip: 'SubRip', ass: 'ASS', ssa: 'SSA', webvtt: 'WebVTT',
+			hdmv_pgs_subtitle: 'PGS', dvd_subtitle: 'VobSub', dvdsub: 'VobSub',
+			mov_text: 'Text', ttml: 'TTML', dvb_subtitle: 'DVB',
+		},
+	},
+};
+
+/** The vocabulary for a language, English when the code is not one of ours --
+ * the same rule `initialLanguage` follows, because an unknown code must not be
+ * able to empty a menu. */
+export function trackVocabulary(language) {
+	return vocabulary[language] ?? vocabulary.en;
+}
 
 /** The language this machine's viewer chose here, or null when nobody has.
  *

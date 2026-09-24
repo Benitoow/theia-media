@@ -447,6 +447,51 @@ impl EpisodeItem {
 pub struct StreamInfo {
     #[serde(default)]
     pub subtitle_tracks: Vec<SubtitleTrack>,
+    /// How long the film is, for the streams that cannot say.
+    ///
+    /// A converted stream is a pipe with no length, so this is the only end the
+    /// clock can have. Zero when the server has never probed the file and TMDB
+    /// knew no runtime either.
+    #[serde(default)]
+    pub duration_seconds: f64,
+    /// The rungs this machine can actually produce for this file, as the server
+    /// publishes them: height 0 is the file as it is, and every rung below it is
+    /// a re-encode. Empty means no encoder is free on this machine, and the
+    /// menu then offers no quality at all rather than a row that fails.
+    #[serde(default)]
+    pub qualities: Vec<VideoQuality>,
+    /// What producing a rung would cost, which is the whole difference between
+    /// a quality change being free and being a decision.
+    #[serde(default)]
+    pub transcode: Option<TranscodeInfo>,
+}
+
+/// One rung of the quality ladder, as `/info` publishes it.
+///
+/// `mode` is what playing this rung would do - "direct", "remux" or
+/// "transcode" - and it is what the menu says a choice costs, rather than
+/// guessing from the height.
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct VideoQuality {
+    #[serde(default)]
+    pub height: i64,
+    #[serde(default)]
+    pub mode: String,
+}
+
+/// What this machine can encode, and whether a slot is free.
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct TranscodeInfo {
+    #[serde(default)]
+    pub available: bool,
+    /// "hardware" or "software", the word the menu shows beside the heading.
+    #[serde(default)]
+    pub kind: String,
+    /// Every transcoding slot is taken, so the rungs that need one would stall
+    /// somebody else's film. The interface greys them instead of letting a
+    /// press fail.
+    #[serde(default)]
+    pub busy: bool,
 }
 
 #[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
@@ -467,6 +512,28 @@ pub struct SubtitleTrack {
     /// "text" or "image".
     #[serde(default)]
     pub kind: String,
+}
+
+/// The rung as a height, if one was asked for.
+///
+/// Zero is the ladder's own word for "the file as it is" and is never a rung:
+/// the server offers none at that height, and the bare route is what serves the
+/// file.
+fn rung(height: Option<i64>) -> Option<i64> {
+    height.filter(|height| *height > 0)
+}
+
+/// A converted stream's query: where to start, and how tall.
+///
+/// `t=` is not a convenience here, it is the film's clock: the pipe starts at
+/// zero, so a viewer who changes quality an hour in is served an hour in.
+fn converted_query(height: i64, start: f64) -> String {
+    let at = if start.is_finite() && start > 0.0 {
+        start
+    } else {
+        0.0
+    };
+    format!("t={at:.3}&h={height}")
 }
 
 impl SubtitleTrack {
@@ -786,18 +853,52 @@ impl Client {
         Ok(episode)
     }
 
-    /// The URL mpv should open. Handing mpv the URL rather than streaming
-    /// through this process is deliberate: mpv does its own range requests,
-    /// buffering and seeking, and it is better at all three than anything
-    /// written here would be.
-    pub fn stream_url(&self, movie_id: i64, file_id: i64) -> String {
-        self.url(&format!("/api/stream/{movie_id}/files/{file_id}"))
+    /// The URL mpv should open, at one rung of the ladder.
+    ///
+    /// Handing mpv the URL rather than streaming through this process is
+    /// deliberate: mpv does its own range requests, buffering and seeking, and
+    /// it is better at all three than anything written here would be.
+    ///
+    /// `None` is the file itself, which is what makes this player worth having:
+    /// mpv reads the container directly, so TrueHD, Atmos and DTS-HD MA reach
+    /// the amplifier untouched. A rung is a *different route* - `/remux`, which
+    /// the server answers with a converted pipe that honours `h=` - because the
+    /// bare route serves bytes and ignores the height entirely (measured: `h=1080`
+    /// on it returns the file, `Content-Range` and all). A pipe starts at zero
+    /// and has no length, so the film's own clock is `t=` on the address plus
+    /// whatever mpv counts, and seeking it means asking again from another `t=`.
+    pub fn stream_url(
+        &self,
+        movie_id: i64,
+        file_id: i64,
+        height: Option<i64>,
+        start: f64,
+    ) -> String {
+        match rung(height) {
+            Some(height) => self.url(&format!(
+                "/api/stream/{movie_id}/files/{file_id}/remux?{}",
+                converted_query(height, start)
+            )),
+            None => self.url(&format!("/api/stream/{movie_id}/files/{file_id}")),
+        }
     }
 
-    pub fn episode_stream_url(&self, episode_id: i64, file_id: i64) -> String {
-        self.url(&format!(
-            "/api/library/episodes/{episode_id}/files/{file_id}/stream"
-        ))
+    pub fn episode_stream_url(
+        &self,
+        episode_id: i64,
+        file_id: i64,
+        height: Option<i64>,
+        start: f64,
+    ) -> String {
+        match rung(height) {
+            Some(height) => self.url(&format!(
+                "/api/library/episodes/{episode_id}/files/{file_id}/stream/remux?{}",
+                converted_query(height, start)
+            )),
+            None => self.url(&format!(
+                "/api/library/episodes/{episode_id}/files/{file_id}/stream"
+            )),
+        }
     }
 
     /// How the server will deliver one file, and what can be chosen while
@@ -977,8 +1078,41 @@ mod tests {
     fn the_stream_url_names_both_ids() {
         let client = Client::new("http://host:8395");
         assert_eq!(
-            client.stream_url(7, 9),
+            client.stream_url(7, 9, None, 0.0),
             "http://host:8395/api/stream/7/files/9"
+        );
+    }
+
+    /// A rung is the converted route, and it carries the film's clock.
+    ///
+    /// Both halves are asserted because both were wrong in the first version of
+    /// this: `h=` on the *bare* route is ignored by the server - measured, it
+    /// answers with the file itself, `Content-Range` and all - and a converted
+    /// pipe starts at zero, so a rung without `t=` would send somebody who
+    /// changed quality an hour in back to the beginning. The profile is appended
+    /// after the query (`Client::url`), which is the other thing that breaks
+    /// silently if it is ever "simplified".
+    #[test]
+    fn a_rung_is_the_converted_route_and_carries_the_clock() {
+        let mut client = Client::new("http://host:8395");
+        assert_eq!(
+            client.stream_url(7, 9, Some(1080), 3600.5),
+            "http://host:8395/api/stream/7/files/9/remux?t=3600.500&h=1080"
+        );
+        // Zero is the ladder's own word for "the file as it is", and the file
+        // is what the bare route serves.
+        assert_eq!(
+            client.stream_url(7, 9, Some(0), 12.0),
+            "http://host:8395/api/stream/7/files/9"
+        );
+        client.set_profile(Some(3));
+        assert_eq!(
+            client.stream_url(7, 9, Some(720), 0.0),
+            "http://host:8395/api/stream/7/files/9/remux?t=0.000&h=720&profile=3"
+        );
+        assert_eq!(
+            client.episode_stream_url(5, 6, Some(720), 61.25),
+            "http://host:8395/api/library/episodes/5/files/6/stream/remux?t=61.250&h=720&profile=3"
         );
     }
 

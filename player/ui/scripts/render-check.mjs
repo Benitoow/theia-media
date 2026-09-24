@@ -18,6 +18,11 @@ import { mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// The sentences and the words themselves, so a label is compared with what the
+// OSD is supposed to say rather than with a copy of it written a second time
+// here.
+import { catalogues, vocabulary } from '../src/lib/catalogues.js';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = join(here, '..', '..', '..');
 
@@ -58,12 +63,31 @@ const FRAME = FRAME_BYTES ? 'data:image/png;base64,' + FRAME_BYTES.toString('bas
 // it is the only fixture in this file that is not hand-written.
 const PROBE_CLIP = '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';
 
+// mpv's own answer for the film the maintainer was watching when he sent the
+// screenshot of this menu on 23 September 2026: seven audio tracks, six
+// subtitles, and every awkward case in it - a title that repeats its codec
+// ("TrueHD 7.1 Atmos" under `truehd`), a layout the container never wrote
+// (`unknown6` for a track titled "DD 5.1"), the same language twice in two
+// formats, and an SDH track. Copied from `--diagnostics` rather than invented,
+// because a fixture that flatters the code proves nothing: this is the list that
+// read as fourteen lines of abbreviations.
 const TRACKS = [
 	{ id: 1, type: 'video', codec: 'hevc', selected: true },
-	{ id: 1, type: 'audio', title: 'Francais', lang: 'fra', codec: 'ac3', 'demux-channels': 'stereo', selected: true },
-	{ id: 2, type: 'audio', title: 'English', lang: 'eng', codec: 'ac3', 'demux-channels': 'stereo', selected: false },
-	{ id: 1, type: 'sub', lang: 'fra', codec: 'subrip', selected: false },
-	{ id: 2, type: 'sub', title: 'fra', lang: 'fra', codec: 'webvtt', external: true, selected: true },
+	{ id: 1, type: 'audio', title: 'TrueHD 7.1 Atmos', lang: 'en', codec: 'truehd', 'demux-channels': '7.1', 'demux-channel-count': 8, selected: true, default: true },
+	{ id: 2, type: 'audio', title: 'DTS-HD MA 7.1', lang: 'en', codec: 'dts', 'demux-channels': 'unknown8', 'demux-channel-count': 8 },
+	{ id: 3, type: 'audio', title: 'DD 5.1', lang: 'en', codec: 'ac3', 'demux-channels': 'unknown6', 'demux-channel-count': 6 },
+	{ id: 4, type: 'audio', title: 'DD 2.0', lang: 'en', codec: 'ac3', 'demux-channels': 'unknown2', 'demux-channel-count': 2 },
+	{ id: 5, type: 'audio', title: 'DD 5.1', lang: 'fr', codec: 'ac3', 'demux-channels': 'unknown6', 'demux-channel-count': 6 },
+	{ id: 6, type: 'audio', title: 'DD 5.1', lang: 'es', codec: 'ac3', 'demux-channels': 'unknown6', 'demux-channel-count': 6 },
+	{ id: 7, type: 'audio', title: 'DDP 7.1', lang: 'ja', codec: 'eac3', 'demux-channels': 'unknown8', 'demux-channel-count': 8 },
+	{ id: 1, type: 'sub', lang: 'en', codec: 'subrip', selected: true },
+	{ id: 2, type: 'sub', title: 'SDH', lang: 'en', codec: 'subrip' },
+	{ id: 3, type: 'sub', lang: 'en', codec: 'hdmv_pgs_subtitle' },
+	{ id: 4, type: 'sub', lang: 'fr', codec: 'hdmv_pgs_subtitle' },
+	// The sidecar the player itself adds, and the one track whose name mpv
+	// derives from a URL when the file gives it neither a title nor a language.
+	{ id: 5, type: 'sub', codec: 'webvtt', external: true },
+	{ id: 6, type: 'sub', lang: 'ja', codec: 'hdmv_pgs_subtitle' },
 ];
 
 const STATUS = {
@@ -73,6 +97,10 @@ const STATUS = {
 	title: 'Multi Track',
 	pause: false,
 	mute: true,
+	// The engine's unit is percent; the frame carries the fraction the command
+	// takes, and this one is deliberately not 100 - a slider that only ever
+	// shows full scale is a slider nobody has seen move.
+	volume: 0.8,
 	pos: 128.4,
 	duration: 600,
 	vo: 'gpu-next',
@@ -83,6 +111,23 @@ const STATUS = {
 	videoCodec: 'hevc',
 	aid: 1,
 	sid: 1,
+};
+
+// What the server answers for the film the maintainer was watching when he
+// asked for a quality choice, copied from its own `/info` rather than invented:
+// six rungs, every one of them but the file's own a re-encode, and `hardware`
+// because this machine encodes on the graphics card (`h264_amf`).
+const QUALITIES = {
+	current: null,
+	qualities: [
+		{ height: 0, mode: 'remux' },
+		{ height: 1440, mode: 'transcode' },
+		{ height: 1080, mode: 'transcode' },
+		{ height: 720, mode: 'transcode' },
+		{ height: 480, mode: 'transcode' },
+		{ height: 360, mode: 'transcode' },
+	],
+	transcode: { available: true, kind: 'hardware', busy: false },
 };
 
 const MOVIES = [
@@ -364,7 +409,12 @@ async function assertHitTargets(page, state) {
 			const cs = getComputedStyle(el);
 			if (cs.display === 'none' || cs.visibility === 'hidden') continue;
 			const r = el.getBoundingClientRect();
-			if (r.width === 0 && r.height === 0) continue;
+			// A control collapsed to nothing is not on screen: the volume slider
+			// is width 0 until the pointer is on it, and the web suite applies
+			// the same rule (web/tests/layout.spec.js). What has to clear the
+			// floor is the control as it is when it can be hit, which
+			// `assertVolume` measures with the slider expanded.
+			if (r.width === 0 || r.height === 0) continue;
 			out.push({
 				what: el.tagName.toLowerCase() + (el.getAttribute('class') ? '.' + el.getAttribute('class').trim().split(/\s+/).join('.') : ''),
 				label: (el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 40),
@@ -379,6 +429,120 @@ async function assertHitTargets(page, state) {
 		console.error(
 			`${state}: ${target.what} "${target.label}" is ${target.w}x${target.h}, under the 44x44 floor of section 9` +
 				(target.what.includes('scrub') ? ' (section 6b says 24px; D3b chose 44px around the 4px line)' : '')
+		);
+		failures++;
+	}
+}
+
+// The volume: a slider, and a button beside it that mutes.
+//
+// The maintainer asked for it on 24 September 2026 - "j'aimerais qu'on puisse
+// le monter ou le descendre, avec une barre normale" - because the bar could
+// only ever silence a film, never set a level. Five things are asserted here,
+// and each is a fault a plausible mistake would produce:
+//
+//   1. the slider is collapsed at rest and expands under the pointer, which is
+//      what keeps a bar that must not wrap inside a 550px window;
+//   2. it is 44px tall where it can be hit, which section 9 asks of every
+//      target and a 4px line does not give;
+//   3. the value shown is the engine's, not a number the interface invented -
+//      a stale local copy would quietly overwrite a volume set anywhere else;
+//   4. moving it issues one write, carrying the fraction, never mpv's percent;
+//   5. the icon mutes, and at zero it restores a level instead, because
+//      unmuting a silent film is not what the press meant.
+//
+// The arrow keys are the same control without a pointer, so they are asserted
+// in the same pass: a window narrower than 50rem has the keys and not the bar.
+async function assertVolume(page) {
+	const slider = page.locator('.volume-slider');
+	const rest = await slider.boundingBox();
+	if (!rest) {
+		console.error('the control bar has no volume slider, so a level cannot be set at all');
+		failures++;
+		return;
+	}
+	if (rest.width > 0.5) {
+		console.error(`the volume slider is open at rest (${Math.round(rest.width)}px): furniture in a bar with no room for it`);
+		failures++;
+	}
+	await page.hover('.player-volume');
+	await page.waitForTimeout(350); // the width transition is 150ms
+	const expanded = await slider.boundingBox();
+	if (!expanded || expanded.width < 44 || expanded.height < 44) {
+		console.error(
+			`the volume slider is ${expanded ? `${Math.round(expanded.width)}x${Math.round(expanded.height)}` : 'absent'} when the pointer is on it, under the 44x44 floor of section 9`
+		);
+		failures++;
+	}
+	await assertFits(page, 'the control row with the volume expanded');
+	// A picture of the bar with the slider open: the two things this control is
+	// judged on - that it reads as part of the bar, and that the track is drawn
+	// rather than the platform's own - are not numbers.
+	const bar = await page.locator('.controls').boundingBox();
+	if (bar) {
+		const top = Math.max(0, bar.y - 8);
+		await page.screenshot({
+			path: join(OUT, '3-volume.png'),
+			clip: { x: 0, y: top, width: 1280, height: Math.min(bar.height + 16, 720 - top) },
+		});
+	}
+
+	// The engine's answer is what the thumb shows. The fixture plays a film at
+	// 80%, so a slider reading anything else is the interface disagreeing with
+	// the only component that knows.
+	const shown = await slider.inputValue();
+	if (Math.abs(Number(shown) - STATUS.volume) > 0.001) {
+		console.error(`the volume slider shows ${shown} while the engine reports ${STATUS.volume}`);
+		failures++;
+	}
+
+	const clear = () => page.evaluate(() => (window.__invocations = []));
+	const invoked = () => page.evaluate(() => window.__invocations ?? []);
+
+	await clear();
+	await slider.fill('0.4');
+	await page.waitForTimeout(200);
+	const writes = (await invoked()).filter((call) => call.cmd === 'player_set_volume');
+	if (writes.length !== 1) {
+		console.error(`moving the volume issued ${writes.length || 'no'} writes, not one`);
+		failures++;
+	} else if (Math.abs(Number(writes[0].args?.volume) - 0.4) > 0.001) {
+		console.error(`moving the volume asked for ${writes[0].args?.volume}, not the fraction 0.4 the command takes`);
+		failures++;
+	}
+
+	// The keys, with nothing focused: the slider has to be blurred first, or the
+	// browser's own range handling answers instead of the player's shortcut.
+	await page.locator('body').click({ position: { x: 8, y: 8 } });
+	await clear();
+	await page.keyboard.press('ArrowUp');
+	await page.waitForTimeout(200);
+	const raised = (await invoked()).filter((call) => call.cmd === 'player_set_volume');
+	if (raised.length !== 1 || Math.abs(Number(raised[0]?.args?.volume) - 0.5) > 0.001) {
+		console.error(`ArrowUp issued ${raised.length || 'no'} volume writes (${raised.map((c) => c.args?.volume).join(', ') || 'none'}), not one of 0.5`);
+		failures++;
+	}
+
+	await clear();
+	await page.locator('.control--mute').click();
+	await page.waitForTimeout(150);
+	const muted = await invoked();
+	if (muted.length !== 1 || muted[0].cmd !== 'player_set_muted') {
+		console.error(`the mute button issued ${muted.map((c) => c.cmd).join(', ') || 'no command'}, not one player_set_muted`);
+		failures++;
+	}
+
+	// A slider at zero is a muted film, so the press restores a level rather
+	// than clearing a mute nobody can hear the difference of.
+	await slider.fill('0');
+	await page.waitForTimeout(200);
+	await clear();
+	await page.locator('.control--mute').click();
+	await page.waitForTimeout(150);
+	const restored = await invoked();
+	if (restored.length !== 1 || restored[0].cmd !== 'player_set_volume' || Math.abs(Number(restored[0].args?.volume) - 0.5) > 0.001) {
+		console.error(
+			`pressing mute with the volume at zero issued ${restored.map((c) => `${c.cmd}(${c.args?.volume ?? ''})`).join(', ') || 'no command'}, not one player_set_volume of 0.5`
 		);
 		failures++;
 	}
@@ -752,11 +916,11 @@ async function assertMenuOwnsItsKeys(page) {
 	// The anchor is the button that says it opens a menu: `.menu-anchor button`
 	// also matched the five rows of the popover, because the popover is a child
 	// of the button (6b anchors it by construction).
-	const anchor = page.locator('button[aria-haspopup=menu]');
+	const anchor = page.locator('button[aria-haspopup=dialog]');
 	await anchor.click();
 	await page.waitForTimeout(350);
 	const anchorLabel = await anchor.getAttribute('aria-label');
-	const rows = await page.locator('.track-menu .track').count();
+	const rows = await page.locator('.track-menu .track-option').count();
 	if (!rows) {
 		console.error('the track menu did not open, so its keyboard behaviour is untested');
 		failures++;
@@ -788,7 +952,7 @@ async function assertMenuOwnsItsKeys(page) {
 	await page.evaluate(() => {
 		window.__commands = [];
 	});
-	await page.locator('.track-menu .track').nth(1).click();
+	await page.locator('.track-menu .track-option').nth(1).click();
 	await page.waitForTimeout(200);
 	const chosen = await page.evaluate(() => window.__commands ?? []);
 	if (!chosen.includes('player_set_track')) {
@@ -815,6 +979,160 @@ async function assertMenuOwnsItsKeys(page) {
 		console.error(`after Escape focus is on ${JSON.stringify(focused)} instead of the "${anchorLabel}" button that opened the menu`);
 		failures++;
 	}
+}
+
+// The menu's two tabs, and the rungs behind the second one.
+//
+// The maintainer asked for this on 24 September 2026: the video quality was
+// missing from a menu that listed audio and subtitles, and the two questions -
+// which language, how much picture - belong in two tabs rather than one column,
+// with nothing said twice. Six things are asserted, each of which a plausible
+// mistake would break:
+//
+//   1. the strip is there, and it opens on the languages tab;
+//   2. that tab lists audio and subtitles and no rung at all;
+//   3. the quality tab lists the ladder the server published, leading with the
+//      file itself, and no track at all - the "no duplicates" rule, both ways;
+//   4. the rungs that are re-encodes say so, and the heading names the encoder;
+//   5. choosing a rung issues one `player_set_quality` carrying the height, and
+//      the file's own rung asks for null rather than for zero - which is the
+//      ladder's word for it, and the only rung that reaches an amplifier
+//      untouched;
+//   6. a machine whose encoder is busy greys the rungs that need one and leaves
+//      the file's own rung pressable.
+async function assertQualityTabs(page) {
+	const anchor = page.locator('button[aria-haspopup=dialog]');
+	const rows = () =>
+		page.evaluate(() => {
+			const lang = document.documentElement.lang;
+			return {
+				lang,
+				tabs: [...document.querySelectorAll('.track-tab')].map((tab) => ({
+					name: tab.getAttribute('data-tab'),
+					label: tab.textContent?.trim() ?? '',
+					selected: tab.getAttribute('aria-selected') === 'true',
+				})),
+				note: document.querySelector('.track-heading-note')?.textContent?.trim() ?? null,
+				options: [...document.querySelectorAll('.track-option')].map((row) => ({
+					primary: row.querySelector('.track-primary')?.textContent?.trim() ?? '',
+					detail: row.querySelector('.track-detail')?.textContent?.trim() ?? '',
+					chosen: row.getAttribute('aria-checked') === 'true',
+					disabled: row.hasAttribute('disabled'),
+				})),
+			};
+		});
+
+	await anchor.click();
+	await page.waitForTimeout(300);
+	let state = await rows();
+	// Two catalogues, and the check needs both: the labels are sentences and
+	// live in `catalogues`, the words a label is built from - "720p",
+	// "réencodée", "carte graphique" - live in `vocabulary`. Reading one where
+	// the other was meant is exactly the fault this assertion just caught in the
+	// component, where the heading note printed the key `qualityHardware`.
+	const labels = catalogues[state.lang] ?? catalogues.en;
+	const words = vocabulary[state.lang] ?? vocabulary.en;
+	if (state.tabs.length !== 2) {
+		console.error(`the menu drew ${state.tabs.length} tabs, expected the quality and language ones`);
+		failures++;
+		return;
+	}
+	if (state.tabs[0].label !== labels.languagesTab || state.tabs[1].label !== labels.qualityTab) {
+		console.error(`the tabs read ${state.tabs.map((tab) => `"${tab.label}"`).join(' and ')}, expected "${labels.languagesTab}" and "${labels.qualityTab}"`);
+		failures++;
+	}
+	if (!state.tabs[0].selected) {
+		console.error('the menu did not open on the languages tab, which is the question asked mid-film');
+		failures++;
+	}
+
+	// (2) the languages tab: tracks, and nothing about picture quality.
+	const trackRows = state.options.length;
+	if (trackRows < 2) {
+		console.error(`the languages tab listed ${trackRows} rows; the fixture has seven audio tracks and six subtitles`);
+		failures++;
+	}
+	const rungish = state.options.filter((row) => /^(1440|1080|720|480|360)p$/.test(row.primary) || row.primary === labels.qualityOriginal);
+	if (rungish.length) {
+		console.error(`the languages tab also listed ${rungish.length} quality rung(s): ${rungish.map((row) => row.primary).join(', ')} - the two questions must not be answered twice`);
+		failures++;
+	}
+
+	// (3) the quality tab. What the languages tab listed is kept, because the
+	//     rule is that none of it appears again on the other side.
+	const languageRows = state.options.map((row) => row.primary);
+	await page.locator('[data-tab=quality]').click();
+	await page.waitForTimeout(250);
+	state = await rows();
+	// Built from the same words the component builds it from, so a catalogue
+	// that stopped saying "720p" would fail here rather than agree with itself.
+	const ladder = QUALITIES.qualities.map((rung) =>
+		rung.height ? words.qualityHeight.replace('{n}', String(rung.height)) : labels.qualityOriginal
+	);
+	const shown = state.options.map((row) => row.primary);
+	if (shown.join(' | ') !== ladder.join(' | ')) {
+		console.error(`the quality tab listed ${JSON.stringify(shown)}, expected ${JSON.stringify(ladder)}`);
+		failures++;
+	}
+	if (state.options.filter((row) => row.chosen).length !== 1 || !state.options[0].chosen) {
+		console.error('the file\'s own rung is not the one ticked, so the menu disagrees with what is playing');
+		failures++;
+	}
+	const withoutDetail = state.options.filter((row) => !row.detail).map((row) => row.primary);
+	if (withoutDetail.join(' | ') !== labels.qualityOriginal) {
+		console.error(`the rungs that repeat their own name as a detail: ${JSON.stringify(withoutDetail)} - only the file's own rung has nothing to add`);
+		failures++;
+	}
+	const reencoded = state.options.filter((row) => row.detail === words.qualityReencoded).length;
+	if (reencoded !== QUALITIES.qualities.length - 1) {
+		console.error(`${reencoded} rungs say they are re-encoded, expected ${QUALITIES.qualities.length - 1}`);
+		failures++;
+	}
+	if (state.note !== words.qualityHardware) {
+		console.error(`the heading names ${JSON.stringify(state.note)}, expected the encoder: ${JSON.stringify(words.qualityHardware)}`);
+		failures++;
+	}
+	const duplicated = state.options.filter((row) => languageRows.includes(row.primary));
+	if (duplicated.length) {
+		console.error(`the quality tab repeated ${duplicated.length} row(s) from the languages tab: ${duplicated.map((row) => row.primary).join(', ')} - a choice offered twice is a choice that can disagree with itself`);
+		failures++;
+	}
+
+	// (5) a rung, and then back to the file itself.
+	await page.evaluate(() => (window.__invocations = []));
+	await page.locator('.track-option').nth(2).click();
+	await page.waitForTimeout(250);
+	const chosen = (await page.evaluate(() => window.__invocations ?? [])).filter((call) => call.cmd === 'player_set_quality');
+	if (chosen.length !== 1 || Number(chosen[0].args?.height) !== 1080) {
+		console.error(`choosing 1080p issued ${JSON.stringify(chosen.map((call) => call.args))}, expected one player_set_quality of 1080`);
+		failures++;
+	}
+	await page.evaluate(() => (window.__invocations = []));
+	await page.locator('.track-option').first().click();
+	await page.waitForTimeout(250);
+	const back = (await page.evaluate(() => window.__invocations ?? [])).filter((call) => call.cmd === 'player_set_quality');
+	if (back.length !== 1 || back[0].args?.height !== null) {
+		console.error(`choosing the file's own rung issued ${JSON.stringify(back.map((call) => call.args))}, expected one player_set_quality of null`);
+		failures++;
+	}
+
+	// (6) every encoder slot taken: the rungs that need one are greyed, and the
+	//     file's own rung is not, because it needs no encoder at all.
+	await page.keyboard.press('Escape');
+	await page.waitForTimeout(250);
+	await page.evaluate((busy) => (window.__ladder = busy), { ...QUALITIES, transcode: { available: true, kind: 'hardware', busy: true } });
+	await anchor.click();
+	await page.waitForTimeout(300);
+	await page.locator('[data-tab=quality]').click();
+	await page.waitForTimeout(250);
+	state = await rows();
+	const greyed = state.options.filter((row) => row.disabled).length;
+	if (greyed !== QUALITIES.qualities.length - 1 || state.options[0].disabled) {
+		console.error(`with every encoder slot taken, ${greyed} rungs were greyed and the file's own was ${state.options[0].disabled ? 'greyed' : 'pressable'} - expected ${QUALITIES.qualities.length - 1} and pressable`);
+		failures++;
+	}
+	await page.keyboard.press('Escape');
+	await page.waitForTimeout(250);
 }
 
 // Escape leaves fullscreen before it leaves the film, and the order is asserted.
@@ -902,7 +1220,7 @@ async function assertEscapeLeavesFullscreenFirst(page) {
 	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
 	await page.evaluate(() => window.__handlers['tauri://resize']?.({ payload: null }));
 	await page.waitForTimeout(200);
-	await page.locator('button[aria-haspopup=menu]').click();
+	await page.locator('button[aria-haspopup=dialog]').click();
 	await page.waitForTimeout(300);
 	await page.keyboard.press('Escape');
 	await page.waitForTimeout(300);
@@ -1374,6 +1692,118 @@ async function assertFailuresAreReadable(page) {
 	}
 }
 
+// A notice belongs to the state that raised it.
+//
+// The maintainer met the audio fallback notice sitting over the home screen's
+// hero after a film had been left - "elle reste active quand je retourne dans le
+// menu" - and the code agreed with the report: one notice key, written on the
+// way in and read forever, so a sentence about one film's sound outlived the
+// film, the return to the library and everything else until the player was
+// closed. It is now shown for a few seconds and it goes with the film.
+//
+// The dwell is asserted as a window rather than as a number: a notice still on
+// screen after twelve seconds is the fault, and one that leaves in two is a
+// flash nobody could read. The engine notice is asserted in the same pass for
+// the opposite reason - it must *not* leave, because an engine that could not
+// start is still not started, and it is the only thing on screen that says so.
+async function assertNoticeLivesWithItsState(page) {
+	const read = () =>
+		page.evaluate(() => {
+			const el = document.querySelector('.notice');
+			const box = el?.getBoundingClientRect();
+			return {
+				text: el?.textContent?.trim() ?? null,
+				label: el?.querySelector('.label')?.textContent?.trim() ?? null,
+				role: el?.getAttribute('role') ?? null,
+				visible: !!box && box.height > 0,
+				lang: document.documentElement.lang,
+				library: document.querySelector('.library-title')?.textContent?.trim() ?? null,
+			};
+		});
+	const raise = (payload) =>
+		page.evaluate(
+			(event) => window.__handlers['player-event']?.({ payload: JSON.stringify(event) }),
+			payload
+		);
+
+	// (a) a film is playing and the endpoint refused the raw stream.
+	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
+	await page.waitForTimeout(250);
+	await raise({ kind: 'audio', mode: 'pcm', reason: 'endpoint-refused-bitstream' });
+	await page.waitForTimeout(300);
+	const shown = await read();
+	const words = catalogues[shown.lang] ?? catalogues.en;
+	if (!shown.visible) {
+		console.error('the audio fallback said nothing at all, so nothing on screen says why the sound is PCM');
+		failures++;
+	} else {
+		if (shown.text !== `${words.audioFallbackLabel}${words.audioFallback}`) {
+			console.error(`the audio fallback notice reads "${shown.text}", expected "${words.audioFallbackLabel}${words.audioFallback}"`);
+			failures++;
+		}
+		if (shown.role !== 'status') {
+			console.error(`the audio fallback notice is not announced (role=${shown.role})`);
+			failures++;
+		}
+	}
+
+	// (b) it is a notice and not a flash: three seconds later it is still there.
+	await page.waitForTimeout(3000);
+	if (!(await read()).visible) {
+		console.error('the audio fallback notice left within three seconds, which is faster than the sentence can be read');
+		failures++;
+	}
+
+	// (c) and it leaves on its own, with nobody touching anything.
+	await page.waitForTimeout(9000);
+	const lingered = await read();
+	if (lingered.visible) {
+		console.error(`the audio fallback notice is still on screen after twelve seconds: "${lingered.text}" - this is the fault the maintainer reported`);
+		failures++;
+	}
+
+	// (d) raised again, and then the film is left: a notice about a film does
+	//     not outlive the film. The furniture is woken first because it hides
+	//     itself after three seconds and a hidden control cannot be pressed -
+	//     the way a viewer brings it back is the way this does.
+	await raise({ kind: 'audio', mode: 'pcm', reason: 'endpoint-refused-bitstream' });
+	await page.waitForTimeout(250);
+	if (!(await read()).visible) {
+		console.error('the audio fallback notice did not come back when the endpoint refused the stream again');
+		failures++;
+	}
+	await page.mouse.move(640, 300);
+	await page.waitForTimeout(200);
+	await page.locator('.control--back').click();
+	await page.waitForTimeout(500);
+	const left = await read();
+	if (left.visible) {
+		console.error(`the audio fallback notice survived the return to the library: "${left.text}"`);
+		failures++;
+	}
+	if (!left.library) {
+		console.error('the back control did not return to the library, so the assertion above proves nothing');
+		failures++;
+	}
+
+	// (e) an engine that cannot start is not about a film, and its notice stays.
+	await raise({ kind: 'engine', state: 'unavailable' });
+	await page.waitForTimeout(300);
+	const engine = await read();
+	if (!engine.visible) {
+		console.error('an unavailable engine said nothing at all');
+		failures++;
+	} else if (engine.text !== `${words.engineUnavailableLabel}${words.engineUnavailable}`) {
+		console.error(`the engine notice reads "${engine.text}", expected "${words.engineUnavailableLabel}${words.engineUnavailable}"`);
+		failures++;
+	}
+	await page.waitForTimeout(3000);
+	if (!(await read()).visible) {
+		console.error('the engine notice left on its own; an engine that could not start is still not started');
+		failures++;
+	}
+}
+
 // The caption bar, measured rather than looked at.
 //
 // The maintainer supplied a reference caption bar on 20 September 2026 and asked
@@ -1554,6 +1984,7 @@ async function openPage(
 	viewport,
 	{
 		tracks = TRACKS,
+		ladder = QUALITIES,
 		movies = MOVIES,
 		series = SERIES,
 		seriesDetail = SERIES_DETAIL,
@@ -1604,7 +2035,7 @@ async function openPage(
 	}
 
 	await page.addInitScript(
-		({ tracks, movies, series, seriesDetail, season, status, discovered, home, seriesHome, preview }) => {
+		({ tracks, ladder, movies, series, seriesDetail, season, status, discovered, home, seriesHome, preview }) => {
 			window.__handlers = {};
 			window.__profiles = [
 				{ id: 1, name: 'Alex', is_default: true, has_avatar: false, avatar_version: 0 },
@@ -1637,6 +2068,9 @@ async function openPage(
 						// connection journey is a screen the checks drive.
 						if (cmd === 'player_current_server') return null;
 						if (cmd === 'player_tracks') return JSON.stringify(tracks);
+						// The ladder a check wants to see, so the busy state can be
+						// exercised without a second page: null means "the fixture".
+						if (cmd === 'player_qualities') return JSON.stringify(window.__ladder ?? ladder);
 						if (cmd === 'player_library') return JSON.stringify(movies);
 						if (cmd === 'player_series') return JSON.stringify(series);
 						if (cmd === 'player_home') return JSON.stringify(home);
@@ -1716,7 +2150,7 @@ async function openPage(
 			};
 			window.__status = status;
 		},
-		{ tracks, movies, series, seriesDetail, season, status: STATUS, discovered, home, seriesHome, preview }
+		{ tracks, ladder, movies, series, seriesDetail, season, status: STATUS, discovered, home, seriesHome, preview }
 	);
 	await page.goto(URL, { waitUntil: 'networkidle' });
 	await page.waitForTimeout(400);
@@ -1820,7 +2254,7 @@ async function assertSeriesJourney(page) {
 // was laid out correctly all along. The harness disagreed with the photograph,
 // and the harness was right - which is why the picture is not the authority here.
 {
-	for (const width of [550, 700, 900]) {
+	for (const width of [550, 700, 833, 900]) {
 		const page = await openPage({ width, height: 700 });
 		await assertFits(page, `the connect screen at ${width}px`);
 
@@ -1834,6 +2268,13 @@ async function assertSeriesJourney(page) {
 		);
 		await showFilm(page);
 		await page.waitForTimeout(250);
+		// 52rem is where the volume slider stops being drawn, so 833 is the first
+		// width that draws it - and the expansion is what consumes the row's
+		// slack, which is the whole reason this sweep draws that width.
+		if (width >= 833) {
+			await page.hover('.player-volume');
+			await page.waitForTimeout(250);
+		}
 		await assertFits(page, `the control row at ${width}px`);
 		if (width === 550) await page.screenshot({ path: join(OUT, '0-controls-550.png') });
 		await page.close();
@@ -2324,27 +2765,96 @@ async function assertSeriesJourney(page) {
 	await page.waitForTimeout(400);
 	await page.screenshot({ path: join(OUT, '3-tracks.png') });
 
-	const rows = await page.locator('.track-menu .track').count();
-	const ticks = await page.locator('.track-menu .tick svg').count();
-	// Three audio choices plus subtitles off plus two subtitle tracks.
-	if (rows !== 5) {
-		console.error(`track menu drew ${rows} rows, expected 5`);
+	const rows = await page.locator('.track-menu .track-option').count();
+	const ticks = await page.locator('.track-menu .track-tick svg').count();
+	// Seven audio choices, subtitles off, six subtitle tracks.
+	if (rows !== 14) {
+		console.error(`track menu drew ${rows} rows, expected 14`);
 		failures++;
 	}
 	if (ticks !== 2) {
 		console.error(`track menu drew ${ticks} ticks, expected 2 (one audio, one subtitle)`);
 		failures++;
 	}
-	// The external track is named by its language, never by its address: given
-	// neither a title nor a language, mpv derives one from the URL, and the menu
-	// read "6?profile=1". Asserted rather than eyeballed.
+	// The external track is named by its position in the list, never by its
+	// address: given neither a title nor a language, mpv derives one from the
+	// URL, and the menu read "6?profile=1". Asserted rather than eyeballed.
 	const menuText = await page.locator('.track-menu').innerText();
 	if (menuText.includes('?profile=') || menuText.includes('http')) {
 		console.error(`a track is named after its URL: ${JSON.stringify(menuText.slice(0, 120))}`);
 		failures++;
 	}
-	if (!menuText.includes('FICHIER EXTERNE') && !menuText.includes('EXTERNAL FILE')) {
+	if (!menuText.includes('FICHIER JOINT') && !menuText.includes('EXTERNAL FILE')) {
 		console.error('the added subtitle does not say it came from beside the film');
+		failures++;
+	}
+
+	// What each row says, read back from the DOM rather than eyeballed.
+	//
+	// The menu the maintainer photographed on 23 September 2026 led with the
+	// container's title and put the raw codec under it, so seven tracks read as
+	// fourteen lines of abbreviations: "TrueHD 7.1 Atmos" over "TRUEHD", and
+	// "DD 5.1" three times over "AC3". Section 6b asks for the opposite - the
+	// language at reading size, the facts under it, and a detail that merely
+	// repeats the line above it dropped - and these are the four things that
+	// make the difference checkable.
+	const drawn = await page.$$eval('.track-menu .track-option', (nodes) =>
+		nodes.map((node) => ({
+			primary: node.querySelector('.track-primary')?.textContent?.trim() ?? '',
+			detail: node.querySelector('.track-detail')?.textContent?.trim() ?? '',
+			checked: node.getAttribute('aria-checked') === 'true',
+			plate: getComputedStyle(node).backgroundColor,
+		}))
+	);
+	const words = vocabulary[await page.evaluate(() => document.documentElement.lang)] ?? vocabulary.en;
+	const languageNames = Object.values(words.languages).map((name) => name.toLowerCase());
+	for (const [index, row] of drawn.entries()) {
+		if (!row.primary) {
+			console.error(`row ${index} has no first line at all`);
+			failures++;
+			continue;
+		}
+		if (/^[A-Z]{2,3}$/.test(row.primary)) {
+			console.error(`row ${index} leads with the container's ISO code (${JSON.stringify(row.primary)}) instead of a word`);
+			failures++;
+		}
+		if (row.detail && row.detail.toLowerCase().includes(row.primary.toLowerCase())) {
+			console.error(`row ${index} repeats its first line in its second: ${JSON.stringify(row.primary)} / ${JSON.stringify(row.detail)}`);
+			failures++;
+		}
+	}
+	for (const row of drawn.slice(0, 7)) {
+		if (!languageNames.includes(row.primary.toLowerCase())) {
+			console.error(`an audio row leads with ${JSON.stringify(row.primary)}, which is not a language name in this catalogue`);
+			failures++;
+		}
+	}
+	// The first track's title already says its codec and its layout, so its
+	// second line is that title and nothing else - the case the maintainer sent.
+	if (drawn[0].detail !== 'TrueHD 7.1 Atmos') {
+		console.error(`the first audio row's detail is ${JSON.stringify(drawn[0].detail)}, expected the title alone`);
+		failures++;
+	}
+	// A layout the container never wrote leaves the number of channels, and
+	// calling six unknown channels "5.1" would be the player naming something it
+	// was not told.
+	if (!/6 (canaux|channels)/.test(drawn[2].detail)) {
+		console.error(`a track with an unknown layout says ${JSON.stringify(drawn[2].detail)} instead of how many channels it has`);
+		failures++;
+	}
+	// Two English subtitle tracks, two formats, and the row says which is which:
+	// without it the menu reads "Anglais" twice.
+	const subtitleDetails = drawn.slice(8).map((row) => row.detail);
+	if (subtitleDetails[0] === subtitleDetails[2]) {
+		console.error(`two English subtitle rows say the same thing (${JSON.stringify(subtitleDetails[0])}), so nothing tells the text track from the bitmap one`);
+		failures++;
+	}
+	// The chosen row is a plate as well as a tick: 6b's "a 2px rule at 6% fill
+	// does not survive the room".
+	const chosenPlate = drawn.find((row) => row.checked)?.plate;
+	const otherPlate = drawn.find((row) => !row.checked)?.plate;
+	if (!chosenPlate || chosenPlate === otherPlate) {
+		console.error(`the chosen row is not drawn as one (chosen ${chosenPlate}, others ${otherPlate})`);
 		failures++;
 	}
 	await page.close();
@@ -2520,6 +3030,7 @@ async function assertSeriesJourney(page) {
 	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
 	await page.waitForTimeout(350);
 	await assertHitTargets(page, 'the control bar with a film playing');
+	await assertVolume(page);
 	await page.close();
 
 	// (b) typing an address is typing, not a keyboard shortcut. The address is
@@ -2559,6 +3070,7 @@ async function assertSeriesJourney(page) {
 	await menu.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
 	await menu.waitForTimeout(300);
 	await assertMenuOwnsItsKeys(menu);
+	await assertQualityTabs(menu);
 	await menu.close();
 
 	// (h) no film, no bar - and the language still reachable without it.
@@ -2684,6 +3196,14 @@ async function assertSeriesJourney(page) {
 		failures++;
 	}
 	await filmPlay.close();
+
+	// (q) what a notice is attached to. The audio fallback is about one film's
+	//     sound and leaves with the film; an engine that will not start is not
+	//     about a film at all. The maintainer's report of 23 September 2026 is
+	//     the first half of that: the notice was still over the library's hero.
+	const notices = await openPage({ width: 1280, height: 720 });
+	await assertNoticeLivesWithItsState(notices);
+	await notices.close();
 }
 
 // The player's own window, at the scale a real display gives it.

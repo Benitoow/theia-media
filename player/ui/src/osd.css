@@ -418,6 +418,112 @@ button.control--primary:hover {
 	flex: 1;
 }
 
+/* --- the volume ----------------------------------------------------------
+   The slider is the volume and the button beside it is the mute. The button
+   alone could only ever silence a film, never set a level, which is what the
+   maintainer asked for on 24 September 2026: "qu'on puisse le monter ou le
+   descendre, avec une barre normale".
+
+   Collapsed until asked for, exactly as the web player's is (`web/src/app.css`,
+   `.player-volume`): a slider permanently open is furniture in a bar that has
+   to fit a clock and five controls into 550 CSS pixels. It expands on hover or
+   when it takes focus, so a keyboard reaches it too.
+
+   Drawn rather than left to `accent-color` - the geometry is the web bar's, so
+   the two players read as one family, and neither wears the platform's flat
+   grey track. Bone, not gold: section 3 budgets five uses of the accent per
+   screen and the scrub bar has already spent one on the thing that matters
+   more. */
+.player-volume {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+}
+
+.volume-slider {
+	width: 0;
+	/* Section 9 is about the target, not the line: the track is 4px because that
+	   reads as precision, and the control is 44px tall because a thumb is not a
+	   mouse. It costs no height - the row's controls are already 3.25rem. */
+	height: 2.75rem;
+	padding: 0;
+	border: 0;
+	opacity: 0;
+	appearance: none;
+	background: transparent;
+	cursor: pointer;
+	transition:
+		width var(--duration-fast) var(--ease-cine),
+		opacity var(--duration-fast) var(--ease-cine);
+}
+
+.volume-slider:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+}
+
+.volume-slider::-webkit-slider-runnable-track {
+	height: 0.25rem;
+	border-radius: 999px;
+	background: rgb(var(--channel-bone) / 0.3);
+	box-shadow: inset 0 0 0 1px rgb(var(--channel-ink) / 0.35);
+}
+
+.volume-slider::-moz-range-track {
+	height: 0.25rem;
+	border-radius: 999px;
+	background: rgb(var(--channel-bone) / 0.3);
+}
+
+.volume-slider::-moz-range-progress {
+	height: 0.25rem;
+	border-radius: 999px;
+	background: var(--color-bone);
+}
+
+.volume-slider::-webkit-slider-thumb {
+	width: 0.7rem;
+	height: 0.7rem;
+	border: 0;
+	border-radius: 50%;
+	margin-top: -0.225rem;
+	background: var(--color-bone);
+	box-shadow: 0 1px 3px rgb(var(--channel-ink) / 0.6);
+	appearance: none;
+}
+
+.volume-slider::-moz-range-thumb {
+	width: 0.7rem;
+	height: 0.7rem;
+	border: 0;
+	border-radius: 50%;
+	background: var(--color-bone);
+	box-shadow: 0 1px 3px rgb(var(--channel-ink) / 0.6);
+}
+
+.player-volume:hover .volume-slider,
+.player-volume:focus-within .volume-slider {
+	width: clamp(3.5rem, 6vw, 6rem);
+	opacity: 1;
+}
+
+/* The slider is the last thing that fits, and the threshold is arithmetic rather
+   than taste - the same arithmetic the 44rem rule below already does. The row
+   runs to 636px and the gutter is `clamp(1.5rem, 4vw, 5.5rem)` per side, so at
+   833px - the first width this rule draws it at - the content box is 766px: 636
+   of row, 56 of expanded slider and about 40 more for a three-hour clock, which
+   is what a forty-five-second fixture never shows. That leaves 34px of slack
+   rather than the 4px 52rem would leave if the rule drew it there, and the sweep
+   in the render check draws 833px with the slider expanded to keep the number
+   honest. Below it the icon stays - it is the control that was already there -
+   and the arrow keys work at every width, which is the answer for a window this
+   narrow. */
+@media (max-width: 52rem) {
+	.volume-slider {
+		display: none;
+	}
+}
+
 /* A notice is information, not decoration: parchment on a raised surface, the
    accent left alone. */
 .notice {
@@ -954,7 +1060,14 @@ button.action:focus-visible {
 /* --- the track menu ------------------------------------------------------
    Section 6b: a popover, not a panel. It is a child of its own button, so it
    is anchored by construction; positioned against the frame it read as a slab
-   that happened to appear. */
+   that happened to appear.
+
+   The treatment is the web player's own (`web/src/app.css`, `.player-tracks`),
+   because it is the same menu: the same 21rem, the same bounded height, the same
+   gradient, and the same drawn scrollbar. Windows painted its light-grey bar
+   with arrow buttons down the side of this one - visible in the screenshot the
+   maintainer sent on 23 September 2026 - which is the fault the web player had
+   already fixed and this one had not. */
 
 .menu-anchor {
 	position: relative;
@@ -965,56 +1078,177 @@ button.action:focus-visible {
 	position: absolute;
 	right: 0;
 	bottom: calc(100% + 0.5rem);
-	width: 21rem;
-	max-height: 22rem;
+	width: min(21rem, calc(100vw - 2rem));
+	/* Bounded so it can never be clipped by its own frame, and scrollable when
+	   it is: seven audio tracks and six subtitles do not fit in any window. */
+	max-height: min(56svh, 30rem);
 	overflow-y: auto;
-	padding: 0.75rem;
-	display: flex;
-	flex-direction: column;
-	gap: 0.15rem;
-	border: 1px solid var(--color-line);
-	border-radius: var(--radius-panel);
-	background: var(--glass-strong);
+	overscroll-behavior: contain;
+	scrollbar-color: rgb(var(--channel-bone) / 0.28) transparent;
+	scrollbar-width: thin;
+	padding: 0.5rem;
+	border: 1px solid rgb(var(--channel-bone) / 0.14);
+	border-radius: 1rem;
+	background:
+		linear-gradient(150deg, rgb(var(--channel-bone) / 0.05), transparent 60%),
+		rgb(var(--channel-surface) / 0.94);
+	box-shadow:
+		0 0.25rem 0.75rem rgba(0, 0, 0, 0.4),
+		0 1.75rem 3.5rem rgba(0, 0, 0, 0.6);
 	/* Held at one value and never animated: a backdrop blur reads back
 	   everything behind it, and transitioning one asks for that work on every
 	   frame (design system section 8). */
-	backdrop-filter: blur(20px);
+	backdrop-filter: blur(28px) saturate(1.1);
 	pointer-events: auto;
 	text-align: left;
 }
 
-.track-menu .label {
-	margin: 0.5rem 0 0.25rem;
+.track-menu::-webkit-scrollbar {
+	width: 0.75rem;
 }
-.track-menu .label:first-child {
-	margin-top: 0;
+.track-menu::-webkit-scrollbar-track {
+	background: transparent;
+}
+.track-menu::-webkit-scrollbar-thumb {
+	border: 0.25rem solid transparent;
+	border-radius: 999px;
+	background: rgb(var(--channel-bone) / 0.28);
+	background-clip: content-box;
+}
+.track-menu::-webkit-scrollbar-thumb:hover {
+	background: rgb(var(--channel-bone) / 0.45);
+	background-clip: content-box;
+}
+/* The arrow buttons at each end are a Windows habit no other surface here has,
+   and they cannot be styled into anything worth keeping. */
+.track-menu::-webkit-scrollbar-button {
+	display: none;
 }
 
-.track {
+.track-heading {
+	margin: 0;
+	padding: 0.5rem 0.75rem 0.4rem;
+	color: var(--color-muted);
+	font-family: var(--font-label);
+	font-size: var(--text-label);
+	font-weight: 500;
+	letter-spacing: var(--text-label--letter-spacing);
+	text-transform: uppercase;
+}
+
+/* --- the two tabs --------------------------------------------------------
+   Quality and languages, kept apart because they are asked at different
+   moments: which language, mid-film and often; how much picture, once, when the
+   machine or the network cannot take the file as it is. The strip only exists
+   when there is a rung to choose, and the languages tab is the one it opens on.
+
+   A strip rather than two headings in one list: seven audio tracks and six
+   subtitles already scroll, and adding six rungs to the same column puts the
+   film's quality below the fold of a menu that is about language. */
+.track-tabs {
 	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	width: 100%;
-	min-height: 2.75rem;
-	padding: 0.4rem 0.5rem;
+	gap: 0.25rem;
+	margin: 0 0 0.25rem;
+	padding: 0.25rem;
+	border-radius: 999px;
+	background: rgb(var(--channel-ink) / 0.5);
+}
+.track-tab {
+	flex: 1;
+	min-height: var(--target-min);
 	border: 0;
-	border-radius: var(--radius-nested);
+	border-radius: 999px;
 	background: transparent;
-	color: var(--color-bone);
-	text-align: left;
+	color: var(--color-muted);
+	font-family: var(--font-label);
+	font-size: var(--text-label);
+	font-weight: 500;
+	letter-spacing: var(--text-label--letter-spacing);
+	text-transform: uppercase;
 	cursor: pointer;
+	transition:
+		background-color var(--duration-fast) var(--ease-cine),
+		color var(--duration-fast) var(--ease-cine);
 }
-.track:hover {
-	background: rgb(var(--channel-bone) / 0.08);
+.track-tab:hover {
+	color: var(--color-bone);
 }
-.track:focus-visible {
+.track-tab--chosen {
+	background: rgb(var(--channel-bone) / 0.1);
+	color: var(--color-bone);
+}
+.track-tab:focus-visible {
 	outline: 2px solid var(--color-accent);
 	outline-offset: -2px;
 }
 
+/* The encoder, named beside the heading: "réencodée" says what a rung costs and
+   this says who pays for it - the graphics card, or the processor. */
+.track-heading-note {
+	margin-left: 0.5rem;
+	color: var(--color-faint);
+	letter-spacing: normal;
+	text-transform: none;
+}
+
+.track-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* Sections read as sections. */
+.track-list + .track-heading {
+	margin-top: 0.5rem;
+	border-top: 1px solid var(--color-line);
+	padding-top: 0.9rem;
+}
+
+/* Full-width rows: section 9 asks for a 44px target and a list read at three
+   metres, and a row that ends where its text ends is neither. */
+.track-option {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	width: 100%;
+	min-height: var(--target-min);
+	padding: 0.5rem 0.75rem;
+	border: 0;
+	border-radius: var(--radius-row);
+	background: transparent;
+	color: var(--color-bone);
+	text-align: left;
+	cursor: pointer;
+	transition: background-color var(--duration-fast) var(--ease-cine);
+}
+.track-option:hover {
+	background: rgb(var(--channel-bone) / 0.07);
+}
+.track-option--chosen {
+	background: rgb(var(--channel-bone) / 0.05);
+}
+.track-option:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: -2px;
+}
+
+/* A rung that needs an encoder while every slot is taken: greyed rather than
+   refused, because a press that would stall somebody else's film is not an
+   answer. The tick and the label stay readable - this is a state, not a fault. */
+.track-option--disabled {
+	color: var(--color-faint);
+	cursor: not-allowed;
+}
+.track-option--disabled:hover {
+	background: transparent;
+}
+
 /* The tick's column is reserved whether or not a tick is drawn, so choosing a
    track never shuffles the labels sideways. */
-.tick {
+.track-tick {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -1023,17 +1257,36 @@ button.action:focus-visible {
 	color: var(--color-accent);
 }
 
-.track-text {
+.track-lines {
 	display: flex;
 	flex-direction: column;
 	gap: 0.1rem;
 	min-width: 0;
+	flex: 1;
 }
+
+/* What the choice is made on, at reading size. */
 .track-primary {
 	font-size: var(--text-small);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+/* The facts under it, at label weight. Clamped to two lines because a
+   container's own title can be long - "COMMENTARY WITH GEORGE LUCAS..." is a
+   real one - and the row grows rather than clipping it. */
+.track-detail {
+	display: -webkit-box;
+	overflow: hidden;
+	color: var(--color-muted);
+	font-family: var(--font-label);
+	font-size: var(--text-label);
+	letter-spacing: 0.1em;
+	line-height: 1.35;
+	text-transform: uppercase;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
 }
 
 /* Below 30rem, a panel aligned to a button 60px from the right edge starts off

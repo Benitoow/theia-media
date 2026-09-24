@@ -821,13 +821,64 @@ a player.
   overflows. The desktop rewrite moved close into the permanent title bar, so
   the playback row now keeps three controls visible and the clock reads `2:08`
   alone.
+- **The volume is a slider, and the button beside it is the mute.** Amended 24
+  September 2026, at the maintainer's request: *"j'aimerais qu'on puisse le monter
+  ou le descendre, avec une barre normale"* - the bar could only silence a film,
+  never set a level, which is not a volume control. Collapsed until the pointer is
+  on it or it takes focus, the web player's own rule and the reason its bar
+  survives a narrow window: a slider permanently open is furniture. The track is
+  drawn - 4px, bone, `rgb(bone / 0.3)` under the thumb - rather than left to
+  `accent-color`, whose flat grey slab belongs to no part of this, and the control
+  is **44px tall where it can be hit** because section 9 is about the target and
+  not the line. It is drawn from **52rem** up - 833px is the first width that draws
+  it - and the icon stays from 44rem where it already was: the row runs to 636px
+  and the gutter is `clamp(1.5rem, 4vw, 5.5rem)` per side, so there is no room
+  there for 56px of slider beside the ~40px a three-hour clock takes over a
+  forty-five-second fixture. The thumb shows the level rather than zero while
+  muted: the engine keeps
+  `volume` and `mute` apart, so the struck-through icon already says the sound is
+  off and the thumb says what a press would bring back. Dragged to the end the film
+  is silent, and moved off the end it is heard again - the web player's rule,
+  applied in `player_set_volume` so both players mean the same thing by a thumb at
+  either end of the track. **↑ and ↓ are the same control without a pointer** and
+  they work at every width, which is the answer for a window too narrow for the
+  bar.
+- **Amended 24 September 2026: the menu has two tabs, and the picture's quality
+  is one of them.** The maintainer asked for what the browser player has offered
+  since V2-M6 and the native one did not: *"il manque le choix de qualité vidéo…
+  un onglet pour le choix de la qualité vidéo et audio, et un onglet pour le choix
+  de la langue audio et sous-titre, tout en évitant les doublons"*. The strip is
+  drawn only when there is a rung to choose - one rung is not a question - and it
+  opens on **Langues**, the question asked mid-film; the quality is asked once,
+  when the machine or the network cannot take the file as it is. Neither tab
+  repeats the other: the audio is listed where it is chosen, with its format under
+  it, and the quality tab says nothing about sound. That is not a preference but a
+  fact of this product - there is no audio ladder to draw, because the server
+  converts the sound only to carry the track that was chosen. The rows keep their
+  44px target and reserved tick column, and a rung that needs an encoder while
+  every slot is taken is **greyed rather than refused**: a press that would stall
+  somebody else's film is not an answer.
+- **A quality rung is the file itself, then the heights the server can produce.**
+  "Qualité du fichier" is first and is the only rung that reaches an amplifier
+  untouched - mpv reads the container directly, so TrueHD, Atmos and DTS-HD MA
+  arrive as they are. Every rung below it is a re-encode, says so (`réencodée`),
+  and names who pays for it beside the heading, *carte graphique* or *processeur*.
+  A rung is a different stream rather than a property, so choosing one reloads the
+  film at the second it left: the clock, the scrub bar and the resume point are the
+  server's `t=` plus what the engine counts, arithmetic the player owns and the
+  interface never sees. **The default is always the file**: a new film starts
+  there, and no rung is remembered across films.
 - **Audio and subtitles are a popover, not a panel.** It is a child of the
   button that opens it, so it is anchored by construction: `right: 0` against
   the button's own box rather than a measured offset from the frame. Positioned
   against the frame it sat 117px from its control on a 900px viewport and read
   as a slab that happened to appear. Below 30rem it pins to the frame instead,
   because a 21rem panel aligned to a button 60px from the right edge starts off
-  the left of a 390px screen.
+  the left of a 390px screen. Its height is bounded - `min(56svh, 30rem)` - so a
+  list longer than the window scrolls instead of being clipped by its own frame,
+  and it draws its own scrollbar: Windows put a light-grey bar with arrow buttons
+  down the side of a panel built in the dark, which the web player had already
+  replaced and the native one had not.
 - **A track is two lines.** The language leads at reading size, because that is
   what the choice is made on; codec, channels and provenance sit under it as a
   tracked label in `--muted`. One middot-joined string put four facts at one
@@ -837,6 +888,23 @@ a player.
 - **The chosen track carries a tick**, in gold, in a column that is reserved
   whether or not it is drawn. A 2px rule at 6% fill does not survive the room.
   The popover has no dismiss button: Escape, the toggle, and a press outside.
+  The chosen row carries a plate as well as the tick, `rgb(bone / 0.05)`.
+- **Amended 23 September 2026: the native player's menu had none of the three
+  rules above.** The maintainer sent a screenshot of it - *"c'est dégueulasse...
+  incompréhensible pour un noob"* - and it was all of them at once: it led with
+  the container's title ("TrueHD 7.1 Atmos") and put the raw codec under it
+  ("TRUEHD"), so seven tracks read as fourteen lines of abbreviations; the
+  language was the container's ISO code, upper-cased; the chosen row was a tick
+  and nothing else; and the bar down its side was Windows' own. It is the same
+  rule now, in `player/ui/src/lib/track-labels.ts` - the same function names as
+  the web application's module, so the two can be read side by side - and the
+  same treatment in `player/ui/src/osd.css`. Two things the native menu says that
+  the web player never has to: **a subtitle's format**, because the native player
+  draws bitmap subtitles and two English rows would otherwise read "Anglais"
+  twice, one SubRip and one PGS; and **the number of channels** when the container
+  wrote no layout, because mpv reports `unknown6` there and six unknown channels
+  are called "6 canaux" rather than "5.1" - the player does not name what it was
+  not told.
 - **Subtitles are shadowed, never boxed.** A `background` on `::cue` is painted
   per line, so a two-line cue gets two slabs of different widths with a ragged
   step between them. A tight four-way shadow plus one soft drop follows the
