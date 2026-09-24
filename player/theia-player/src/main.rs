@@ -59,10 +59,29 @@ impl AudioMode {
 struct Session {
     engine: Engine,
     audio: AudioMode,
+    /// The playback preferences the OSD last sent, mirrored here rather than
+    /// read from the static at every use.
+    ///
+    /// The load path needs them - `load_options` decides `sid=no` from them, and
+    /// every load re-applies the subtitle style and the language lists - and the
+    /// load path runs while the session lock is held, which is where this file
+    /// refuses to reach for a second lock. Written in exactly two places, both of
+    /// which take it from [`PLAYBACK`]: when the session is created, and when the
+    /// OSD saves the sheet.
+    playback: PlaybackPreferences,
     media: Option<String>,
     /// What to call what is playing. The OSD shows this rather than picking a
     /// filename out of a URL, which is what a stream address would reduce to.
     title: Option<String>,
+    /// The language the current film was made in, when the server knows it.
+    ///
+    /// This is what `vo` asks the engine for, and it is set by `play_movie`
+    /// alone: a series carries no such field (`SeriesMetadata` in
+    /// `internal/library/series.go` has no `original_language`), so an episode
+    /// leaves it `None` and `vo` degrades to the file's own default rather than
+    /// to a guess. Cleared by every load, because it belongs to the film that
+    /// carried it.
+    original_language: Option<String>,
     /// When the current file was handed to mpv. The audio watchdog needs a
     /// reference point that is not the playback clock: a refused output stalls
     /// that clock at zero, which is the whole reason the watchdog exists.
@@ -89,6 +108,17 @@ struct Session {
     /// once it has, and by any explicit choice of the viewer's, so a menu
     /// selection is never undone a second later by the player.
     sidecar_decided: bool,
+    /// Whether the end of the current file has already been acted on.
+    ///
+    /// The end of a file lasts for as long as it stays loaded - `keep-open=yes`
+    /// keeps it at the end rather than unloading it - so without this the
+    /// telemetry thread would start the next episode twice a second. Re-armed by
+    /// the engine's own answer rather than by our own load, deliberately: a load
+    /// that has just been handed to mpv can still be reporting the file before it,
+    /// and how long that lasts is not something this process can see from outside
+    /// - a guard re-armed by the load would act inside that window and skip an
+    /// episode. See `autoplay_next_episode`.
+    end_handled: bool,
     /// The subtitle files still to be handed to mpv for this load.
     ///
     /// A queue rather than a flag, because an add can legitimately fail and
@@ -137,7 +167,10 @@ impl Session {
         self.title = title;
         self.start_at = start_at;
         // A new film starts as the file is: the rung belonged to the one before
-        // it, and so did the tracks.
+        // it, and so did the tracks. The original language belonged to the film
+        // as well, and `play_movie` sets it back when it has one - an episode
+        // never does.
+        self.original_language = None;
         self.quality = None;
         self.aid = None;
         self.sid = None;
@@ -308,6 +341,14 @@ impl Session {
         }
         if let Some(sid) = self.sid {
             options.push(format!("sid={sid}"));
+        } else if self.playback.subtitle_language == SubtitleLanguage::Off {
+            // Somebody asked for no subtitles, and has not chosen a track for
+            // this film, so the file is opened saying so. `sid=no` is mpv's own
+            // word for it and a *file-local* option for the same reason `start=`
+            // is: it belongs to the file being opened rather than to the player.
+            // It matters that this is not left to `slang`: an empty list is the
+            // file's own default, which is the opposite of what was asked.
+            options.push("sid=no".to_string());
         }
         if options.is_empty() {
             None
@@ -320,6 +361,7 @@ impl Session {
     fn clear_media(&mut self) {
         self.media = None;
         self.title = None;
+        self.original_language = None;
         self.loaded_at = None;
         self.start_at = 0.0;
         self.quality = None;
@@ -330,6 +372,10 @@ impl Session {
         self.sidecars_pending.clear();
         self.sidecar_tries = 0;
         self.sidecar_decided = false;
+        // Nothing is loaded any more, so nothing has ended: the guard must not
+        // survive the viewer closing the film, or a later film's end would be
+        // read as one already dealt with.
+        self.end_handled = false;
         self.audio_reason = None;
     }
 }
@@ -344,13 +390,553 @@ static CLIENT: Mutex<Option<server::Client>> = Mutex::new(None);
 #[derive(Clone, Copy)]
 enum Playing {
     Movie(i64),
-    Episode(i64),
+    /// The episode playing, and the one the server says follows it.
+    ///
+    /// The next id travels with the id of what is playing rather than in a
+    /// static of its own, so that "what plays next" has one answer and one
+    /// owner, and so the paths that already clear the media - `player_stop`,
+    /// `clear_media` - clear this too. `None` is not "do not autoplay": it is
+    /// the server saying there is no next episode.
+    Episode { id: i64, next: Option<i64> },
 }
 
 /// The playable record currently owned by mpv. Keeping the kind beside the id
 /// matters: films and episodes have deliberately parallel progress endpoints,
 /// not one polymorphic endpoint pretending the distinction does not exist.
 static CURRENT_MEDIA: Mutex<Option<Playing>> = Mutex::new(None);
+
+// ---------------------------------------------------------------------------
+// Playback preferences
+//
+// The settings sheet owns the widgets and the sentences; what each choice
+// *means* to the engine is decided here, once, beside the properties it becomes.
+// None of it is a matter of taste - every rule below is a unit conversion or a
+// precedence, and each one carries the reason it is what it is. The engine was
+// probed headlessly on this machine (libmpv-2.dll, client API 2.5, mpv 0.41) for
+// every default and every range quoted here; the numbers are not read off a
+// manual.
+// ---------------------------------------------------------------------------
+
+/// Everything the settings sheet decides about how a film is played.
+///
+/// `serde(default)` on the container and on every field, because the two
+/// programs are updated separately: a payload written before one of these existed
+/// is a payload with a default in it, not a refusal. The defaults are the ones
+/// the sheet ships (the same table is in `player/ui/src/types.ts`) and they have
+/// to agree: a `Default` that disagreed would change the picture for a viewer who
+/// never opened the settings, with nothing anywhere to say why.
+#[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(default, rename_all = "camelCase")]
+struct PlaybackPreferences {
+    /// Whether the next episode follows this one when the file ends.
+    auto_play_next: bool,
+    audio_language: AudioLanguage,
+    subtitle_language: SubtitleLanguage,
+    subtitle_style: SubtitleStyle,
+}
+
+impl Default for PlaybackPreferences {
+    fn default() -> Self {
+        PlaybackPreferences {
+            auto_play_next: true,
+            audio_language: AudioLanguage::Auto,
+            subtitle_language: SubtitleLanguage::Auto,
+            subtitle_style: SubtitleStyle::default(),
+        }
+    }
+}
+
+impl PlaybackPreferences {
+    /// Refuses a payload that carries the right fields with values that are not
+    /// the ones the sheet can produce.
+    ///
+    /// Serde has already answered for the languages, the outline and the font -
+    /// those are enumerated below, so an unknown one is a named error rather than
+    /// a silent fallback. The two colours travel as free text, because a
+    /// background is `none` or a colour, and a value that is neither has no
+    /// defensible reading: every other setting can fall back to a default the
+    /// sheet also ships, while a string that is not a colour can only be drawn as
+    /// whatever the engine makes of it.
+    fn validate(&self) -> Result<(), String> {
+        let style = &self.subtitle_style;
+        if rgb(&style.colour).is_none() {
+            return Err(format!(
+                "subtitleStyle.colour is {:?}, which is not a \"#RRGGBB\" colour",
+                style.colour
+            ));
+        }
+        if style.background != "none" && rgb(&style.background).is_none() {
+            return Err(format!(
+                "subtitleStyle.background is {:?}, which is neither \"none\" nor a \"#RRGGBB\" colour",
+                style.background
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// Which audio track the player asks the engine for.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
+enum AudioLanguage {
+    /// Whatever the file itself was made to prefer.
+    Auto,
+    /// The French version, which is the one this household watches.
+    Vf,
+    /// The language the title was made in, when the server knows it.
+    Vo,
+}
+
+/// Which subtitle track the player asks the engine for.
+///
+/// `Off` is not `Auto` with a different list: auto leaves the file's own answer
+/// alone, off is somebody saying they do not want subtitles. Only a load option
+/// can say that (see [`Session::load_options`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
+enum SubtitleLanguage {
+    Auto,
+    #[serde(rename = "none")]
+    Off,
+    Fr,
+    En,
+}
+
+/// How the outline around the text is drawn, when there is no background colour
+/// to draw instead - the precedence itself is in [`outline_properties`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
+enum Outline {
+    Shadow,
+    Outline,
+    #[serde(rename = "none")]
+    Off,
+}
+
+/// Which family the engine draws the text in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
+enum Font {
+    Standard,
+    Serif,
+    Mono,
+}
+
+impl Font {
+    /// The three generic names the engine's own font provider understands.
+    ///
+    /// Generic rather than named families: the engine resolves them through
+    /// fontconfig on Unix and DirectWrite on Windows, which know what is
+    /// installed - and the OSD ships no font the engine could load anyway, so a
+    /// family name of ours would be one it had never heard of.
+    fn family(self) -> &'static str {
+        match self {
+            Font::Standard => "sans-serif",
+            Font::Serif => "serif",
+            Font::Mono => "monospace",
+        }
+    }
+}
+
+/// The look of a subtitle line, in the units the settings sheet speaks.
+#[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(default, rename_all = "camelCase")]
+struct SubtitleStyle {
+    /// Text size, in pixels at a 1080-tall window. The sheet's slider runs 24 to
+    /// 72 in steps of 2, and 36 sits in the middle of it.
+    size_px: f64,
+    /// How far above the bottom of the picture the text sits, in the same
+    /// 1080-referenced pixels. The slider runs 24 to 200 in steps of 4.
+    height_px: f64,
+    /// The text colour, `#RRGGBB`. The interface never sends alpha.
+    colour: String,
+    outline: Outline,
+    /// `none`, or a `#RRGGBB` the outline is replaced by.
+    background: String,
+    font: Font,
+    bold: bool,
+}
+
+impl Default for SubtitleStyle {
+    fn default() -> Self {
+        SubtitleStyle {
+            size_px: 36.0,
+            height_px: 120.0,
+            colour: "#EDE7DC".to_string(),
+            outline: Outline::Shadow,
+            background: "none".to_string(),
+            font: Font::Standard,
+            bold: false,
+        }
+    }
+}
+
+/// The preferences the OSD last sent.
+///
+/// Process-wide rather than per-film, because they are a setting and not a
+/// property of what is on screen, and kept even when there is nothing to apply
+/// them to: a player whose engine would not start still has to answer the sheet,
+/// and the OSD keeps its own copy in `localStorage` for exactly the same reason.
+/// Lazy because a `PlaybackPreferences` holds `String`s and a `static` needs a
+/// const constructor.
+static PLAYBACK: std::sync::LazyLock<Mutex<PlaybackPreferences>> =
+    std::sync::LazyLock::new(|| Mutex::new(PlaybackPreferences::default()));
+
+/// The preferences as they stand, copied out.
+fn stored_playback() -> PlaybackPreferences {
+    PLAYBACK.lock().unwrap().clone()
+}
+
+/// The settings sheet's save, and its first call after the page mounts.
+///
+/// The whole object arrives as one JSON string rather than as an argument per
+/// setting: three of the four fields are nested or enumerated, and a command
+/// whose signature had to be kept in step with a form would be a second copy of
+/// the form.
+///
+/// Nothing is applied until the payload has been read and checked, and what has
+/// been read is stored before it is applied: an engine that refused a property,
+/// or that never started at all, must not leave the player holding choices
+/// nobody made. An engine that is absent is an `Err` - the OSD answers that by
+/// keeping the same choices in `localStorage` - but the store still happened.
+#[tauri::command]
+fn player_set_playback(prefs: String) -> Result<(), String> {
+    let parsed: PlaybackPreferences =
+        serde_json::from_str(&prefs).map_err(|e| format!("reading the playback preferences: {e}"))?;
+    parsed.validate()?;
+    *PLAYBACK.lock().unwrap() = parsed;
+    apply_playback()
+}
+
+/// What the engine is actually holding for subtitles, read back from it.
+///
+/// The settings sheet decides seven things and sends them; whether the engine
+/// took them is a different question, and it is the one a report of "the slider
+/// does nothing" turns on. A property the engine refuses keeps the value it
+/// already had, so reading these back is a measurement rather than a restatement
+/// of what was sent. The two language lists travel with them because they are
+/// what the *next* load will choose tracks with, and an empty one is what "the
+/// file's own default" looks like from the outside.
+fn player_subtitles() -> String {
+    let guard = SESSION.lock().unwrap();
+    let Some(session) = guard.as_ref() else {
+        return "engine: not running".into();
+    };
+    let held = |name: &str| session.engine.property(name).unwrap_or_else(|| "?".into());
+    let style = &session.playback.subtitle_style;
+    format!(
+        "asked {:.0}px at {:.0}px, {:?}, band {}, {:?}, {} | sub-font-size={} sub-pos={} \
+sub-margin-y={} sub-color={} sub-border-style={} sub-border-size={} sub-shadow-offset={} \
+sub-back-color={} sub-font={} sub-bold={} sub-ass-override={} sub-ass-force-style={} | \
+alang={:?} slang={:?}",
+        style.size_px,
+        style.height_px,
+        style.outline,
+        style.background,
+        style.font,
+        if style.bold { "bold" } else { "normal" },
+        held("sub-font-size"),
+        held("sub-pos"),
+        held("sub-margin-y"),
+        held("sub-color"),
+        held("sub-border-style"),
+        held("sub-border-size"),
+        held("sub-shadow-offset"),
+        held("sub-back-color"),
+        held("sub-font"),
+        held("sub-bold"),
+        held("sub-ass-override"),
+        held("sub-ass-force-style"),
+        session.engine.property("alang").unwrap_or_default(),
+        session.engine.property("slang").unwrap_or_default(),
+    )
+}
+
+/// Applies the stored preferences to the running engine, and nowhere else.
+///
+/// The engine is asked; it is never told what to think. Every value is set as a
+/// property, so the style is live on a film that is already playing - which is
+/// what makes the sheet's sliders answer immediately rather than at the next
+/// film.
+fn apply_playback() -> Result<(), String> {
+    // Read and released before the session lock is taken: this file never holds
+    // two of its locks at once, and that is the whole of its deadlock policy.
+    let prefs = stored_playback();
+    let mut guard = SESSION.lock().unwrap();
+    let session = guard.as_mut().ok_or("the engine is not running")?;
+    // The session keeps its own copy because `load_options` reads it while the
+    // session lock is held, and this is one of the two places that writes it.
+    session.playback = prefs;
+    apply_playback_to(&session.engine, &session.playback, session.original_language.as_deref())
+}
+
+/// Sets every property the preferences decide, and names the ones the engine
+/// would not take.
+///
+/// A refusal is a real error code with a reason in it - measured: an unknown
+/// value for `sub-border-style` answers "unsupported format for accessing
+/// property" - and a player that read that as success would render something
+/// nobody chose while reporting that it had. So each refusal is collected and
+/// named, and the caller decides what to do with the answer: the settings sheet
+/// is told, a film is not stopped by one.
+fn apply_playback_to(
+    engine: &Engine,
+    prefs: &PlaybackPreferences,
+    original_language: Option<&str>,
+) -> Result<(), String> {
+    let mut refused: Vec<String> = Vec::new();
+    for (name, value) in playback_properties(prefs, original_language) {
+        if let Err(e) = engine.set_property(name, &value) {
+            refused.push(e);
+        }
+    }
+    if refused.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("the engine refused {}", refused.join("; ")))
+    }
+}
+
+/// Every property the preferences decide.
+///
+/// One list rather than the same calls spelled out in two places: the set is
+/// applied when the sheet is saved and again before every load, and a second
+/// list would drift from this one the first time a setting was added.
+fn playback_properties(
+    prefs: &PlaybackPreferences,
+    original_language: Option<&str>,
+) -> Vec<(&'static str, String)> {
+    let style = &prefs.subtitle_style;
+    let mut properties: Vec<(&'static str, String)> = vec![
+        (
+            "sub-font-size",
+            format!("{:.2}", subtitle_font_size(style.size_px)),
+        ),
+        (
+            "sub-pos",
+            format!("{:.2}", subtitle_position(style.height_px)),
+        ),
+        // Zeroed rather than left alone. The position above puts the band where
+        // the slider says; the engine's own margin default is 34 scaled pixels,
+        // which would push it up by about 23 of ours - or by whatever a previous
+        // session or the user's own mpv.conf left behind. A margin that is not
+        // part of the setting has no business being added to it.
+        ("sub-margin-y", "0".to_string()),
+        ("sub-color", opaque_colour(&style.colour)),
+        // `force` rather than the engine's own default of `scale`, and this one is
+        // measured: with `yes` the script kept its own font, size and colour - a
+        // bone 24 px request was drawn as 27 px white Arial - and a style setting
+        // that applies only to the tracks a film does not have is not a setting.
+        ("sub-ass-override", "force".to_string()),
+        // The script's own margins emptied, and nothing else: `sub-margin-y` is
+        // not consulted on an ASS track (see `subtitle_position`), so this is what
+        // stops a MarginV the script brought from winning. `Alignment` is
+        // deliberately not forced - a script that places a line elsewhere keeps
+        // its side of the picture, which is the only reason to force one field
+        // rather than the whole style.
+        ("sub-ass-force-style", "MarginV=0".to_string()),
+        // Set rather than assumed, although it is the engine's own default: the
+        // 2/3 conversion above is true only while this is on, and this process
+        // reads the user's own mpv.conf at startup, which is free to have turned
+        // it off. A player that inherits its units renders a size nobody chose.
+        ("sub-scale-by-window", "yes".to_string()),
+        ("sub-font", style.font.family().to_string()),
+        ("sub-bold", if style.bold { "yes" } else { "no" }.to_string()),
+    ];
+    // The outline inverts on dark text - part of what the sheet promises - and
+    // both colours are set even when a background box makes them inert, so that
+    // clearing the background gives a correct outline back on the same tick.
+    let ink = outline_ink(&style.colour);
+    properties.push(("sub-border-color", ink.to_string()));
+    properties.push(("sub-shadow-color", ink.to_string()));
+    properties.push(("alang", audio_language_list(prefs, original_language)));
+    properties.push(("slang", subtitle_language_list(prefs)));
+    properties.extend(outline_properties(style));
+    properties
+}
+
+/// How the outline is drawn: a precedence the settings sheet does not have to
+/// know about.
+///
+/// A background colour wins over the outline, because a band behind the text is
+/// what somebody who chose one is asking for, and it is drawn at 70 % alpha so
+/// the picture stays visible through it. The style is `opaque-box` and not
+/// `background-box`: the sheet's promise is a band like the one television draws
+/// across the whole width of the picture, and `background-box` would fit the box
+/// to the text instead.
+///
+/// With no background there are three cases and the engine has two styles:
+///
+/// * `outline` is `outline-and-shadow` with a border and no shadow. Both
+///   properties are set in every case, because a `sub-shadow-offset` left over
+///   from the case before is how a setting stops meaning anything.
+/// * `shadow` is the same style with the border at zero and a shadow instead -
+///   one engine style, two looks, which is what the engine offers.
+/// * `none` has no style of its own: the engine's `sub-border-style` choices are
+///   `outline-and-shadow`, `opaque-box` and `background-box`, and an unknown
+///   value is refused outright. A `background-box` with alpha zero is how this
+///   says none - transparent, and fitted to the text, so that nothing shows.
+fn outline_properties(style: &SubtitleStyle) -> Vec<(&'static str, String)> {
+    if style.background != "none" {
+        let digits = style
+            .background
+            .strip_prefix('#')
+            .unwrap_or(&style.background);
+        return vec![
+            ("sub-border-style", "opaque-box".to_string()),
+            ("sub-back-color", format!("#B3{digits}")),
+        ];
+    }
+    match style.outline {
+        Outline::Outline => vec![
+            ("sub-border-style", "outline-and-shadow".to_string()),
+            ("sub-border-size", "2.4".to_string()),
+            ("sub-shadow-offset", "0".to_string()),
+        ],
+        Outline::Shadow => vec![
+            ("sub-border-style", "outline-and-shadow".to_string()),
+            ("sub-border-size", "0".to_string()),
+            ("sub-shadow-offset", "1.2".to_string()),
+        ],
+        Outline::Off => vec![
+            ("sub-border-style", "background-box".to_string()),
+            ("sub-back-color", "#00000000".to_string()),
+        ],
+    }
+}
+
+/// The engine's `sub-font-size` for a size in 1080-referenced pixels.
+///
+/// Two thirds, and the reason is a unit rather than a preference: with
+/// `sub-scale-by-window` on, the engine measures subtitle text in pixels of a
+/// 720-tall window, so 720/1080 turns a size chosen against a 1080-tall picture
+/// into the engine's own unit and the text keeps its share of whatever window it
+/// is drawn in. The sheet says 36 and the engine is given 24.00.
+fn subtitle_font_size(size_px: f64) -> f64 {
+    size_px * 2.0 / 3.0
+}
+
+/// The engine's `sub-pos` for a height above the bottom of the picture, in
+/// 1080-referenced pixels: 100 % minus the same 2/3 conversion.
+///
+/// The position does the positioning, not the margin, and that is measured
+/// rather than chosen. On a track that carries its own ASS script, `sub-margin-y`
+/// is not consulted at all: a script setting MarginV=200 put its glyphs 207 px
+/// from the bottom of a 720-tall picture while `sub-margin-y` asked for 80, and
+/// that was with `sub-ass-override=force`. `sub-pos` is consulted on both kinds,
+/// so the height is turned into a percentage of the picture - heightPx * 2/3
+/// engine pixels over 720, which is heightPx / 10.8 - and taken off 100 %.
+///
+/// Measured after, at 1280x720: the glyph bottoms land at heightPx * 2/3 + 4 px,
+/// identically for an SRT sidecar and for that ASS file - 40 px of height gives
+/// 31, 120 gives 84, 200 gives 137. The 4 px are the descender below the
+/// baseline and are the same on both kinds, so what is being placed is the box
+/// the text sits in rather than the glyphs, which is exactly what the sheet's own
+/// preview draws.
+fn subtitle_position(height_px: f64) -> f64 {
+    100.0 - height_px / 10.8
+}
+
+/// The six hex digits of a colour written `#RRGGBB`, or nothing for any other
+/// shape. One rule, asked by the two callers that need it, so that "is this a
+/// colour" has a single answer.
+fn rgb_digits(colour: &str) -> Option<&str> {
+    let digits = colour.strip_prefix('#')?;
+    if digits.len() == 6 && digits.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        Some(digits)
+    } else {
+        None
+    }
+}
+
+/// `#RRGGBB` as three numbers, for the luminance below.
+fn rgb(colour: &str) -> Option<(u8, u8, u8)> {
+    let digits = rgb_digits(colour)?;
+    let value = u32::from_str_radix(digits, 16).ok()?;
+    Some(((value >> 16) as u8, (value >> 8) as u8, value as u8))
+}
+
+/// `#RRGGBB` as the engine takes it: eight digits, alpha first.
+///
+/// Measured against the engine: it prints colours as `#AARRGGBB` and reads eight
+/// digits the same way, with the alpha leading. The sheet sends six, which carry
+/// none - so the opaque `FF` is written here, saying what the colour is rather
+/// than leaving the engine to infer it.
+/// [`PlaybackPreferences::validate`] has already refused anything in another
+/// shape; this passes such a value through unchanged rather than mangling it, so
+/// the engine's own refusal is what gets logged.
+fn opaque_colour(colour: &str) -> String {
+    match rgb_digits(colour) {
+        Some(digits) => format!("#FF{digits}"),
+        None => colour.to_string(),
+    }
+}
+
+/// Whether text in this colour reads as dark, by relative luminance.
+///
+/// The plain weighted sum of the sRGB values over 255, thresholded at 0.5 - not
+/// the gamma-decoded one: what is being decided is which way round the outline
+/// goes, and that is a question about the colour as drawn rather than about the
+/// light it stands for.
+fn is_dark(colour: &str) -> bool {
+    let Some((red, green, blue)) = rgb(colour) else {
+        // A colour that cannot be read is treated as light, which is what nearly
+        // every subtitle is and which is the pair the interface's own ink is
+        // drawn with.
+        return false;
+    };
+    let luminance = 0.2126 * f64::from(red) / 255.0
+        + 0.7152 * f64::from(green) / 255.0
+        + 0.0722 * f64::from(blue) / 255.0;
+    luminance < 0.5
+}
+
+/// The colour the outline and the shadow take: black behind light text, and the
+/// interface's own paper behind dark text.
+///
+/// "the outline inverts automatically if you pick dark text" is what the sheet
+/// promises, and this is the whole of it - one rule, used by both properties, so
+/// the two can never disagree.
+fn outline_ink(text_colour: &str) -> &'static str {
+    if is_dark(text_colour) {
+        "#FFEDE7DC"
+    } else {
+        "#FF000000"
+    }
+}
+
+/// What the engine should look for when it picks the audio track.
+///
+/// An empty list is not "no sound": it is the file's own default, which is what
+/// `auto` means and what an unknown original language has to fall back to. The
+/// three-letter codes sit beside the two-letter ones because a file's tracks
+/// carry whichever its maker wrote - `fre` and `fra` as well as `fr`.
+///
+/// `vo` is the honest case, and the limit is here: the player asks for the
+/// language a title was made in only when the server said what that is, and
+/// otherwise asks for nothing at all. Guessing from a filename, a country or the
+/// library's own tongue would pick a track nobody asked for.
+fn audio_language_list(prefs: &PlaybackPreferences, original_language: Option<&str>) -> String {
+    match prefs.audio_language {
+        AudioLanguage::Auto => String::new(),
+        AudioLanguage::Vf => "fr,fre,fra".to_string(),
+        AudioLanguage::Vo => original_language.unwrap_or_default().to_string(),
+    }
+}
+
+/// What the engine should look for when it picks the subtitle track.
+///
+/// `auto` and `none` are the same list and different behaviour: auto leaves the
+/// file's own answer alone, while none opens the file with `sid=no` (see
+/// [`Session::load_options`]). A language list cannot ask for the absence of a
+/// track, which is why that half of the choice is not here.
+fn subtitle_language_list(prefs: &PlaybackPreferences) -> String {
+    match prefs.subtitle_language {
+        SubtitleLanguage::Auto | SubtitleLanguage::Off => String::new(),
+        SubtitleLanguage::Fr => "fr,fre,fra".to_string(),
+        SubtitleLanguage::En => "en,eng".to_string(),
+    }
+}
 
 /// The engine options that differ by platform: how the picture reaches the
 /// window, and how the sound leaves the machine.
@@ -496,6 +1082,48 @@ fn apply_audio_mode(engine: &Engine, mode: AudioMode) -> Result<(), String> {
     Ok(())
 }
 
+/// What the interface measured about itself, in the window since the last
+/// report.
+///
+/// The OSD is the half of this application that can stutter without the engine
+/// noticing: mpv presents its frames on its own thread, while the page shares
+/// one main thread with React, the styles and the compositor. These numbers are
+/// how a session says whether the interface kept up, and they exist because
+/// "fluid" without a measurement is an opinion.
+#[derive(Clone, Default)]
+struct OsdStats {
+    /// The longest frame interval seen while somebody was doing something, in
+    /// milliseconds. This is the number a viewer feels.
+    worst_frame_ms: f64,
+    /// How many frames in the window took longer than two frames at 60 Hz.
+    slow_frames: u32,
+    /// How many frames the sampler drew. Zero with a zero worst frame means the
+    /// instrument never ran, which is a different answer from "it was smooth".
+    frames: u32,
+    /// How many resize events arrived in the window: one drag of a window's
+    /// edge is not one event, and the count is what says how many.
+    resize_events: u32,
+}
+
+/// When this process started, so the first status frame can say how long the
+/// application took to become useful. The frames begin 500 ms after the window
+/// is shown, so the number reads about half a second high - written down here
+/// rather than corrected, because a number whose offset is known is worth more
+/// than one quietly adjusted.
+static STARTED_AT: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+
+/// Written by `player_osd_stats`, read by the status frame. Absent until the
+/// interface has reported once, which is the honest answer for "not measured
+/// yet" rather than a zero.
+static OSD_STATS: std::sync::Mutex<Option<OsdStats>> = std::sync::Mutex::new(None);
+
+#[tauri::command]
+fn player_osd_stats(worst_frame_ms: f64, slow_frames: u32, frames: u32, resize_events: u32) {
+    if let Ok(mut guard) = OSD_STATS.lock() {
+        *guard = Some(OsdStats { worst_frame_ms, slow_frames, frames, resize_events });
+    }
+}
+
 #[tauri::command]
 fn player_status() -> String {
     let guard = SESSION.lock().unwrap();
@@ -507,6 +1135,14 @@ fn player_status() -> String {
     // mpv's own "no" for a flag, which is not JSON: the OSD parses in a
     // try/catch and would have ignored every frame in silence, leaving a
     // perfectly blank player with nothing in any log to explain it.
+    // Absent until the interface has reported once. A zero here would be
+    // indistinguishable from a measured zero, which is the difference between
+    // "the interface is keeping up" and "nothing is measuring".
+    let osd = OSD_STATS.lock().ok().and_then(|guard| guard.clone());
+    // Read, not reset: a resize that has just ended is still the answer to
+    // "did the window keep up", and the number is cleared when the next one
+    // starts rather than by whoever reads it.
+    let resize = RESIZE_TIMING.lock().map(|guard| *guard).unwrap_or((None, 0, 0.0, 0.0));
     let text = |name: &str| engine.property(name);
     let number = |name: &str| engine.property(name).and_then(|v| v.parse::<f64>().ok());
     let integer = |name: &str| engine.property(name).and_then(|v| v.parse::<i64>().ok());
@@ -541,6 +1177,28 @@ fn player_status() -> String {
         // is. Session state rather than an mpv property: the rung is a fact
         // about the address the film was fetched from.
         "quality": session.quality,
+        // The picture's own accounting, which mpv has always kept and this
+        // application never asked for: the rate it is actually presenting, and
+        // the frames it or its decoder had to throw away. A film that looks
+        // wrong is usually one of these two numbers, and no amount of reading
+        // the interface would have shown it.
+        "fps": number("estimated-vf-fps"),
+        "drops": integer("frame-drop-count").unwrap_or(0),
+        "decoderDrops": integer("decoder-frame-drop-count").unwrap_or(0),
+        // And the interface's, reported by the page itself. Null until it has
+        // said anything, which is not the same as zero.
+        "sinceStartMs": STARTED_AT.get().map(|start| start.elapsed().as_millis() as u64).unwrap_or(0),
+        "osdWorstFrameMs": osd.as_ref().map(|one| one.worst_frame_ms),
+        "osdSlowFrames": osd.as_ref().map(|one| one.slow_frames),
+        "osdFrames": osd.as_ref().map(|one| one.frames),
+        "osdResizeEvents": osd.as_ref().map(|one| one.resize_events),
+        "resizeEvents": resize.1,
+        "resizeWorstGapMs": (resize.2 * 10.0).round() / 10.0,
+        "resizeMeanGapMs": if resize.1 > 1 {
+            ((resize.3 / f64::from(resize.1 - 1)) * 10.0).round() / 10.0
+        } else {
+            0.0
+        },
     })
     .to_string()
 }
@@ -762,6 +1420,16 @@ fn supervise_subtitles() {
     if session.sidecar_decided {
         return;
     }
+    // A viewer who asked for no subtitles gets none. The load opens the film
+    // with `sid=no` (`Session::load_options`), and without this the automatic
+    // choice below would put a sidecar back a second later - it reads "nothing
+    // is selected" as "choose something", and "no subtitles" is exactly that.
+    // Read every tick rather than recorded, so changing the preference brings the
+    // automatic choice back without reloading the film; the sidecar is still
+    // listed in the menu either way, because it was added above.
+    if session.sid.is_none() && session.playback.subtitle_language == SubtitleLanguage::Off {
+        return;
+    }
     match session.engine.property("sid").as_deref() {
         // Something is chosen, so there is nothing to decide. Recorded rather
         // than checked again on every tick.
@@ -843,7 +1511,7 @@ fn current_playable() -> Result<Playable, String> {
                 file: file.id,
             })
         }
-        Some(Playing::Episode(id)) => {
+        Some(Playing::Episode { id, .. }) => {
             let episode = client.episode(id)?;
             let file = episode
                 .files
@@ -1225,7 +1893,7 @@ fn player_current_server() -> Result<Option<String>, String> {
 /// Starts a film. mpv is handed the stream URL and fetches it itself: it does
 /// range requests, buffering and seeking better than anything written here.
 fn play_movie(id: i64) -> Result<String, String> {
-    let (url, movie_id, title, resume_at, sidecars) = {
+    let (url, movie_id, title, resume_at, sidecars, original_language) = {
         let guard = CLIENT.lock().unwrap();
         let client = guard.as_ref().ok_or("no server is connected")?;
         // The list does not carry files; the detail does. One extra request is
@@ -1275,6 +1943,11 @@ fn play_movie(id: i64) -> Result<String, String> {
             },
             resume_at,
             sidecars,
+            // The language this film was made in, which is what a `vo` audio
+            // preference asks the engine for. Empty when TMDB was never matched
+            // to the file, and empty is not a language: it becomes no request at
+            // all, so the engine answers with the file's own default.
+            Some(movie.metadata.original_language.clone()).filter(|language| !language.is_empty()),
         )
     };
 
@@ -1287,6 +1960,20 @@ fn play_movie(id: i64) -> Result<String, String> {
         // of this found the honest way. A file-local option belongs to the
         // loadfile command's own argument list, and that is where it goes.
         session.mark_loaded(url.clone(), Some(title), resume_at, sidecars);
+        session.original_language = original_language;
+        // Applied before the load, because the language lists are read when the
+        // file's own tracks are chosen and that happens in the load below: a
+        // `vo` list left over from the previous film would pick this one's audio
+        // by the wrong tongue. A refusal is logged and the film plays: a
+        // subtitle colour the engine would not take is not a reason to refuse
+        // somebody their film.
+        if let Err(e) = apply_playback_to(
+            &session.engine,
+            &session.playback,
+            session.original_language.as_deref(),
+        ) {
+            eprintln!("theia-player: playback preferences not applied to this film: {e}");
+        }
         // A film started from the library plays. Without this it inherits the
         // pause state of whatever was on screen before, which is how a viewer
         // who paused one film and opened another got a frozen picture.
@@ -1302,7 +1989,7 @@ fn play_movie(id: i64) -> Result<String, String> {
 
 /// Starts one episode through the same engine and track path as a film.
 fn play_episode(id: i64) -> Result<String, String> {
-    let (url, episode_id, title, resume_at, sidecars) = {
+    let (url, episode_id, next_episode_id, title, resume_at, sidecars) = {
         let guard = CLIENT.lock().unwrap();
         let client = guard.as_ref().ok_or("no server is connected")?;
         let episode = client.episode(id)?;
@@ -1351,6 +2038,10 @@ fn play_episode(id: i64) -> Result<String, String> {
         (
             client.episode_stream_url(episode.id, file.id, None, resume_at),
             episode.id,
+            // Read here, once, while the episode is being fetched anyway: this is
+            // the answer to "what plays next", and it belongs to what is playing
+            // rather than to a second request made when the file ends.
+            episode.next_episode_id,
             title,
             resume_at,
             sidecars,
@@ -1361,6 +2052,22 @@ fn play_episode(id: i64) -> Result<String, String> {
         let mut session_guard = SESSION.lock().unwrap();
         let session = session_guard.as_mut().ok_or("the engine is not running")?;
         session.mark_loaded(url.clone(), Some(title), resume_at, sidecars);
+        // No original language, deliberately, and this is where the limit bites:
+        // `SeriesMetadata` in `internal/library/series.go` carries no
+        // `original_language`, so a series cannot say what tongue it was made in
+        // and there is nothing here to guess from. A `vo` preference therefore
+        // degrades to the engine's own default on an episode - which is the
+        // honest answer, since inventing one would pick a track nobody asked for.
+        // `mark_loaded` has already left this `None`.
+        // Applied before the load for the same reason as in `play_movie`: the
+        // language lists are consulted when the file's tracks are chosen.
+        if let Err(e) = apply_playback_to(
+            &session.engine,
+            &session.playback,
+            session.original_language.as_deref(),
+        ) {
+            eprintln!("theia-player: playback preferences not applied to this episode: {e}");
+        }
         // A film started from the library plays. Without this it inherits the
         // pause state of whatever was on screen before, which is how a viewer
         // who paused one film and opened another got a frozen picture.
@@ -1369,7 +2076,10 @@ fn play_episode(id: i64) -> Result<String, String> {
             return Err(e);
         }
     }
-    *CURRENT_MEDIA.lock().unwrap() = Some(Playing::Episode(episode_id));
+    *CURRENT_MEDIA.lock().unwrap() = Some(Playing::Episode {
+        id: episode_id,
+        next: next_episode_id,
+    });
     Ok(url)
 }
 
@@ -1678,18 +2388,97 @@ fn apply_round_region(hwnd: isize, width: u32, height: u32, scale: f64, rounded:
 #[cfg(not(windows))]
 fn apply_round_region(_hwnd: isize, _width: u32, _height: u32, _scale: f64, _rounded: bool) {}
 
-/// Applies the region from a window's own geometry. Two thin wrappers, because
-/// the setup hook holds a `WebviewWindow` and the event hook a `Window`, and
-/// both answer the same three questions.
+/// Clears the window region: one cheap call, and the corners are square until
+/// it is put back.
 #[cfg(windows)]
-fn round_window(window: &tauri::Window) {
-    let Ok(hwnd) = window.hwnd() else { return };
-    let size = window.inner_size().unwrap_or_default();
-    let scale = window.scale_factor().unwrap_or(1.0);
-    let full = window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false);
-    apply_round_region(hwnd.0 as isize, size.width, size.height, scale, !full);
+fn clear_round_region(hwnd: isize) {
+    use windows_sys::Win32::Foundation::HWND;
+    use windows_sys::Win32::Graphics::Gdi::SetWindowRgn;
+    unsafe { SetWindowRgn(hwnd as HWND, std::ptr::null_mut(), 1) };
 }
 
+#[cfg(not(windows))]
+fn clear_round_region(_hwnd: isize) {}
+
+/// What the window's own resize looked like from inside this process: how many
+/// events arrived, and the worst gap between two of them.
+///
+/// A drag is a modal loop in Windows: the events are sent as the pointer moves,
+/// and the window paints between them. If this process is busy, it falls behind
+/// the pointer and the events arrive late - so **this gap is the lag a person
+/// sees**, and it is the number the page's own frame timing cannot see: the page
+/// can draw at a hundred frames a second while the window it lives in is a
+/// second behind the hand.
+/// The third number is the total of the gaps, so the average can be read as
+/// well as the worst: the worst is dominated by the first step of a drag, and a
+/// change that only helps the steps after it would be invisible in it.
+static RESIZE_TIMING: std::sync::Mutex<(Option<std::time::Instant>, u32, f64, f64)> =
+    std::sync::Mutex::new((None, 0, 0.0, 0.0));
+
+/// When the last resize arrived, and whether the rounded region is applied.
+///
+/// `None` for the time means no resize is in flight. The telemetry thread is
+/// what puts the region back, so this costs no timer and no thread of its own.
+static RESIZE_STATE: std::sync::Mutex<(Option<std::time::Instant>, bool)> =
+    std::sync::Mutex::new((None, true));
+
+/// Called from the window event hook, once per resize event.
+///
+/// The region is a snapshot of a size, so a stale one clips a bigger window -
+/// but re-making it per event is what made a drag of the window's edge lag.
+/// **Measured on 24 September 2026**, with a scripted drag of forty steps: five
+/// frames drawn with the region re-made on each event, eighty-eight with it left
+/// alone. So it is dropped once here, which cannot clip anything, and put back
+/// once when the size has settled.
+#[cfg(windows)]
+fn note_resize(hwnd: isize) {
+    let now = std::time::Instant::now();
+    // Both numbers are totals since the process started, and deliberately so:
+    // the first version reset them when a new drag began, and a reader (me) who
+    // looked one second too late read the count of a two-pixel step. A number
+    // that can be gathered wrong is worse than no number.
+    if let Ok(mut timing) = RESIZE_TIMING.lock() {
+        if let Some(previous) = timing.0 {
+            let gap = now.duration_since(previous).as_secs_f64() * 1000.0;
+            timing.2 = timing.2.max(gap);
+            timing.3 += gap;
+        }
+        timing.0 = Some(now);
+        timing.1 += 1;
+    }
+    let Ok(mut state) = RESIZE_STATE.lock() else { return };
+    if state.1 {
+        clear_round_region(hwnd);
+        state.1 = false;
+    }
+    state.0 = Some(now);
+}
+
+#[cfg(not(windows))]
+fn note_resize(_hwnd: isize) {}
+
+/// Puts the region back once the size has stopped moving.
+#[cfg(windows)]
+fn settle_round_region(window: &tauri::WebviewWindow) {
+    let Ok(mut state) = RESIZE_STATE.lock() else { return };
+    let Some(at) = state.0 else { return };
+    if state.1 || at.elapsed() < Duration::from_millis(250) {
+        return;
+    }
+    state.1 = true;
+    state.0 = None;
+    drop(state);
+    round_webview_window(window);
+}
+
+#[cfg(not(windows))]
+fn settle_round_region(_window: &tauri::WebviewWindow) {}
+
+/// Applies the region from a window's own geometry.
+///
+/// One wrapper rather than two, since decision 147's resize pass: the event hook
+/// now calls `note_resize` and the region is put back by the telemetry thread
+/// through `settle_round_region`, so the `tauri::Window` half had no caller left.
 #[cfg(windows)]
 fn round_webview_window(window: &tauri::WebviewWindow) {
     let Ok(hwnd) = window.hwnd() else { return };
@@ -1699,12 +2488,12 @@ fn round_webview_window(window: &tauri::WebviewWindow) {
     apply_round_region(hwnd.0 as isize, size.width, size.height, scale, !full);
 }
 
-// The two stubs below exist so the setup and event hooks read the same on every
-// platform. On macOS and the other Unix they have nothing to do: the rounding is
-// `SetWindowRgn`, and the window is a normal `NSWindow`.
+// The stub below exists so the setup hook reads the same on every platform. On
+// macOS and the other Unix it has nothing to do: the rounding is `SetWindowRgn`,
+// and the window is a normal `NSWindow`.
 
 #[cfg(not(windows))]
-fn round_window(_window: &tauri::Window) {}
+fn round_webview_window(_window: &tauri::WebviewWindow) {}
 
 #[cfg(not(windows))]
 fn round_webview_window(_window: &tauri::WebviewWindow) {}
@@ -1947,10 +2736,90 @@ fn save_progress() {
     let Some(client) = guard.as_ref() else { return };
     let result = match media {
         Playing::Movie(id) => client.save_progress(id, position, duration),
-        Playing::Episode(id) => client.save_episode_progress(id, position, duration),
+        // The id is what progress belongs to; the next episode travelling beside
+        // it is about what happens at the end of the file and has no business in
+        // somebody's watch history.
+        Playing::Episode { id, .. } => client.save_episode_progress(id, position, duration),
     };
     if let Err(e) = result {
         eprintln!("theia-player: {e}");
+    }
+}
+
+/// Starts the next episode when a file ends, if the viewer asked for that.
+///
+/// The engine is what says the file ended: `eof-reached` is a property of the
+/// file that is loaded, and it is absent while nothing is loaded - an absent
+/// value is not the end of anything, and reading it as one would start an
+/// episode from an idle player. `keep-open=yes` keeps the finished file loaded,
+/// so the property stays set for as long as nobody touches the player, which is
+/// why the session holds a guard: without it the telemetry thread would start
+/// the next episode twice a second.
+///
+/// The guard is re-armed by the engine's own answer - a tick that reports no end
+/// - rather than by the load the player itself issues, and that is deliberate. A
+/// load that has just been handed to mpv can still be reporting the file before
+/// it, and for how long is not something this process can observe from outside;
+/// a guard re-armed by the load would act inside that window, so the episode
+/// after the one just started would start on top of it. Keying on the property
+/// needs no such judgement: the tick that re-arms is the same tick's reading of
+/// the same value.
+///
+/// The film ending and the viewer closing the window are different events, and
+/// only the first one autoplays: the window closing ends the process, and a
+/// viewer who pressed stop left the media empty (see `player_stop`), which is
+/// what the match below reads.
+fn autoplay_next_episode() {
+    // One lock at a time, each taken and released on its own: the session first,
+    // because the answer comes from the engine, then the preferences, then the
+    // media. This file never holds two of its locks at once.
+    let ended = {
+        let mut guard = match SESSION.lock() {
+            Ok(guard) => guard,
+            Err(_) => return,
+        };
+        let Some(session) = guard.as_mut() else { return };
+        if session.engine.property("eof-reached").as_deref() == Some("yes") {
+            if session.end_handled {
+                return;
+            }
+            session.end_handled = true;
+            true
+        } else {
+            // No file has ended, so the next end is a fresh one.
+            session.end_handled = false;
+            false
+        }
+    };
+    if !ended {
+        return;
+    }
+    // The end has been recorded whether or not anything comes of it: a
+    // preference turned on ten minutes after the film finished must not start an
+    // episode the viewer has moved on from.
+    if !PLAYBACK.lock().map(|guard| guard.auto_play_next).unwrap_or(false) {
+        return;
+    }
+    let next = match *CURRENT_MEDIA.lock().unwrap() {
+        Some(Playing::Episode { next: Some(id), .. }) => id,
+        // A film, an episode the server says is the last one, and a stopped
+        // player all land here, which is the point of keeping the next id with
+        // the media rather than in a static of its own.
+        _ => return,
+    };
+    // The finished episode is written before the record it belongs to is
+    // replaced: the periodic save runs every five seconds, so its last word on
+    // this episode can be five seconds old, and after the switch there is
+    // nothing left to write its end from.
+    save_progress();
+    // The same path the library's own click takes, so the next episode resumes
+    // where it was left, brings its sidecars and records its own progress.
+    match play_episode(next) {
+        Ok(_) => println!("theia-player: autoplaying episode {next}"),
+        // Logged and dropped, never fatal: a thread that died here would take the
+        // status frames, the audio watchdog and the progress saves with it, and
+        // nobody would know why the player went quiet.
+        Err(e) => eprintln!("theia-player: could not autoplay episode {next}: {e}"),
     }
 }
 
@@ -2015,8 +2884,13 @@ fn start_engine(wid: isize, media: Option<&str>, silent: bool) -> Result<(), Str
         // The mode the engine was just configured for, not a second opinion:
         // `audio` is PCM on macOS and a passthrough request elsewhere.
         audio,
+        // Whatever the OSD has already chosen, or the sheet's own defaults: this
+        // is the copy the load path reads, and it is written only here and by
+        // `apply_playback`.
+        playback: stored_playback(),
         media: None,
         title: None,
+        original_language: None,
         loaded_at: None,
         start_at: 0.0,
         aid: None,
@@ -2025,6 +2899,7 @@ fn start_engine(wid: isize, media: Option<&str>, silent: bool) -> Result<(), Str
         sidecars_pending: Vec::new(),
         sidecar_tries: 0,
         sidecar_decided: false,
+        end_handled: false,
         audio_reason: None,
         quality: None,
         duration_hint: None,
@@ -2036,6 +2911,14 @@ fn start_engine(wid: isize, media: Option<&str>, silent: bool) -> Result<(), Str
         session.mark_loaded(path.to_string(), title, 0.0, Vec::new());
     }
     *SESSION.lock().unwrap() = Some(session);
+    // The same application the sheet's save runs, once, here - so the process
+    // never renders a default nobody chose. It is deliberately after the load
+    // above: the properties are live, and the load is what needs the window, not
+    // the settings. A refusal is logged and does not stop the player: an engine
+    // that would not take a subtitle colour is still an engine.
+    if let Err(e) = apply_playback() {
+        eprintln!("theia-player: playback preferences not applied: {e}");
+    }
     Ok(())
 }
 
@@ -2046,6 +2929,11 @@ fn flag(name: &str) -> Option<String> {
 }
 
 fn main() {
+    // The clock the first status frame measures the startup against. Set here
+    // rather than at the first report: what is being measured is how long this
+    // process took to become useful, and that starts now.
+    let _ = STARTED_AT.set(std::time::Instant::now());
+
     // A build that cannot name itself can never be updated by anything that
     // asks, which is decision 24 applied to the player: the installer next door
     // runs exactly this command to find out what is installed. Answered first,
@@ -2148,6 +3036,8 @@ fn main() {
             player_home,
             player_series_home,
             player_watch_stats,
+            player_osd_stats,
+            player_set_playback,
             player_series_detail,
             player_season,
             player_play,
@@ -2260,14 +3150,46 @@ fn main() {
             let _ = window.show();
 
             // Telemetry, mpv -> Rust -> OSD. The page never polls.
+            //
+            // A frame is sent when the state a viewer can see has moved, and
+            // once every two seconds when it has not. What the interface does
+            // with a frame is re-render, and re-rendering a screen that says the
+            // same thing is work nobody asked for: measured on 24 September
+            // 2026, an idle player used 2.8 % of a core and the number was
+            // identical with one film in the library and with two hundred and
+            // fifty. The diagnostics move every tick by design - the startup
+            // clock, the interface's own measurements - so they are taken out
+            // of the comparison rather than out of the frame.
             let emitter = window.clone();
             std::thread::spawn(move || {
                 let mut tick: u32 = 0;
+                let mut last_visible = String::new();
+                let mut last_sent = std::time::Instant::now() - Duration::from_secs(5);
                 loop {
                     std::thread::sleep(Duration::from_millis(500));
-                    let _ = emitter.emit("player-status", player_status());
+                    // The rounded corners come back once the size has settled.
+                    settle_round_region(&emitter);
+                    let frame = player_status();
+                    let mut value: serde_json::Value =
+                        serde_json::from_str(&frame).unwrap_or(serde_json::Value::Null);
+                    if let Some(map) = value.as_object_mut() {
+                        for key in ["sinceStartMs", "osdWorstFrameMs", "osdSlowFrames", "osdFrames", "osdResizeEvents"] {
+                            map.remove(key);
+                        }
+                    }
+                    let visible = value.to_string();
+                    if visible != last_visible || last_sent.elapsed() >= Duration::from_secs(2) {
+                        let _ = emitter.emit("player-status", frame);
+                        last_visible = visible;
+                        last_sent = std::time::Instant::now();
+                    }
                     supervise_audio(&emitter);
                     supervise_subtitles();
+                    // The three things that happen on their own, on the thread
+                    // that already ticks: the sound falling back, the sidecar
+                    // subtitles arriving, and the next episode following this
+                    // one. Each reads mpv and does at most one thing.
+                    autoplay_next_episode();
                     // Every five seconds is often enough for a resume point and
                     // rare enough that an idle player makes no traffic at all.
                     tick += 1;
@@ -2322,9 +3244,20 @@ fn main() {
                     // in an about screen.
                     println!("engine-pin: {}", player_engine_pin());
                     let mut last = String::new();
+                    let mut last_style = String::new();
                     loop {
                         std::thread::sleep(Duration::from_secs(1));
                         println!("{}", player_status());
+                        // What the engine holds for subtitles, read back from it
+                        // and printed on change: the sheet's own sliders change
+                        // it while a film plays, and a refusal leaves the engine
+                        // on its previous value, which is what a silent failure
+                        // looks like from here.
+                        let style = player_subtitles();
+                        if style != last_style {
+                            println!("subtitle-style: {style}");
+                            last_style = style;
+                        }
                         // Tracks arrive with the file and change when a
                         // subtitle is added, so they are printed on change
                         // rather than every second.
@@ -2347,12 +3280,17 @@ fn main() {
                     // process disappears.
                     save_progress();
                 }
-                // The region is a snapshot of a size, so every resize needs a new
-                // one: a stale region would clip a bigger window to the shape it
-                // used to have. Maximizing and fullscreen clear it instead, which
-                // is why the helper asks the window rather than a flag of ours.
+                // The region is a snapshot of a size, so a window that keeps
+                // growing would be clipped to the shape it used to have - but
+                // re-making it per event is what made a drag of the window's edge
+                // lag (measured: five frames drawn against eighty-eight with it
+                // left alone). So a resize *drops* the region, which cannot clip
+                // anything, and the telemetry thread puts a fresh one back once
+                // the size has settled. Decision 147 carries the numbers.
                 tauri::WindowEvent::Resized(_) | tauri::WindowEvent::ScaleFactorChanged { .. } => {
-                    round_window(window);
+                    if let Ok(hwnd) = window.hwnd() {
+                        note_resize(hwnd.0 as isize);
+                    }
                 }
                 _ => {}
             }
@@ -2465,5 +3403,346 @@ mod player_window_tests {
         let (width, height) = fitted_window_size(1366.0, 768.0);
         assert!(width <= 1286.0 && height <= 688.0);
         assert!((width / height - 16.0 / 9.0).abs() < 0.001);
+    }
+}
+
+/// The playback preferences and what they become in the engine.
+///
+/// These are tests of the mapping functions and not of the engine: they assert
+/// the *value* each setting turns into, which is the whole of what the settings
+/// sheet promises. Whether the picture then looks right is a question for the
+/// pixel check over the real player, and is not claimed here.
+#[cfg(test)]
+mod playback_tests {
+    use super::*;
+
+    /// The defaults as the struct builds them, with one part of the style
+    /// changed - so a test says only what it is about.
+    fn style_with(change: impl FnOnce(&mut SubtitleStyle)) -> PlaybackPreferences {
+        let mut prefs = PlaybackPreferences::default();
+        change(&mut prefs.subtitle_style);
+        prefs
+    }
+
+    /// The value the table would set `name` to, or a panic naming the property:
+    /// a setting that vanished from the table is the failure these tests exist
+    /// for, and `.unwrap_or_default()` would hide it behind an empty string.
+    fn table_for(
+        prefs: &PlaybackPreferences,
+        original_language: Option<&str>,
+        name: &str,
+    ) -> String {
+        playback_properties(prefs, original_language)
+            .into_iter()
+            .find(|(key, _)| *key == name)
+            .map(|(_, value)| value)
+            .unwrap_or_else(|| panic!("the table sets no {name}"))
+    }
+
+    fn property(prefs: &PlaybackPreferences, name: &str) -> String {
+        table_for(prefs, None, name)
+    }
+
+    fn sets(prefs: &PlaybackPreferences, name: &str) -> bool {
+        playback_properties(prefs, None)
+            .iter()
+            .any(|(key, _)| *key == name)
+    }
+
+    #[test]
+    fn an_empty_payload_is_the_defaults_the_sheet_ships() {
+        let parsed: PlaybackPreferences = serde_json::from_str("{}").expect("an empty payload");
+        assert_eq!(parsed, PlaybackPreferences::default());
+        // Spelled out rather than compared with the struct's `Default` alone:
+        // these are the numbers in the page's own `types.ts`, and a default that
+        // moved on one side only is the silent behaviour change this test is for.
+        assert!(parsed.auto_play_next);
+        assert_eq!(parsed.audio_language, AudioLanguage::Auto);
+        assert_eq!(parsed.subtitle_language, SubtitleLanguage::Auto);
+        assert_eq!(parsed.subtitle_style.size_px, 36.0);
+        assert_eq!(parsed.subtitle_style.height_px, 120.0);
+        assert_eq!(parsed.subtitle_style.colour, "#EDE7DC");
+        assert_eq!(parsed.subtitle_style.outline, Outline::Shadow);
+        assert_eq!(parsed.subtitle_style.background, "none");
+        assert_eq!(parsed.subtitle_style.font, Font::Standard);
+        assert!(!parsed.subtitle_style.bold);
+    }
+
+    #[test]
+    fn a_payload_from_the_sheet_is_read_field_for_field() {
+        // The shape the sheet actually sends, camelCase and nesting included: a
+        // renamed field would leave every setting at its default with nothing
+        // anywhere to show for it.
+        let payload = r##"{
+            "autoPlayNext": false,
+            "audioLanguage": "vf",
+            "subtitleLanguage": "en",
+            "subtitleStyle": {
+                "sizePx": 48,
+                "heightPx": 160,
+                "colour": "#112233",
+                "outline": "outline",
+                "background": "#445566",
+                "font": "mono",
+                "bold": true
+            }
+        }"##;
+        let parsed: PlaybackPreferences =
+            serde_json::from_str(payload).expect("the sheet's own payload");
+        assert!(!parsed.auto_play_next);
+        assert_eq!(parsed.audio_language, AudioLanguage::Vf);
+        assert_eq!(parsed.subtitle_language, SubtitleLanguage::En);
+        assert_eq!(parsed.subtitle_style.size_px, 48.0);
+        assert_eq!(parsed.subtitle_style.height_px, 160.0);
+        assert_eq!(parsed.subtitle_style.colour, "#112233");
+        assert_eq!(parsed.subtitle_style.outline, Outline::Outline);
+        assert_eq!(parsed.subtitle_style.background, "#445566");
+        assert_eq!(parsed.subtitle_style.font, Font::Mono);
+        assert!(parsed.subtitle_style.bold);
+    }
+
+    #[test]
+    fn a_value_outside_the_contract_is_refused_rather_than_defaulted() {
+        // The enumerated fields are refused by serde itself, with the value that
+        // was wrong in the message.
+        for payload in [
+            r#"{"audioLanguage": "de"}"#,
+            r#"{"subtitleLanguage": "de"}"#,
+            r#"{"subtitleStyle": {"outline": "outline-and-shadow"}}"#,
+            r#"{"subtitleStyle": {"font": "comic"}}"#,
+        ] {
+            let error = serde_json::from_str::<PlaybackPreferences>(payload)
+                .expect_err("this payload names no setting the sheet can produce");
+            assert!(error.to_string().contains("unknown variant"), "{payload}: {error}");
+        }
+        // The two colours travel as free text, because a background is `none` or
+        // a colour - so they are checked by the validator, which names the field
+        // the way the sheet knows it.
+        let wrong_ink = style_with(|style| style.colour = "blue".to_string());
+        assert!(wrong_ink.validate().unwrap_err().contains("subtitleStyle.colour"));
+        let wrong_box = style_with(|style| style.background = "#EDE7D".to_string());
+        assert!(wrong_box.validate().unwrap_err().contains("subtitleStyle.background"));
+        // And what the sheet can produce passes, including the background box.
+        assert!(PlaybackPreferences::default().validate().is_ok());
+        let boxed = style_with(|style| style.background = "#203040".to_string());
+        assert!(boxed.validate().is_ok());
+    }
+
+    #[test]
+    fn the_sheet_sizes_are_converted_into_the_engines_own_unit() {
+        // Two thirds, because the engine measures in pixels of a 720-tall window
+        // while `sub-scale-by-window` is on and the sheet's slider is drawn
+        // against a 1080-tall picture. The default and the top of the slider.
+        assert_eq!(subtitle_font_size(36.0), 24.0);
+        assert_eq!(subtitle_font_size(72.0), 48.0);
+        // The height becomes a percentage of the picture rather than a margin:
+        // the same 2/3, measured against the 720 rows it is a percentage of.
+        // Checked at the three heights the engine was measured with.
+        for height in [40.0, 120.0, 200.0] {
+            let from_the_bottom = (100.0 - subtitle_position(height)) * 7.2;
+            assert!(
+                (from_the_bottom - height * 2.0 / 3.0).abs() < 0.001,
+                "{height} px of height became {from_the_bottom} engine pixels"
+            );
+        }
+    }
+
+    #[test]
+    fn the_properties_carry_those_values_as_the_engine_prints_them() {
+        let prefs = style_with(|style| {
+            style.size_px = 36.0;
+            style.height_px = 120.0;
+        });
+        assert_eq!(property(&prefs, "sub-font-size"), "24.00");
+        // The default height as a percentage: 100 - 120 / 10.8.
+        assert_eq!(property(&prefs, "sub-pos"), "88.89");
+        // And no margin on top of it: the engine's own default of 34 would lift
+        // the band by about 23 of our pixels, above what the slider asked for.
+        assert_eq!(property(&prefs, "sub-margin-y"), "0");
+        // `force`, because with anything less the script's own font, size and
+        // colour would be the ones drawn, and the script's own margins emptied -
+        // `sub-pos` cannot override those on an ASS track.
+        assert_eq!(property(&prefs, "sub-ass-override"), "force");
+        assert_eq!(property(&prefs, "sub-ass-force-style"), "MarginV=0");
+    }
+
+    #[test]
+    fn a_colour_reaches_the_engine_alpha_first() {
+        // Measured against the engine: it prints colours as `#AARRGGBB` and reads
+        // eight digits the same way, alpha first. The sheet sends six, which carry
+        // none, so the alpha is written here - opaque, which is what the paper the
+        // interface is drawn on is.
+        assert_eq!(opaque_colour("#EDE7DC"), "#FFEDE7DC");
+        assert_eq!(property(&PlaybackPreferences::default(), "sub-color"), "#FFEDE7DC");
+        // Another shape goes through unchanged rather than mangled: the engine's
+        // own refusal is the answer, and `apply_playback_to` prints it.
+        assert_eq!(opaque_colour("red"), "red");
+        assert_eq!(opaque_colour("#EDE7D"), "#EDE7D");
+    }
+
+    #[test]
+    fn a_background_colour_wins_over_the_outline() {
+        let prefs = style_with(|style| {
+            style.outline = Outline::Outline;
+            style.background = "#203040".to_string();
+        });
+        // A band across the picture, which is what television does; the engine's
+        // `background-box` would fit the box to the text instead.
+        assert_eq!(property(&prefs, "sub-border-style"), "opaque-box");
+        // 70 % alpha, so the picture stays readable through the band.
+        assert_eq!(property(&prefs, "sub-back-color"), "#B3203040");
+        // And the outline's own properties are not set at all in this case, so
+        // there is nothing stale for the next change to inherit.
+        assert!(!sets(&prefs, "sub-border-size"));
+        assert!(!sets(&prefs, "sub-shadow-offset"));
+    }
+
+    #[test]
+    fn the_three_outlines_are_the_engines_two_styles() {
+        let shadow = style_with(|style| style.outline = Outline::Shadow);
+        assert_eq!(property(&shadow, "sub-border-style"), "outline-and-shadow");
+        assert_eq!(property(&shadow, "sub-border-size"), "0");
+        assert_eq!(property(&shadow, "sub-shadow-offset"), "1.2");
+        assert!(!sets(&shadow, "sub-back-color"));
+
+        let outline = style_with(|style| style.outline = Outline::Outline);
+        assert_eq!(property(&outline, "sub-border-style"), "outline-and-shadow");
+        assert_eq!(property(&outline, "sub-border-size"), "2.4");
+        assert_eq!(property(&outline, "sub-shadow-offset"), "0");
+
+        // The engine has no borderless style - its choices are
+        // `outline-and-shadow`, `opaque-box` and `background-box` - so a fully
+        // transparent box is how none is said.
+        let none = style_with(|style| style.outline = Outline::Off);
+        assert_eq!(property(&none, "sub-border-style"), "background-box");
+        assert_eq!(property(&none, "sub-back-color"), "#00000000");
+        assert!(!sets(&none, "sub-border-size"));
+    }
+
+    #[test]
+    fn dark_text_inverts_its_own_outline() {
+        assert!(!is_dark("#EDE7DC"));
+        assert!(is_dark("#101010"));
+        // The threshold, on both sides of it: #808080 is a luminance of 0.502 and
+        // #7F7F7F is 0.498.
+        assert!(!is_dark("#808080"));
+        assert!(is_dark("#7F7F7F"));
+        // A colour that cannot be read is treated as light, which is what nearly
+        // every subtitle is.
+        assert!(!is_dark("red"));
+
+        let light = PlaybackPreferences::default();
+        assert_eq!(property(&light, "sub-border-color"), "#FF000000");
+        assert_eq!(property(&light, "sub-shadow-color"), "#FF000000");
+        let dark = style_with(|style| style.colour = "#101010".to_string());
+        assert_eq!(property(&dark, "sub-border-color"), "#FFEDE7DC");
+        assert_eq!(property(&dark, "sub-shadow-color"), "#FFEDE7DC");
+    }
+
+    #[test]
+    fn the_language_lists_are_what_the_engine_reads() {
+        let with = |audio, subtitles| PlaybackPreferences {
+            audio_language: audio,
+            subtitle_language: subtitles,
+            ..Default::default()
+        };
+
+        // `auto` asks for nothing, which is the file's own default. It stays
+        // nothing even when the server did name the film's original language:
+        // auto means the file decides, not the metadata.
+        let auto = with(AudioLanguage::Auto, SubtitleLanguage::Auto);
+        assert_eq!(audio_language_list(&auto, None), "");
+        assert_eq!(audio_language_list(&auto, Some("en")), "");
+        assert_eq!(subtitle_language_list(&auto), "");
+
+        // The French version, and French subtitles: three-letter codes beside the
+        // two-letter one, because a file's tracks carry whichever its maker wrote.
+        let vf = with(AudioLanguage::Vf, SubtitleLanguage::Fr);
+        assert_eq!(audio_language_list(&vf, None), "fr,fre,fra");
+        assert_eq!(subtitle_language_list(&vf), "fr,fre,fra");
+
+        // The original language, known and unknown: the film's own tongue when
+        // the server said what it is, and no request at all when it did not.
+        let vo = with(AudioLanguage::Vo, SubtitleLanguage::En);
+        assert_eq!(audio_language_list(&vo, Some("de")), "de");
+        assert_eq!(audio_language_list(&vo, None), "");
+        assert_eq!(subtitle_language_list(&vo), "en,eng");
+
+        // `none` and `auto` send the same empty list and mean different things:
+        // no subtitles is said by the load option, not by a language list.
+        let off = with(AudioLanguage::Auto, SubtitleLanguage::Off);
+        assert_eq!(subtitle_language_list(&off), "");
+    }
+
+    #[test]
+    fn the_table_carries_every_property_the_preferences_decide() {
+        let prefs = PlaybackPreferences {
+            audio_language: AudioLanguage::Vf,
+            subtitle_language: SubtitleLanguage::Off,
+            ..Default::default()
+        };
+        for name in [
+            // The style, then the two language lists, then the outline - which is
+            // what the two callers of this table apply, in one place.
+            "sub-font-size",
+            "sub-margin-y",
+            "sub-pos",
+            "sub-color",
+            "sub-ass-override",
+            "sub-ass-force-style",
+            "sub-scale-by-window",
+            "sub-font",
+            "sub-bold",
+            "sub-border-color",
+            "sub-shadow-color",
+            "alang",
+            "slang",
+            "sub-border-style",
+        ] {
+            assert!(sets(&prefs, name), "the table sets no {name}");
+        }
+        // `force` rather than the engine's own default of `scale`: an ASS track
+        // would otherwise take none of the style, which was measured as a 27 px
+        // white Arial where the sheet asked for bone at 24 px.
+        assert_eq!(property(&prefs, "sub-ass-override"), "force");
+        // And set rather than assumed, because the 2/3 conversion is only true
+        // while it is on.
+        assert_eq!(property(&prefs, "sub-scale-by-window"), "yes");
+        assert_eq!(table_for(&prefs, Some("de"), "alang"), "fr,fre,fra");
+        assert_eq!(table_for(&prefs, Some("de"), "slang"), "");
+    }
+
+    #[test]
+    fn the_font_choices_are_the_generic_families() {
+        // Generic names, because the engine resolves them through its own font
+        // provider and the OSD ships no font the engine could load.
+        assert_eq!(property(&style_with(|style| style.font = Font::Standard), "sub-font"), "sans-serif");
+        assert_eq!(property(&style_with(|style| style.font = Font::Serif), "sub-font"), "serif");
+        assert_eq!(property(&style_with(|style| style.font = Font::Mono), "sub-font"), "monospace");
+    }
+
+    #[test]
+    fn bold_is_the_engines_own_flag() {
+        assert_eq!(property(&PlaybackPreferences::default(), "sub-bold"), "no");
+        assert_eq!(property(&style_with(|style| style.bold = true), "sub-bold"), "yes");
+    }
+
+    #[test]
+    fn a_serialised_payload_reads_back_as_itself() {
+        // The two programs are updated separately, so the shape this side writes
+        // has to be the shape it reads - which is what a settings sheet upgraded
+        // after the player is relying on.
+        let prefs = style_with(|style| {
+            style.size_px = 52.0;
+            style.height_px = 168.0;
+            style.colour = "#203040".to_string();
+            style.outline = Outline::Off;
+            style.background = "#AABBCC".to_string();
+            style.font = Font::Serif;
+            style.bold = true;
+        });
+        let text = serde_json::to_string(&prefs).expect("the preferences serialise");
+        let back: PlaybackPreferences = serde_json::from_str(&text).expect("and read back");
+        assert_eq!(back, prefs);
     }
 }

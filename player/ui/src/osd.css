@@ -2101,6 +2101,22 @@ button.action:focus-visible {
 	white-space: nowrap;
 }
 
+/* While the window is being resized by hand, the interface drops what makes
+   Chromium re-raster the whole page on every step: the blurs behind the hero,
+   the backdrop filters of the scrims, and the transitions that would animate
+   their way through the gesture. They come back when the size settles.
+   Measured on 24 September 2026 with a scripted drag of forty steps, 25 ms
+   apart: this process was 363 ms behind the pointer with them, and the number
+   to beat is that one. The class is set by the OSD's own resize listener and
+   removed by its debounce, so a drag is one switch on and one off. */
+html[data-resizing='true'] *,
+html[data-resizing='true'] *::before,
+html[data-resizing='true'] *::after {
+	filter: none !important;
+	backdrop-filter: none !important;
+	transition: none !important;
+}
+
 /* What was watched, in the settings sheet (decision 146).
    The layout is the one the maintainer brought on 24 September 2026: an
    overview of tiles, the month on one line, the films/series ratio as a split
@@ -2294,6 +2310,283 @@ button.action:focus-visible {
 
 .settings-section p.settings-copy-note--error {
 	color: var(--color-error);
+}
+
+/* --- playback and subtitles (decision 148) --------------------------------
+   Two panes from the reference the maintainer brought on 24 September 2026:
+   the playback row of three decisions, and the subtitle style - a preview, two
+   measurements, four looks. The disposition is the reference's; the language
+   is this product's, which means the glyph column, the bone-1px hairlines that
+   already separate settings, and an accent spent only on focus.
+
+   The preview is not decoration. It is drawn at the film's own proportion -
+   the stage stands for a picture 1080 tall, and `1cqh / 1080` is the same
+   2/3 conversion the engine is handed, so a size the sheet shows is the size
+   the film takes. That rule is what makes a preview honest, and it is the one
+   thing a screenshot of it cannot check. */
+
+.settings-row {
+	display: grid;
+	gap: 0.8rem;
+	padding: 0.9rem 0;
+}
+
+.settings-row-head {
+	display: grid;
+	grid-template-columns: 1.75rem minmax(0, 1fr) auto;
+	gap: 0.7rem;
+	align-items: start;
+}
+
+.settings-row-icon {
+	display: grid;
+	width: 1.75rem;
+	height: 1.75rem;
+	border: 1px solid rgb(var(--channel-bone) / 0.1);
+	border-radius: 0.55rem;
+	color: var(--color-muted);
+	place-items: center;
+}
+
+/* The font row's glyph is a word rather than an icon: "Aa" is what a type
+   choice looks like, and lucide has no letter pair that means it. */
+.settings-row-icon--text {
+	font-family: var(--font-display);
+	font-size: 0.8rem;
+	letter-spacing: 0;
+	line-height: 1;
+}
+
+.settings-value {
+	align-self: center;
+	padding: 0.25rem 0.6rem;
+	border: 1px solid var(--color-line);
+	border-radius: 999px;
+	background: rgb(var(--channel-ink) / 0.6);
+	color: var(--color-parchment);
+	font-family: var(--font-label);
+	font-size: var(--text-label);
+	letter-spacing: 0.08em;
+	white-space: nowrap;
+}
+
+.settings-slider {
+	display: flex;
+	align-items: center;
+	gap: 0.7rem;
+	padding-left: 2.45rem;
+}
+
+.settings-step {
+	display: grid;
+	width: 2.75rem;
+	height: 2.75rem;
+	flex: none;
+	border: 1px solid var(--color-line);
+	border-radius: 999px;
+	background: rgb(var(--channel-ink) / 0.6);
+	color: var(--color-parchment);
+	cursor: pointer;
+	place-items: center;
+	transition: color var(--duration-fast) var(--ease-cine), border-color var(--duration-fast) var(--ease-cine);
+}
+
+.settings-step:hover:not(:disabled) {
+	border-color: rgb(var(--channel-bone) / 0.3);
+	color: var(--color-bone);
+}
+
+.settings-step:disabled {
+	color: var(--color-faint);
+	cursor: default;
+}
+
+.settings-step:focus-visible,
+.settings-slider input[type='range']:focus-visible,
+.settings-swatch:focus-visible,
+.settings-reset:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+}
+
+.settings-slider input[type='range'] {
+	min-width: 0;
+	flex: 1;
+	height: 2.75rem;
+	background: transparent;
+	cursor: pointer;
+	appearance: none;
+}
+
+.settings-slider input[type='range']::-webkit-slider-runnable-track {
+	height: 0.25rem;
+	border-radius: 999px;
+	background: rgb(var(--channel-bone) / 0.3);
+}
+
+.settings-slider input[type='range']::-webkit-slider-thumb {
+	width: 1rem;
+	height: 1rem;
+	margin-top: -0.375rem;
+	border: 0;
+	border-radius: 999px;
+	background: var(--color-bone);
+	appearance: none;
+}
+
+.settings-slider input[type='range']::-moz-range-track {
+	height: 0.25rem;
+	border-radius: 999px;
+	background: rgb(var(--channel-bone) / 0.3);
+}
+
+.settings-slider input[type='range']::-moz-range-progress {
+	height: 0.25rem;
+	border-radius: 999px;
+	background: var(--color-bone);
+}
+
+.settings-slider input[type='range']::-moz-range-thumb {
+	width: 1rem;
+	height: 1rem;
+	border: 0;
+	border-radius: 999px;
+	background: var(--color-bone);
+}
+
+.settings-swatches {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.55rem;
+	padding-left: 2.45rem;
+}
+
+.settings-swatch {
+	width: 2.5rem;
+	height: 2.5rem;
+	padding: 0;
+	border: 0;
+	border-radius: 999px;
+	background: var(--swatch);
+	box-shadow: inset 0 0 0 1px rgb(var(--channel-bone) / 0.16);
+	cursor: pointer;
+	transition: transform var(--duration-fast) var(--ease-cine), box-shadow var(--duration-fast) var(--ease-cine);
+}
+
+.settings-swatch:hover {
+	transform: scale(1.06);
+}
+
+/* The chosen swatch wears the same inversion the rail and the segments use -
+   bone, not the accent - and the ring is drawn outside it so a black swatch
+   and a white one are equally visible against the sheet. */
+.settings-swatch[aria-pressed='true'] {
+	box-shadow: 0 0 0 2px rgb(18 17 16), 0 0 0 3px var(--color-bone), inset 0 0 0 1px rgb(var(--channel-bone) / 0.16);
+}
+
+/* "Nothing here" as a disc with a line through it, which is what the reference
+   drew and what a palette needs: a word would be read, and this is looked at. */
+.settings-swatch--none {
+	background-color: rgb(var(--channel-ink) / 0.75);
+	background-image: linear-gradient(
+		135deg,
+		transparent calc(50% - 1px),
+		var(--color-muted) calc(50% - 1px) calc(50% + 1px),
+		transparent calc(50% + 1px)
+	);
+	box-shadow: inset 0 0 0 1px var(--color-line);
+}
+
+.settings-reset {
+	flex: none;
+	padding: 0.35rem 0.1rem;
+	border: 0;
+	background: none;
+	color: var(--color-muted);
+	font-family: var(--font-label);
+	font-size: var(--text-label);
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	cursor: pointer;
+	transition: color var(--duration-fast) var(--ease-cine);
+}
+
+.settings-reset:hover:not(:disabled) {
+	color: var(--color-bone);
+}
+
+.settings-reset:disabled {
+	color: var(--color-faint);
+	cursor: default;
+}
+
+.subtitle-preview {
+	display: grid;
+	gap: 0.5rem;
+	padding: 0.2rem 0 0.7rem;
+}
+
+.subtitle-preview-title {
+	color: var(--color-faint);
+}
+
+/* `container-type: size` is what lets the subtitle inside be measured against
+   this box: `cqh` is one per cent of its height, so a picture 1080 tall is
+   `100cqh / 1080` per stored pixel. The first version divided one per cent by
+   1080 and drew the sample a hundred times too small, which the harness caught
+   by reading the arithmetic back rather than by looking at it. The box is 16:9
+   because the arithmetic only means anything if the stage is the shape of the
+   picture. */
+.subtitle-preview-stage {
+	--sub-scale: calc(100cqh / 1080);
+	position: relative;
+	width: 100%;
+	aspect-ratio: 16 / 9;
+	container-type: size;
+	overflow: hidden;
+	border: 1px solid var(--color-line);
+	border-radius: var(--radius-row);
+	background:
+		radial-gradient(120% 80% at 22% 12%, rgb(var(--channel-bone) / 0.09), transparent 62%),
+		linear-gradient(160deg, #24211e, #0d0c0b 68%);
+}
+
+.subtitle-preview-band {
+	position: absolute;
+	right: 0;
+	bottom: calc(var(--sub-height) * var(--sub-scale));
+	left: 0;
+	display: flex;
+	justify-content: center;
+	/* The band's own padding is a fraction of the type, not a fixed length: a
+	   band that stayed 5px tall while the letters grew would be a band drawn for
+	   a size nobody chose. libass pads its box the same way, in ems. */
+	padding: calc(var(--sub-size) * var(--sub-scale) * 0.14) 0;
+	background: var(--sub-band);
+}
+
+.subtitle-preview-line {
+	max-width: 90%;
+	color: var(--sub-colour);
+	font-family: var(--sub-font);
+	font-size: calc(var(--sub-size) * var(--sub-scale));
+	font-weight: var(--sub-weight);
+	line-height: 1.25;
+	text-align: center;
+}
+
+/* The two outlines, in CSS: the engine draws them with libass, so these are
+   approximations of its strokes - the size, the colour, the family and the band
+   are exact, and the film stays the authority on the last two per cent. */
+.subtitle-preview-stage[data-outline='outline'] .subtitle-preview-line {
+	-webkit-text-stroke: calc(var(--sub-size) * var(--sub-scale) * 0.055) var(--sub-outline);
+	paint-order: stroke fill;
+}
+
+.subtitle-preview-stage[data-outline='shadow'] .subtitle-preview-line {
+	text-shadow:
+		calc(var(--sub-size) * var(--sub-scale) * 0.06)
+		calc(var(--sub-size) * var(--sub-scale) * 0.06) 0 var(--sub-outline);
 }
 
 .settings-update-row {

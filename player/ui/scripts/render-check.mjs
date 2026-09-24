@@ -585,7 +585,14 @@ async function assertTypingIsNotShortcuts(page, address) {
 		failures++;
 	}
 	const commands = await page.evaluate(() => window.__commands ?? []);
-	const playback = commands.filter((c) => c !== 'player_library' && c !== 'player_tracks');
+	// What this asserts is that typing moves the player, so what is filtered
+	// out is the reads and the measurements: the library and the track list are
+	// reads, and the interface's own performance report - added on 24 September
+	// 2026, once a second, with the numbers it drew - is not a playback command
+	// by any reading. A name that appears here and *is* playback would make this
+	// assertion quietly blind, which is why the list is named for what it holds.
+	const diagnostics = new Set(['player_library', 'player_tracks', 'player_osd_stats', 'player_set_playback']);
+	const playback = commands.filter((c) => !diagnostics.has(c));
 	if (playback.length) {
 		console.error(`typing the address issued ${playback.length} playback command(s): ${playback.join(', ')}`);
 		failures++;
@@ -686,7 +693,9 @@ async function assertOnePressOneCommand(page) {
 		await button.click();
 		await page.waitForTimeout(150);
 		const commands = await page.evaluate(() => window.__commands ?? []);
-		const stateChanging = commands.filter((c) => c !== 'player_tracks' && c !== 'player_library');
+		// The reads and the interface's own measurement report are not playback
+		// commands; see the note on the address-typing assertion above.
+		const stateChanging = commands.filter((c) => !['player_tracks', 'player_library', 'player_osd_stats', 'player_set_playback'].includes(c));
 		if (stateChanging.length > 1) {
 			console.error(`pressing "${label}" issued ${stateChanging.length} commands: ${stateChanging.join(', ')}`);
 			failures++;
@@ -1157,10 +1166,10 @@ async function assertQualityTabs(page) {
 // presses to leave fullscreen ended the film instead. Decision D2 asks for this
 // exact sequence to be proposed and validated.
 //
-// The state reaches the OSD through `tauri://resize`, which is the only signal this
-// Tauri version emits for a fullscreen change, so the simulation sends that event
-// the way the runtime does. Without it the check would be testing a state the
-// product never reaches.
+// The state reaches the OSD through the window's own resize signal, which is the
+// only one this Tauri version emits for a fullscreen change, so the simulation
+// fires the handler the product registers, the way the runtime does. Without it
+// the check would be testing a state the product never reaches.
 async function assertEscapeLeavesFullscreenFirst(page) {
 	const state = () =>
 		page.evaluate(() => ({
@@ -1172,7 +1181,7 @@ async function assertEscapeLeavesFullscreenFirst(page) {
 
 	// (a) the product's own binding takes the window fullscreen.
 	await page.keyboard.press('f');
-	await page.evaluate(() => window.__handlers['tauri://resize']?.({ payload: null }));
+	await page.evaluate(() => window.__fireResize());
 	await page.waitForTimeout(250);
 	let now = await state();
 	if (!now.fullscreen) {
@@ -1188,7 +1197,7 @@ async function assertEscapeLeavesFullscreenFirst(page) {
 
 	// (b) one Escape gives the window back and keeps the film.
 	await page.keyboard.press('Escape');
-	await page.evaluate(() => window.__handlers['tauri://resize']?.({ payload: null }));
+	await page.evaluate(() => window.__fireResize());
 	await page.waitForTimeout(300);
 	now = await state();
 	if (now.closed) {
@@ -1232,7 +1241,7 @@ async function assertEscapeLeavesFullscreenFirst(page) {
 		window.__windowClosed = false;
 	});
 	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
-	await page.evaluate(() => window.__handlers['tauri://resize']?.({ payload: null }));
+	await page.evaluate(() => window.__fireResize());
 	await page.waitForTimeout(200);
 	await page.locator('button[aria-haspopup=dialog]').click();
 	await page.waitForTimeout(300);
@@ -1254,7 +1263,7 @@ async function assertEscapeLeavesFullscreenFirst(page) {
 
 	// (e) and once the menu is gone, the same key leaves fullscreen.
 	await page.keyboard.press('Escape');
-	await page.evaluate(() => window.__handlers['tauri://resize']?.({ payload: null }));
+	await page.evaluate(() => window.__fireResize());
 	await page.waitForTimeout(300);
 	now = await state();
 	if (now.fullscreen || now.closed) {
@@ -2150,6 +2159,16 @@ async function openPage(
 				window: {
 					getCurrentWindow: () => ({
 						minimize() {},
+						// The window's own resize signal, which is how the OSD learns
+						// that the window changed shape or went fullscreen. The
+						// `tauri://resize` bus event this used to rely on never
+						// arrived in the real player - measured on 24 September 2026,
+						// the count was zero through a whole drag of the window - so
+						// the harness registers the handler the product now registers.
+						onResized: async (handler) => {
+							(window.__resizeHandlers ??= []).push(handler);
+							return () => {};
+						},
 						toggleMaximize: async () => {
 							window.__maximized = !window.__maximized;
 						},
@@ -2168,6 +2187,10 @@ async function openPage(
 						},
 					}),
 				},
+			};
+			window.__resizeHandlers = [];
+			window.__fireResize = () => {
+				for (const handler of window.__resizeHandlers) handler({ payload: null });
 			};
 			window.__status = status;
 		},
@@ -2714,14 +2737,22 @@ async function assertSeriesJourney(page) {
 	};
 	await page.getByRole('button', { name: /Réglages|Settings/ }).click();
 	await page.waitForTimeout(250);
-	if ((await page.getByRole('dialog').count()) !== 1 || (await page.locator('.settings-nav-item').count()) !== 5) {
-		console.error('the player settings sheet or its five sections are missing');
+	if ((await page.getByRole('dialog').count()) !== 1 || (await page.locator('.settings-nav-item').count()) !== 6) {
+		console.error('the player settings sheet or its six sections are missing');
 		failures++;
 	}
-	// The two real preference switches live behind Playback.
-	await openSettingsSection(/Lecture|Playback/);
+	// The two switches that describe the interface, and the three decisions that
+	// describe the film: they used to share one pane, and 24 September 2026 took
+	// them apart because they answer different questions - one is about the
+	// screen, the others about what plays on it.
+	await openSettingsSection(/Interface/);
 	if ((await page.getByRole('switch').count()) !== 2) {
-		console.error('the Playback panel does not hold its two real preference switches');
+		console.error('the Interface panel does not hold its two real preference switches');
+		failures++;
+	}
+	await openSettingsSection(/Lecture|Playback/);
+	if ((await page.getByRole('switch').count()) !== 1) {
+		console.error('the Playback panel does not hold the autoplay switch');
 		failures++;
 	}
 	// The connected facts live behind Server, and the address can be taken out.
@@ -2835,6 +2866,152 @@ async function assertSeriesJourney(page) {
 		failures++;
 	}
 	await page.evaluate(() => (window.__watching = undefined));
+
+	// The subtitle style, asserted where it makes a promise: the preview stands
+	// for a picture 1080 pixels tall, so every number the sheet shows can be read
+	// back out of the page as the proportion the film itself would take. A
+	// preview that flattered a choice would pass any photograph of it, which is
+	// why this is arithmetic and not a screenshot.
+	await openSettingsSection(/Sous-titres|Subtitles/);
+	await page.screenshot({ path: join(OUT, '15-settings-subtitles.png') });
+	// And the four looks, which are what the reference's second and third
+	// pictures are: the pane scrolls, and a photograph of its top alone would
+	// leave the swatches, the outlines and the two families unrecorded.
+	await page.locator('.settings-panel').evaluate((node) => node.scrollTo({ top: node.scrollHeight }));
+	await page.waitForTimeout(200);
+	await page.screenshot({ path: join(OUT, '15b-settings-subtitles-looks.png') });
+	await page.locator('.settings-panel').evaluate((node) => node.scrollTo({ top: 0 }));
+	const readPreview = () =>
+		page.locator('.subtitle-preview-stage').evaluate((stage) => {
+			const line = stage.querySelector('.subtitle-preview-line');
+			const band = stage.querySelector('.subtitle-preview-band');
+			const lineStyle = getComputedStyle(line);
+			const bandStyle = getComputedStyle(band);
+			const box = stage.getBoundingClientRect();
+			return {
+				// The content box, because that is what the container's own `cqh`
+				// is one per cent of: the border is not part of the picture.
+				height: stage.clientHeight,
+				fontSize: parseFloat(lineStyle.fontSize),
+				weight: lineStyle.fontWeight,
+				family: lineStyle.fontFamily,
+				colour: lineStyle.color,
+				strokeWidth: parseFloat(lineStyle.webkitTextStrokeWidth || '0'),
+				shadow: lineStyle.textShadow,
+				band: bandStyle.backgroundColor,
+				bandGap: box.bottom - parseFloat(getComputedStyle(stage).borderBottomWidth) - band.getBoundingClientRect().bottom,
+			};
+		});
+	// 1080 is not a magic number here: it is the height both sliders are measured
+	// against, which is what the panel's own sentence tells the reader.
+	const at1080 = (px, stageHeight) => (px * stageHeight) / 1080;
+	const near = (got, want, slack) => Math.abs(got - want) <= slack;
+	let preview = await readPreview();
+	if (!near(preview.fontSize, at1080(36, preview.height), 0.5) || !near(preview.bandGap, at1080(120, preview.height), 0.5)) {
+		console.error(`the preview drew ${preview.fontSize}px of text ${preview.bandGap}px from the bottom on a ${preview.height}px stage; 36 and 120 at 1080 are ${at1080(36, preview.height)} and ${at1080(120, preview.height)} there`);
+		failures++;
+	}
+	// A range input is set the way a browser does it, through the native setter,
+	// so React's own change handler is what runs - a direct assignment would
+	// leave the draft untouched and test nothing.
+	const setSlider = async (name, value) => {
+		await page.getByRole('slider', { name }).evaluate((node, next) => {
+			Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(node, String(next));
+			node.dispatchEvent(new Event('input', { bubbles: true }));
+		}, value);
+	};
+	await setSlider(/Taille du texte|Text size/, 72);
+	await setSlider(/Hauteur|Height/, 200);
+	await page.waitForTimeout(120);
+	preview = await readPreview();
+	if (!near(preview.fontSize, at1080(72, preview.height), 0.8) || !near(preview.bandGap, at1080(200, preview.height), 1)) {
+		console.error(`the sliders moved the preview to ${preview.fontSize}px / ${preview.bandGap}px, expected ${at1080(72, preview.height)} / ${at1080(200, preview.height)}`);
+		failures++;
+	}
+	// The number beside each slider is the value itself, not a decoration: a
+	// sheet that shows a number the film does not take is worse than no sheet.
+	const chips = (await page.locator('.settings-value').allInnerTexts()).map((one) => one.trim());
+	if (!chips.includes('72 px') || !chips.includes('200 px')) {
+		console.error(`the sliders report ${JSON.stringify(chips)}, expected 72 px and 200 px`);
+		failures++;
+	}
+	// A dark colour inverts the outline - a black outline around black letters is
+	// not an outline - and the inversion is the panel's own sentence, so it is
+	// the one thing about the two strokes that a photograph could not settle.
+	const colourGroup = page.getByRole('group', { name: /Couleur du texte|Text colour/ });
+	await colourGroup.getByRole('button', { name: /^(Noir|Black)$/ }).click();
+	await page.waitForTimeout(120);
+	preview = await readPreview();
+	if (preview.colour !== 'rgb(14, 13, 12)') {
+		console.error(`the black swatch painted the sample ${preview.colour}`);
+		failures++;
+	}
+	if (!preview.shadow.includes('rgb(237, 231, 220)')) {
+		console.error(`the shadow over dark text is ${preview.shadow}, expected the bone colour`);
+		failures++;
+	}
+	// The three outlines are three states of one text, each different from the
+	// others: a choice that changes nothing is a control nobody can use.
+	const outlineGroup = page.getByRole('group', { name: /Contour du texte|Text outline/ });
+	await outlineGroup.getByRole('button', { name: /^(Contour|Outline)$/ }).click();
+	await page.waitForTimeout(120);
+	preview = await readPreview();
+	if (!(preview.strokeWidth > 0) || preview.shadow !== 'none') {
+		console.error(`the outline choice drew a ${preview.strokeWidth}px stroke and the shadow ${preview.shadow}`);
+		failures++;
+	}
+	await outlineGroup.getByRole('button', { name: /^(Ombre|Shadow)$/ }).click();
+	await page.waitForTimeout(120);
+	preview = await readPreview();
+	if (preview.strokeWidth !== 0 || preview.shadow === 'none') {
+		console.error(`the shadow choice drew a ${preview.strokeWidth}px stroke and the shadow ${preview.shadow}`);
+		failures++;
+	}
+	await outlineGroup.getByRole('button', { name: /^(Aucun|None)$/ }).click();
+	await page.waitForTimeout(120);
+	preview = await readPreview();
+	if (preview.strokeWidth !== 0 || preview.shadow !== 'none') {
+		console.error(`no outline still drew a ${preview.strokeWidth}px stroke and the shadow ${preview.shadow}`);
+		failures++;
+	}
+	// The band is the television answer, at the alpha a band is read through.
+	const bandGroup = page.getByRole('group', { name: /Fond derrière le texte|Behind the text/ });
+	await bandGroup.getByRole('button', { name: /^(Noir|Black)$/ }).click();
+	await page.waitForTimeout(120);
+	preview = await readPreview();
+	if (!/^rgba\(0, 0, 0, 0\.70?\d*\)$/.test(preview.band)) {
+		console.error(`the band behind the text is ${preview.band}, expected black at seventy per cent`);
+		failures++;
+	}
+	// A font and a weight, which the engine resolves itself: what the sheet can
+	// promise is that the preview asks for the family and the weight it sends.
+	await page.getByRole('group', { name: /Police|Font/ }).getByRole('button', { name: /^(Chasse fixe|Monospace)$/ }).click();
+	await page.getByRole('group', { name: /Gras|Bold/ }).getByRole('button', { name: /^(Épaisse|Thick)$/ }).click();
+	await page.waitForTimeout(120);
+	preview = await readPreview();
+	if (!preview.family.includes('Consolas') || preview.weight !== '700') {
+		console.error(`the sample is drawn in ${preview.family} at ${preview.weight}`);
+		failures++;
+	}
+	// And everything comes back: a link that is always lit is a link nobody
+	// believes, so it is grey until something has actually changed.
+	const reset = page.getByRole('button', { name: /Tout réinitialiser|Reset all/ });
+	if (await reset.isDisabled()) {
+		console.error('the reset link is grey although seven things were changed');
+		failures++;
+	}
+	await reset.click();
+	await page.waitForTimeout(120);
+	preview = await readPreview();
+	if (preview.colour !== 'rgb(237, 231, 220)' || preview.band !== 'rgba(0, 0, 0, 0)' || preview.weight !== '400' || !near(preview.fontSize, at1080(36, preview.height), 0.5)) {
+		console.error(`after the reset the sample is ${preview.colour} on ${preview.band} at ${preview.weight}/${preview.fontSize}px`);
+		failures++;
+	}
+	if (!(await reset.isDisabled())) {
+		console.error('the reset link stayed lit with nothing left to reset');
+		failures++;
+	}
+
 	await reopenSettings(/Mise à jour|Update/);
 
 	await openSettingsSection(/Mise à jour|Update/);
@@ -2843,15 +3020,46 @@ async function assertSeriesJourney(page) {
 		console.error('the Update panel does not expose the real current/latest state and install action');
 		failures++;
 	}
-	// Back to the panel whose switch this journey flips, and photograph the sheet.
-	await openSettingsSection(/Lecture|Playback/);
+	// Two decisions left standing, for the save below to carry: what the sheet
+	// stores in the page and what the engine is told must be the same object, or
+	// the two drift apart the first time one of them changes. They are made here
+	// rather than earlier because reopening a section closes the sheet, and a
+	// draft does not survive its own close - which the first version of this
+	// assertion found by being written before that reopen.
+	await openSettingsSection(/Sous-titres|Subtitles/);
+	await setSlider(/Taille du texte|Text size/, 48);
+	await colourGroup.getByRole('button', { name: /^(Jaune|Yellow)$/ }).click();
+	await page.waitForTimeout(120);
+	// Back to the pane whose switch this journey flips, and photograph the sheet
+	// where the two switches that describe the interface now live.
+	await openSettingsSection(/Interface/);
 	await page.screenshot({ path: join(OUT, '1-settings.png') });
+	// The engine's own word that it is up. A real session sends this twice a
+	// second from its telemetry thread, and the sheet only hands the preferences
+	// over once it has heard it: a page that was never told "ready" has nothing
+	// to hand them to, and asserting the send without this frame would have been
+	// asserting a sequence the product never runs.
+	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify({ ...status, media: '' }) }), STATUS);
+	await page.waitForTimeout(120);
 	await page.getByRole('switch', { name: /Réduire les animations|Reduce motion/ }).click();
 	await page.getByRole('button', { name: /Enregistrer|Save/ }).click();
 	await page.waitForTimeout(180);
 	const storedPreferences = await page.evaluate(() => JSON.parse(localStorage.getItem('theia.player.preferences') ?? '{}'));
 	if ((await page.getByRole('dialog').count()) !== 0 || storedPreferences.reducedMotion !== true) {
 		console.error(`saving player settings did not persist and close: ${JSON.stringify(storedPreferences)}`);
+		failures++;
+	}
+	// And the engine is handed the same object the page stored: two decisions
+	// were left standing in the subtitles pane, and a style that only reaches
+	// localStorage is a setting the film never hears about.
+	const lastPlayback = await page.evaluate(() => (window.__invocations ?? []).filter((one) => one.cmd === 'player_set_playback').pop());
+	const sentPlayback = lastPlayback ? JSON.parse(lastPlayback.args.prefs) : null;
+	if (!sentPlayback || sentPlayback.subtitleStyle?.sizePx !== 48 || sentPlayback.subtitleStyle?.colour !== '#F2D46B' || sentPlayback.subtitleStyle?.background !== 'none') {
+		console.error(`saving the sheet sent the engine ${JSON.stringify(sentPlayback)}, expected the size and the colour that were left standing`);
+		failures++;
+	}
+	if (JSON.stringify(sentPlayback) !== JSON.stringify({ ...storedPreferences.playback })) {
+		console.error(`the page stored ${JSON.stringify(storedPreferences.playback)} and the engine was told ${JSON.stringify(sentPlayback)}`);
 		failures++;
 	}
 	await page.close();

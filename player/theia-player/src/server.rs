@@ -357,6 +357,17 @@ pub struct EpisodeItem {
     pub files: Vec<EpisodeFile>,
     #[serde(default)]
     pub progress: Progress,
+    /// The episode the server says comes after this one, which is what the
+    /// player starts when the file ends and the viewer asked for it.
+    ///
+    /// Absent is an answer and not a gap: the last of a season, a special and a
+    /// show with one episode have no next, and `nextEpisode` in
+    /// `internal/library/series.go` says so by sending nothing. The field is
+    /// populated from the running order rather than from progress, so it is
+    /// already known when this episode is opened - which is the moment the
+    /// player reads it.
+    #[serde(default)]
+    pub next_episode_id: Option<i64>,
     #[serde(default)]
     pub still_url: String,
 }
@@ -424,6 +435,14 @@ pub struct Metadata {
     pub vote_average: f64,
     #[serde(default)]
     pub director: String,
+    /// The language the film was made in, as TMDB stores it - `fr`, `en`.
+    ///
+    /// The one metadata field playback itself depends on: `vo` in the audio
+    /// preferences asks the engine for this tongue, and nothing else can produce
+    /// it. Empty when TMDB was never matched to the file, which is not a
+    /// language and must not become one - the engine's own default answers then.
+    #[serde(default)]
+    pub original_language: String,
 }
 
 /// What the server says about a card preview.

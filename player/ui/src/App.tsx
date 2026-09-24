@@ -18,18 +18,27 @@ import {
 	type LucideIcon,
 	Maximize2,
 	Minimize2,
+	Minus,
 	MonitorPlay,
+	Palette,
 	Pause,
 	Percent,
 	Pencil,
+	PenLine,
 	Play,
+	Plus,
 	RotateCcw,
 	RotateCw,
 	Search,
 	Server as ServerIcon,
 	Settings2,
+	Square,
 	BarChart3,
+	Bold,
+	Captions,
 	Tv,
+	Type,
+	UnfoldVertical,
 	UserRound,
 	Volume1,
 	Volume2,
@@ -63,7 +72,8 @@ import notFoundArt from './assets/media-not-found.png';
 import { catalogues, initialLanguage, storedLanguage, trackVocabulary } from './lib/catalogues.js';
 import { artworkCandidates, displayTitle, displayYear, imageURL } from './lib/tmdb';
 import { formatRuntime } from './lib/utils';
-import type { DiscoveredServer, Home, HomeRow, Movie, PlayerStatus, Profile, QualityLadder, Season, Series, SeriesHome, Server, Track, TrackVocabulary, UpdateStatus, WatchStats } from './types';
+import { PLAYBACK_DEFAULTS } from './types';
+import type { DiscoveredServer, Home, HomeRow, Movie, PlaybackPreferences, PlayerStatus, Profile, QualityLadder, Season, Series, SeriesHome, Server, SubtitleStyle, Track, TrackVocabulary, UpdateStatus, WatchStats } from './types';
 
 const invoke = async <T,>(command: string, args?: Record<string, unknown>): Promise<T> => {
 	const call = window.__TAURI__?.core?.invoke;
@@ -92,7 +102,90 @@ const AUDIO_NOTICE_MS = 8000;
 const VOLUME_SETTLE_MS = 900;
 
 type Section = 'home' | 'films' | 'series' | 'search';
-type Preferences = { reducedMotion: boolean; autoHideControls: boolean };
+type Preferences = { reducedMotion: boolean; autoHideControls: boolean; playback: PlaybackPreferences };
+
+/// The two sliders' own ranges, which the stored-value reader and the controls
+/// both use: a number outside them is not a preference, it is a bad file.
+const SUBTITLE_SIZE = { min: 24, max: 72, step: 2 };
+const SUBTITLE_HEIGHT = { min: 24, max: 200, step: 4 };
+
+/// The colours the sheet offers, as values rather than names: the name is the
+/// catalogue key beside it, so the two languages cannot disagree about which
+/// swatch is which. Six, not sixteen - the accent is one of them, which is
+/// deliberate, and a picker would be a second screen for a personal choice.
+const SUBTITLE_COLOURS: Array<{ value: string; key: string }> = [
+	{ value: '#EDE7DC', key: 'colourBone' },
+	{ value: '#FFFFFF', key: 'colourWhite' },
+	{ value: '#F2D46B', key: 'colourYellow' },
+	{ value: '#8ED0E8', key: 'colourCyan' },
+	{ value: '#C8A24A', key: 'colourGold' },
+	{ value: '#0E0D0C', key: 'colourBlack' },
+];
+
+/// The band behind the text: none, or four greys. A band is not a designer's
+/// palette, it is there to be read through, so the choice is dark, light or
+/// nothing - and the engine draws it at 70 % alpha, which is what makes it a
+/// band rather than a bar.
+const SUBTITLE_BANDS: Array<{ value: string; key: string }> = [
+	{ value: 'none', key: 'bandNone' },
+	{ value: '#000000', key: 'colourBlack' },
+	{ value: '#3A3632', key: 'bandGrey' },
+	{ value: '#EDE7DC', key: 'colourWhite' },
+];
+
+const AUDIO_LANGUAGES = ['auto', 'vf', 'vo'] as const;
+const SUBTITLE_LANGUAGES = ['auto', 'none', 'fr', 'en'] as const;
+const SUBTITLE_OUTLINES = ['shadow', 'outline', 'none'] as const;
+const SUBTITLE_FONTS = ['standard', 'serif', 'mono'] as const;
+
+/// A stored value when it is one this build offers, the default otherwise.
+///
+/// A preferences file outlives the build that wrote it: a colour dropped from
+/// the palette, or a number typed into the devtools, would otherwise reach the
+/// engine as a value it refuses - and the sheet would draw a swatch as chosen
+/// while the film showed something else.
+function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
+	return allowed.includes(value as T) ? (value as T) : fallback;
+}
+
+function storedPlayback(value: unknown): PlaybackPreferences {
+	const raw = (value ?? {}) as Record<string, unknown>;
+	const style = (raw.subtitleStyle ?? {}) as Record<string, unknown>;
+	const fallback = PLAYBACK_DEFAULTS.subtitleStyle;
+	// A number inside its control's own range, or the default: the engine
+	// refuses a size of nine thousand rather than clamping it, and a sheet that
+	// showed one would be showing a value the film never had.
+	const slider = (stored: unknown, range: { min: number; max: number }, or: number) =>
+		typeof stored === 'number' && Number.isFinite(stored)
+			? Math.min(range.max, Math.max(range.min, Math.round(stored)))
+			: or;
+	return {
+		autoPlayNext: raw.autoPlayNext !== false,
+		audioLanguage: oneOf(raw.audioLanguage, AUDIO_LANGUAGES, PLAYBACK_DEFAULTS.audioLanguage),
+		subtitleLanguage: oneOf(raw.subtitleLanguage, SUBTITLE_LANGUAGES, PLAYBACK_DEFAULTS.subtitleLanguage),
+		subtitleStyle: {
+			sizePx: slider(style.sizePx, SUBTITLE_SIZE, fallback.sizePx),
+			heightPx: slider(style.heightPx, SUBTITLE_HEIGHT, fallback.heightPx),
+			colour: oneOf(style.colour, SUBTITLE_COLOURS.map((one) => one.value), fallback.colour),
+			outline: oneOf(style.outline, SUBTITLE_OUTLINES, fallback.outline),
+			background: oneOf(style.background, SUBTITLE_BANDS.map((one) => one.value), fallback.background),
+			font: oneOf(style.font, SUBTITLE_FONTS, fallback.font),
+			bold: style.bold === true,
+		},
+	};
+}
+
+/// The colour the outline takes for a given text colour.
+///
+/// The engine inverts it over dark text - a black outline around black letters
+/// is not an outline - and the preview has to obey the same rule or it would
+/// show a look the film never takes.
+function outlineColourFor(colour: string): string {
+	const channels = [1, 3, 5].map((at) => parseInt(colour.slice(at, at + 2), 16) / 255);
+	const [r, g, b] = channels.map((one) => (Number.isFinite(one) ? one : 1));
+	const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+	return luminance < 0.5 ? '#EDE7DC' : '#000000';
+}
 
 /// What the OSD is saying, and for how long.
 ///
@@ -108,9 +201,10 @@ function initialPreferences(): Preferences {
 		return {
 			reducedMotion: Boolean(value.reducedMotion),
 			autoHideControls: value.autoHideControls !== false,
+			playback: storedPlayback(value.playback),
 		};
 	} catch {
-		return { reducedMotion: false, autoHideControls: true };
+		return { reducedMotion: false, autoHideControls: true, playback: PLAYBACK_DEFAULTS };
 	}
 }
 
@@ -176,6 +270,9 @@ export default function App() {
 	const [focusInFurniture, setFocusInFurniture] = useState(false);
 	const idleTimer = useRef<number | null>(null);
 	const noticeTimer = useRef<number | null>(null);
+	// The resize listener's debounce: one drag is one answer, asked when the
+	// size stops moving.
+	const resizeTimer = useRef<number | null>(null);
 	const lastPointerDown = useRef(0);
 	const trackButton = useRef<HTMLButtonElement>(null);
 	const trackMenu = useRef<TrackMenuHandle>(null);
@@ -454,12 +551,105 @@ export default function App() {
 		}, next.dwell);
 	}, []);
 
+	// What the interface measures about itself, so that "fluid" can be a number
+	// rather than an opinion.
+	//
+	// Three numbers, and the first two are the ones that matter:
+	//
+	// - the worst frame interval seen while somebody was *doing* something. That
+	//   is what a viewer feels, and it is measured by drawing frames rather than
+	//   by asking a platform whether it felt slow: the first version of this
+	//   watched `longtask` entries, which stayed at zero through a two-hundred-
+	//   and-fifty-card render and through scrolling the grid. An instrument that
+	//   cannot fail is not an instrument.
+	// - how many frames in the window took longer than 32 ms, which is two
+	//   frames at 60 Hz: one slow frame is a hiccup, a run of them is a stutter.
+	// A third number used to live here - the longest gap between status frames -
+	// and it was removed on the same day it was written, because the emission
+	// became event-driven and a gap then measures the heartbeat rather than the
+	// thread. A number whose meaning depends on another decision is a trap.
+	//
+	// The sampling is armed by a gesture and stops by itself. A permanent
+	// requestAnimationFrame loop on a transparent page above a film would keep
+	// the compositor producing frames nobody asked for, which is an optimisation
+	// that costs - so the loop only runs for three seconds after a pointer, a
+	// key or a scroll, which is exactly when a stutter would be felt.
+	const osdMeasure = useRef({ worstFrame: 0, slowFrames: 0, frames: 0, resizeEvents: 0, lastPaintAt: 0, samplingUntil: 0, sampling: false, arm: () => {} });
+	useEffect(() => {
+		const measure = osdMeasure.current;
+		const sample = (now: number) => {
+			if (measure.lastPaintAt > 0) {
+				const interval = now - measure.lastPaintAt;
+				measure.worstFrame = Math.max(measure.worstFrame, interval);
+				if (interval > 32) measure.slowFrames += 1;
+			}
+			measure.lastPaintAt = now;
+			measure.frames += 1;
+			if (now < measure.samplingUntil) {
+				requestAnimationFrame(sample);
+			} else {
+				measure.sampling = false;
+				measure.lastPaintAt = 0;
+			}
+		};
+		const arm = () => {
+			measure.samplingUntil = performance.now() + 3000;
+			if (!measure.sampling) {
+				measure.sampling = true;
+				measure.lastPaintAt = 0;
+				requestAnimationFrame(sample);
+			}
+		};
+		const events: Array<keyof WindowEventMap> = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'scroll'];
+		for (const name of events) window.addEventListener(name, arm, { passive: true, capture: true });
+		// A window resize is not a page gesture, so the listener above never sees
+		// one - and a resize is exactly when a stutter is felt. The resize
+		// listener calls this.
+		measure.arm = arm;
+		const tick = window.setInterval(() => {
+			// Nothing measured, nothing sent. A player nobody is touching draws
+			// no frames of its own to measure, and reporting zeroes once a
+			// second would be a command per second for a number that says
+			// "idle" - which is what the frame's own gap already says.
+			if (measure.frames === 0) {
+				measure.worstFrame = 0;
+				measure.slowFrames = 0;
+				return;
+			}
+			// `frames` is what keeps this honest: a report of zero milliseconds
+			// is a measurement of a smooth window, and a report of zero frames
+			// is an instrument that never ran. The two are not the same answer
+			// and the first version of this could not tell them apart.
+			void invoke('player_osd_stats', {
+				worstFrameMs: Math.round(measure.worstFrame * 10) / 10,
+				slowFrames: measure.slowFrames,
+				frames: measure.frames,
+				resizeEvents: measure.resizeEvents
+			}).catch(() => {});
+			measure.worstFrame = 0;
+			measure.slowFrames = 0;
+			measure.frames = 0;
+			// `resizeEvents` is deliberately not reset: it is the count since the
+			// page loaded, because the first version counted per report and I
+			// read it a second too late and concluded the listener never fired.
+		}, 1000);
+		return () => {
+			for (const name of events) window.removeEventListener(name, arm, { capture: true });
+			window.clearInterval(tick);
+		};
+	}, []);
+
 	useEffect(() => {
 		const cleanups: Array<() => void> = [];
 		let disposed = false;
 		listen('player-status', (event) => {
 			try {
 				const frame = JSON.parse(String(event.payload)) as PlayerStatus;
+				// While a film plays the interface must keep up, and the sampler
+				// has no gesture to arm it: a viewer watching a film touches
+				// nothing. The compositor is awake anyway then, so the loop
+				// costs nothing it was not already costing.
+				if (frame.media && !frame.pause) osdMeasure.current.arm();
 				setStatus(frame);
 				if (typeof frame.volume === 'number' && Date.now() - volumeTouched.current > VOLUME_SETTLE_MS) setVolume(frame.volume);
 			} catch {
@@ -477,21 +667,67 @@ export default function App() {
 				// Same contract as status frames.
 			}
 		}).then((cleanup) => (disposed ? cleanup() : cleanups.push(cleanup)));
-		listen('tauri://resize', async () => {
-			const appWindow = getAppWindow();
-			try {
-				setFullscreen(Boolean(await appWindow?.isFullscreen()));
-				setMaximized(Boolean(await appWindow?.isMaximized()));
-			} catch {
-				// Keep the last known state.
-			}
-		}).then((cleanup) => (disposed ? cleanup() : cleanups.push(cleanup)));
+		// The window's own resize, asked of the window rather than of the event
+		// bus: the maintainer's report of 24 September 2026 - "quand je prends
+		// les flèches pour rétrécir ou agrandir la fenêtre, ça lag de malade" -
+		// was measured with the sampler armed and counted, and the count came
+		// back zero: `tauri://resize` was never arriving, so this listener had
+		// been dead since it was written, and the state it maintains could never
+		// change. Reading that state costs two calls across the bridge, so it is
+		// asked once the size has stopped moving rather than per pixel of drag.
+		const appWindow = getAppWindow();
+		// Guarded rather than chained: a shell whose API has no `onResized` must
+		// leave the listener absent, not throw inside this effect - which is how
+		// the first version of it would have taken the status and event
+		// registrations down with it.
+		const resized = appWindow
+			?.onResized?.(() => {
+				osdMeasure.current.arm();
+				osdMeasure.current.resizeEvents += 1;
+				// Measured on 24 September 2026, with a scripted drag of forty steps:
+				// **the page costs nothing here.** With this whole callback reduced
+				// to a no-op the window's own event gap stayed at 66 ms, and with the
+				// engine not loaded at all it fell to 9.9 - so what lags is mpv
+				// reconfiguring its surface per step, not anything on this side. What
+				// is kept is the part that must not be lost: the measurement, and the
+				// one answer a drag needs.
+				document.documentElement.dataset.resizing = 'true';
+				if (resizeTimer.current !== null) window.clearTimeout(resizeTimer.current);
+				resizeTimer.current = window.setTimeout(() => {
+					delete document.documentElement.dataset.resizing;
+					void (async () => {
+						try {
+							setFullscreen(Boolean(await appWindow.isFullscreen()));
+							setMaximized(Boolean(await appWindow.isMaximized()));
+						} catch {
+							// Keep the last known state.
+						}
+					})();
+				}, 150);
+			});
+		resized?.then((cleanup: () => void) => (disposed ? cleanup() : cleanups.push(cleanup)));
 		return () => {
 			disposed = true;
 			cleanups.forEach((cleanup) => cleanup());
+			if (resizeTimer.current !== null) window.clearTimeout(resizeTimer.current);
 			if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
 		};
 	}, [showNotice]);
+
+	// What the settings sheet decided, handed to the engine.
+	//
+	// Sent the moment the engine can hear rather than only when Save is pressed,
+	// and sent again whenever the preferences change: a subtitle style that
+	// needed a restart to appear is a setting nobody can see the effect of, and
+	// the frame this rides on is a bridge call that costs nothing. `status.ready`
+	// is in the dependencies because the engine is created by the shell, not by
+	// this page - a preferences frame sent before it exists is refused, and the
+	// refusal is not worth a sentence: what is stored here is re-sent on the next
+	// change, and the engine starts from its own copy of the same defaults.
+	useEffect(() => {
+		if (!status.ready) return;
+		void invoke('player_set_playback', { prefs: JSON.stringify(preferences.playback) }).catch(() => {});
+	}, [status.ready, preferences.playback]);
 
 	const wake = useCallback(() => {
 		if (idleTimer.current !== null) window.clearTimeout(idleTimer.current);
@@ -1180,7 +1416,232 @@ function CardGrid({ children }: { children: React.ReactNode }) {
 // The sections of the settings sheet, in the order its rail shows them. The
 // name is also the catalogue key of the panel's heading, so the rail, the panel
 // and the sentences cannot drift apart.
-type SettingsPane = 'interface' | 'playback' | 'watching' | 'server' | 'update';
+//
+// `playback` is the playback row and `subtitles` its own pane, which is the
+// disposition the maintainer brought on 24 September 2026: the two switches
+// that were in `playback` describe the interface, not the film, so they moved
+// to `interface` where they belong and the pane below them can be the three
+// things a viewer actually changes about films.
+type SettingsPane = 'interface' | 'playback' | 'subtitles' | 'watching' | 'server' | 'update';
+
+/// A row of mutually exclusive choices, drawn as one segmented pill - the
+/// control the sheet already uses for the interface language, so a viewer
+/// learns it once. `aria-pressed` rather than colour alone, as the design
+/// system requires: the fill is bone, not the accent, for the same reason.
+function SettingsChoices<T extends string>({ label, options, value, onPick, t }: {
+	label: string;
+	options: Array<{ value: T; key: string }>;
+	value: T;
+	onPick: (value: T) => void;
+	t: (key: string) => string;
+}) {
+	return (
+		<div className="settings-segment" role="group" aria-label={label}>
+			{options.map((one) => (
+				<button key={one.value} type="button" aria-pressed={value === one.value} onClick={() => onPick(one.value)}>{t(one.key)}</button>
+			))}
+		</div>
+	);
+}
+
+/// The colours, as colours rather than words: a swatch is the only control that
+/// answers "what will it look like" without being read. `none` is drawn as a
+/// struck-through disc, the way a palette says "nothing here" without a word.
+function SettingsSwatches({ label, options, value, onPick, t }: {
+	label: string;
+	options: Array<{ value: string; key: string }>;
+	value: string;
+	onPick: (value: string) => void;
+	t: (key: string) => string;
+}) {
+	return (
+		<div className="settings-swatches" role="group" aria-label={label}>
+			{options.map((one) => (
+				<button
+					key={one.value}
+					type="button"
+					className={`settings-swatch${one.value === 'none' ? ' settings-swatch--none' : ''}`}
+					style={{ '--swatch': one.value } as React.CSSProperties}
+					aria-pressed={value === one.value}
+					aria-label={t(one.key)}
+					title={t(one.key)}
+					onClick={() => onPick(one.value)}
+				/>
+			))}
+		</div>
+	);
+}
+
+/// One measurement row: the glyph, the sentence, the number, and the slider.
+///
+/// The minus and plus buttons are not decoration - a thumb is precise to about
+/// three pixels and the size is a decision about reading at three metres - and
+/// they carry their own accessible names because a lone glyph is not a name.
+function SettingsSlider({ icon: Icon, label, hint, value, range, suffix, onChange, t }: {
+	icon: LucideIcon;
+	label: string;
+	hint: string;
+	value: number;
+	range: { min: number; max: number; step: number };
+	suffix: string;
+	onChange: (value: number) => void;
+	t: (key: string) => string;
+}) {
+	const hold = (delta: number) => onChange(Math.min(range.max, Math.max(range.min, value + delta)));
+	return (
+		<section className="settings-row">
+			<div className="settings-row-head">
+				<span className="settings-row-icon" aria-hidden="true"><Icon size={17} strokeWidth={1.8} /></span>
+				<div className="settings-section-copy"><h3>{label}</h3><p>{hint}</p></div>
+				<span className="settings-value">{value} {suffix}</span>
+			</div>
+			<div className="settings-slider">
+				<button type="button" className="settings-step" onClick={() => hold(-range.step)} disabled={value <= range.min} aria-label={`${t('decrease')} · ${label}`}><Minus size={16} strokeWidth={2} /></button>
+				<input
+					type="range"
+					min={range.min}
+					max={range.max}
+					step={range.step}
+					value={value}
+					onChange={(event) => onChange(Number(event.currentTarget.value))}
+					aria-label={label}
+					aria-valuetext={`${value} ${suffix}`}
+				/>
+				<button type="button" className="settings-step" onClick={() => hold(range.step)} disabled={value >= range.max} aria-label={`${t('increase')} · ${label}`}><Plus size={16} strokeWidth={2} /></button>
+			</div>
+		</section>
+	);
+}
+
+/// What the film will look like, at the film's own proportion.
+///
+/// The stage is 16:9 and stands for a picture 1080 pixels tall, so one CSS rule
+/// - `1cqh / 1080` - turns the stored pixels into this box's own, and what the
+/// sheet draws is the arithmetic the engine is handed rather than a decoration
+/// shaped like subtitles. Sizes, colour, font and the band are exact; the
+/// outline and the shadow are CSS approximations of what libass does, and the
+/// film stays the authority. No artwork: the ground is a gradient, which is
+/// also what a bright scene and a dark one need to be judged against.
+function SubtitlePreview({ subtitles, line, label }: { subtitles: SubtitleStyle; line: string; label: string }) {
+	return (
+		<div className="subtitle-preview">
+			<span className="label subtitle-preview-title">{label}</span>
+			<div
+				className="subtitle-preview-stage"
+				data-outline={subtitles.outline}
+				role="img"
+				aria-label={`${label} — ${line}`}
+				style={{
+					'--sub-size': subtitles.sizePx,
+					'--sub-height': subtitles.heightPx,
+					'--sub-colour': subtitles.colour,
+					'--sub-outline': outlineColourFor(subtitles.colour),
+					'--sub-band': subtitles.background === 'none' ? 'transparent' : `${subtitles.background}B3`,
+					'--sub-font': subtitles.font === 'serif' ? 'Georgia, "Times New Roman", serif' : subtitles.font === 'mono' ? 'Consolas, "SFMono-Regular", monospace' : 'var(--font-ui)',
+					'--sub-weight': subtitles.bold ? 700 : 400,
+				} as React.CSSProperties}
+			>
+				<div className="subtitle-preview-band"><span className="subtitle-preview-line">{line}</span></div>
+			</div>
+		</div>
+	);
+}
+
+/// The subtitles pane: what the reference laid out, in this product's language.
+///
+/// Seven decisions, in the order somebody makes them - how big, how high, what
+/// colour, what detaches it, what holds it, in which family, how heavy - and a
+/// preview above all of them, because every one of the seven is a question the
+/// eye answers faster than the mind.
+function SubtitlePane({ subtitles, t, onStyle, onReset }: {
+	subtitles: SubtitleStyle;
+	t: (key: string) => string;
+	onStyle: (patch: Partial<SubtitleStyle>) => void;
+	onReset: () => void;
+}) {
+	// Whether anything has been changed at all, which is the only thing the
+	// reset link needs to know: a link that is always lit is a link nobody
+	// believes, and pressing it would write a value that is already there.
+	const changed = (Object.keys(PLAYBACK_DEFAULTS.subtitleStyle) as Array<keyof SubtitleStyle>).some(
+		(key) => subtitles[key] !== PLAYBACK_DEFAULTS.subtitleStyle[key],
+	);
+	return (
+		<>
+			<section className="settings-section settings-section--row">
+				<div className="settings-section-copy"><h3>{t('subtitles')}</h3><p>{t('subtitlesHint')}</p></div>
+				<button type="button" className="settings-reset" onClick={onReset} disabled={!changed}>{t('subtitlesReset')}</button>
+			</section>
+			<SubtitlePreview subtitles={subtitles} line={t('subtitlePreviewLine')} label={t('subtitlePreview')} />
+			<SettingsSlider
+				icon={Type} label={t('subtitleSize')} hint={t('subtitleSizeHint')} suffix={t('pixels')}
+				value={subtitles.sizePx} range={SUBTITLE_SIZE} onChange={(sizePx) => onStyle({ sizePx })} t={t}
+			/>
+			<div className="settings-separator" />
+			<SettingsSlider
+				icon={UnfoldVertical} label={t('subtitleHeight')} hint={t('subtitleHeightHint')} suffix={t('pixels')}
+				value={subtitles.heightPx} range={SUBTITLE_HEIGHT} onChange={(heightPx) => onStyle({ heightPx })} t={t}
+			/>
+			<div className="settings-separator" />
+			<section className="settings-row">
+				<div className="settings-row-head">
+					<span className="settings-row-icon" aria-hidden="true"><Palette size={17} strokeWidth={1.8} /></span>
+					<div className="settings-section-copy"><h3>{t('subtitleColour')}</h3><p>{t('subtitleColourHint')}</p></div>
+				</div>
+				<SettingsSwatches label={t('subtitleColour')} options={SUBTITLE_COLOURS} value={subtitles.colour} onPick={(colour) => onStyle({ colour })} t={t} />
+			</section>
+			<div className="settings-separator" />
+			<section className="settings-row">
+				<div className="settings-row-head">
+					<span className="settings-row-icon" aria-hidden="true"><PenLine size={17} strokeWidth={1.8} /></span>
+					<div className="settings-section-copy"><h3>{t('subtitleOutline')}</h3><p>{t('subtitleOutlineHint')}</p></div>
+				</div>
+				<SettingsChoices
+					label={t('subtitleOutline')}
+					options={[{ value: 'shadow', key: 'outlineShadow' }, { value: 'outline', key: 'outlineLine' }, { value: 'none', key: 'outlineNone' }] as const}
+					value={subtitles.outline}
+					onPick={(outline) => onStyle({ outline })}
+					t={t}
+				/>
+			</section>
+			<div className="settings-separator" />
+			<section className="settings-row">
+				<div className="settings-row-head">
+					<span className="settings-row-icon" aria-hidden="true"><Square size={17} strokeWidth={1.8} /></span>
+					<div className="settings-section-copy"><h3>{t('subtitleBand')}</h3><p>{t('subtitleBandHint')}</p></div>
+				</div>
+				<SettingsSwatches label={t('subtitleBand')} options={SUBTITLE_BANDS} value={subtitles.background} onPick={(background) => onStyle({ background })} t={t} />
+			</section>
+			<div className="settings-separator" />
+			<section className="settings-row">
+				<div className="settings-row-head">
+					<span className="settings-row-icon settings-row-icon--text" aria-hidden="true">Aa</span>
+					<div className="settings-section-copy"><h3>{t('subtitleFont')}</h3><p>{t('subtitleFontHint')}</p></div>
+				</div>
+				<SettingsChoices
+					label={t('subtitleFont')}
+					options={[{ value: 'standard', key: 'fontStandard' }, { value: 'serif', key: 'fontSerif' }, { value: 'mono', key: 'fontMono' }] as const}
+					value={subtitles.font}
+					onPick={(font) => onStyle({ font })}
+					t={t}
+				/>
+			</section>
+			<div className="settings-separator" />
+			<section className="settings-row">
+				<div className="settings-row-head">
+					<span className="settings-row-icon" aria-hidden="true"><Bold size={17} strokeWidth={1.8} /></span>
+					<div className="settings-section-copy"><h3>{t('subtitleBold')}</h3><p>{t('subtitleBoldHint')}</p></div>
+				</div>
+				<SettingsChoices
+					label={t('subtitleBold')}
+					options={[{ value: 'normal', key: 'boldNormal' }, { value: 'thick', key: 'boldThick' }] as const}
+					value={subtitles.bold ? 'thick' : 'normal'}
+					onPick={(weight) => onStyle({ bold: weight === 'thick' })}
+					t={t}
+				/>
+			</section>
+		</>
+	);
+}
 
 function SettingsModal({ open, language, preferences, server, updateStatus, updateBusy, t, onClose, onSave, onCheckUpdate, onApplyUpdate }: { open: boolean; language: string; preferences: Preferences; server: Server | null; updateStatus: UpdateStatus | null; updateBusy: boolean; t: (key: string) => string; onClose: () => void; onSave: (language: string, preferences: Preferences) => void; onCheckUpdate: () => void; onApplyUpdate: () => void }) {
 	const [draftLanguage, setDraftLanguage] = useState(language);
@@ -1229,10 +1690,22 @@ function SettingsModal({ open, language, preferences, server, updateStatus, upda
 	const panes: Array<{ id: SettingsPane; icon: LucideIcon; label: string }> = [
 		{ id: 'interface', icon: Languages, label: t('interface') },
 		{ id: 'playback', icon: MonitorPlay, label: t('playback') },
+		{ id: 'subtitles', icon: Captions, label: t('subtitles') },
 		{ id: 'watching', icon: BarChart3, label: t('watching') },
 		{ id: 'server', icon: ServerIcon, label: t('server') },
 		{ id: 'update', icon: Download, label: t('update') },
 	];
+	// The two writers the panes below use, so a row never has to know how the
+	// draft is nested. A patch rather than a whole object: the style has seven
+	// fields and a slider that sent all seven would overwrite a swatch chosen
+	// while the thumb was moving.
+	const patchPlayback = (patch: Partial<PlaybackPreferences>) =>
+		setDraft((current) => ({ ...current, playback: { ...current.playback, ...patch } }));
+	const patchStyle = (patch: Partial<SubtitleStyle>) =>
+		setDraft((current) => ({
+			...current,
+			playback: { ...current.playback, subtitleStyle: { ...current.playback.subtitleStyle, ...patch } },
+		}));
 	useEffect(() => {
 		if (open) {
 			setDraftLanguage(language);
@@ -1293,15 +1766,10 @@ function SettingsModal({ open, language, preferences, server, updateStatus, upda
 					</nav>
 					<div className="settings-panel" role="region" aria-label={t(pane)}>
 						{pane === 'interface' && (
-							<section className="settings-section">
-								<div className="settings-section-copy"><h3>{t('interface')}</h3><p>{t('languageHint')}</p></div>
-								<div className="settings-segment" role="group" aria-label={t('language')}>{(['fr', 'en'] as const).map((locale) => <button key={locale} type="button" aria-pressed={draftLanguage === locale} onClick={() => setDraftLanguage(locale)}>{locale === 'fr' ? 'Français' : 'English'}</button>)}</div>
-							</section>
-						)}
-						{pane === 'playback' && (
 							<>
 								<section className="settings-section">
-									<div className="settings-section-copy"><h3>{t('playback')}</h3><p>{t('playbackHint')}</p></div>
+									<div className="settings-section-copy"><h3>{t('interface')}</h3><p>{t('languageHint')}</p></div>
+									<div className="settings-segment" role="group" aria-label={t('language')}>{(['fr', 'en'] as const).map((locale) => <button key={locale} type="button" aria-pressed={draftLanguage === locale} onClick={() => setDraftLanguage(locale)}>{locale === 'fr' ? 'Français' : 'English'}</button>)}</div>
 								</section>
 								<div className="settings-separator" />
 								<section className="settings-section settings-section--row">
@@ -1314,6 +1782,48 @@ function SettingsModal({ open, language, preferences, server, updateStatus, upda
 									<Switch checked={draft.reducedMotion} onCheckedChange={(checked) => setDraft((current) => ({ ...current, reducedMotion: checked }))} aria-label={t('reducedMotion')} />
 								</section>
 							</>
+						)}
+						{pane === 'playback' && (
+							<>
+								<section className="settings-section">
+									<div className="settings-section-copy"><h3>{t('playback')}</h3><p>{t('playbackHint')}</p></div>
+								</section>
+								<div className="settings-separator" />
+								<section className="settings-section settings-section--row">
+									<div className="settings-section-copy"><h3>{t('autoPlayNext')}</h3><p>{t('autoPlayNextHint')}</p></div>
+									<Switch checked={draft.playback.autoPlayNext} onCheckedChange={(checked) => patchPlayback({ autoPlayNext: checked })} aria-label={t('autoPlayNext')} />
+								</section>
+								<div className="settings-separator" />
+								<section className="settings-section settings-section--row">
+									<div className="settings-section-copy"><h3>{t('audioLanguage')}</h3><p>{t('audioLanguageHint')}</p></div>
+									<SettingsChoices
+										label={t('audioLanguage')}
+										options={[{ value: 'auto', key: 'audioAuto' }, { value: 'vf', key: 'audioVf' }, { value: 'vo', key: 'audioVo' }]}
+										value={draft.playback.audioLanguage}
+										onPick={(audioLanguage) => patchPlayback({ audioLanguage })}
+										t={t}
+									/>
+								</section>
+								<div className="settings-separator" />
+								<section className="settings-section settings-section--row">
+									<div className="settings-section-copy"><h3>{t('subtitleLanguage')}</h3><p>{t('subtitleLanguageHint')}</p></div>
+									<SettingsChoices
+										label={t('subtitleLanguage')}
+										options={[{ value: 'auto', key: 'subtitleAuto' }, { value: 'none', key: 'subtitleNone' }, { value: 'fr', key: 'subtitleFr' }, { value: 'en', key: 'subtitleEn' }]}
+										value={draft.playback.subtitleLanguage}
+										onPick={(subtitleLanguage) => patchPlayback({ subtitleLanguage })}
+										t={t}
+									/>
+								</section>
+							</>
+						)}
+						{pane === 'subtitles' && (
+							<SubtitlePane
+								subtitles={draft.playback.subtitleStyle}
+								t={t}
+								onStyle={patchStyle}
+								onReset={() => patchStyle(PLAYBACK_DEFAULTS.subtitleStyle)}
+							/>
 						)}
 						{pane === 'watching' && (
 							<section className="settings-section settings-stats">

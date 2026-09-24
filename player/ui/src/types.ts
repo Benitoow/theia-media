@@ -102,6 +102,99 @@ export type SeriesHome = {
 	recent_series: Series[];
 };
 
+/** Which audio track the engine is asked for. `auto` is the file's own answer,
+ *  `vf` is French, and `vo` follows the original language of the title. */
+export type AudioLanguage = 'auto' | 'vf' | 'vo';
+
+/** Which subtitle track the engine is asked for. `none` keeps them off until
+ *  somebody asks for one in the menu, which is not the same as absent. */
+export type SubtitleLanguage = 'auto' | 'none' | 'fr' | 'en';
+
+/** What detaches the letters from the picture. The engine has no borderless
+ *  style of its own, so `none` is a transparent box - see the note in Rust. */
+export type SubtitleOutline = 'shadow' | 'outline' | 'none';
+
+/** Three families the engine can resolve by name. The fonts this interface
+ *  ships are web fonts, which the engine cannot load, so it offers none of
+ *  them: "standard" is the engine's own sans. */
+export type SubtitleFont = 'standard' | 'serif' | 'mono';
+
+/**
+ * How subtitles are drawn, as the settings sheet decides it.
+ *
+ * The two sizes are pixels on a picture 1080 pixels tall, and the engine's own
+ * unit is a scaled pixel - the player converts once, in Rust, and the preview
+ * in this interface is drawn at exactly the same proportion so that what the
+ * sheet shows and what the film does cannot drift apart.
+ */
+export type SubtitleStyle = {
+	sizePx: number;
+	heightPx: number;
+	/** `#RRGGBB`; the alpha the engine needs is added where the value is used. */
+	colour: string;
+	outline: SubtitleOutline;
+	/** `none`, or a `#RRGGBB` band behind the text. */
+	background: string;
+	font: SubtitleFont;
+	bold: boolean;
+};
+
+/**
+ * What the settings sheet decides about playing, and what the engine is told
+ * through `player_set_playback`.
+ *
+ * The shape is a contract with Rust: the fields are camelCase on the wire and
+ * the defaults below are the ones `PlaybackPreferences::default` carries, so a
+ * preferences object that never reaches the engine still means the same thing
+ * there.
+ */
+export type PlaybackPreferences = {
+	autoPlayNext: boolean;
+	audioLanguage: AudioLanguage;
+	subtitleLanguage: SubtitleLanguage;
+	subtitleStyle: SubtitleStyle;
+};
+
+/** The look a subtitle has before anybody changes anything: the engine's own
+ *  size, the reference the sheet was built from, and no band. 36 and 120 are
+ *  pixels at 1080, which is where the two sliders start. */
+export const PLAYBACK_DEFAULTS: PlaybackPreferences = {
+	autoPlayNext: true,
+	audioLanguage: 'auto',
+	subtitleLanguage: 'auto',
+	subtitleStyle: {
+		sizePx: 36,
+		heightPx: 120,
+		colour: '#EDE7DC',
+		outline: 'shadow',
+		background: 'none',
+		font: 'standard',
+		bold: false,
+	},
+};
+
+/**
+ * What the interface measures about itself, and what the engine measures about
+ * the picture. Both are diagnostics: the OSD shows none of them, `--diagnostics`
+ * prints them, and a claim of fluidity without them is an opinion.
+ */
+export type FluidStats = {
+	/** The rate mpv is actually presenting, not the file's own. */
+	fps?: number | null;
+	/** Frames the video output and the decoder had to throw away. */
+	drops?: number;
+	decoderDrops?: number;
+	/** The worst frame interval seen while somebody was doing something, in ms. */
+	osdWorstFrameMs?: number | null;
+	/** How many frames in the window took longer than two frames at 60 Hz. */
+	osdSlowFrames?: number | null;
+	/** How many frames the sampler drew: zero with a zero worst frame means the
+	 *  instrument never ran, which is not the same answer as "it was smooth". */
+	osdFrames?: number | null;
+	/** How many window-resize events arrived: one drag is not one event. */
+	osdResizeEvents?: number | null;
+};
+
 export type PlayerStatus = {
 	ready?: boolean;
 	media?: string | null;
