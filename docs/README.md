@@ -18,6 +18,9 @@ passer pour la documentation courante.
 
 ## Notes de version
 
+- [`Theia 3.3.5`](releases/v3.3.5.md) - les réglages du lecteur portent enfin sur
+  le film - Lecture et Sous-titres, mesurés sur le moteur lui-même - et le lecteur
+  cesse d'envoyer des trames que personne ne lit.
 - [`Theia 3.3.4`](releases/v3.3.4.md) - la génération native atteint Apple
   Silicon : le lecteur y dessine le film lui-même, l'archive s'exécute telle
   qu'elle est téléchargée.

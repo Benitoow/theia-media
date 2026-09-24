@@ -17,8 +17,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Benitoow/theia-media/releases/download/v3.3.4/theia-setup-windows-amd64.exe">Download for Windows x64</a> ·
-  <a href="https://github.com/Benitoow/theia-media/releases/download/v3.3.4/theia-setup-darwin-arm64">Download for macOS Apple Silicon</a> ·
+  <a href="https://github.com/Benitoow/theia-media/releases/download/v3.3.5/theia-setup-windows-amd64.exe">Download for Windows x64</a> ·
+  <a href="https://github.com/Benitoow/theia-media/releases/download/v3.3.5/theia-setup-darwin-arm64">Download for macOS Apple Silicon</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
@@ -38,7 +38,11 @@ external database or separate web app to install.
 ## V3.3: playback leaves the browser
 
 > [!IMPORTANT]
-> **`v3.3.4` is the current download.** The product is now three programs:
+> **`v3.3.5` is the current download.** It is the release where the player's
+> settings catch up with the film: **Lecture** (the next episode started
+> automatically, the audio language, the subtitles) and **Sous-titres** - a
+> preview and seven decisions behind it - beside a player that no longer sends a
+> status frame nobody reads. The product is three programs:
 > `theia-server` (the headless Go backend you already run, which keeps serving
 > the web interface for administration and fallback playback), `theia-player`
 > (a native desktop player built on Tauri and libmpv) and `theia-setup` (the
@@ -138,8 +142,8 @@ you an installation you would later resent.
 
 ## Three-minute setup
 
-1. Download **[Theia 3.3.4 for Windows x64](https://github.com/Benitoow/theia-media/releases/download/v3.3.4/theia-setup-windows-amd64.exe)**
-   - or, on a Mac with Apple Silicon, **[Theia 3.3.4 for macOS](https://github.com/Benitoow/theia-media/releases/download/v3.3.4/theia-setup-darwin-arm64)**
+1. Download **[Theia 3.3.5 for Windows x64](https://github.com/Benitoow/theia-media/releases/download/v3.3.5/theia-setup-windows-amd64.exe)**
+   - or, on a Mac with Apple Silicon, **[Theia 3.3.5 for macOS](https://github.com/Benitoow/theia-media/releases/download/v3.3.5/theia-setup-darwin-arm64)**
    - and run it. That one installer asks which
    language Theia should speak, what this machine is for, where to keep its data,
    the port it listens on, the name it answers to on the network, and which
@@ -172,14 +176,14 @@ where they are. Nothing asks for administrator rights in either direction.
 
 | Platform | The download |
 | --- | --- |
-| Windows x64 | [`theia-setup-windows-amd64.exe`](https://github.com/Benitoow/theia-media/releases/download/v3.3.4/theia-setup-windows-amd64.exe) (one file) |
-| macOS Apple Silicon | [`theia-setup-darwin-arm64`](https://github.com/Benitoow/theia-media/releases/download/v3.3.4/theia-setup-darwin-arm64) (one file) |
+| Windows x64 | [`theia-setup-windows-amd64.exe`](https://github.com/Benitoow/theia-media/releases/download/v3.3.5/theia-setup-windows-amd64.exe) (one file) |
+| macOS Apple Silicon | [`theia-setup-darwin-arm64`](https://github.com/Benitoow/theia-media/releases/download/v3.3.5/theia-setup-darwin-arm64) (one file) |
 | Windows on ARM, Intel Macs, Linux | not yet - see *what is verified* below |
 
 If you would rather install with nothing downloaded, use the
-[`theia-3.3.4-windows-amd64.zip`](https://github.com/Benitoow/theia-media/releases/download/v3.3.4/theia-3.3.4-windows-amd64.zip)
+[`theia-3.3.5-windows-amd64.zip`](https://github.com/Benitoow/theia-media/releases/download/v3.3.5/theia-3.3.5-windows-amd64.zip)
 or the
-[`theia-3.3.4-darwin-arm64.zip`](https://github.com/Benitoow/theia-media/releases/download/v3.3.4/theia-3.3.4-darwin-arm64.zip)
+[`theia-3.3.5-darwin-arm64.zip`](https://github.com/Benitoow/theia-media/releases/download/v3.3.5/theia-3.3.5-darwin-arm64.zip)
 offline bundle. Each holds every file for its platform. Unpack it and run
 `theia-setup.exe`, or `theia-setup` on a Mac, from inside that folder: it finds
 the programs **beside itself**, copies them, and needs no network at all.
