@@ -2495,8 +2495,27 @@ fn round_webview_window(window: &tauri::WebviewWindow) {
 #[cfg(not(windows))]
 fn round_webview_window(_window: &tauri::WebviewWindow) {}
 
+/// One resize event, handed to the timing and to the region.
+///
+/// Two functions rather than an `if let Ok(hwnd)` in the event hook, and this is
+/// not tidiness: `tauri::Window::hwnd` does not exist on macOS, so asking for a
+/// handle there is a build error rather than a no-op. The **dispatch of 24
+/// September 2026** found that the hard way - the resize pass had only ever been
+/// compiled on Windows, and the macOS player job refused the tree with
+/// `no method named hwnd found for reference &tauri::Window`. A release is
+/// measured on every platform it publishes, which is what caught it before a tag
+/// did.
+#[cfg(windows)]
+fn note_resize_event(window: &tauri::Window) {
+    if let Ok(hwnd) = window.hwnd() {
+        note_resize(hwnd.0 as isize);
+    }
+}
+
+/// Nothing on a Mac or the other Unix: there is no window region to drop, and
+/// the timing that goes with it is a Windows measurement.
 #[cfg(not(windows))]
-fn round_webview_window(_window: &tauri::WebviewWindow) {}
+fn note_resize_event(_window: &tauri::Window) {}
 
 /// Chooses a 16:9 logical window that fits the current monitor at any DPI.
 fn fitted_window_size(monitor_width: f64, monitor_height: f64) -> (f64, f64) {
@@ -3288,9 +3307,7 @@ fn main() {
                 // anything, and the telemetry thread puts a fresh one back once
                 // the size has settled. Decision 147 carries the numbers.
                 tauri::WindowEvent::Resized(_) | tauri::WindowEvent::ScaleFactorChanged { .. } => {
-                    if let Ok(hwnd) = window.hwnd() {
-                        note_resize(hwnd.0 as isize);
-                    }
+                    note_resize_event(window);
                 }
                 _ => {}
             }
