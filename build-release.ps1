@@ -1,7 +1,7 @@
 # Assembles what a person actually downloads: one archive, one file to run.
 #
 #   .\build-release.ps1                     -> dist\theia-<version>-windows-amd64.zip
-#   .\build-release.ps1 -Version 3.3.3
+#   .\build-release.ps1 -Version 3.3.6
 #   .\build-release.ps1 -Version 3.3.4 -Target darwin-arm64
 #                                           -> dist\theia-3.3.4-darwin-arm64.zip,
 #                                              assembled from dist\ and not built
@@ -30,9 +30,8 @@
 # pinned for darwin-arm64 alone, so by the time this runs the bundle and the
 # three programs are already in dist/ and nothing here may build anything. What
 # this path owns is the archive: the bundle as it stands, the programs under the
-# short names the installer looks for, and a START-HERE.txt that says the two
-# things a Mac user meets and a Windows user does not - an unsigned download and
-# a zip that arrives without its executable bit.
+# short names the installer looks for, and a START-HERE.txt that explains the
+# unsigned download and the per-user installation.
 #
 # Nothing is fetched or compiled to make the macOS archive, so it is offline by
 # construction, and a missing bundle names the build that produces it rather
@@ -278,13 +277,27 @@ if (-not $go) {
     if (Test-Path $candidate) { $go = $candidate }
 }
 if (-not $go) { throw 'Go was not found. Install it, put it on PATH, or unpack it at $env:USERPROFILE/go-toolchain/go.' }
+# A workflow dispatch deliberately names its dry-run binaries 0.0.0, without a
+# tag. Real release versions carry the tag's v in every executable.
+$binaryVersion = if ($Version -in @('dev', '0.0.0')) { $Version } else { "v$Version" }
 
 # The player first when it is not already built: it is by far the longest step,
 # and failing there should not happen after the Go builds have run.
 if (-not $SkipPlayer) {
     Write-Host '==> Building the player and its engine' -ForegroundColor Cyan
-    & (Join-Path $root 'build-player.ps1') -Release -Bundle
+    & (Join-Path $root 'build-player.ps1') -Release -Bundle -Version $binaryVersion
     if ($LASTEXITCODE -ne 0) { throw 'the player build failed' }
+}
+
+# A reused player bundle can be older than the requested archive. Check it
+# before rebuilding the other programs or replacing an existing archive.
+$playerExe = Join-Path $root 'dist\theia-player-windows-amd64\theia-player.exe'
+if (-not (Test-Path $playerExe)) {
+    throw "the player bundle is missing from $playerExe; build it with .\build-player.ps1 -Release -Bundle -Version $binaryVersion"
+}
+$playerVersion = & $playerExe -version
+if ($LASTEXITCODE -ne 0 -or $playerVersion -ne "theia-player $binaryVersion") {
+    throw "the player bundle reports '$playerVersion', expected 'theia-player $binaryVersion'; rebuild it for this archive"
 }
 
 $name = "theia-$Version-windows-amd64"
@@ -307,6 +320,10 @@ try {
     # case, so a loop variable called `$target` *is* the -Target parameter, and
     # assigning a hashtable to it fails with a message about converting one into
     # a string. Same trap as `$bundle` in build-player.ps1.
+    # Match the published components: the tag contains `v`, while the archive
+    # filename uses a bare version. A locally built archive should not give its
+    # server, setup and launcher a different version from the same release's
+    # individually published executables.
     foreach ($build in @(
         @{ path = './cmd/theia-server'; out = 'theia-server.exe'; key = 'main.tmdbAPIKey' },
         @{ path = './cmd/theia-setup'; out = 'theia-setup.exe'; key = '' },
@@ -315,7 +332,7 @@ try {
         # somebody clicked Theia. See cmd/theia/main.go.
         @{ path = './cmd/theia'; out = 'theia.exe'; key = ''; gui = $true }
     )) {
-        $ldflags = "-s -w -X main.version=$Version"
+        $ldflags = "-s -w -X main.version=$binaryVersion"
         if ($build.key -and $env:TMDB_API_KEY) { $ldflags += " -X $($build.key)=$($env:TMDB_API_KEY)" }
         if ($build.gui) { $ldflags += ' -H=windowsgui' }
         & $go build -buildvcs=false -trimpath -ldflags $ldflags -o (Join-Path $stage $build.out) $build.path
@@ -328,9 +345,6 @@ finally {
 
 # The player bundle, already assembled with its engine by build-player.ps1.
 $playerBundle = Join-Path $root 'dist\theia-player-windows-amd64'
-if (-not (Test-Path (Join-Path $playerBundle 'theia-player.exe'))) {
-    throw "the player bundle is missing from $playerBundle; build it with .\build-player.ps1 -Release -Bundle"
-}
 foreach ($file in 'theia-player.exe', 'libmpv-2.dll', 'LICENSE-libmpv.txt', 'NOTICE.md') {
     Copy-Item (Join-Path $playerBundle $file) $stage
 }

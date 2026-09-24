@@ -4,7 +4,7 @@
 #   ./scripts/build-player-macos.sh                     -> debug build
 #   ./scripts/build-player-macos.sh -Release            -> release build
 #   ./scripts/build-player-macos.sh -Release -Bundle    -> and dist/theia-player-darwin-arm64
-#   ./scripts/build-player-macos.sh -Release -Bundle -Version 3.3.4
+#   ./scripts/build-player-macos.sh -Release -Bundle -Version v3.3.6
 #                                                       -> and a binary that names
 #                                                          that build, which is
 #                                                          what --diagnostics
@@ -111,9 +111,9 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Frameworks" "$app/Contents/Resourc
 cp "$binary" "$app/Contents/MacOS/theia-player"
 
 # The bundle's own description of itself. The binary reports the tag - the same
-# value build.rs compiled in, so `theia-player -version` prints v3.3.4 - and the
+# value build.rs compiled in, so `theia-player -version` prints v3.3.6 - and the
 # plist carries that tag without its leading `v`, because CFBundleShortVersionString
-# and CFBundleVersion are documented as dotted numbers and `v3.3.4` is not one.
+# and CFBundleVersion are documented as dotted numbers and `v3.3.6` is not one.
 # They name one version, and the updater compares them that way: internal/setup's
 # sameVersion drops the `v` from both sides before comparing.
 plistVersion="${version:-dev}"

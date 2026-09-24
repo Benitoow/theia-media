@@ -228,3 +228,27 @@ jobs:
           name: macos-proof
           path: out/
           retention-days: 14
+
+      # The earlier steps keep going to collect evidence even after a failure.
+      # Make the final job result reflect those logs after the artifact is saved.
+      - name: Require successful proof
+        if: always()
+        run: |
+          for check in \
+            'out/render-spike.log|render-spike exit: 0' \
+            'out/composite-spike.log|composite-spike exit: 0' \
+            'out/bundle.log|build-player-macos exit: 0' \
+            'out/archive.log|build-release exit: 0' \
+            'out/verify.log|verify-macos exit: 0'
+          do
+            file="${check%%|*}"
+            result="${check#*|}"
+            if ! grep -qFx "$result" "$file"; then
+              echo "::error::$file did not report '$result'"
+              exit 1
+            fi
+          done
+          if grep -q '^FAIL ' out/verify.log; then
+            echo '::error::the macOS verifier reported a failed check'
+            exit 1
+          fi

@@ -540,7 +540,7 @@ async function assertVolume(page) {
 	await clear();
 	await page.locator('.control--mute').click();
 	await page.waitForTimeout(150);
-	const muted = await invoked();
+	const muted = (await invoked()).filter((call) => call.cmd !== 'player_osd_stats');
 	if (muted.length !== 1 || muted[0].cmd !== 'player_set_muted') {
 		console.error(`the mute button issued ${muted.map((c) => c.cmd).join(', ') || 'no command'}, not one player_set_muted`);
 		failures++;
@@ -553,7 +553,7 @@ async function assertVolume(page) {
 	await clear();
 	await page.locator('.control--mute').click();
 	await page.waitForTimeout(150);
-	const restored = await invoked();
+	const restored = (await invoked()).filter((call) => call.cmd !== 'player_osd_stats');
 	if (restored.length !== 1 || restored[0].cmd !== 'player_set_volume' || Math.abs(Number(restored[0].args?.volume) - 0.5) > 0.001) {
 		console.error(
 			`pressing mute with the volume at zero issued ${restored.map((c) => `${c.cmd}(${c.args?.volume ?? ''})`).join(', ') || 'no command'}, not one player_set_volume of 0.5`

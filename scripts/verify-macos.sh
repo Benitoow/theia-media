@@ -21,6 +21,7 @@ work="$(mktemp -d /tmp/theia-verify.XXXXXX)"
 pass=0
 fail=0
 look=0
+archive_version=""
 
 while [ $# -gt 0 ]; do
 	case "$1" in
@@ -57,7 +58,11 @@ echo "== The engine the player ships =="
 if [ -x "$app/Contents/MacOS/theia-player" ]; then
 	reported="$("$app/Contents/MacOS/theia-player" -version 2>&1 | head -1)"
 	case "$reported" in
-		theia-player*) ok "the player names itself: $reported" ;;
+		theia-player\ *)
+			archive_version="${reported#theia-player }"
+			archive_version="${archive_version#v}"
+			ok "the player names itself: $reported"
+			;;
 		*) bad "the player printed $reported instead of its own version" ;;
 	esac
 else
@@ -81,7 +86,7 @@ if command -v codesign >/dev/null 2>&1; then
 		bad "codesign --verify refuses the bundle"
 	fi
 fi
-human "Gatekeeper: a downloaded copy must be refused once (unsigned, not notarised). Control-click, Open, Open."
+human "Gatekeeper: check the first launch of a downloaded copy (ad-hoc signed, not notarised)."
 
 echo
 echo "== The server, on a throwaway data directory =="
@@ -89,9 +94,11 @@ echo "== The server, on a throwaway data directory =="
 # workflow, and a working tree. The first version of this script only knew the
 # first two and reported "no darwin server binary" about a directory that held
 # one.
+archive_dir=""
+[ -n "$archive_version" ] && archive_dir="$root/dist/theia-$archive_version-darwin-arm64"
 server="$root/theia-server-darwin-arm64"
 [ -x "$server" ] || server="$root/dist/theia-server-darwin-arm64"
-[ -x "$server" ] || server="$root/dist/theia-3.3.4-darwin-arm64/theia-server"
+if [ ! -x "$server" ] && [ -n "$archive_dir" ]; then server="$archive_dir/theia-server"; fi
 if [ -x "$server" ]; then
 	data="$work/data"
 	mkdir -p "$data/library"
@@ -178,7 +185,8 @@ fi
 
 echo
 echo "== The installer, into a throwaway home =="
-setup="$root/dist/theia-3.3.4-darwin-arm64/theia-setup"
+setup=""
+if [ -n "$archive_dir" ]; then setup="$archive_dir/theia-setup"; fi
 [ -x "$setup" ] || setup="$root/dist/theia-setup-darwin-arm64"
 [ -x "$setup" ] || setup="$root/theia-setup"
 if [ -x "$setup" ]; then

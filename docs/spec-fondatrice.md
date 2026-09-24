@@ -307,8 +307,8 @@ plateforme, pas des défauts de Theia.
 
 | Clause amendée | Sens en V3.3 |
 |---|---|
-| §1, §3 et §3 (pitch Navidrome) : « un seul binaire » | **trois exécutables** : `theia-server` (Go, headless), `theia-player` (Tauri 2 + Rust + libmpv), `theia-setup` (Go + Charm), **plus la commande `theia`** (Go) qui démarre le serveur s'il ne répond pas puis ouvre le lecteur - décision 139, 21 septembre 2026. Les **noms d'assets publiés** du serveur restent `theia-<os>-<arch>` : les installations v3.2 se mettent à jour avec ces noms, les renommer les abandonnerait. |
-| §3 : « pas de dépendance runtime au-delà de ffmpeg » | reste vrai **pour `theia-server`**. `theia-player` ajoute **libmpv** : source épinglée, SHA-256 vérifié, licence contrôlée, téléchargée au premier besoin. Il utilise en plus le moteur web de la plateforme (WebView2, WKWebView, WebKitGTK), qui n'est ni téléchargé ni épinglé par Theia - exception nommée, pas oubli. |
+| §1, §3 et §3 (pitch Navidrome) : « un seul binaire » | **trois exécutables** : `theia-server` (Go, headless), `theia-player` (Tauri 2 + Rust + libmpv), `theia-setup` (Go + Charm), **plus la commande `theia`** (Go) qui démarre le serveur s'il ne répond pas puis ouvre le lecteur - décision 139, 21 septembre 2026. Les assets serveur publiés s'appellent `theia-server-<os>-<arch>` depuis la V3.3 ; les anciens noms `theia-<os>-<arch>` ont été conservés pour la transition V3.3.0 uniquement (décisions 119 et 138). |
+| §3 : « pas de dépendance runtime au-delà de ffmpeg » | reste vrai **pour `theia-server`**. `theia-player` ajoute **libmpv** : source épinglée, SHA-256 vérifié, licence contrôlée, **livrée dans le bundle du lecteur** (décision 118). Il utilise en plus le moteur web de la plateforme (WebView2, WKWebView, WebKitGTK), qui n'est ni téléchargé ni épinglé par Theia - exception nommée, pas oubli. |
 | §5 : « applications natives hors périmètre » | les applications **de bureau** entrent dans le périmètre. Les applications TV et mobiles restent dehors (V3.4/V5). |
 | §2 étape 4 et §10 : « depuis un navigateur, sur la TV, en moins de 3 clics » | le critère de succès V3.3 passe par `theia-player` pour la restitution ; le navigateur reste la voie d'administration et de secours. Le critère lui-même est réécrit dans [`v3.3.md`](v3.3.md). |
 | §11.7 : « binaire lancé manuellement » *(reformulé, pas supprimé)* | `theia-setup` installe un service `systemd`, une tâche planifiée Windows ou un agent `launchd`, **sur demande explicite** uniquement. Aucune élévation imposée. |
@@ -332,9 +332,12 @@ Ces règles restent des interdits, pas des préférences :
 - **Interface en français et en anglais**, catalogues séparés, parité vérifiée.
 - **Le design system reste la référence visuelle**, y compris pour l'OSD du
   player natif : une seule identité, pas deux.
-- **On rapporte ce qui a été mesuré.** Windows est la seule plateforme de
-  validation réelle de la V3.3. macOS, Linux, Android TV, Apple TV et iOS sont
-  écrits mais **non vérifiés**, et le disent.
+- **On rapporte ce qui a été mesuré.** Windows x64 a été validé sur la machine du
+  mainteneur. Depuis la V3.3.4, le lecteur, l'installeur et l'archive macOS Apple
+  Silicon ont tourné sur un Mac hébergé par GitHub (décision 144), avec des limites
+  encore ouvertes sur le son réel, le décodage matériel, Gatekeeper et le rendu
+  perçu par une personne. Les autres cibles n'ont que le serveur vérifié par la
+  chaîne de build ; aucun produit complet n'y est revendiqué.
 
 ### 14.3 La machine ne devine pas son rôle
 

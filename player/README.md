@@ -1,7 +1,8 @@
 # theia-player
 
-Theia's native player: a Tauri 2 window whose only visible layer is the OSD,
-with libmpv drawing the film into a child surface of the same window.
+Theia's native player: a Tauri 2 window with an OSD over libmpv. On Windows,
+libmpv draws into a child surface; on macOS, the host renders its frames into
+an OpenGL view below the OSD.
 
 It exists because a browser cannot hand an untouched Dolby TrueHD, DTS-HD MA or
 Atmos stream to an amplifier, renders only the HDR10 base layer of a Dolby
@@ -30,7 +31,7 @@ and `player/theia-player/gen` are generated and never committed.
 
 A player without an engine plays nothing, so the bundle is what gets distributed:
 `theia-player.exe`, `libmpv-2.dll`, `LICENSE-libmpv.txt` and `NOTICE.md`, zipped
-into `dist/theia-player-windows-amd64.zip` (about 43 MB). The engine is fetched by
+into `dist/theia-player-windows-amd64.zip` (about 47 MiB). The engine is fetched by
 `scripts/fetch-libmpv`, which reads `player/libmpv.json` and **checks two
 digests** - the archive's before extracting, the library's after - and refuses to
 hand anything on if either disagrees:
@@ -42,8 +43,9 @@ go run ./scripts/fetch-libmpv -out player/vendor
 
 The upstream project keeps thirty days of builds, so `THEIA_LIBMPV_MIRROR` points
 the fetch at a mirror first; the digest is what decides, not the URL. Both
-`windows/amd64` and `darwin/arm64` are pinned; only Windows has been run and
-verified, and the macOS pin's first run is on a Mac (see [On macOS](#on-macos)).
+`windows/amd64` and `darwin/arm64` are pinned. The Windows player was run on
+the maintainer's machine; the macOS player and engine were run on a GitHub-hosted
+Apple Silicon Mac (see [On macOS](#on-macos)).
 
 ### How an installed player is updated
 
@@ -85,14 +87,10 @@ and a name:
 | `Contents/Resources/` | `LICENSE-libmpv.txt` and `NOTICE.md`, beside those |
 
 **The bundle is ad-hoc signed and not notarised** - there is no Apple certificate
-behind it - so Gatekeeper refuses the first launch of a copy that came off the
-network: right-click the app, *Open*, then *Open* again, or
-`xattr -dr com.apple.quarantine Theia.app` for a scripted one. And **a zip does
-not carry Unix permission bits**, which is what the download is: after
-extracting, `Theia.app/Contents/MacOS/theia-player` can arrive not executable, so
-`chmod +x` it (`START-HERE.txt` in the archive says so, and `build-release.ps1`
-writes it). CI unpacks the same zip with `ditto -x -k`, which is what recreates
-the bits and the symlinks.
+behind it. Gatekeeper's first response to a downloaded copy still needs an
+interactive Mac check. CI extracts the published ZIP with `ditto -x -k` and
+verifies the player, server, setup and launcher are executable and the engine's
+symlinks survive. The offline archive needs no `chmod` step.
 
 The engine and the audio differ from Windows in three places, and each is in
 `src/main.rs` beside the value it belongs to: the platform table asks for
@@ -100,11 +98,10 @@ The engine and the audio differ from Windows in three places, and each is in
 the audio mode starts at PCM because CoreAudio has no passthrough for the formats
 the Windows path asks for, and the window handle is the NSView Tauri hands over.
 
-### The first check, and the one thing that is already known
+### The engine's macOS render path
 
-The `darwin/arm64` pin has never been run. One thing about it is known from the
-engine's own build configuration and from mpv 0.41's source, and it is written
-into the code rather than left for the first person to discover: **nothing in
+The `darwin/arm64` pin was run on a GitHub-hosted Apple Silicon Mac. Its build
+configuration and mpv 0.41's source explain why **nothing in
 mpv's video outputs can draw a frame on macOS with this engine.** mpv 0.41 has no
 `metal` GPU API - the names it accepts are `auto`, `opengl`, `vulkan`, `d3d11` -
 the pin is built with `vulkan=disabled`, so the one macOS context in that table,
@@ -114,7 +111,9 @@ The engine's one video path is the libmpv render API over OpenGL
 (`plain-gl=enabled` in the pin), where the *host* owns the GL context and draws
 each frame - an architecture change for this player, not a port.
 
-So the first Mac run answers it, and the answer is in the player's own output:
+The Mac run proved `mpv_render_context_create` works, frames reach the host's
+`NSOpenGLView`, and a transparent WebView composites over it. The verifier and
+player diagnostics can repeat those checks:
 
 ```bash
 ./scripts/verify-macos.sh -Media /path/to/a/film
@@ -122,11 +121,11 @@ dist/theia-player-darwin-arm64/Theia.app/Contents/MacOS/theia-player \
   --media /path/to/a/film --mute --diagnostics
 ```
 
-`--diagnostics` prints the session state once a second, and `vo`, `hwdec` and
-`ao` in it are mpv's own answers (`current-vo`, `hwdec-current`, `current-ao`) -
-so a film that plays says what it played through, and a film that does not shows
-`pos` standing still. The other thing no program here can answer is the picture:
-whether the OSD draws over the film, which is a person's look.
+`--diagnostics` prints the session state once a second. `vo`, `hwdec` and `ao`
+are mpv's own properties (`current-vo`, `hwdec-current`, `current-ao`); on macOS
+the host owns video output, so `current-vo` can be empty even while frames are
+drawn. Position advancing and the verifier's frame count establish playback.
+The OSD's appearance over a moving film still needs a person's look.
 
 ## Looking at the OSD without playing anything
 
@@ -294,11 +293,10 @@ the menu's detail line, where the file on disk is a `.srt`; and serving the
 sidecar untouched would need a server route the API does not have. That belongs
 to the server's own phase.
 
-Not verified anywhere yet: macOS, Linux, television browsers, bitstream
-passthrough reaching an actual amplifier, and the OSD drawn by the real WebView2
-window over moving picture rather than by Chromium over a still frame. That last
-one is the maintainer's look, and it is the only result that could overturn the
-`wid` composition choice.
+Still unverified: Linux and television browsers as complete products, bitstream
+passthrough reaching an actual amplifier, and the OSD's appearance over moving
+picture on the maintainer's screen. The macOS runner verified playback and
+composition, but not interactive audio, VideoToolbox or Gatekeeper behaviour.
 
 ## The audio path, and the failure it recovers from
 

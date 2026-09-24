@@ -4,8 +4,8 @@ Theia is a personal media server: no configuration, no account, no paywall. One
 user, their own films, their own machine.
 
 **V3.3 is the current release line.** `v3.2.0` is the last single-binary
-release; `v3.3.0` introduced the native generation and `v3.3.3` is the current
-maintenance release. V3.3 splits the product into three artifacts:
+release; `v3.3.0` introduced the native generation and `v3.3.5` is the current
+published maintenance release. V3.3 splits the product into three artifacts:
 `theia-server` (Go, headless, still serving the frozen Svelte interface as
 fallback playback), `theia-player` (Tauri 2 + Rust + libmpv - the native player,
 and where films are now meant to be watched) and `theia-setup` (Go + Charm, the
@@ -18,15 +18,14 @@ Vision profile 7, and does not read Matroska natively.
 
 Read decision 117 and `docs/spec-fondatrice.md` §14 before touching anything.
 They record exactly which founding clauses were superseded and which still bind.
-Windows is the only platform V3.3 can be verified on; macOS, Linux, Android TV,
-Apple TV and iOS are unverified until they run on real hardware. **V3.3.4 adds
-macOS Apple Silicon** (decision 144) under exactly that rule: the engine is pinned
-and measured, the code exists, and nothing is claimed until a real Mac runs the two
-spikes in `player/spike-macos/`, plays a film with the player, and passes
-`scripts/verify-macos.sh`. Until then the macOS paths are written, build, and are
-described as unverified wherever they appear.
+Windows x64 and macOS Apple Silicon have complete release artifacts. The Windows
+player was run on the maintainer's machine; the macOS player, installer and
+archive were run on a GitHub-hosted Apple Silicon Mac (decision 144). macOS audio
+output, hardware decoding, Gatekeeper and the OSD over a moving film still need
+an interactive Mac check. Other targets have server binaries only and must not be
+presented as complete products.
 
-**Publication is explicit.** `v3.3.0` is public; preparing a later release does
+**Publication is explicit.** `v3.3.5` is public; preparing a later release does
 not authorize publishing it. Never push, create or push a tag, create a release,
 or upload an asset without the maintainer's explicit instruction for that exact
 action. `release.yml` fires on a pushed `v*` tag, so a tag pushed "just to see
@@ -276,7 +275,7 @@ with EPERM while cleaning up.
 ## Building the release archive
 
 ```bash
-./build-release.ps1 -Version 3.3.3     # -> dist/theia-3.3.3-windows-amd64.zip
+./build-release.ps1 -Version 3.3.6     # -> dist/theia-3.3.6-windows-amd64.zip
 ```
 
 The archive is **the offline path**: everything in one zip - the installer, the
@@ -287,14 +286,11 @@ the first version published three separate downloads and told the reader to put
 them together - and somebody who downloaded only the installer, which is what the
 README said to do first, got a configuration and nothing to run it.
 
-**What a person downloads is one executable**,
-`theia-setup-windows-amd64.exe`, because Windows x64 is the only complete
-platform verified on real hardware. It fetches the rest, verified. The server
-assets for six targets and the Windows player bundle are published as labelled
-components for the updater and installer; setup executables for an unverified
-player platform are not published as if they were a complete product. Decisions
-138 and 139 fix the exact release surface: the installer, the offline bundle, the
-six server binaries, the player bundle and the `theia` command, and
+**A person downloads one setup executable** for Windows x64 or macOS Apple
+Silicon. It fetches the rest, verified. Each also has an offline archive. Six
+server binaries remain separate components for the updater and installer; setup
+executables for targets without a verified player are not published as complete
+products. Decisions 138, 139 and 144 fix the fourteen-asset release surface, and
 `scripts/check-release-assets.ps1` refuses anything else.
 
 ## Building the native player
@@ -336,11 +332,11 @@ What ships is the **bundle**, not the executable:
 It adds the engine (`libmpv-2.dll`), the LGPL text and the notice naming the
 pinned build. `scripts/fetch-libmpv` downloads the archive from
 `player/libmpv.json` and checks **two** digests - the archive before extracting,
-the library after - refusing anything that disagrees. Only `windows/amd64` is
-pinned: an entry for a platform nobody has run would be a claim, not a pin. The
-release pipeline checks the four bundle files and the loaded engine's digest
-before publishing, because a bundle missing its licence is a breach rather than
-an incomplete download.
+the library after - refusing anything that disagrees. Windows x64 and macOS
+Apple Silicon are pinned. The pipeline checks the Windows bundle's four files
+and loaded engine digest, and verifies the macOS app bundle and its engine on an
+Apple Silicon runner before publishing. A bundle missing its licence is a breach
+rather than an incomplete download.
 
 The OSD is a web page whose only external dependency is `window.__TAURI__`, so it
 can be looked at without launching the player or playing anything:

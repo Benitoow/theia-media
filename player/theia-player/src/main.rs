@@ -116,7 +116,7 @@ struct Session {
     /// the engine's own answer rather than by our own load, deliberately: a load
     /// that has just been handed to mpv can still be reporting the file before it,
     /// and how long that lasts is not something this process can see from outside
-    /// - a guard re-armed by the load would act inside that window and skip an
+    /// so a guard re-armed by the load would act inside that window and skip an
     /// episode. See `autoplay_next_episode`.
     end_handled: bool,
     /// The subtitle files still to be handed to mpv for this load.
@@ -508,7 +508,8 @@ enum SubtitleLanguage {
 #[serde(rename_all = "lowercase")]
 enum Outline {
     Shadow,
-    Outline,
+    #[serde(rename = "outline")]
+    Border,
     #[serde(rename = "none")]
     Off,
 }
@@ -788,7 +789,7 @@ fn outline_properties(style: &SubtitleStyle) -> Vec<(&'static str, String)> {
         ];
     }
     match style.outline {
-        Outline::Outline => vec![
+        Outline::Border => vec![
             ("sub-border-style", "outline-and-shadow".to_string()),
             ("sub-border-size", "2.4".to_string()),
             ("sub-shadow-offset", "0".to_string()),
@@ -2775,8 +2776,8 @@ fn save_progress() {
 /// why the session holds a guard: without it the telemetry thread would start
 /// the next episode twice a second.
 ///
-/// The guard is re-armed by the engine's own answer - a tick that reports no end
-/// - rather than by the load the player itself issues, and that is deliberate. A
+/// The guard is re-armed by the engine's own answer: a tick that reports no end,
+/// rather than by the load the player itself issues. That is deliberate. A
 /// load that has just been handed to mpv can still be reporting the file before
 /// it, and for how long is not something this process can observe from outside;
 /// a guard re-armed by the load would act inside that window, so the episode
@@ -3512,7 +3513,7 @@ mod playback_tests {
         assert_eq!(parsed.subtitle_style.size_px, 48.0);
         assert_eq!(parsed.subtitle_style.height_px, 160.0);
         assert_eq!(parsed.subtitle_style.colour, "#112233");
-        assert_eq!(parsed.subtitle_style.outline, Outline::Outline);
+        assert_eq!(parsed.subtitle_style.outline, Outline::Border);
         assert_eq!(parsed.subtitle_style.background, "#445566");
         assert_eq!(parsed.subtitle_style.font, Font::Mono);
         assert!(parsed.subtitle_style.bold);
@@ -3600,7 +3601,7 @@ mod playback_tests {
     #[test]
     fn a_background_colour_wins_over_the_outline() {
         let prefs = style_with(|style| {
-            style.outline = Outline::Outline;
+            style.outline = Outline::Border;
             style.background = "#203040".to_string();
         });
         // A band across the picture, which is what television does; the engine's
@@ -3622,7 +3623,7 @@ mod playback_tests {
         assert_eq!(property(&shadow, "sub-shadow-offset"), "1.2");
         assert!(!sets(&shadow, "sub-back-color"));
 
-        let outline = style_with(|style| style.outline = Outline::Outline);
+        let outline = style_with(|style| style.outline = Outline::Border);
         assert_eq!(property(&outline, "sub-border-style"), "outline-and-shadow");
         assert_eq!(property(&outline, "sub-border-size"), "2.4");
         assert_eq!(property(&outline, "sub-shadow-offset"), "0");

@@ -11,7 +11,11 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..', '..');
-const binary = join(root, process.platform === 'win32' ? 'theia-server.exe' : 'theia-server');
+// Point at the server inside a freshly assembled release archive when checking
+// the bytes a person would actually run, without replacing a working-tree build.
+const binary = process.env.THEIA_TEST_BINARY
+	? resolve(process.env.THEIA_TEST_BINARY)
+	: join(root, process.platform === 'win32' ? 'theia-server.exe' : 'theia-server');
 const stale = join(root, process.platform === 'win32' ? 'theia.exe' : 'theia');
 
 if (!existsSync(binary)) {

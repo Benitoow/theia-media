@@ -6,10 +6,9 @@ import "fmt"
 
 // The Windows application registration, absent elsewhere.
 //
-// V3.3 is verified on Windows only; a program list entry on a platform nobody has
-// run would be a claim rather than a pin, which is the rule the whole project is
-// held to. The programs are still installed, and the data directory is still
-// theirs to move.
+// This registry entry is Windows-specific. On macOS the installer exposes the
+// application through ~/Applications and the command through ~/.local/bin.
+// Linux has no verified desktop integration yet.
 
 // UninstallFlag is the flag that removes an installation. It exists on every
 // platform because the command line does; only the registration is Windows-only.

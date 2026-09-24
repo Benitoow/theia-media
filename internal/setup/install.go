@@ -254,10 +254,10 @@ func playerProgram(goos, goarch string) program {
 // whose members are that tree, and an extraction is asked for exactly these
 // names: the tree brings everything with it, and each member after it is a
 // second question whose answer decides whether a bundle missing its engine or
-// its licence is refused. Windows is pinned and verified; the macOS list is what
-// the player's bundle is *supposed* to contain, and the Mac has to confirm it
-// (the tree is written down here and in the release workflow, and the two must
-// agree).
+// its licence is refused. Both bundles are pinned and checked by the release
+// workflow; the macOS bundle has also run on an Apple Silicon runner (decision
+// 144). The tree is written down here and in the release workflow, and the two
+// must agree.
 func bundleFiles(goos string) []string {
 	switch goos {
 	case "windows":

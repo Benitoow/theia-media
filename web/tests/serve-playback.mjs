@@ -4,7 +4,9 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '../..');
 const data = mkdtempSync(join(tmpdir(), 'theia-playback-guard-'));
-const binary = join(root, process.platform === 'win32' ? 'theia-server.exe' : 'theia-server');
+const binary = process.env.THEIA_TEST_BINARY
+	? resolve(process.env.THEIA_TEST_BINARY)
+	: join(root, process.platform === 'win32' ? 'theia-server.exe' : 'theia-server');
 // The same trap serve.mjs documents: a pre-V3.3 binary at the root is not this
 // tree, and a guard that runs it reports on code nobody is changing.
 if (!existsSync(binary)) {

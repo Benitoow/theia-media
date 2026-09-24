@@ -91,7 +91,7 @@ pub fn engine_path() -> Result<PathBuf, String> {
         paths
     };
     #[cfg(not(target_os = "macos"))]
-    let candidates = vec![dir.join(ENGINE_FILE_NAME)];
+    let candidates = [dir.join(ENGINE_FILE_NAME)];
 
     if let Some(found) = candidates.iter().find(|p| p.is_file()) {
         return Ok(found.clone());

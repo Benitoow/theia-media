@@ -1167,7 +1167,6 @@ mod tests {
     }
 
     #[test]
-    #[test]
     fn the_watching_payload_is_read_as_the_server_writes_it() {
         // The literal is what the server answered on 24 September 2026, copied
         // rather than paraphrased: the shape is the contract between the two
@@ -1222,6 +1221,7 @@ mod tests {
         assert_eq!(image_url("http://host:8395", "", "w185"), "");
     }
 
+    #[test]
     fn the_profile_is_appended_without_breaking_a_query() {
         let mut client = Client::new("http://host:8395/");
         assert_eq!(client.url("/api/health"), "http://host:8395/api/health");

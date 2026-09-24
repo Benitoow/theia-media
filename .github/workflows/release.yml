@@ -181,11 +181,9 @@ jobs:
           path: dist/
           retention-days: 1
 
-  # The player is a second toolchain - Rust, Node, and a 95 MB engine fetched by
-  # digest - and it is built on Windows only. Not for convenience: Windows is the
-  # only platform the player has been run and verified on (docs/v3.3.md), and a
-  # macOS or Linux artifact would be a claim nobody has tested. Those arrive when
-  # they can be validated, which is what the validation boundary says.
+  # The player is a second toolchain - Rust, Node, and a pinned engine fetched by
+  # digest. Windows x64 and macOS Apple Silicon have complete player builds;
+  # the remaining server targets have no verified native player.
   player:
     name: Player (windows/amd64)
     # Only the artifact, like the build matrix above.
@@ -214,6 +212,8 @@ jobs:
           node-version: '24'
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
 
       # It caches the registry and the target directory, which is most of the
       # build time: a Tauri release build is a few hundred crates.
@@ -231,6 +231,17 @@ jobs:
         env:
           CGO_ENABLED: '0'
         run: .\build-player.ps1 -Release -Bundle -Version ${{ env.THEIA_VERSION }}
+
+      - name: Check player UI dependencies
+        run: npm audit --audit-level=high
+        working-directory: player/ui
+
+      - name: Test and lint the native player
+        run: |
+          cargo test --manifest-path player/Cargo.toml --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo clippy --manifest-path player/Cargo.toml --all-targets --locked -- -D warnings
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # A bundle without the engine plays nothing; one without the licence
       # breaches the LGPL that allows us to ship the engine at all. Both are
@@ -432,6 +443,8 @@ jobs:
           node-version: '24'
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -443,6 +456,11 @@ jobs:
       # an ad-hoc signature and the zip.
       - name: Build the player and its app bundle
         run: ./scripts/build-player-macos.sh -Release -Bundle -Version ${{ env.THEIA_VERSION }}
+
+      - name: Test and lint the macOS player
+        run: |
+          cargo test --manifest-path player/Cargo.toml --locked
+          cargo clippy --manifest-path player/Cargo.toml --all-targets --locked -- -D warnings
 
       # A bundle without its engine plays nothing, and one without the licence
       # breaches the LGPL that allows us to ship the engine at all. Both are
