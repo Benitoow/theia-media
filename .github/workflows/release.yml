@@ -602,8 +602,8 @@ jobs:
         with:
           go-version: '1.26.6'
 
-      - name: Test macOS ZIP extraction and symlink safety
-        run: go test -count=1 ./internal/release
+      - name: Test macOS installer and ZIP extraction
+        run: go test -count=1 ./internal/release ./internal/setup
 
       - uses: actions/download-artifact@v8
         with:
@@ -727,7 +727,27 @@ jobs:
             test -e "$link" || { echo "dangling installed framework link: $link"; exit 1; }
           done < <(find "$app/Contents/Frameworks" -type l)
           "$app/Contents/MacOS/theia-player" -version
+          test ! -x "$app/Contents/Info.plist"
+          codesign --verify --strict "$app"
           echo "the ZIP installer kept all $actual framework symlinks"
+
+      - name: Install the Mac download from its extracted folder
+        run: |
+          folder_home="$RUNNER_TEMP/theia-folder-install"
+          mkdir -p "$folder_home/library"
+          HOME="$folder_home" "$RUNNER_TEMP/download/theia-setup" \
+            --role all-in-one --lang en \
+            --install-dir "$folder_home/.local/lib/theia" \
+            --data-dir "$folder_home/.theia" --library "$folder_home/library" \
+            --port 8398 --from "$RUNNER_TEMP/download" --yes
+          app="$folder_home/.local/lib/theia/Theia.app"
+          test -x "$app/Contents/MacOS/theia-player"
+          test ! -x "$app/Contents/Info.plist"
+          test -L "$app/Contents/Frameworks/libmpv.dylib"
+          test -e "$app/Contents/Frameworks/libmpv.dylib"
+          codesign --verify --strict "$app"
+          "$app/Contents/MacOS/theia-player" -version
+          echo 'the folder installer kept the bundle modes, links and signature'
 
       - uses: actions/upload-artifact@v7
         with:

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -64,6 +65,56 @@ func macPlayerFolder(t *testing.T, omit ...string) string {
 		write(t, filepath.Join(dir, filepath.FromSlash(member)), bundleBody(member))
 	}
 	return dir
+}
+
+func TestCopyTreeKeepsMacBundlePermissionsAndLinks(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix file modes and framework symlinks need a Unix filesystem")
+	}
+	from := filepath.Join(t.TempDir(), darwinPlayerTree)
+	files := []struct {
+		name string
+		mode os.FileMode
+	}{
+		{"Contents/MacOS/theia-player", 0o755},
+		{"Contents/Info.plist", 0o644},
+		{"Contents/_CodeSignature/CodeResources", 0o644},
+		{"Contents/Resources/LICENSE-libmpv.txt", 0o644},
+		{"Contents/Frameworks/libmpv.2.dylib", 0o755},
+	}
+	for _, file := range files {
+		path := filepath.Join(from, filepath.FromSlash(file.name))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(file.name), file.mode); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(path, file.mode); err != nil {
+			t.Fatal(err)
+		}
+	}
+	link := filepath.Join(from, "Contents", "Frameworks", "libmpv.dylib")
+	if err := os.Symlink("libmpv.2.dylib", link); err != nil {
+		t.Fatal(err)
+	}
+	to := filepath.Join(t.TempDir(), darwinPlayerTree)
+	if err := copyTree(from, to); err != nil {
+		t.Fatalf("copyTree: %v", err)
+	}
+	for _, file := range files {
+		info, err := os.Stat(filepath.Join(to, filepath.FromSlash(file.name)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := info.Mode().Perm(); got != file.mode {
+			t.Errorf("%s mode = %04o, want %04o", file.name, got, file.mode)
+		}
+	}
+	installedLink := filepath.Join(to, "Contents", "Frameworks", "libmpv.dylib")
+	if target, err := os.Readlink(installedLink); err != nil || target != "libmpv.2.dylib" {
+		t.Errorf("installed framework link = %q (%v)", target, err)
+	}
 }
 
 // TestTheMacintoshProgramsAreWhatTheReleasePublishes pins the whole set at once:

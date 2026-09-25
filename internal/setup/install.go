@@ -681,7 +681,16 @@ func copyTree(from, to string) error {
 			os.Remove(target)
 			return os.Symlink(link, target)
 		case entry.Type().IsRegular():
-			return copyInto(path, filepath.Dir(target), filepath.Base(target))
+			info, err := entry.Info()
+			if err != nil {
+				return err
+			}
+			if err := copyInto(path, filepath.Dir(target), filepath.Base(target)); err != nil {
+				return err
+			}
+			// copyInto makes standalone programs executable. An app bundle also
+			// contains signed metadata and licence texts: keep their own modes.
+			return os.Chmod(target, info.Mode().Perm())
 		default:
 			return fmt.Errorf("setup: %s is neither a file nor a symlink, and a bundle is made of those", path)
 		}
