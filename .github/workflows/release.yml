@@ -725,6 +725,12 @@ jobs:
           $version = '${{ env.THEIA_VERSION }}'.TrimStart('v')
           ./scripts/check-release-assets.ps1 -Directory staging -Version $version
 
+      - name: Check components match the offline downloads byte for byte
+        shell: pwsh
+        run: |
+          $version = '${{ env.THEIA_VERSION }}'.TrimStart('v')
+          ./scripts/check-release-parity.ps1 -Directory staging -Version $version
+
   publish:
     name: Publish the release
     # Every gate, explicitly: the jobs no longer chain through each other, so
