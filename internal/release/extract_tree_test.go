@@ -1,8 +1,10 @@
 package release
 
 import (
+	"archive/zip"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -145,6 +147,104 @@ func TestExtractRefusesAnEntryClimbingOutOfTheTree(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "escaped.txt")); err == nil {
 		t.Error("the file was written outside the destination after all")
 	}
+}
+
+func TestExtractPreservesFrameworkLink(t *testing.T) {
+	// Windows may not grant an ordinary test process the right to create a
+	// symlink. The release gate also runs this test on macOS, where the player
+	// bundle actually needs the link to load libmpv.
+	requireSymlinks(t)
+	const member = tree + "/Contents/Frameworks/libmpv.2.dylib"
+	archive := makeFrameworkArchive(t, "libmpv.2.dylib")
+	dir := t.TempDir()
+	for range 2 { // a force reinstall must replace the link it wrote before
+		if _, err := Extract(archive, dir, []string{tree}); err != nil {
+			t.Fatalf("Extract: %v", err)
+		}
+		link := filepath.Join(dir, filepath.FromSlash(treeEngine))
+		info, err := os.Lstat(link)
+		if err != nil || info.Mode()&os.ModeSymlink == 0 {
+			t.Fatalf("%s is not a symlink: %v", link, err)
+		}
+		if target, err := os.Readlink(link); err != nil || target != "libmpv.2.dylib" {
+			t.Errorf("link target = %q (%v)", target, err)
+		}
+		if body, err := os.ReadFile(link); err != nil || string(body) != "engine" {
+			t.Errorf("the linked engine is unreadable: %q (%v)", body, err)
+		}
+		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(member))); err != nil {
+			t.Errorf("the link target is missing: %v", err)
+		}
+	}
+}
+
+func TestExtractRefusesEscapingFrameworkLink(t *testing.T) {
+	archive := makeFrameworkArchive(t, "../../../../outside")
+	_, err := Extract(archive, t.TempDir(), []string{tree})
+	if err == nil || !strings.Contains(err.Error(), "escapes the destination") {
+		t.Fatalf("an escaping link was accepted: %v", err)
+	}
+}
+
+func TestExtractRefusesAnExistingSymlinkParent(t *testing.T) {
+	requireSymlinks(t)
+	dir := t.TempDir()
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(dir, tree)); err != nil {
+		t.Fatal(err)
+	}
+	_, err := Extract(makeArchive(t, playerTree()), dir, []string{tree})
+	if err == nil || !strings.Contains(err.Error(), "not a real directory") {
+		t.Fatalf("extraction followed a pre-existing symlink: %v", err)
+	}
+	if entries, err := os.ReadDir(outside); err != nil || len(entries) != 0 {
+		t.Fatalf("extraction wrote through the link: %v (%v)", entries, err)
+	}
+}
+
+func requireSymlinks(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		probe := filepath.Join(t.TempDir(), "link")
+		if err := os.Symlink("target", probe); err != nil {
+			t.Skipf("this Windows account cannot create symlinks: %v", err)
+		}
+	}
+}
+
+func makeFrameworkArchive(t *testing.T, linkTarget string) string {
+	t.Helper()
+	archive := filepath.Join(t.TempDir(), "player.zip")
+	file, err := os.Create(archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := zip.NewWriter(file)
+	for _, member := range []struct{ name, body string }{
+		{tree + "/Contents/Frameworks/libmpv.2.dylib", "engine"},
+		{treeEngine, linkTarget},
+	} {
+		header := &zip.FileHeader{Name: member.name, Method: zip.Deflate}
+		if member.name == treeEngine {
+			header.SetMode(os.ModeSymlink | 0o755)
+		} else {
+			header.SetMode(0o755)
+		}
+		entry, err := writer.CreateHeader(header)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := entry.Write([]byte(member.body)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return archive
 }
 
 func mustReadFile(t *testing.T, path string) []byte {

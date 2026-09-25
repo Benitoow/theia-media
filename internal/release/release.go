@@ -25,6 +25,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -317,6 +318,7 @@ func copyWithProgress(dst io.Writer, src io.Reader, hash io.Writer, total int64,
 // rather than unpacked over whatever it reaches - including every entry a tree
 // brings with it, not only the names that were asked for.
 func Extract(archive, dir string, names []string) ([]string, error) {
+	dir = filepath.Clean(dir)
 	reader, err := zip.OpenReader(archive)
 	if err != nil {
 		return nil, fmt.Errorf("release: reading %s: %w", filepath.Base(archive), err)
@@ -333,6 +335,7 @@ func Extract(archive, dir string, names []string) ([]string, error) {
 		requested[name] = true
 	}
 	written := make([]string, 0, len(names))
+	var links []archiveLink
 	for _, entry := range reader.File {
 		answers := answeredBy(entry.Name, names)
 		if len(answers) == 0 {
@@ -352,7 +355,13 @@ func Extract(archive, dir string, names []string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := writeEntry(entry, target); err != nil {
+		if entry.Mode()&os.ModeSymlink != 0 {
+			link, err := readArchiveLink(entry)
+			if err != nil {
+				return nil, err
+			}
+			links = append(links, archiveLink{target, link})
+		} else if err := writeEntry(dir, entry, target); err != nil {
 			return nil, err
 		}
 		for _, name := range answers {
@@ -370,7 +379,62 @@ func Extract(archive, dir string, names []string) ([]string, error) {
 		return nil, fmt.Errorf("release: %s does not contain %s",
 			filepath.Base(archive), strings.Join(missing, ", "))
 	}
+	// Zip archives do not guarantee their entry order. Make links last so an
+	// entry below one cannot be written through it while extracting the tree.
+	for _, link := range links {
+		if err := writeArchiveLink(dir, link); err != nil {
+			return nil, err
+		}
+	}
 	return written, nil
+}
+
+type archiveLink struct {
+	path   string
+	target string
+}
+
+func readArchiveLink(entry *zip.File) (string, error) {
+	source, err := entry.Open()
+	if err != nil {
+		return "", fmt.Errorf("release: opening link %s: %w", entry.Name, err)
+	}
+	defer source.Close()
+	const maxLinkLength = 4096
+	body, err := io.ReadAll(io.LimitReader(source, maxLinkLength+1))
+	if err != nil {
+		return "", fmt.Errorf("release: reading link %s: %w", entry.Name, err)
+	}
+	link := string(body)
+	if len(body) == 0 || len(body) > maxLinkLength || strings.ContainsAny(link, "\\\x00") ||
+		path.IsAbs(link) || filepath.IsAbs(link) {
+		return "", fmt.Errorf("release: invalid link target in %s", entry.Name)
+	}
+	resolved := path.Clean(path.Join(path.Dir(entry.Name), link))
+	if resolved == ".." || strings.HasPrefix(resolved, "../") {
+		return "", fmt.Errorf("release: link %s escapes the destination", entry.Name)
+	}
+	return link, nil
+}
+
+func writeArchiveLink(dir string, link archiveLink) error {
+	if err := ensureArchiveParents(dir, link.path); err != nil {
+		return err
+	}
+	if info, err := os.Lstat(link.path); err == nil {
+		if info.IsDir() {
+			return fmt.Errorf("release: link %s would replace a directory", link.path)
+		}
+		if err := os.Remove(link.path); err != nil {
+			return fmt.Errorf("release: replacing link %s: %w", link.path, err)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("release: inspecting link %s: %w", link.path, err)
+	}
+	if err := os.Symlink(link.target, link.path); err != nil {
+		return fmt.Errorf("release: creating link %s: %w", link.path, err)
+	}
+	return nil
 }
 
 // answeredBy reports which of the requested names one archive entry answers.
@@ -405,9 +469,18 @@ func safeJoin(dir, name string) (string, error) {
 	return target, nil
 }
 
-func writeEntry(entry *zip.File, target string) error {
-	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-		return fmt.Errorf("release: creating %s: %w", filepath.Dir(target), err)
+func writeEntry(dir string, entry *zip.File, target string) error {
+	if err := ensureArchiveParents(dir, target); err != nil {
+		return err
+	}
+	// A force reinstall may find an old link at this name. Opening it with
+	// O_TRUNC would overwrite its target instead of replacing this member.
+	if info, err := os.Lstat(target); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		if err := os.Remove(target); err != nil {
+			return fmt.Errorf("release: replacing %s: %w", target, err)
+		}
+	} else if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("release: inspecting %s: %w", target, err)
 	}
 	source, err := entry.Open()
 	if err != nil {
@@ -432,6 +505,40 @@ func writeEntry(entry *zip.File, target string) error {
 	}
 	if err != nil {
 		return fmt.Errorf("release: writing %s: %w", target, err)
+	}
+	if err := os.Chmod(target, mode); err != nil {
+		return fmt.Errorf("release: setting permissions on %s: %w", target, err)
+	}
+	return nil
+}
+
+// ensureArchiveParents refuses a pre-existing link in the destination path.
+// MkdirAll would follow it before the archive's own path guard could help.
+func ensureArchiveParents(dir, target string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("release: creating %s: %w", dir, err)
+	}
+	base, err := os.Lstat(dir)
+	if err != nil || !base.IsDir() || base.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("release: destination %s is not a real directory", dir)
+	}
+	relative, err := filepath.Rel(dir, filepath.Dir(target))
+	if err != nil {
+		return fmt.Errorf("release: locating %s: %w", target, err)
+	}
+	if relative == "." {
+		return nil
+	}
+	current := dir
+	for _, part := range strings.Split(relative, string(filepath.Separator)) {
+		current = filepath.Join(current, part)
+		if err := os.Mkdir(current, 0o755); err != nil && !os.IsExist(err) {
+			return fmt.Errorf("release: creating %s: %w", current, err)
+		}
+		info, err := os.Lstat(current)
+		if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("release: %s is not a real directory", current)
+		}
 	}
 	return nil
 }

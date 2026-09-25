@@ -598,6 +598,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.6'
+
+      - name: Test macOS ZIP extraction and symlink safety
+        run: go test -count=1 ./internal/release
+
       - uses: actions/download-artifact@v8
         with:
           name: theia-server-darwin-arm64
@@ -694,6 +701,33 @@ jobs:
             exit 1
           fi
           echo 'the download starts and its instructions match it'
+
+      # The normal Mac verifier installs a directory beside the setup program.
+      # An explicit --from ZIP exercises release.Extract instead, including the
+      # libmpv symlinks that zip -y stored in the downloadable archive.
+      - name: Install the Mac download from its ZIP
+        run: |
+          version='${{ env.THEIA_VERSION }}'
+          version="${version#v}"
+          test_home="$RUNNER_TEMP/theia-zip-install"
+          mkdir -p "$test_home/library"
+          HOME="$test_home" "$RUNNER_TEMP/download/theia-setup" \
+            --role all-in-one --lang en \
+            --install-dir "$test_home/.local/lib/theia" \
+            --data-dir "$test_home/.theia" --library "$test_home/library" \
+            --port 8398 --from "$PWD/dist/theia-${version}-darwin-arm64.zip" --yes
+          app="$test_home/.local/lib/theia/Theia.app"
+          test -x "$app/Contents/MacOS/theia-player"
+          test -L "$app/Contents/Frameworks/libmpv.dylib"
+          test -e "$app/Contents/Frameworks/libmpv.dylib"
+          expected=$(find "$RUNNER_TEMP/download/Theia.app/Contents/Frameworks" -type l | wc -l | tr -d ' ')
+          actual=$(find "$app/Contents/Frameworks" -type l | wc -l | tr -d ' ')
+          test "$actual" = "$expected" || { echo "installed $actual of $expected framework links"; exit 1; }
+          while IFS= read -r link; do
+            test -e "$link" || { echo "dangling installed framework link: $link"; exit 1; }
+          done < <(find "$app/Contents/Frameworks" -type l)
+          "$app/Contents/MacOS/theia-player" -version
+          echo "the ZIP installer kept all $actual framework symlinks"
 
       - uses: actions/upload-artifact@v7
         with:
