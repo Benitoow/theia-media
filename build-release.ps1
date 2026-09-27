@@ -48,7 +48,12 @@ param(
 
     # Windows only, and vacuous on darwin: the macOS path never builds the
     # player, so there is nothing here for it to skip.
-    [switch]$SkipPlayer
+    [switch]$SkipPlayer,
+
+    # CI assembles the offline archive from the exact published Go components.
+    # Rebuilding them in another job changes Go's build ID on Windows even when
+    # the program bytes and build settings are otherwise identical.
+    [switch]$UseDistPrograms
 )
 
 $ErrorActionPreference = 'Stop'
@@ -305,10 +310,24 @@ $stage = Join-Path $root "dist\$name"
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
-Write-Host '==> Building the server and the installer' -ForegroundColor Cyan
-Push-Location $root
-try {
-    $env:CGO_ENABLED = '0'
+if ($UseDistPrograms) {
+    Write-Host '==> Copying the published Go components into the archive' -ForegroundColor Cyan
+    foreach ($program in @(
+        @{ asset = 'theia-server-windows-amd64.exe'; installed = 'theia-server.exe' },
+        @{ asset = 'theia-setup-windows-amd64.exe'; installed = 'theia-setup.exe' },
+        @{ asset = 'theia-launcher-windows-amd64.exe'; installed = 'theia.exe' }
+    )) {
+        $source = Join-Path $root "dist/$($program.asset)"
+        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+            throw "the Windows archive needs $source from the component build"
+        }
+        Copy-Item -LiteralPath $source -Destination (Join-Path $stage $program.installed)
+    }
+} else {
+    Write-Host '==> Building the server and the installer' -ForegroundColor Cyan
+    Push-Location $root
+    try {
+        $env:CGO_ENABLED = '0'
     # Short names inside the archive: the archive name already carries the
     # platform, and `theia-server.exe` is the first name the installer looks for.
     #
@@ -338,9 +357,10 @@ try {
         & $go build -buildvcs=false -trimpath -ldflags $ldflags -o (Join-Path $stage $build.out) $build.path
         if ($LASTEXITCODE -ne 0) { throw "building $($build.out) failed" }
     }
-}
-finally {
-    Pop-Location
+    }
+    finally {
+        Pop-Location
+    }
 }
 
 # The player bundle, already assembled with its engine by build-player.ps1.

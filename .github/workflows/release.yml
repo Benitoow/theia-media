@@ -186,8 +186,9 @@ jobs:
   # the remaining server targets have no verified native player.
   player:
     name: Player (windows/amd64)
-    # Only the artifact, like the build matrix above.
-    needs: interface
+    # The offline download contains the exact server, setup and launcher built
+    # by the matrix, so the Windows player job waits for those components.
+    needs: [interface, build]
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
@@ -263,20 +264,19 @@ jobs:
           }
           Get-ChildItem $dir | Select-Object Name, Length
 
-      # And the archive a person downloads: decision 121. The server and the
-      # installer are rebuilt here at the tagged version, and the player bundle
-      # is the one just checked - and "rebuilt here" is exactly why this step
-      # needs the interface downloaded above and the key below: a rebuild takes
-      # what this job has, not what the build job had. Fault 14.
+      # The archive a person downloads uses the exact published Go components.
+      # Rebuilding them on Windows produced a different Go build ID from the
+      # cross-compiled assets, even though their program bytes were identical.
+      - uses: actions/download-artifact@v8
+        with:
+          name: theia-server-windows-amd64
+          path: dist
+
       - name: Assemble the one-file download
         shell: pwsh
-        env:
-          CGO_ENABLED: '0'
-          # The same secret the build job injects into the published server.
-          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: |
           $version = '${{ env.THEIA_VERSION }}'.TrimStart('v')
-          .\build-release.ps1 -Version $version -SkipPlayer
+          .\build-release.ps1 -Version $version -SkipPlayer -UseDistPrograms
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Check the archive holds everything
