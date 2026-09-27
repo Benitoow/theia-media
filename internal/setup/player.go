@@ -287,7 +287,7 @@ func swapBundle(staged, dir string, names []string) error {
 		// A leftover from an earlier update that could not delete it. Best
 		// effort: the next successful update removes it.
 		os.RemoveAll(aside)
-		if fileExists(target) {
+		if pathExists(target) {
 			if err := os.Rename(target, aside); err != nil {
 				restore()
 				return fmt.Errorf("setup: moving %s aside: %w", name, err)

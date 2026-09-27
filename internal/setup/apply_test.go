@@ -200,7 +200,7 @@ func TestArtifactsSayWhatIsMissingRatherThanFetchingIt(t *testing.T) {
 	if want := len(programsFor(RolePlayer, runtime.GOOS, runtime.GOARCH)); len(artifacts) != want {
 		t.Fatalf("a player-only machine asked for %d artifacts, want %d", len(artifacts), want)
 	}
-	if artifacts[0].Name != executableName(programsFor(RolePlayer, runtime.GOOS, runtime.GOARCH)[0]) {
+	if artifacts[0].Name != acceptedNames(programsFor(RolePlayer, runtime.GOOS, runtime.GOARCH)[0])[0] {
 		t.Errorf("artifact = %q, want the player", artifacts[0].Name)
 	}
 	if artifacts[0].Found && artifacts[0].Path != "" {
