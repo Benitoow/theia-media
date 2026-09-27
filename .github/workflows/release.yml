@@ -808,17 +808,19 @@ jobs:
           go run ./scripts/check-setup-payload -setup staging/theia-setup-windows-amd64.exe -server staging/theia-server-windows-amd64.exe -target windows-amd64
           go run ./scripts/check-setup-payload -setup staging/theia-setup-darwin-arm64 -server staging/theia-server-darwin-arm64 -target darwin-arm64
 
-      # The shipped macOS app currently advances playback without drawing a
-      # frame (decision 149). Keep a tag from publishing that known defect.
-      # This source check is only a floor; inspect a frame from the real app
-      # on a Mac before a new release is authorised.
-      - name: Refuse the known missing macOS renderer
+      # The render API is now integrated in source, but no Mac has built and
+      # photographed that *application* yet. Keep publication stopped until
+      # the native candidate is inspected and this gate is intentionally
+      # replaced with the evidence-backed check (decision 149).
+      - name: Await native macOS film-frame proof
         shell: bash
         run: |
           if ! git grep -q 'mpv_render_context_create' -- player/theia-player/src; then
             echo '::error::The macOS player has no render context; playback progress cannot prove a picture.'
             exit 1
           fi
+          echo '::error::The integrated macOS renderer has not been built and visually verified on a Mac.'
+          exit 1
 
   publish:
     name: Publish the release

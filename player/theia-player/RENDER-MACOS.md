@@ -47,22 +47,29 @@ The threading rules the header states, and they are hard requirements:
   callback. Not doing so can deadlock mpv's core thread, which the header says in
   as many words.
 
-From `docs.rs` (checked for the current versions, Apple-only crates, `cfg`-gated):
+The bridge compiles these AppKit classes and methods with the macOS SDK:
 
 | Item | Where | Note |
 |---|---|---|
-| `NSOpenGLView` | `objc2_app_kit` | deprecated in favour of `MTKView`, present; needs features `NSOpenGLView`, `NSOpenGL`, `NSView`, `NSResponder` |
-| `NSOpenGLView::initWithFrame_pixelFormat` | `objc2_app_kit` | `(Allocated<Self>, NSRect, Option<&NSOpenGLPixelFormat>) -> Option<Retained<Self>>` |
-| `NSOpenGLView::openGLContext` / `setOpenGLContext` | `objc2_app_kit` | the context the render API must be given |
-| `NSOpenGLView::setWantsBestResolutionOpenGLSurface` | `objc2_app_kit` | true, or the surface is drawn at half resolution on a Retina display |
-| `define_class!` | `objc2` | `#[unsafe(super(NSOpenGLView))]`, `#[ivars = ...]`, `#[unsafe(method(drawRect:))]`, and a `Drop` impl becomes `dealloc` |
-| `NSView::addSubview_positioned_relativeTo` | `objc2_app_kit` | `NSWindowBelow` relative to the webview's view keeps the OSD above the film |
-| `MainThreadMarker` | `objc2` | AppKit objects are main-thread only, and the type says so |
-| `NSTimer` | `objc2_foundation` | enough for the render tick; a `CVDisplayLink` is the better clock later, not the first version |
+| `NSOpenGLView` | AppKit | the film surface, with an OpenGL 3.2 core context |
+| `openGLContext` / `makeCurrentContext` | AppKit | the context the render API must use |
+| `setWantsBestResolutionOpenGLSurface` | AppKit | Retina pixels rather than logical points |
+| `drawRect:` | AppKit subclass | renders a frame and reports its swap to mpv |
+| `addSubview:positioned:relativeTo:` | AppKit | `NSWindowBelow` relative to the WebView keeps the OSD above the film |
+| `NSTimer` | Foundation | main-thread render tick, including common run-loop modes |
 
-## The sequence to implement
+## Integrated candidate; native proof pending
 
-In `player/theia-player/src/render_macos.rs`, `cfg(target_os = "macos")` only:
+`src/render_macos.m` now implements the sequence below as an AppKit bridge;
+`src/render_macos.rs` passes the borrowed mpv handle and view from the Tauri
+application. The build uses headers from the same digest-checked archive as its
+libmpv dylib. The verifier requires its frame counter to advance. This has not
+yet been compiled or seen drawing a frame on macOS, so the release gate remains
+closed.
+
+## Render sequence
+
+In the macOS-only bridge:
 
 1. **The view.** `NSOpenGLPixelFormat` with `NSOpenGLProfileVersion3_2Core`,
    double buffered, 24-bit colour, 8-bit alpha. An `NSOpenGLView` sized to the
@@ -79,7 +86,7 @@ In `player/theia-player/src/render_macos.rs`, `cfg(target_os = "macos")` only:
 5. **The render tick** (an `NSTimer` at the display's rate to begin with):
    if the flag is set, `mpv_render_context_update`, and when
    `MPV_RENDER_UPDATE_FRAME` comes back, `setNeedsDisplay` on the view. The
-   `drawRect:` implementation, written in Rust with `define_class!`, makes the
+   `drawRect:` implementation in the Objective-C bridge makes the
    context current, renders with `OPENGL_FBO` (`fbo = 0`, `w`/`h` from the view's
    bounds **times the backing scale factor**) and `FLIP_Y = 1`, calls
    `flushBuffer`, then `mpv_render_context_report_swap`.

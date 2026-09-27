@@ -21,5 +21,15 @@ fn main() {
     // Declaring the directory here makes the crate rebuild with the interface it
     // ships. `build-player.ps1` then checks the result rather than trusting it.
     println!("cargo:rerun-if-changed=../ui/dist");
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
+        println!("cargo:rerun-if-changed=src/render_macos.m");
+        cc::Build::new()
+            .file("src/render_macos.m")
+            .include("../vendor-darwin/include")
+            .flag("-fobjc-arc")
+            .compile("theia_render_macos");
+        println!("cargo:rustc-link-lib=framework=AppKit");
+        println!("cargo:rustc-link-lib=framework=OpenGL");
+    }
     tauri_build::build()
 }

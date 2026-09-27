@@ -3348,6 +3348,9 @@ dependencies = [
 name = "theia-player"
 version = "3.3.6"
 dependencies = [
+ "cc",
+ "gdkx11",
+ "gtk",
  "libloading 0.8.9",
  "mdns-sd",
  "serde",

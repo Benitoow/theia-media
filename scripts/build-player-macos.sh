@@ -81,6 +81,18 @@ if ! command -v cargo >/dev/null 2>&1; then
 	exit 1
 fi
 
+# The render bridge is compiled with the headers from the pinned engine, so
+# fetch and verify that archive before cargo rather than after it.
+vendor="$root/player/vendor-darwin"
+if ! command -v go >/dev/null 2>&1; then
+	echo "go is required to verify the pinned macOS engine and its render headers." >&2
+	exit 1
+fi
+echo "==> Fetching the pinned engine and render headers"
+rm -rf "$vendor"
+mkdir -p "$vendor"
+(cd "$root" && go run ./scripts/fetch-libmpv -platform "darwin/$goarch" -out "$vendor")
+
 # The workflow passes the tag this release is built from, so the binary can name
 # it when somebody reports something. build.rs answers 'dev' when it is absent,
 # which is what a local build is.
@@ -129,19 +141,6 @@ sed "s/@VERSION@/${plistVersion}/g" "$root/player/theia-player/Info.plist" >"$ap
 # The engine, by digest. `fetch-libmpv` is the same tool Windows uses and it
 # reads the same manifest; on macOS the pin is a set of libraries, so it verifies
 # every one of them and brings the licence texts with it.
-vendor="$root/player/vendor-darwin"
-if command -v go >/dev/null 2>&1; then
-	echo "==> Fetching the pinned engine"
-	rm -rf "$vendor"
-	mkdir -p "$vendor"
-	(cd "$root" && go run ./scripts/fetch-libmpv -platform "darwin/$goarch" -out "$vendor")
-elif [ ! -d "$vendor" ]; then
-	echo "go was not found and $vendor holds nothing." >&2
-	echo "Install Go, or pre-fetch the engine with:" >&2
-	echo "  go run ./scripts/fetch-libmpv -platform darwin/$goarch -out $vendor" >&2
-	exit 1
-fi
-
 if [ -z "$(ls -A "$vendor"/*.dylib 2>/dev/null)" ]; then
 	echo "$vendor holds no dylibs; the engine was not fetched" >&2
 	exit 1

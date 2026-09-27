@@ -107,6 +107,8 @@ export const catalogues = {
 		noServer:
 			"Aucun serveur détecté sur le réseau. Saisis l'adresse que Theia affiche à son démarrage.",
 		connectionFailed: "La connexion a échoué. Vérifie l'adresse, et que Theia est bien démarré.",
+		connectionUnreadable:
+			"Cette adresse n'a pas pu être lue. Saisis celle que Theia affiche à son démarrage, par exemple http://192.168.1.20:8383.",
 		libraryFailed: "La bibliothèque n'a pas pu être chargée.",
 		seriesFailed: "Cette série n'a pas pu être chargée.",
 		episodeFailed: "Cet épisode n'a pas pu être ouvert.",
@@ -348,6 +350,8 @@ export const catalogues = {
 		searching: 'Searching…',
 		noServer: 'No server answered on the network. Enter the address Theia prints when it starts.',
 		connectionFailed: 'The connection failed. Check the address, and that Theia is running.',
+		connectionUnreadable:
+			'That address could not be read. Enter the one Theia prints when it starts, for example http://192.168.1.20:8383.',
 		libraryFailed: 'The library could not be loaded.',
 		seriesFailed: 'That series could not be loaded.',
 		episodeFailed: 'That episode could not be opened.',

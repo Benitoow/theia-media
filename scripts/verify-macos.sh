@@ -158,13 +158,14 @@ else
 			bad "the player exited before a frame could be inspected; see $work/diagnostics.txt"
 			break
 		fi
-		if [ -s "$report" ] && grep -Eq '"pos":[1-9]' "$work/diagnostics.txt"; then
+		if [ -s "$report" ] && grep -Eq '"pos":[1-9]' "$work/diagnostics.txt" &&
+			grep -Eq 'render-frames: [1-9][0-9]*' "$work/diagnostics.txt"; then
 			ready=1
 			break
 		fi
 	done
 	if [ "$ready" -eq 0 ] && kill -0 "$player_pid" 2>/dev/null; then
-		bad "the player had no window report and advancing playback before capture"
+		bad "the player had no window, advancing playback and rendered frames before capture"
 	fi
 	# Capture while the product is alive and after its own telemetry says a
 	# film is playing. A screenshot taken after exit is a desktop photograph.
@@ -200,6 +201,13 @@ else
 		ok "playback advanced: pos $first -> $last"
 	else
 		bad "the position did not advance (pos '$first' -> '$last'); see $frames"
+	fi
+	first_frame=$(grep -o 'render-frames: [0-9]*' "$frames" | head -1 | cut -d' ' -f2)
+	last_frame=$(grep -o 'render-frames: [0-9]*' "$frames" | tail -1 | cut -d' ' -f2)
+	if [ -n "$first_frame" ] && [ -n "$last_frame" ] && [ "$last_frame" -gt "$first_frame" ]; then
+		ok "the actual application rendered frames: $first_frame -> $last_frame"
+	else
+		bad "the application rendered no advancing frames ($first_frame -> $last_frame)"
 	fi
 	# `vo` and `hwdec` are printed rather than asserted, and the reason is the
 	# finding this path is built on: with `vo=libmpv` the *host* owns the video

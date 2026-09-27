@@ -208,6 +208,22 @@ function initialPreferences(): Preferences {
 	}
 }
 
+/// The sentence a refused connection earns.
+///
+/// The player answers a code rather than prose (decision 25, read the other way
+/// round), and the two codes are not the same advice: an address the player
+/// could not read is somebody's typo, while an address it read and got nothing
+/// from is the case the old sentence described. Sending a typo to "check that
+/// Theia is running" points at a machine that was never the problem.
+///
+/// Anything unrecognised - a code from a newer player, or a failure that is not
+/// a refusal at all - keeps the sentence this screen always had.
+function connectErrorKey(error: unknown) {
+	const code = typeof error === 'string' ? error : '';
+	if (code === 'address_unreadable') return 'connectionUnreadable';
+	return 'connectionFailed';
+}
+
 export default function App() {
 	const location = useLocation();
 	const navigate = useNavigate();
@@ -383,9 +399,9 @@ export default function App() {
 				}
 				await Promise.all([loadLibrary(), loadHome(), refreshUpdateStatus()]);
 				return true;
-			} catch {
+			} catch (error) {
 				setServer(null);
-				if (!quiet) setErrorKey('connectionFailed');
+				if (!quiet) setErrorKey(connectErrorKey(error));
 				return false;
 			} finally {
 				setBusy(false);

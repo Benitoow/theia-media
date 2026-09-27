@@ -683,6 +683,92 @@ fn image_url(base: &str, path: &str, size: &str) -> String {
     )
 }
 
+/// Why a connection attempt was refused, in the two shapes the connect screen
+/// tells apart.
+///
+/// The sentences belong to the interface, and the player answers a code
+/// (decision 25, read the other way round). The distinction is not decoration:
+/// on 27 September 2026 the maintainer typed `http://192.168.1.77.8383` - a dot
+/// where the colon belongs - pressed Connect, and read "check the address, and
+/// that Theia is running". The server had been up for four minutes and its log
+/// held no request from that machine at all: the address never left the player,
+/// and the one sentence sent the search to a machine that was never the
+/// problem.
+#[derive(Clone, Copy, Debug)]
+enum RefusalKind {
+    /// The address itself could not be read: a URL the parser refuses, a scheme
+    /// this player has no stack for, or a name that does not resolve.
+    Unreadable,
+    /// The address was understood, and nothing usable came back from it.
+    Silent,
+}
+
+impl RefusalKind {
+    /// The code the interface owns a sentence for.
+    fn code(self) -> &'static str {
+        match self {
+            RefusalKind::Unreadable => "address_unreadable",
+            RefusalKind::Silent => "no_answer",
+        }
+    }
+}
+
+/// A refused connection: which of the two shapes, and what the transport said.
+///
+/// `Display` is the transport's own words, which is what the console and the
+/// `--server` flag print; the OSD never shows them.
+#[derive(Clone, Debug)]
+pub struct Refusal {
+    kind: RefusalKind,
+    detail: String,
+}
+
+impl Refusal {
+    /// The code the interface owns a sentence for.
+    pub fn code(&self) -> &'static str {
+        self.kind.code()
+    }
+
+    pub fn detail(&self) -> &str {
+        &self.detail
+    }
+
+    /// A failure of something other than the address: the shape a call that got
+    /// past the parser carries when it fails.
+    pub fn silent(detail: String) -> Refusal {
+        Refusal {
+            kind: RefusalKind::Silent,
+            detail,
+        }
+    }
+
+    /// Reads a transport failure.
+    ///
+    /// `InvalidUrl`, `UnknownScheme` and `Dns` are about the address: the parser
+    /// or the resolver could not make a host out of it. Everything else - a
+    /// refused connection, a timeout, a status this player did not expect -
+    /// means the address was understood and the sentence about the server is
+    /// the true one.
+    fn of(error: ureq::Error) -> Refusal {
+        let kind = match error.kind() {
+            ureq::ErrorKind::InvalidUrl
+            | ureq::ErrorKind::UnknownScheme
+            | ureq::ErrorKind::Dns => RefusalKind::Unreadable,
+            _ => RefusalKind::Silent,
+        };
+        Refusal {
+            kind,
+            detail: error.to_string(),
+        }
+    }
+}
+
+impl std::fmt::Display for Refusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.detail)
+    }
+}
+
 /// A connection to one server.
 pub struct Client {
     agent: ureq::Agent,
@@ -703,12 +789,20 @@ impl Client {
     /// while startup probes must move on quickly to the next candidate. Keeping
     /// both on the same ten-second timeout made an offline remembered server
     /// look like a frozen application.
+    ///
+    /// The address is trimmed, and that is not politeness. The contract is an
+    /// address somebody typed or copied - the server prints one at startup and
+    /// the console line it sits on carries a space - and `ureq` refuses
+    /// `http://host:8383 ` with `InvalidPort`, the space becoming part of the
+    /// port. A correct address then failed to connect while the screen blamed
+    /// the server. Nothing else is guessed at: no scheme is invented, no port is
+    /// moved, and an address that is still unreadable is reported as such.
     pub fn with_timeout(base: &str, timeout: Duration) -> Client {
         Client {
             agent: ureq::AgentBuilder::new()
                 .timeout(timeout)
                 .build(),
-            base: base.trim_end_matches('/').to_string(),
+            base: base.trim().trim_end_matches('/').to_string(),
             profile: None,
         }
     }
@@ -738,8 +832,27 @@ impl Client {
         }
     }
 
+    /// Asks the server who it is, keeping the failure's shape.
+    ///
+    /// [`Client::health`] answers a sentence, which is what every other caller
+    /// wants. This one exists for `connect_to`, which has to tell an address it
+    /// could not read from a server that did not answer - see [`Refusal`].
+    pub fn probe(&self) -> Result<Health, Refusal> {
+        let response = self
+            .agent
+            .get(&self.url("/api/health"))
+            .call()
+            .map_err(Refusal::of)?;
+        response.into_json::<Health>().map_err(|error| {
+            Refusal::silent(format!(
+                "the answer was not the JSON this player expects: {error}"
+            ))
+        })
+    }
+
     pub fn health(&self) -> Result<Health, String> {
-        self.get_json("/api/health")
+        self.probe()
+            .map_err(|refusal| format!("/api/health: {}", refusal.detail()))
     }
 
     pub fn profiles(&self) -> Result<Vec<Profile>, String> {
@@ -1235,6 +1348,52 @@ mod tests {
             client.url("/api/library/movies?limit=5"),
             "http://host:8395/api/library/movies?limit=5&profile=3"
         );
+    }
+
+    /// The two shapes a refused connection has, on the addresses that produced
+    /// them.
+    ///
+    /// The first is the maintainer's own typo on 27 September 2026, copied
+    /// character for character: a dot where the colon belongs. The URL parser
+    /// refuses it before any socket is opened, which is why the server's log
+    /// held nothing from that machine and why "check that Theia is running"
+    /// sent the search to the wrong computer. The second is a port nothing
+    /// listens on: the address was understood, so the sentence about the server
+    /// is the true one.
+    #[test]
+    fn an_address_that_cannot_be_read_is_not_a_server_that_is_down() {
+        let Err(typo) = Client::new("http://192.168.1.77.8383").probe() else {
+            panic!("a dot where the colon belongs is not a server address");
+        };
+        assert_eq!(typo.code(), "address_unreadable");
+
+        let Err(closed) = Client::with_timeout("http://127.0.0.1:1", Duration::from_millis(500)).probe()
+        else {
+            panic!("nothing listens on port 1");
+        };
+        assert_eq!(closed.code(), "no_answer");
+    }
+
+    /// An address somebody copied arrives with the space the console line
+    /// carried, and that space is not part of the port.
+    ///
+    /// `ureq` reads `http://host:8383 ` as a port called "8383 " and refuses it
+    /// with `InvalidPort`, so the trim is what makes a correct address work at
+    /// all. What it does not do is invent anything: an address that is still
+    /// unreadable stays unreadable, and is reported as an address problem
+    /// rather than as a server that is down.
+    #[test]
+    fn a_copied_address_loses_the_space_it_was_copied_with() {
+        let client = Client::new("  http://host:8395/  ");
+        assert_eq!(client.base(), "http://host:8395");
+        assert_eq!(client.url("/api/health"), "http://host:8395/api/health");
+
+        let spaced = Client::new("http://host:83 83");
+        assert_eq!(spaced.base(), "http://host:83 83");
+        let Err(refused) = spaced.probe() else {
+            panic!("a port with a space in it is not a port");
+        };
+        assert_eq!(refused.code(), "address_unreadable");
     }
 
     #[test]

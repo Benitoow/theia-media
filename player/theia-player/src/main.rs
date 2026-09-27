@@ -1,8 +1,8 @@
 //! Theia's native player.
 //!
 //! On Windows, libmpv draws the film into a child surface of the Tauri window
-//! and the Svelte OSD floats above it (spike A2b). The macOS render context is
-//! not integrated yet; see decision 149 before claiming its picture works.
+//! and the Svelte OSD floats above it (spike A2b). macOS now has a render
+//! context candidate; decision 149 still requires native frame proof.
 //! The Rust side owns the engine, the session and the lifecycle;
 //! the page owns every sentence the user reads, which is decision 25 applied to
 //! a second interface.
@@ -23,6 +23,8 @@
 
 mod mpv;
 mod server;
+#[cfg(target_os = "macos")]
+mod render_macos;
 
 use mpv::Engine;
 use std::path::{Path, PathBuf};
@@ -943,14 +945,75 @@ fn subtitle_language_list(prefs: &PlaybackPreferences) -> String {
 /// The engine options that differ by platform: how the picture reaches the
 /// window, and how the sound leaves the machine.
 ///
-/// Windows is exactly what this player has always set - D3D11 through gpu-next,
-/// WASAPI for sound - and nothing here changes it. The shape is identical on
-/// every platform on purpose: `start_engine` sets these options one by one and
-/// treats a refusal as fatal, so a value mpv does not know becomes a player that
-/// says why it will not start rather than one that renders on another backend in
-/// silence.
-#[cfg(windows)]
-const PLATFORM_OPTIONS: &[(&str, &str)] = &[
+/// The shape is identical on every platform on purpose: `start_engine` sets
+/// these options one by one and treats a refusal as fatal, so a value mpv does
+/// not know becomes a player that says why it will not start rather than one that
+/// renders on another backend in silence.
+///
+/// **The platform is an argument rather than a `cfg` block, and that is the fix
+/// for a real fault.** Decision 149 found Linux being told to use `d3d11` and
+/// `wasapi` - a Windows table, in a `cfg` block no Windows machine and no test
+/// could read, which is why it survived from the day the table was written until
+/// somebody audited the source. The same reasoning as `manifest_key`: a mapping
+/// is testable without the machine that has the problem.
+///
+/// `dri_present` is the second half of the same idea: on Linux one option is a
+/// question for the machine, and a test cannot answer it either - so it is passed
+/// in rather than looked up here. See [`linux_video_output`].
+fn platform_options(platform: Platform, dri_present: bool) -> Vec<(&'static str, String)> {
+    let table = match platform {
+        Platform::Windows => WINDOWS_OPTIONS,
+        Platform::Macos => MACOS_OPTIONS,
+        Platform::Unix => UNIX_OPTIONS,
+    };
+    table
+        .iter()
+        .map(|(key, value)| {
+            let value = if *key == "vo" && platform == Platform::Unix {
+                linux_video_output(dri_present)
+            } else {
+                value
+            };
+            (*key, value.to_string())
+        })
+        .collect()
+}
+
+/// Whether this machine exposes a DRI device, which is what EGL and Vulkan need
+/// on Linux. Always false elsewhere, where the question does not exist.
+fn dri_present() -> bool {
+    cfg!(not(any(windows, target_os = "macos"))) && std::path::Path::new("/dev/dri").exists()
+}
+
+/// The video output Linux is told to use, which is not always the same one.
+///
+/// `gpu-next` is the output that *should* be used: libplacebo over Vulkan or EGL,
+/// with hardware decoding, and it is what this player asks for on Windows and
+/// macOS. A Linux desktop with a working graphics stack answers it.
+///
+/// But mpv 0.41 cannot be *asked* whether the stack works. When EGL cannot create
+/// a screen, its X11 GL path fails and then hits `vo_x11_init`'s own assertion
+/// (`!vo->x11` failed), which aborts the process - measured twice on 27 September
+/// 2026 in WSLg, where `/dev/dri` does not exist: once through the player, once
+/// through `mpv --vo=gpu-next` alone, with `Suspect software renderer or indirect
+/// context` immediately before it. There is no refusal for the player to react to,
+/// and the abort takes the whole application with it, so the choice has to be made
+/// before the engine starts.
+///
+/// A machine with no DRI device has no EGL and no Vulkan, so the software X11
+/// output is the one that will draw: `vo=x11` is a legacy output with bad
+/// performance and a picture, and a picture is what the alternative does not have.
+fn linux_video_output(dri_present: bool) -> &'static str {
+    if dri_present {
+        "gpu-next"
+    } else {
+        "x11"
+    }
+}
+
+/// Windows: exactly what this player has always set - D3D11 through gpu-next,
+/// WASAPI for sound - and nothing here changes it.
+const WINDOWS_OPTIONS: &[(&str, &str)] = &[
     ("vo", "gpu-next"),
     ("gpu-api", "d3d11"),
     ("gpu-context", "d3d11"),
@@ -958,8 +1021,8 @@ const PLATFORM_OPTIONS: &[(&str, &str)] = &[
     ("ao", "wasapi"),
 ];
 
-/// macOS: the requested output needs a render context this application does
-/// not yet create (decision 149).
+/// macOS: the requested output uses the AppKit/OpenGL render bridge. It still
+/// needs native frame and compositing proof (decision 149).
 ///
 /// `vo=libmpv` means "no video output at all": the host creates a GL context and
 /// must call `mpv_render_context_render` for every frame, which is the only way a
@@ -972,48 +1035,87 @@ const PLATFORM_OPTIONS: &[(&str, &str)] = &[
 /// its pin) and `coreaudio` its audio output. Nothing here asks for bitstream
 /// passthrough: CoreAudio has no path for TrueHD, Atmos or DTS-HD MA, so the
 /// session starts in PCM and stays there (`apply_audio_mode` is a no-op on macOS).
-#[cfg(target_os = "macos")]
-const PLATFORM_OPTIONS: &[(&str, &str)] = &[
+const MACOS_OPTIONS: &[(&str, &str)] = &[
     ("vo", "libmpv"),
     ("hwdec", "videotoolbox"),
     ("ao", "coreaudio"),
 ];
 
-/// Every other Unix, unchanged: these are exactly the values the player set on
-/// these platforms before macOS joined the product, and `player/libmpv.json`
-/// pins no engine for them, so there is nothing here to check against.
-#[cfg(not(any(windows, target_os = "macos")))]
-const PLATFORM_OPTIONS: &[(&str, &str)] = &[
+/// Linux: mpv's own Linux stack, and nothing borrowed from another platform.
+///
+/// `gpu-api` and `gpu-context` are deliberately **absent**. Which pair is right
+/// depends on the machine - Vulkan or OpenGL, X11 or Wayland - and mpv probes
+/// for that itself. Naming one here would refuse to start on every machine that
+/// chose the other, and a refusal is fatal by design, so it would be a player
+/// that will not open a film rather than one that picked the slower backend.
+///
+/// `hwdec=auto-safe` is the engine's own conservative choice: VA-API, VDPAU or
+/// NVDEC where the driver offers them, software where it does not.
+///
+/// `ao` is a preference list rather than one driver, because the answer belongs
+/// to the machine: PipeWire on a current desktop, PulseAudio on an older one,
+/// ALSA on a bare console.
+const UNIX_OPTIONS: &[(&str, &str)] = &[
     ("vo", "gpu-next"),
-    ("gpu-api", "d3d11"),
-    ("gpu-context", "d3d11"),
-    ("hwdec", "d3d11va"),
-    ("ao", "wasapi"),
+    ("hwdec", "auto-safe"),
+    ("ao", "pipewire,pulse,alsa"),
 ];
+
+/// The platforms this player builds for, named so the tables above can be read
+/// and tested from any of them.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Platform {
+    Windows,
+    Macos,
+    Unix,
+}
+
+/// The platform this build is for.
+///
+/// Read from `std::env::consts::OS` rather than chosen by a `cfg`, for two
+/// reasons: it is the same source `manifest_key` maps from, so the table and the
+/// engine pin cannot disagree about what this machine is; and every variant is
+/// constructed in one place, which is what keeps a three-arm table free of the
+/// dead-code warning that a `cfg`-selected constant earns on the two platforms it
+/// is not compiled for.
+fn current_platform() -> Platform {
+    match std::env::consts::OS {
+        "windows" => Platform::Windows,
+        "macos" => Platform::Macos,
+        _ => Platform::Unix,
+    }
+}
 
 /// The options the player starts with. Kept in one place so the policy is
 /// readable rather than scattered through the setup closure.
 ///
 /// `wid` is sent on Windows and Linux. macOS omits it because mpv 0.41 does not
-/// read an `NSView*` through this option. Omitting `wid` does not itself draw a
-/// frame: the application still needs to own a render context (decision 149).
+/// read an `NSView*` through this option. The NSView is instead passed to the
+/// render bridge after mpv starts.
 ///
 /// `silent` starts muted. It exists because a player that always makes a noise
 /// is hostile in a shared room - and because every automated run of this
 /// program has no business producing sound on somebody's machine.
 fn base_options(wid: isize, silent: bool) -> Vec<(&'static str, String)> {
     let mut options: Vec<(&'static str, String)> = Vec::new();
-    // `wid` is the handle the platform gave us: an `HWND` on Windows, and nothing
-    // on macOS any more - its intended GL render context (`vo=libmpv`, see
-    // RENDER-MACOS.md) is still missing, so mpv is given no window at all.
+    // `wid` is the handle the platform gave us: an `HWND` on Windows, an X11
+    // window id on Linux, and nothing on macOS any more. Its NSView goes to
+    // render_macos after mpv starts.
     // mpv 0.41 stopped reading `wid` on macOS: the paragraph
     // documenting an `NSView*` left the manual after 0.36 and no macOS file in
     // 0.41.0 reads the option.
+    //
+    // A zero is left out rather than sent. `wid=0` is not "no embedding" to mpv,
+    // it is a request for a window of the engine's own - so a Wayland session,
+    // which has no id to hand over, would put the film in a second window beside
+    // the OSD instead of under it, and say nothing about why.
     #[cfg(not(target_os = "macos"))]
-    options.push(("wid", wid.to_string()));
+    if wid != 0 {
+        options.push(("wid", wid.to_string()));
+    }
     #[cfg(target_os = "macos")]
     let _ = wid;
-    options.extend(PLATFORM_OPTIONS.iter().map(|(k, v)| (*k, (*v).to_string())));
+    options.extend(platform_options(current_platform(), dri_present()));
     options.extend([
         ("audio-channels", "auto".into()),
         ("mute", if silent { "yes".into() } else { "no".into() }),
@@ -1036,37 +1138,108 @@ fn base_options(wid: isize, silent: bool) -> Vec<(&'static str, String)> {
     options
 }
 
+/// The X11 window id mpv should draw into, or zero when the session has none.
+///
+/// Read from GTK's own window, because the portable way does not work here: a
+/// Tauri window on Linux is a `gtk::ApplicationWindow`, and its
+/// `raw_window_handle` handle answers `Unavailable` - measured on 27 September
+/// 2026 in WSLg, where the player printed `could not read the window handle: the
+/// underlying handle is not available` and handed mpv a zero. `gtk` and `gdkx11`
+/// are already in the graph through tauri and wry; they are named here because
+/// this crate calls them.
+///
+/// Wayland answers zero, and that is not a failure to look it up: a Wayland
+/// surface belongs to the client that created it, so there is no id another
+/// process could be pointed at. `base_options` leaves `wid` out in that case, and
+/// mpv opens a window of its own - a film that plays in its own window beside an
+/// OSD that cannot sit over it. That is a known limit of this platform, not a
+/// silent one: `RENDER-LINUX.md` records what a Wayland session needs instead.
+#[cfg(not(any(windows, target_os = "macos")))]
+fn x11_window_id(window: &tauri::WebviewWindow) -> isize {
+    use gtk::prelude::*;
+
+    let gtk_window = match window.gtk_window() {
+        Ok(window) => window,
+        Err(error) => {
+            eprintln!("theia-player: could not read the GTK window: {error}");
+            return 0;
+        }
+    };
+    let gdk_window = match gtk_window.window() {
+        Some(window) => window,
+        None => {
+            // GTK creates the GdkWindow when the widget is realised, and this
+            // runs before the window is shown - the engine starts first, so a
+            // film that cannot open does not flash a window at somebody.
+            // Realising creates the GdkWindow without mapping it: the id exists,
+            // and the window stays hidden until `show`.
+            gtk_window.realize();
+            match gtk_window.window() {
+                Some(window) => window,
+                None => {
+                    eprintln!(
+                        "theia-player: the GTK window could not be realised, so mpv gets no window id"
+                    );
+                    return 0;
+                }
+            }
+        }
+    };
+    match gdk_window.downcast::<gdkx11::X11Window>() {
+        Ok(x11) => x11.xid() as isize,
+        Err(_) => {
+            eprintln!(
+                "theia-player: this session has no X11 window id, so the film opens in the engine's own window"
+            );
+            0
+        }
+    }
+}
+
 /// The passthrough request, kept apart from the options above because it is
 /// withdrawn at runtime when the endpoint refuses it.
 ///
 /// Named for what it is: the WASAPI bitstream path, `audio-spdif` plus
-/// `audio-exclusive`. CoreAudio has no equivalent - mpv's own manual documents
-/// the only macOS passthrough as `--coreaudio-spdif-hack`, which sends AC-3 and
-/// DTS core as float PCM and *disables* normal AC-3 passthrough even on a device
-/// that reports it, and neither it nor the `coreaudio` driver's redirection to
-/// `coreaudio_exclusive` carries TrueHD, Atmos or DTS-HD MA - so macOS asks for
-/// nothing at all and its audio mode is PCM.
-#[cfg(not(target_os = "macos"))]
+/// `audio-exclusive`. Only Windows has it, and the two other platforms ask for
+/// nothing for different reasons.
+///
+/// **macOS**: CoreAudio has no equivalent. mpv's own manual documents the only
+/// macOS passthrough as `--coreaudio-spdif-hack`, which sends AC-3 and DTS core
+/// as float PCM and *disables* normal AC-3 passthrough even on a device that
+/// reports it, and neither it nor the `coreaudio` driver's redirection to
+/// `coreaudio_exclusive` carries TrueHD, Atmos or DTS-HD MA.
+///
+/// **Linux**: `audio-exclusive` is a WASAPI option and does not exist there at
+/// all, which is why this used to be a table for "everything that is not macOS"
+/// and cost Linux a refused option, a fallback and a reload cycle on every film -
+/// measured in WSLg on 27 September 2026, where the player logged "passthrough
+/// refused by the endpoint, fell back to PCM" before the first second of a
+/// fixture. mpv does have `audio-spdif` on Linux, but nothing here has measured
+/// it against a receiver - no machine with one has run this player on Linux - and
+/// a player declares nothing it cannot observe. The option to add is
+/// `audio-spdif` alone, without `audio-exclusive`, on a machine where the answer
+/// can be heard.
+#[cfg(windows)]
 const SPDIF_CODECS: &str = "ac3,eac3,dts,dts-hd,truehd";
 
 /// Asks the engine for the audio path its mode names.
 ///
-/// Windows and the other Unix do exactly what they have always done: a
-/// passthrough request, and PCM when it has to be withdrawn.
+/// Windows does exactly what it has always done: a passthrough request, and PCM
+/// when it has to be withdrawn.
 ///
-/// macOS does nothing, deliberately and in one place, because it has no request
-/// to make and therefore none to withdraw: `SPDIF_CODECS` names formats
-/// CoreAudio cannot carry (see above). The mode the session *starts* in is the
-/// other half of that decision and lives in `start_engine`.
+/// The other two do nothing, deliberately and in one place, because they have no
+/// request to make and therefore none to withdraw (see above). The mode the
+/// session *starts* in is the other half of that decision and lives in
+/// `start_engine`.
 fn apply_audio_mode(engine: &Engine, mode: AudioMode) -> Result<(), String> {
-    #[cfg(target_os = "macos")]
+    #[cfg(not(windows))]
     {
         // The two arms would be the same no-op, so there is one: writing a
-        // `audio-spdif` request here and relying on mpv to refuse it is the
-        // silent request this port exists to remove.
+        // request here and relying on mpv to refuse it is the silent request
+        // this port exists to remove.
         let _ = (engine, mode);
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(windows)]
     match mode {
         AudioMode::Passthrough => {
             engine.set_option("audio-spdif", SPDIF_CODECS)?;
@@ -1835,10 +2008,16 @@ async fn player_local_server() -> Result<Option<String>, String> {
 
 /// Connects to a server at an address. This is the path that always works,
 /// which is why the OSD offers it beside whatever discovery found.
-fn connect_to(url: &str) -> Result<String, String> {
+///
+/// The failure is typed, and only the first request can produce the address
+/// half of it: once `/api/health` has answered, the address has been read, so
+/// everything after that is the other shape. The OSD turns the code into a
+/// sentence (decision 25); the console and `--server` print the transport's own
+/// words, because a person reading a terminal is debugging, not watching.
+fn connect_to(url: &str) -> Result<String, server::Refusal> {
     let mut client = server::Client::new(url);
-    let health = client.health()?;
-    let profiles = client.profiles()?;
+    let health = client.probe()?;
+    let profiles = client.profiles().map_err(server::Refusal::silent)?;
     // One profile is not a question (decision 50): adopt it rather than asking,
     // exactly as the web interface does.
     if profiles.len() == 1 {
@@ -1848,7 +2027,7 @@ fn connect_to(url: &str) -> Result<String, String> {
         // not mean throwing progress into an unscoped bucket.
         client.set_profile(Some(profile.id));
     }
-    let json = connection_payload(&client, &health, &profiles)?;
+    let json = connection_payload(&client, &health, &profiles).map_err(server::Refusal::silent)?;
     *CLIENT.lock().unwrap() = Some(client);
     Ok(json)
 }
@@ -2091,7 +2270,9 @@ struct Sidecar {
 
 #[tauri::command]
 fn player_connect(url: String) -> Result<String, String> {
-    connect_to(&url)
+    // The interface is handed a code, not a sentence: it owns the words
+    // (decision 25) and the two failures do not earn the same advice.
+    connect_to(&url).map_err(|refusal| refusal.code().to_string())
 }
 
 /// Chooses which viewing history the player writes to. It travels in the open,
@@ -2867,15 +3048,17 @@ fn start_engine(wid: isize, media: Option<&str>, silent: bool) -> Result<(), Str
             Err(e) => return Err(e),
         }
     }
-    // Windows, and every other Unix, start by asking for passthrough and fall
-    // back to PCM when the endpoint refuses. macOS has no passthrough to ask for
-    // - CoreAudio cannot carry what `SPDIF_CODECS` names - so it starts in PCM,
-    // and the audio watchdog that watches for a refused bitstream has nothing to
-    // watch there (`supervise_audio` returns unless the mode is Passthrough).
-    let audio = if cfg!(target_os = "macos") {
-        AudioMode::Pcm
-    } else {
+    // Windows starts by asking for passthrough and falls back to PCM when the
+    // endpoint refuses. The other two start in PCM because they have nothing to
+    // ask for: CoreAudio cannot carry what `SPDIF_CODECS` names, and Linux has no
+    // `audio-exclusive` option and no measurement of `audio-spdif` against a
+    // receiver. The audio watchdog that watches for a refused bitstream has
+    // nothing to watch where nothing was asked (`supervise_audio` returns unless
+    // the mode is Passthrough).
+    let audio = if cfg!(windows) {
         AudioMode::Passthrough
+    } else {
+        AudioMode::Pcm
     };
     apply_audio_mode(&engine, audio)?;
     engine.initialize()?;
@@ -2888,6 +3071,9 @@ fn start_engine(wid: isize, media: Option<&str>, silent: bool) -> Result<(), Str
     if let Some(path) = media {
         engine.command(&["loadfile", path])?;
     }
+
+    #[cfg(target_os = "macos")]
+    render_macos::attach(wid, &engine, &dll)?;
 
     let mut session = Session {
         engine,
@@ -2989,7 +3175,10 @@ fn main() {
     if let Some(url) = flag("--server") {
         if std::env::args().any(|a| a == "--list") {
             let limit = flag("--limit").and_then(|n| n.parse::<u32>().ok());
-            match connect_to(&url).and_then(|_| player_library(limit)) {
+            match connect_to(&url)
+                .map_err(|refusal| refusal.to_string())
+                .and_then(|_| player_library(limit))
+            {
                 Ok(json) => println!("{json}"),
                 Err(e) => {
                     eprintln!("theia-player: {e}");
@@ -3062,7 +3251,8 @@ fn main() {
             // The handle mpv draws into, and the one place it is chosen. mpv
             // calls it `wid` on Windows. macOS obtains an `NSView*` here but
             // does not pass it through `base_options` because mpv 0.41 ignores
-            // that option there. Linux currently has no embedded window handle.
+            // that option there. Linux hands over an X11 window id, and reports
+            // zero on Wayland, where no such id exists.
             let wid = {
                 #[cfg(windows)]
                 {
@@ -3070,13 +3260,13 @@ fn main() {
                 }
                 #[cfg(target_os = "macos")]
                 {
-                    // The window's content view: the NSView the WebView is
-                    // drawn in, which is where a film would have to go.
+                    // The window's content view. Wry places the WKWebView
+                    // inside it, and render_macos inserts the film below it.
                     window.ns_view().expect("the window's content view") as isize
                 }
                 #[cfg(not(any(windows, target_os = "macos")))]
                 {
-                    0isize
+                    x11_window_id(&window)
                 }
             };
             // The configured size is only a safe fallback. On a 200% display a
@@ -3099,6 +3289,11 @@ fn main() {
                 start_window_probe(window.clone(), wid, requested, PathBuf::from(path));
             }
 
+            // The handle mpv was given, printed because on Linux it is the one
+            // thing that decides whether the film lands under the OSD or in a
+            // window of its own - and a person debugging a machine they cannot
+            // see has no other way to tell those apart.
+            println!("theia-player: window id {wid}");
             match start_engine(wid, media.as_deref(), silent) {
                 Ok(()) => {
                     let version = player_version().unwrap_or_else(|| "unknown".into());
@@ -3256,6 +3451,8 @@ fn main() {
                     loop {
                         std::thread::sleep(Duration::from_secs(1));
                         println!("{}", player_status());
+                        #[cfg(target_os = "macos")]
+                        println!("render-frames: {}", render_macos::frames());
                         // What the engine holds for subtitles, read back from it
                         // and printed on change: the sheet's own sliders change
                         // it while a film plays, and a refusal leaves the engine
@@ -3287,6 +3484,8 @@ fn main() {
                     // explicit boundary and records the exact playhead before the
                     // process disappears.
                     save_progress();
+                    #[cfg(target_os = "macos")]
+                    render_macos::detach();
                 }
                 // The region is a snapshot of a size, so a window that keeps
                 // growing would be clipped to the shape it used to have - but
@@ -3362,7 +3561,107 @@ fn supervise_audio(app: &tauri::WebviewWindow) {
 
 #[cfg(test)]
 mod player_window_tests {
-    use super::{fitted_window_size, manifest_key};
+    use super::{
+        base_options, fitted_window_size, linux_video_output, manifest_key, platform_options, Platform,
+    };
+
+    /// Linux is told to use Linux, and Windows still says what it always said.
+    ///
+    /// Decision 149 found the opposite in source: this build handed Linux
+    /// `d3d11`, `d3d11va` and `wasapi` - a Windows table, in a `cfg` block that
+    /// no Windows machine, no test and no reader of the Windows source could
+    /// see. That is why the table is a mapping now, and this is the test that
+    /// would have failed.
+    #[test]
+    fn the_linux_table_names_no_windows_backend() {
+        let linux = platform_options(Platform::Unix, true);
+        let keys: Vec<&str> = linux.iter().map(|(key, _)| *key).collect();
+        let values: Vec<&str> = linux.iter().map(|(_, value)| value.as_str()).collect();
+
+        assert!(values.contains(&"gpu-next"), "Linux draws through gpu-next");
+        assert!(
+            !values
+                .iter()
+                .any(|value| value.contains("d3d11") || value.contains("wasapi")),
+            "no Windows backend belongs in the Linux table: {values:?}"
+        );
+        // The pair that depends on the machine is left to the engine, which
+        // probes for it. Naming one would refuse to start on the other, and a
+        // refused option is fatal by design.
+        assert!(
+            !keys.contains(&"gpu-api") && !keys.contains(&"gpu-context"),
+            "the graphics API and context are the session's answer, not ours: {keys:?}"
+        );
+        assert!(values.contains(&"auto-safe"), "hardware decoding where it exists");
+
+        let windows = platform_options(Platform::Windows, true);
+        assert!(
+            windows
+                .iter()
+                .any(|(key, value)| *key == "gpu-api" && *value == "d3d11"),
+            "Windows keeps D3D11"
+        );
+        assert!(
+            windows.iter().any(|(key, value)| *key == "ao" && *value == "wasapi"),
+            "Windows keeps WASAPI"
+        );
+    }
+
+    /// Linux asks the machine which video output it can actually use, and the
+    /// answer is not the engine's to give.
+    ///
+    /// mpv 0.41 aborts the process when EGL cannot create a screen - measured in
+    /// WSLg on 27 September 2026, where `/dev/dri` does not exist: `mpv
+    /// --vo=gpu-next` died on `vo_x11_init: Assertion '!vo->x11' failed` before
+    /// anything could react. A machine with no DRI device has no EGL and no
+    /// Vulkan, so the software X11 output is the one that draws; a machine with
+    /// one keeps libplacebo over Vulkan or EGL.
+    #[test]
+    fn linux_asks_for_the_output_its_machine_can_use() {
+        assert_eq!(linux_video_output(true), "gpu-next");
+        assert_eq!(linux_video_output(false), "x11");
+
+        let without_dri = platform_options(Platform::Unix, false);
+        assert!(
+            without_dri.iter().any(|(key, value)| *key == "vo" && value == "x11"),
+            "no DRI device means the software output: {without_dri:?}"
+        );
+        let with_dri = platform_options(Platform::Unix, true);
+        assert!(
+            with_dri.iter().any(|(key, value)| *key == "vo" && value == "gpu-next"),
+            "a DRI device keeps gpu-next: {with_dri:?}"
+        );
+
+        // Windows and macOS are not asked the question: their tables carry the
+        // output they always did, whatever this machine's /dev/dri says.
+        for platform in [Platform::Windows, Platform::Macos] {
+            let options = platform_options(platform, false);
+            assert!(
+                !options.iter().any(|(_, value)| value == "x11"),
+                "{platform:?} must not be answered with Linux's output: {options:?}"
+            );
+        }
+    }
+
+    /// A window id of zero is left out rather than sent.
+    ///
+    /// `wid=0` is not "no embedding" to mpv: it asks for a window of the
+    /// engine's own. A Wayland session has no id to hand over, so sending the
+    /// zero would put the film in a second window beside the OSD and explain
+    /// nothing. Zero is the honest answer, and this is what it must become.
+    #[test]
+    fn a_zero_window_id_is_not_sent_as_a_wid() {
+        let without = base_options(0, true);
+        assert!(
+            !without.iter().any(|(key, _)| *key == "wid"),
+            "a zero window id must not be sent: {without:?}"
+        );
+        let with = base_options(1234, true);
+        assert!(
+            with.iter().any(|(key, value)| *key == "wid" && value == "1234"),
+            "a real window id is still sent"
+        );
+    }
 
     #[test]
     fn the_manifest_is_keyed_the_way_assets_are_named() {

@@ -37,6 +37,17 @@ func extractSet(archive string, version platformVersion, outDir string) error {
 	if err != nil {
 		return err
 	}
+	// The macOS player compiles its render bridge against the headers from this
+	// exact digest-checked archive. System mpv headers may describe another ABI.
+	for _, name := range []string{"client.h", "render.h", "render_gl.h"} {
+		from := filepath.Join(root, "include", "mpv", name)
+		if !fileExists(from) {
+			return fmt.Errorf("%s is not in %s", name, filepath.Base(archive))
+		}
+		if err := copyFile(from, filepath.Join(outDir, "include", "mpv", name)); err != nil {
+			return err
+		}
+	}
 
 	names := make([]string, 0, len(version.RuntimeLibraries))
 	for name := range version.RuntimeLibraries {

@@ -108,6 +108,13 @@ pub fn engine_path() -> Result<PathBuf, String> {
 }
 
 impl Engine {
+    /// Borrowed by the macOS render bridge while this Engine owns the handle.
+    /// Its render context is freed before the engine can be replaced or dropped.
+    #[cfg(target_os = "macos")]
+    pub fn raw_context(&self) -> *mut c_void {
+        self.ctx
+    }
+
     /// Loads the library, creates a context and initialises it. Options are
     /// set through [`Engine::set_option`] *before* this call, which is why the
     /// two steps are separate.
