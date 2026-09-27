@@ -59,6 +59,12 @@ if [ "$release" = 1 ]; then
 	cargo_flags+=(--release)
 fi
 
+case "$(uname -m)" in
+	arm64) goarch=arm64 ;;
+	x86_64) goarch=amd64 ;;
+	*) echo "unsupported macOS architecture: $(uname -m)" >&2; exit 1 ;;
+esac
+
 echo "==> Building the OSD"
 (
 	cd "$root/player/ui"
@@ -104,7 +110,7 @@ if [ "$bundle" != 1 ]; then
 	exit 0
 fi
 
-stage="$root/dist/theia-player-darwin-arm64"
+stage="$root/dist/theia-player-darwin-$goarch"
 app="$stage/Theia.app"
 rm -rf "$stage"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Frameworks" "$app/Contents/Resources"
@@ -128,11 +134,11 @@ if command -v go >/dev/null 2>&1; then
 	echo "==> Fetching the pinned engine"
 	rm -rf "$vendor"
 	mkdir -p "$vendor"
-	(cd "$root" && go run ./scripts/fetch-libmpv -platform darwin/arm64 -out "$vendor")
+	(cd "$root" && go run ./scripts/fetch-libmpv -platform "darwin/$goarch" -out "$vendor")
 elif [ ! -d "$vendor" ]; then
 	echo "go was not found and $vendor holds nothing." >&2
 	echo "Install Go, or pre-fetch the engine with:" >&2
-	echo "  go run ./scripts/fetch-libmpv -platform darwin/arm64 -out $vendor" >&2
+	echo "  go run ./scripts/fetch-libmpv -platform darwin/$goarch -out $vendor" >&2
 	exit 1
 fi
 
@@ -148,7 +154,7 @@ fi
 # bundle was 25 MB larger than the engine it ships. A flattened set looks
 # completely normal, which is why the count below exists.
 cp -R "$vendor"/*.dylib "$app/Contents/Frameworks/"
-want_links=$(python3 -c "import json;m=json.load(open('$root/player/libmpv.json'));print(len(m['platforms']['darwin/arm64'].get('runtime_symlinks',{})))")
+want_links=$(python3 -c "import json;m=json.load(open('$root/player/libmpv.json'));print(len(m['platforms']['darwin/$goarch'].get('runtime_symlinks',{})))")
 have_links=$(find "$app/Contents/Frameworks" -type l | wc -l | tr -d ' ')
 if [ "$want_links" -gt 0 ] && [ "$have_links" -ne "$want_links" ]; then
 	echo "the Frameworks directory holds $have_links symlinks where the pin names $want_links:" >&2
@@ -200,7 +206,7 @@ if [ -d "$sources" ] && [ -f "$built" ]; then
 fi
 
 echo "==> Packing the bundle"
-archive="$root/dist/theia-player-darwin-arm64.zip"
+archive="$root/dist/theia-player-darwin-$goarch.zip"
 rm -f "$archive"
 # ditto, not zip: it keeps the bundle's structure and its executable bits, and
 # the installer extracts this archive by member name.
@@ -208,7 +214,7 @@ ditto -c -k --sequesterRsrc --keepParent "$app" "$archive"
 
 unpacked=$(du -sm "$app" | cut -f1)
 packed=$(du -m "$archive" | cut -f1)
-echo "==> theia-player-darwin-arm64 ready (${unpacked} MB, ${packed} MB zipped)"
+echo "==> theia-player-darwin-$goarch ready (${unpacked} MB, ${packed} MB zipped)"
 echo "    Theia.app/Contents/MacOS/theia-player"
 echo "    Theia.app/Contents/Frameworks/  ($(ls "$app/Contents/Frameworks"/*.dylib | wc -l | tr -d ' ') dylibs)"
 echo "    Theia.app/Contents/Resources/licenses/  (the engine's licences)"

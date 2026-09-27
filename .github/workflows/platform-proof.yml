@@ -1,0 +1,254 @@
+name: Additional platform proof
+
+# Run on the target CPU before adding its player to a public release. A build
+# alone cannot establish that the engine loads or the installer works.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  interface:
+    uses: ./.github/workflows/interface.yml
+
+  linux-native-build:
+    name: Linux ${{ matrix.goarch }} native compilation and dependency audit
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-24.04, goarch: amd64 }
+          - { runner: ubuntu-24.04-arm, goarch: arm64 }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.6'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: player
+      - name: Install Tauri Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+      - name: Compile the native player and audit linked dependencies
+        run: |
+          set -euo pipefail
+          npm ci --prefix player/ui
+          npm run build --prefix player/ui
+          THEIA_VERSION=0.0.0 cargo build --manifest-path player/Cargo.toml --release --locked
+          cargo test --manifest-path player/Cargo.toml --locked
+          cargo clippy --manifest-path player/Cargo.toml --all-targets --locked -- -D warnings
+          mkdir -p out
+          file player/target/release/theia-player | tee out/player-file.txt
+          ldd player/target/release/theia-player | tee out/player-linked-libraries.txt
+          player/target/release/theia-player -version | tee out/player-version.txt
+          printf 'This is a compile diagnostic, not a playable Linux product. The pinned engine and renderer are still missing.\n' | tee out/status.txt
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: linux-${{ matrix.goarch }}-diagnostics
+          path: out/
+          retention-days: 14
+
+  windows-arm64:
+    needs: interface
+    runs-on: windows-11-arm
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: embedded-web
+          path: web-dist
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.6'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: player
+      - name: Build and test the native player
+        shell: pwsh
+        run: |
+          .\build-player.ps1 -Release -Bundle -Architecture arm64 -Version 0.0.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test --manifest-path player/Cargo.toml --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo clippy --manifest-path player/Cargo.toml --all-targets --locked -- -D warnings
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & .\dist\theia-player-windows-arm64\theia-player.exe -version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory -Force -Path out | Out-Null
+          go run ./scripts/create-proof-media -out out/fixture.mp4 -seconds 20
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $log = Join-Path (Resolve-Path out).Path 'player.log'
+          $errors = Join-Path (Resolve-Path out).Path 'player.err'
+          $media = (Resolve-Path out/fixture.mp4).Path
+          $player = Start-Process -FilePath (Resolve-Path .\dist\theia-player-windows-arm64\theia-player.exe) -ArgumentList '--media', $media, '--diagnostics', '--mute', '--window', '1280x720' -RedirectStandardOutput $log -RedirectStandardError $errors -PassThru
+          try {
+            $pin = $null
+            for ($second = 0; $second -lt 90 -and -not $pin; $second++) {
+              Start-Sleep -Seconds 1
+              if (Test-Path $log) { $pin = Select-String -Path $log -Pattern '^engine-pin: ' | Select-Object -First 1 }
+              if ($player.HasExited) { break }
+            }
+            if (-not $pin) {
+              Get-Content $log, $errors -ErrorAction SilentlyContinue
+              throw 'the Windows ARM64 player never loaded its engine'
+            }
+            $engine = ($pin.Line -replace '^engine-pin: ', '') | ConvertFrom-Json
+            if (-not $engine.loaded -or $engine.library_sha256 -ne '0915c9c1b947729f9e0d58693d7f2589158183f938ac1bce8431b8f0809f0031') {
+              throw "the Windows ARM64 player loaded an unexpected engine: $($pin.Line)"
+            }
+            Write-Host "native ARM64 engine loaded: $($engine.loaded)"
+            Start-Sleep -Seconds 6
+            if ($player.HasExited) { throw 'the Windows ARM64 player exited before its frame could be captured' }
+            Add-Type -AssemblyName System.Windows.Forms
+            Add-Type -AssemblyName System.Drawing
+            $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bitmap = [System.Drawing.Bitmap]::new($bounds.Width, $bounds.Height)
+            $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+            try {
+              $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+              $bitmap.Save((Join-Path (Resolve-Path out).Path 'player-screen.png'))
+            } finally {
+              $graphics.Dispose()
+              $bitmap.Dispose()
+            }
+            $positions = [regex]::Matches((Get-Content $log -Raw), '"pos":([0-9.]+)')
+            if ($positions.Count -lt 2 -or [double]$positions[$positions.Count - 1].Groups[1].Value -le [double]$positions[0].Groups[1].Value) {
+              throw 'the Windows ARM64 player did not advance through the film; inspect player.log'
+            }
+            Write-Host "playback advanced: $($positions[0].Groups[1].Value) -> $($positions[$positions.Count - 1].Groups[1].Value); inspect out/player-screen.png for the actual picture and OSD"
+          }
+          finally { Stop-Process -Id $player.Id -Force -ErrorAction SilentlyContinue }
+      - name: Install the complete set on Windows ARM64
+        shell: pwsh
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: |
+          $env:CGO_ENABLED = '0'
+          $env:GOOS = 'windows'
+          $env:GOARCH = 'arm64'
+          New-Item -ItemType Directory -Force -Path dist, "$env:RUNNER_TEMP\theia-library" | Out-Null
+          go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=0.0.0 -X main.tmdbAPIKey=$env:TMDB_API_KEY" -o dist/theia-server-windows-arm64.exe ./cmd/theia-server
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go build -buildvcs=false -trimpath -ldflags '-s -w -X main.version=0.0.0' -o dist/theia-setup-windows-arm64.exe ./cmd/theia-setup
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go build -buildvcs=false -trimpath -ldflags '-s -w -H=windowsgui -X main.version=0.0.0' -o dist/theia-launcher-windows-arm64.exe ./cmd/theia
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .\build-release.ps1 -Version 0.0.0 -Target windows-arm64 -SkipPlayer -UseDistPrograms
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go run ./scripts/package-setup -setup dist/theia-setup-windows-arm64.exe -archive dist/theia-0.0.0-windows-arm64.zip -out dist/proof/theia-setup-windows-arm64.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go run ./scripts/check-setup-payload -setup dist/proof/theia-setup-windows-arm64.exe -server dist/theia-server-windows-arm64.exe -target windows-arm64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & .\dist\proof\theia-setup-windows-arm64.exe --role all-in-one --lang en --install-dir "$env:RUNNER_TEMP\theia-install" --data-dir "$env:RUNNER_TEMP\theia-data" --library "$env:RUNNER_TEMP\theia-library" --port 8398 --yes
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "$env:RUNNER_TEMP\theia-install\theia-player.exe" -version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($required in 'theia-server.exe', 'theia-player.exe', 'theia.exe', 'libmpv-2.dll', 'LICENSE-libmpv.txt') {
+            if (-not (Test-Path (Join-Path "$env:RUNNER_TEMP\theia-install" $required))) { throw "the installed Windows ARM64 product is missing $required" }
+          }
+          $serverLog = Join-Path (Resolve-Path out).Path 'installed-server.log'
+          $server = Start-Process -FilePath (Join-Path "$env:RUNNER_TEMP\theia-install" 'theia-server.exe') -ArgumentList '-data-dir', "$env:RUNNER_TEMP\theia-data", '-port', '8398' -PassThru -WindowStyle Hidden -RedirectStandardOutput $serverLog -RedirectStandardError "$serverLog.err"
+          try {
+            $client = [System.Net.Http.HttpClient]::new()
+            $client.Timeout = [TimeSpan]::FromSeconds(10)
+            $health = $null
+            for ($second = 0; $second -lt 60 -and -not $health; $second++) {
+              Start-Sleep -Seconds 1
+              try { $health = $client.GetStringAsync('http://127.0.0.1:8398/api/health').Result } catch { }
+            }
+            if (-not $health) { throw 'the installed Windows ARM64 server never answered /api/health' }
+            $page = $client.GetAsync('http://127.0.0.1:8398/').Result
+            $body = $page.Content.ReadAsStringAsync().Result
+            if (-not $page.IsSuccessStatusCode -or $body -notmatch '<html') { throw "the installed Windows ARM64 server returned $([int]$page.StatusCode) without its interface" }
+            if ((Get-Content $serverLog -Raw) -notmatch 'key_source=built-in') { throw 'the installed Windows ARM64 server has no built-in TMDB key' }
+            Write-Host 'the installed ARM64 server serves the real interface and carries its metadata key'
+          }
+          finally {
+            $client.Dispose()
+            Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
+          }
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: windows-arm64-candidate-setup
+          path: dist/proof/theia-setup-windows-arm64.exe
+          retention-days: 7
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: windows-arm64-playback-evidence
+          path: out/
+          retention-days: 14
+
+  macos-intel:
+    needs: interface
+    runs-on: macos-15-intel
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: embedded-web
+          path: web-dist
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.6'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: player
+      - name: Build and test the native player
+        run: |
+          set -euo pipefail
+          ./scripts/build-player-macos.sh -Release -Bundle -Version 0.0.0
+          cargo test --manifest-path player/Cargo.toml --locked
+          cargo clippy --manifest-path player/Cargo.toml --all-targets --locked -- -D warnings
+          dist/theia-player-darwin-amd64/Theia.app/Contents/MacOS/theia-player -version
+          codesign --verify --strict dist/theia-player-darwin-amd64/Theia.app
+      - name: Run the installer and playback verifier on Intel
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: |
+          set -euo pipefail
+          export GOOS=darwin GOARCH=amd64 CGO_ENABLED=0
+          go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=0.0.0 -X main.tmdbAPIKey=${TMDB_API_KEY}" -o dist/theia-server-darwin-amd64 ./cmd/theia-server
+          go build -buildvcs=false -trimpath -ldflags '-s -w -X main.version=0.0.0' -o dist/theia-setup-darwin-amd64 ./cmd/theia-setup
+          go build -buildvcs=false -trimpath -ldflags '-s -w -X main.version=0.0.0' -o dist/theia-launcher-darwin-amd64 ./cmd/theia
+          pwsh ./build-release.ps1 -Version 0.0.0 -Target darwin-amd64
+          go run ./scripts/package-setup -setup dist/theia-setup-darwin-amd64 -archive dist/theia-0.0.0-darwin-amd64.zip -out dist/proof/theia-setup-darwin-amd64
+          go run ./scripts/check-setup-payload -setup dist/proof/theia-setup-darwin-amd64 -server dist/theia-server-darwin-amd64 -target darwin-amd64
+          mkdir -p out
+          go run ./scripts/create-proof-media -out out/fixture.mp4 -seconds 20
+          THEIA_PROOF_DIR=out THEIA_SETUP="$PWD/dist/proof/theia-setup-darwin-amd64" ./scripts/verify-macos.sh -Media out/fixture.mp4 | tee out/verify.log
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: macos-intel-proof
+          path: |
+            out/
+            dist/proof/theia-setup-darwin-amd64
+          retention-days: 14

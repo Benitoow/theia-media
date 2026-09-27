@@ -181,6 +181,12 @@ jobs:
           path: dist/
           retention-days: 1
 
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-server-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/theia-server-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+          retention-days: 1
+
   # The player is a second toolchain - Rust, Node, and a pinned engine fetched by
   # digest. Windows x64 and macOS Apple Silicon have complete player builds;
   # the remaining server targets have no verified native player.
@@ -472,14 +478,19 @@ jobs:
             exit 1
           }
 
+      - name: Embed the complete product in the public setup
+        shell: pwsh
+        run: |
+          $version = '${{ env.THEIA_VERSION }}'.TrimStart('v')
+          go run ./scripts/package-setup -setup dist/theia-setup-windows-amd64.exe -archive "dist/theia-$version-windows-amd64.zip" -out dist/public/theia-setup-windows-amd64.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & dist/public/theia-setup-windows-amd64.exe -version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - uses: actions/upload-artifact@v7
         with:
-          name: theia-release-windows-amd64
-          # Both zips: the archive a person downloads, and the player alone for
-          # anybody who wants only that.
-          path: |
-            dist/theia-*-windows-amd64.zip
-            dist/theia-player-windows-amd64.zip
+          name: release-setup-windows-amd64
+          path: dist/public/theia-setup-windows-amd64.exe
           retention-days: 1
 
   # The macOS player. Its own runner because it needs a macOS SDK to link, and
@@ -749,10 +760,18 @@ jobs:
           "$app/Contents/MacOS/theia-player" -version
           echo 'the folder installer kept the bundle modes, links and signature'
 
+      - name: Embed the complete product in the public setup
+        run: |
+          set -euo pipefail
+          version='${{ env.THEIA_VERSION }}'
+          version="${version#v}"
+          go run ./scripts/package-setup -setup dist/theia-setup-darwin-arm64 -archive "dist/theia-${version}-darwin-arm64.zip" -out dist/public/theia-setup-darwin-arm64
+          dist/public/theia-setup-darwin-arm64 -version
+
       - uses: actions/upload-artifact@v7
         with:
-          name: theia-release-darwin-arm64
-          path: dist/theia-*-darwin-arm64.zip
+          name: release-setup-darwin-arm64
+          path: dist/public/theia-setup-darwin-arm64
           retention-days: 1
 
   # The exact public release surface, checked on every run of this file - a
@@ -770,7 +789,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           path: staging
-          pattern: theia-*
+          pattern: release-*
           merge-multiple: true
 
       - name: Check the exact public release surface
@@ -779,11 +798,27 @@ jobs:
           $version = '${{ env.THEIA_VERSION }}'.TrimStart('v')
           ./scripts/check-release-assets.ps1 -Directory staging -Version $version
 
-      - name: Check components match the offline downloads byte for byte
-        shell: pwsh
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.6'
+
+      - name: Check each setup contains the matching public server
+        shell: bash
         run: |
-          $version = '${{ env.THEIA_VERSION }}'.TrimStart('v')
-          ./scripts/check-release-parity.ps1 -Directory staging -Version $version
+          go run ./scripts/check-setup-payload -setup staging/theia-setup-windows-amd64.exe -server staging/theia-server-windows-amd64.exe -target windows-amd64
+          go run ./scripts/check-setup-payload -setup staging/theia-setup-darwin-arm64 -server staging/theia-server-darwin-arm64 -target darwin-arm64
+
+      # The shipped macOS app currently advances playback without drawing a
+      # frame (decision 149). Keep a tag from publishing that known defect.
+      # This source check is only a floor; inspect a frame from the real app
+      # on a Mac before a new release is authorised.
+      - name: Refuse the known missing macOS renderer
+        shell: bash
+        run: |
+          if ! git grep -q 'mpv_render_context_create' -- player/theia-player/src; then
+            echo '::error::The macOS player has no render context; playback progress cannot prove a picture.'
+            exit 1
+          fi
 
   publish:
     name: Publish the release
@@ -799,7 +834,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           path: staging
-          pattern: theia-*
+          pattern: release-*
           merge-multiple: true
 
       # No separate checksum file: GitHub reports a sha256 digest for every
@@ -814,17 +849,11 @@ jobs:
             --verify-tag \
             --title "Theia ${GITHUB_REF_NAME}" \
             --notes-file docs/releases/${GITHUB_REF_NAME}.md \
-            "staging/theia-setup-windows-amd64.exe#DOWNLOAD — Theia ${version} for Windows x64" \
-            "staging/theia-${version}-windows-amd64.zip#OFFLINE — Complete Windows x64 bundle" \
-            "staging/theia-player-windows-amd64.zip#Component — Windows x64 player bundle (installer-managed)" \
-            "staging/theia-launcher-windows-amd64.exe#Component — Windows x64 theia command (installer-managed)" \
-            "staging/theia-server-windows-amd64.exe#Component — Windows x64 server (updater-managed)" \
-            "staging/theia-server-windows-arm64.exe#Component — Windows ARM64 server (updater-managed)" \
-            "staging/theia-server-linux-amd64#Component — Linux x64 server (updater-managed)" \
-            "staging/theia-server-linux-arm64#Component — Linux ARM64 server (updater-managed)" \
-            "staging/theia-server-darwin-amd64#Component — macOS Intel server (updater-managed)" \
-            "staging/theia-server-darwin-arm64#Component — macOS Apple Silicon server (updater-managed)" \
-            "staging/theia-setup-darwin-arm64#DOWNLOAD — Theia ${version} for macOS Apple Silicon" \
-            "staging/theia-${version}-darwin-arm64.zip#OFFLINE — Complete macOS Apple Silicon bundle" \
-            "staging/theia-player-darwin-arm64.zip#Component — macOS Apple Silicon player bundle (installer-managed)" \
-            "staging/theia-launcher-darwin-arm64#Component — macOS Apple Silicon theia command (installer-managed)"
+            "staging/theia-setup-windows-amd64.exe#Theia ${version} for Windows x64" \
+            "staging/theia-server-windows-amd64.exe#Windows x64 server for existing updaters" \
+            "staging/theia-server-windows-arm64.exe#Windows ARM64 server for existing updaters" \
+            "staging/theia-server-linux-amd64#Linux x64 server for existing updaters" \
+            "staging/theia-server-linux-arm64#Linux ARM64 server for existing updaters" \
+            "staging/theia-server-darwin-amd64#macOS Intel server for existing updaters" \
+            "staging/theia-server-darwin-arm64#macOS Apple Silicon server for existing updaters" \
+            "staging/theia-setup-darwin-arm64#Theia ${version} for macOS Apple Silicon"

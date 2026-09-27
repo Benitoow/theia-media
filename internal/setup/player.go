@@ -389,7 +389,12 @@ func latestPlayerRelease(ctx context.Context, client *http.Client, apiBase strin
 	}
 	asset, err := rel.Named(release.PlayerName(runtime.GOOS, runtime.GOARCH))
 	if err != nil {
-		return release.Release{}, release.Asset{}, fmt.Errorf("%w: %v", errNoPlayerAsset, err)
+		// New releases put the complete player bundle inside the one-file
+		// installer. Older releases still expose the dedicated player ZIP.
+		asset, err = rel.Named(release.SetupName(runtime.GOOS, runtime.GOARCH))
+		if err != nil {
+			return release.Release{}, release.Asset{}, fmt.Errorf("%w: %v", errNoPlayerAsset, err)
+		}
 	}
 	return rel, asset, nil
 }

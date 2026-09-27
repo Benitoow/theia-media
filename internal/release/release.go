@@ -449,6 +449,7 @@ func writeArchiveLink(dir string, link archiveLink) error {
 // order the caller asked, and a map would make which name a missing entry is
 // reported against depend on hashing.
 func answeredBy(entry string, names []string) []string {
+	entry = strings.TrimPrefix(entry, "./")
 	trimmed := strings.TrimSuffix(entry, "/")
 	var answered []string
 	for _, name := range names {

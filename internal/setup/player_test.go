@@ -195,6 +195,20 @@ func TestPlayerUpdateReportsAReleaseWithoutABundle(t *testing.T) {
 	}
 }
 
+func TestPlayerUpdateFindsBundleInsideStandaloneSetup(t *testing.T) {
+	name := release.SetupName(runtime.GOOS, runtime.GOARCH)
+	server := releaseServer(t, "v9.9.9",
+		map[string][]byte{name: []byte("standalone setup")},
+		map[string]string{name: "sha256:" + digestOf([]byte("standalone setup"))})
+	rel, asset, err := latestPlayerRelease(context.Background(), server.Client(), server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rel.Tag != "v9.9.9" || asset.Name != name {
+		t.Errorf("selected release %s, asset %s; want v9.9.9, %s", rel.Tag, asset.Name, name)
+	}
+}
+
 // Decision 24, applied to the second program: a build that cannot say what it is
 // is refused before anything is asked of the network.
 func TestPlayerUpdateRefusesABuildThatCannotNameItself(t *testing.T) {

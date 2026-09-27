@@ -312,6 +312,7 @@ func diskNames(base, goos, goarch string) []string {
 // because a machine with half a product is harder to explain than a machine
 // where nothing happened yet.
 func InstallPrograms(ctx context.Context, plan Plan, source Source, report Reporter) ([]Action, error) {
+	source = sourceFromSelf(source)
 	if strings.TrimSpace(plan.InstallDir) == "" {
 		dir, err := DefaultInstallDir()
 		if err != nil {
@@ -460,7 +461,7 @@ func findProgram(plan Plan, source Source, want program) (bool, string, error) {
 }
 
 func originOf(from string) string {
-	if strings.EqualFold(filepath.Ext(from), ".zip") {
+	if strings.EqualFold(filepath.Ext(from), ".zip") || selfArchive(from, runtime.GOOS) {
 		return "archive"
 	}
 	return "folder"
@@ -579,7 +580,7 @@ func placeFrom(from string, plan Plan, want program) error {
 	if info.IsDir() {
 		return placeFromFolder(from, plan, want)
 	}
-	if strings.EqualFold(filepath.Ext(from), ".zip") {
+	if strings.EqualFold(filepath.Ext(from), ".zip") || selfArchive(from, runtime.GOOS) {
 		return placeFromArchive(from, plan, want)
 	}
 	return &InstallError{

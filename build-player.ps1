@@ -18,7 +18,9 @@
 param(
     [switch]$Release,
     [switch]$Bundle,
-    [string]$Version
+    [string]$Version,
+    [ValidateSet('amd64', 'arm64')]
+    [string]$Architecture = $(if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'amd64' })
 )
 
 $ErrorActionPreference = 'Stop'
@@ -50,6 +52,13 @@ if (-not $cargo) {
 }
 if (-not $cargo) {
     throw "cargo was not found. Install Rust from https://rustup.rs, or put cargo on PATH."
+}
+$rustc = (Get-Command rustc -ErrorAction SilentlyContinue).Source
+if (-not $rustc) { $rustc = Join-Path (Split-Path $cargo) 'rustc.exe' }
+$rustHost = (& $rustc -vV | Select-String '^host: ').ToString()
+$expectedRustArch = if ($Architecture -eq 'arm64') { 'aarch64' } else { 'x86_64' }
+if ($rustHost -notmatch "^host: $expectedRustArch-pc-windows-") {
+    throw "this script builds for the host; $rustHost cannot produce a Windows $Architecture bundle"
 }
 
 # The workflow passes the tag this release is being built from, so the binary
@@ -124,7 +133,7 @@ if (-not $go) {
 }
 if (-not $go) { throw 'Go was not found, and the bundling step needs it to fetch and verify the engine.' }
 
-$bundleDir = Join-Path $root "dist\theia-player-windows-amd64"
+$bundleDir = Join-Path $root "dist\theia-player-windows-$Architecture"
 # Not `$bundle`: PowerShell compares variable names case-insensitively, so
 # `$bundle` *is* the -Bundle switch, and assigning a path to it fails with a
 # message about converting a string into a switch. The first version of this did
@@ -135,7 +144,7 @@ New-Item -ItemType Directory -Force -Path $bundleDir | Out-Null
 Push-Location $root
 try {
     $env:CGO_ENABLED = '0'
-    & $go run ./scripts/fetch-libmpv -out $bundleDir
+    & $go run ./scripts/fetch-libmpv -platform "windows/$Architecture" -out $bundleDir
     if ($LASTEXITCODE -ne 0) { throw 'fetching the pinned engine failed' }
 }
 finally {
@@ -146,11 +155,11 @@ Copy-Item $exe (Join-Path $bundleDir 'theia-player.exe')
 Copy-Item (Join-Path $root 'player\LICENSE-libmpv.txt') $bundleDir
 Copy-Item (Join-Path $root 'player\NOTICE.md') $bundleDir
 
-$archive = Join-Path $root 'dist\theia-player-windows-amd64.zip'
+$archive = Join-Path $root "dist\theia-player-windows-$Architecture.zip"
 if (Test-Path $archive) { Remove-Item -Force $archive }
 Compress-Archive -Path (Join-Path $bundleDir '*') -DestinationPath $archive
 
 $total = [math]::Round(((Get-ChildItem $bundleDir -File | Measure-Object -Property Length -Sum).Sum) / 1MB, 1)
 $zipped = [math]::Round((Get-Item $archive).Length / 1MB, 1)
-Write-Host "==> theia-player-windows-amd64 ready ($total MB, $zipped MB zipped)" -ForegroundColor Green
+Write-Host "==> theia-player-windows-$Architecture ready ($total MB, $zipped MB zipped)" -ForegroundColor Green
 Get-ChildItem $bundleDir | ForEach-Object { Write-Host ("    {0} ({1:N1} MB)" -f $_.Name, ($_.Length / 1MB)) }

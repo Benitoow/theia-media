@@ -7,13 +7,16 @@
 		"time bomb - the first installation attempted a month later would 404, and a",
 		"checksum that cannot be fetched cannot be verified.",
 		"",
-		"Each platform gets its own pin, its own digests and its own run on real",
-		"hardware before it appears here: an entry nobody has executed would be a",
-		"claim, not a pin. Windows has been run since V3.3.0; macOS Apple Silicon",
-		"was added for V3.3.4 and run on a GitHub-hosted Mac on 22 September 2026.",
+		"Each candidate has its own archive and library digests. A platform joins",
+		"the public release only after its player and installer run on that CPU.",
+		"Windows x64 has been run since V3.3.0; macOS Apple Silicon was run on a",
+		"GitHub-hosted Mac on 22 September 2026. Windows ARM64 and macOS Intel",
+		"are candidates whose archive contents were checked, pending native runs.",
 		"",
-		"Which engine, and why these two. Both are LGPL builds of a current mpv with",
-		"libplacebo, so the renderer is gpu-next on both platforms and the codec",
+		"Which engine, and why these providers. Both provide LGPL builds of a",
+		"current mpv with libplacebo; published rendering is verified on Windows",
+		"x64, while the candidate architectures still need their own runtime proof.",
+		"The codec",
 		"generation matches: the macOS pin carries FFmpeg 8.1.2, the same version the",
 		"server downloads for conversion, and the Windows pin carries an FFmpeg of",
 		"the same libavcodec generation (62.x). An earlier macOS candidate -",
@@ -23,6 +26,95 @@
 		"its rpaths."
 	],
 	"platforms": {
+		"windows/arm64": {
+			"provider": "zhongfly/mpv-winbuild",
+			"release": "2026-09-14-0b7ed670f7",
+			"asset": "mpv-dev-lgpl-aarch64-20260914-git-0b7ed670f7.7z",
+			"url": "https://github.com/zhongfly/mpv-winbuild/releases/download/2026-09-14-0b7ed670f7/mpv-dev-lgpl-aarch64-20260914-git-0b7ed670f7.7z",
+			"archive_bytes": 23481172,
+			"archive_sha256": "b098eb21cb420c56c96af48d186fdbbe063f5410a9ab6e9dbe85d7070dd9f718",
+			"library": "libmpv-2.dll",
+			"library_sha256": "0915c9c1b947729f9e0d58693d7f2589158183f938ac1bce8431b8f0809f0031",
+			"library_bytes": 73109504,
+			"licence": "LGPL-2.1-or-later",
+			"licence_file": "LICENSE-libmpv.txt",
+			"source_offer": "https://github.com/zhongfly/mpv-winbuild",
+			"build": {
+				"mpv": "v0.41.0-1049-g0b7ed670f",
+				"libplacebo": "v7.371.0",
+				"ffmpeg": "N-126548-g6efe500d2"
+			},
+			"configuration": "-Dgpl=false -Dlibmpv=true -Dcplayer=false -Dvulkan=enabled -Dlibass -Dlibplacebo -Dsubrandr=enabled",
+			"verified": [
+				"archive and extracted library SHA-256 measured on Windows x64; ARM64 playback pending"
+			]
+		},
+		"darwin/amd64": {
+			"provider": "178meorg/libmpv-macos-build",
+			"release": "v0.41.4",
+			"asset": "libmpv-v0.41.4-macos-x86_64.tar.gz",
+			"url": "https://github.com/178meorg/libmpv-macos-build/releases/download/v0.41.4/libmpv-v0.41.4-macos-x86_64.tar.gz",
+			"archive_bytes": 16307218,
+			"archive_sha256": "1e924be7be2870d62cabed33a75f4416647002c0b0e75eb9dce0f301c8a5d83b",
+			"profile": "enhanced-lgpl",
+			"layout": "lib/*.dylib beside each other, every dependency's licence text in licenses/",
+			"library": "libmpv.2.dylib",
+			"library_sha256": "02d78dfa4caed516d3a41e98e6b2cfe9733f2a41d43d1b0761565ec9710a94f4",
+			"library_bytes": 3937592,
+			"runtime_libraries": {
+				"libarchive.13.8.2.dylib": "a5a7131e11ec2aa2196b2d41f926b6e3f6e7e3f3ceb28fa13b85528e69b43593",
+				"libass.9.dylib": "91de0b6406d6be4c18ac65c37bec438705d976772ce6aa901ce916a1ea3be0b9",
+				"libavcodec.62.28.102.dylib": "7a05b7d17294607db2f505f74da1afd961c879e6dc361232e7c217b793f10c7f",
+				"libavfilter.11.14.102.dylib": "9d61ad6d959eb5b46664dc2e3feff10cbc924b9b45ddb87381cedda69921f9b6",
+				"libavformat.62.12.102.dylib": "a777fd5ff155d8878049e7b6e18d8277e26bc5b0fd46d9fb37968e0248313f6e",
+				"libavutil.60.26.102.dylib": "ea31cbc317904484ecc0066804e47a25a966f6a5367736dcc32bccb280789793",
+				"libdav1d.7.dylib": "fd55b5ffa2e86ffaac091f77b7ed3f261c4fb83f889a9dd85c260a35e621c6a8",
+				"libfreetype.6.20.2.dylib": "b66866a0f98b239fad39269a85e348d5532e63434f711cb2e9426cb941c72e70",
+				"libfribidi.0.dylib": "45a25d5cbf581a5078a3b4bf3a4cc0d37ea243b5c7152c62e17adcf862d8e6c6",
+				"libharfbuzz.0.dylib": "43929ac1b0f0a939ca0a71a1d0287d57b630a8dc8db50d3a982f111187c6bb41",
+				"liblcms2.2.dylib": "8e29bc56b8b8eb740c2a5f0ed8e8afe8c9408baf386f690511c3a390010be757",
+				"libmpv.2.dylib": "02d78dfa4caed516d3a41e98e6b2cfe9733f2a41d43d1b0761565ec9710a94f4",
+				"libplacebo.360.dylib": "53d6203b557860dc154e1378919f6e6e47dbf166123a44de073b69c160ef96ce",
+				"libswresample.6.3.102.dylib": "43da825b1a7913c27df7caaa628da852f90a247b08928adb6da919f09b855af0",
+				"libswscale.9.5.102.dylib": "d601e3a5af7de8d9fc5552cc65de5d98ec0763ae249d4e72d61e7ade28aaadf6",
+				"libuchardet.0.0.8.dylib": "4b515f1a3f4f0b189c48f04fcb30d82f8c11662c9d72b5aa6c89d072ebca41b0",
+				"libxml2.16.dylib": "62d8679b18b6d5273cfe90bc3a7b6a41f899d3f59f1741828b8d89b8a38b2fa9",
+				"libz.1.3.1.dylib": "7c4a8c6e6096eeca076714000010a84f0a09d5122739d707fc66984fdea1b021",
+				"libzimg.2.dylib": "f934051ca63e5cdb98608036ae84d525e4d759663f9557ab4b9a95a029f28c18"
+			},
+			"runtime_symlinks": {
+				"libarchive.13.dylib": "libarchive.13.8.2.dylib",
+				"libavcodec.62.dylib": "libavcodec.62.28.102.dylib",
+				"libavfilter.11.dylib": "libavfilter.11.14.102.dylib",
+				"libavformat.62.dylib": "libavformat.62.12.102.dylib",
+				"libavutil.60.dylib": "libavutil.60.26.102.dylib",
+				"libfreetype.6.dylib": "libfreetype.6.20.2.dylib",
+				"libmpv.dylib": "libmpv.2.dylib",
+				"libswresample.6.dylib": "libswresample.6.3.102.dylib",
+				"libswscale.9.dylib": "libswscale.9.5.102.dylib",
+				"libuchardet.0.dylib": "libuchardet.0.0.8.dylib",
+				"libz.1.dylib": "libz.1.3.1.dylib"
+			},
+			"rpath": [
+				"@loader_path",
+				"@loader_path/../lib",
+				"@loader_path/../Frameworks"
+			],
+			"install_name": "@rpath/libmpv.2.dylib",
+			"minimum_macos": "11.0",
+			"licence": "LGPL-2.1-or-later",
+			"licence_dir": "licenses",
+			"licence_file": "LICENSE-libmpv.txt",
+			"source_offer": "https://github.com/178meorg/libmpv-macos-build",
+			"build": {
+				"mpv": "v0.41.0-dev-gd97d68da9",
+				"ffmpeg": "8.1.2",
+				"libplacebo": "7.360.1"
+			},
+			"verified": [
+				"archive SHA-256, 19 library digests, 11 symlink targets and licences measured from release archive; Intel playback pending"
+			]
+		},
 		"windows/amd64": {
 			"provider": "zhongfly/mpv-winbuild",
 			"release": "2026-09-14-0b7ed670f7",

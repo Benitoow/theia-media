@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/Benitoow/theia-media/internal/release"
 )
 
 // Removing an installation.
@@ -205,10 +207,26 @@ func copySelf(target string) error {
 	if err != nil {
 		return fmt.Errorf("setup: finding this program: %w", err)
 	}
+	return copySelfFrom(self, target)
+}
+
+func copySelfFrom(self, target string) error {
 	if same, err := filepath.Abs(self); err == nil {
 		if absolute, err := filepath.Abs(target); err == nil && strings.EqualFold(same, absolute) {
 			return nil
 		}
+	}
+	if selfArchive(self, runtime.GOOS) {
+		staging, err := os.MkdirTemp("", "theia-setup-self-")
+		if err != nil {
+			return fmt.Errorf("setup: staging the maintenance tool: %w", err)
+		}
+		defer os.RemoveAll(staging)
+		name := installerExecutable(runtime.GOOS)
+		if _, err := release.Extract(self, staging, []string{name}); err != nil {
+			return fmt.Errorf("setup: extracting the maintenance tool: %w", err)
+		}
+		return copyInto(filepath.Join(staging, name), filepath.Dir(target), filepath.Base(target))
 	}
 	return copyInto(self, filepath.Dir(target), filepath.Base(target))
 }

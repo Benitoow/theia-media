@@ -1,8 +1,9 @@
 //! Theia's native player.
 //!
-//! A Tauri window whose only visible layer is the OSD: libmpv draws the film
-//! into a child surface of that window, and the Svelte page floats above it
-//! (spike A2b). The Rust side owns the engine, the session and the lifecycle;
+//! On Windows, libmpv draws the film into a child surface of the Tauri window
+//! and the Svelte OSD floats above it (spike A2b). The macOS render context is
+//! not integrated yet; see decision 149 before claiming its picture works.
+//! The Rust side owns the engine, the session and the lifecycle;
 //! the page owns every sentence the user reads, which is decision 25 applied to
 //! a second interface.
 //!
@@ -957,10 +958,11 @@ const PLATFORM_OPTIONS: &[(&str, &str)] = &[
     ("ao", "wasapi"),
 ];
 
-/// macOS: the film is drawn by this program, not by mpv.
+/// macOS: the requested output needs a render context this application does
+/// not yet create (decision 149).
 ///
 /// `vo=libmpv` means "no video output at all": the host creates a GL context and
-/// calls `mpv_render_context_render` for every frame, which is the only way a
+/// must call `mpv_render_context_render` for every frame, which is the only way a
 /// frame can reach a window on macOS with this engine - its build disables
 /// `vulkan`, `macos-cocoa-cb` and `swift-build`, so none of mpv's own outputs can
 /// present, and `--wid` is gone in 0.41. `RENDER-MACOS.md` is the specification
@@ -992,14 +994,9 @@ const PLATFORM_OPTIONS: &[(&str, &str)] = &[
 /// The options the player starts with. Kept in one place so the policy is
 /// readable rather than scattered through the setup closure.
 ///
-/// `wid` comes first and is the handle the platform gave us: an `HWND` on
-/// Windows, an `NSView*` on macOS, nothing on the other Unix. mpv calls it `wid`
-/// everywhere, so the entry itself does not vary; what varies is what the handle
-/// is, and `main` decides that in one place. On macOS this entry is the Mac's
-/// first check: mpv 0.41 no longer reads `wid` there at all - the paragraph
-/// documenting an `NSView*` left the manual after 0.36, and no macOS file in
-/// 0.41.0 reads the option - so the film is expected to appear in a window mpv
-/// opens itself. `start_engine` keeps the player alive either way.
+/// `wid` is sent on Windows and Linux. macOS omits it because mpv 0.41 does not
+/// read an `NSView*` through this option. Omitting `wid` does not itself draw a
+/// frame: the application still needs to own a render context (decision 149).
 ///
 /// `silent` starts muted. It exists because a player that always makes a noise
 /// is hostile in a shared room - and because every automated run of this
@@ -1007,9 +1004,9 @@ const PLATFORM_OPTIONS: &[(&str, &str)] = &[
 fn base_options(wid: isize, silent: bool) -> Vec<(&'static str, String)> {
     let mut options: Vec<(&'static str, String)> = Vec::new();
     // `wid` is the handle the platform gave us: an `HWND` on Windows, and nothing
-    // on macOS any more - the film there is drawn by this program into its own GL
-    // context (`vo=libmpv`, see RENDER-MACOS.md), so mpv is given no window at
-    // all. mpv 0.41 stopped reading `wid` on macOS anyway: the paragraph
+    // on macOS any more - its intended GL render context (`vo=libmpv`, see
+    // RENDER-MACOS.md) is still missing, so mpv is given no window at all.
+    // mpv 0.41 stopped reading `wid` on macOS: the paragraph
     // documenting an `NSView*` left the manual after 0.36 and no macOS file in
     // 0.41.0 reads the option.
     #[cfg(not(target_os = "macos"))]
@@ -3063,11 +3060,9 @@ fn main() {
         .setup(move |app| {
             let window = app.get_webview_window("main").expect("the main window");
             // The handle mpv draws into, and the one place it is chosen. mpv
-            // calls it `wid` on every platform; what it *is* does not travel: an
-            // `HWND` on Windows, an `NSView*` on macOS (mpv 0.36's manual asked
-            // for exactly that, `NSView*` cast to `intptr_t`; 0.41 no longer
-            // reads the option at all - see `base_options`), and nothing on the
-            // other Unix, where no window embedding has ever been attempted.
+            // calls it `wid` on Windows. macOS obtains an `NSView*` here but
+            // does not pass it through `base_options` because mpv 0.41 ignores
+            // that option there. Linux currently has no embedded window handle.
             let wid = {
                 #[cfg(windows)]
                 {

@@ -1,4 +1,4 @@
-# Assembles what a person actually downloads: one archive, one file to run.
+# Assembles the internal payload embedded in the public setup executable.
 #
 #   .\build-release.ps1                     -> dist\theia-<version>-windows-amd64.zip
 #   .\build-release.ps1 -Version 3.3.6
@@ -19,38 +19,35 @@
 # no network at install time, which is also what "it works on my own machine"
 # means.
 #
-# The published assets are still published separately, with their platform
-# names, for people who want one piece and for the updater, which selects
-# `theia-server-<os>-<arch>` by name.
+# The six server assets remain public under their exact platform names because
+# installed updaters select `theia-server-<os>-<arch>` by name (decision 150).
 #
 # macOS is the second platform with a whole product, from V3.3.4, and it is
 # assembled rather than built - which is the one real difference between the two
 # paths and the reason `-Target` exists instead of a second script. A Tauri app
 # bundle is compiled by the machine it will run on, and the engine inside it is
-# pinned for darwin-arm64 alone, so by the time this runs the bundle and the
+# pinned for that macOS architecture, so by the time this runs the bundle and the
 # three programs are already in dist/ and nothing here may build anything. What
 # this path owns is the archive: the bundle as it stands, the programs under the
 # short names the installer looks for, and a START-HERE.txt that explains the
 # unsigned download and the per-user installation.
 #
-# Nothing is fetched or compiled to make the macOS archive, so it is offline by
-# construction, and a missing bundle names the build that produces it rather
-# than reaching for the network.
+# Nothing is fetched or compiled to make the macOS payload archive. A missing
+# bundle names the build that produces it rather than reaching for the network.
 
 param(
     [string]$Version = 'dev',
 
-    # The platform whose archive to assemble. `windows-amd64` builds the
-    # programs (below); `darwin-arm64` assembles what a Mac built, and is what
-    # the release workflow runs on its macOS runner.
-    [ValidateSet('windows-amd64', 'darwin-arm64')]
+    # Windows targets can build their own programs; macOS targets assemble
+    # what their native runner built.
+    [ValidateSet('windows-amd64', 'windows-arm64', 'darwin-arm64', 'darwin-amd64')]
     [string]$Target = 'windows-amd64',
 
     # Windows only, and vacuous on darwin: the macOS path never builds the
     # player, so there is nothing here for it to skip.
     [switch]$SkipPlayer,
 
-    # CI assembles the offline archive from the exact published Go components.
+    # CI assembles the internal payload from the exact published Go components.
     # Rebuilding them in another job changes Go's build ID on Windows even when
     # the program bytes and build settings are otherwise identical.
     [switch]$UseDistPrograms
@@ -58,6 +55,22 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
+$distRoot = [IO.Path]::GetFullPath((Join-Path $root 'dist'))
+
+function Reset-Stage([string]$Path) {
+    $absolute = [IO.Path]::GetFullPath($Path)
+    if (-not $absolute.StartsWith($distRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "refusing to reset a stage outside dist: $absolute"
+    }
+    if (Test-Path -LiteralPath $absolute) {
+        $item = Get-Item -LiteralPath $absolute -Force
+        if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+            throw "refusing to reset a linked stage: $absolute"
+        }
+        Remove-Item -LiteralPath $absolute -Recurse -Force
+    }
+    New-Item -ItemType Directory -Force -Path $absolute | Out-Null
+}
 
 # The one step both platforms take: everything standing in the stage becomes
 # dist\theia-<version>-<platform>.zip, and the sizes are printed.
@@ -72,7 +85,7 @@ $root = $PSScriptRoot
 # permission bits, and `-y` keeps the symlinks inside the bundle as symlinks
 # instead of turning each one into a second copy of a 3.8 MB dylib. So the
 # darwin path uses it, and what a Mac user unzips now runs.
-function Publish-OfflineArchive {
+function Write-SetupPayloadArchive {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
         [Parameter(Mandatory = $true)][string]$Stage
@@ -136,13 +149,13 @@ function Get-DistProgram {
 # choice: PowerShell on macOS does not read a backslash as a separator, so
 # `dist\theia-player-darwin-arm64` names a directory that cannot exist there.
 # Windows accepts both, which is why the Windows path below keeps its own.
-if ($Target -eq 'darwin-arm64') {
+if ($Target.StartsWith('darwin-')) {
+    $goarch = $Target.Split('-')[1]
     Write-Host '==> Assembling the macOS archive from dist/ (nothing is built)' -ForegroundColor Cyan
 
-    $name = "theia-$Version-darwin-arm64"
+    $name = "theia-$Version-$Target"
     $stage = Join-Path $root "dist/$name"
-    if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
-    New-Item -ItemType Directory -Force -Path $stage | Out-Null
+    Reset-Stage $stage
 
     # The player bundle as the macOS build leaves it, engine and licences
     # inside: the application is copied whole, so there is no second flat copy
@@ -154,7 +167,7 @@ if ($Target -eq 'darwin-arm64') {
     # `@rpath/libmpv.2.dylib`, while a bundle that renames it to `libmpv.dylib`
     # is what the loader reaches either way. What must not happen is a bundle
     # with no engine in it, because that one looks complete and plays nothing.
-    $bundle = Join-Path $root 'dist/theia-player-darwin-arm64'
+    $bundle = Join-Path $root "dist/theia-player-$Target"
     foreach ($required in @(
         'Theia.app/Contents/MacOS/theia-player',
         'Theia.app/Contents/Resources/LICENSE-libmpv.txt',
@@ -181,7 +194,7 @@ if ($Target -eq 'darwin-arm64') {
     & ditto (Join-Path $bundle 'Theia.app') (Join-Path $stage 'Theia.app')
     if ($LASTEXITCODE -ne 0) { throw "ditto failed with exit code $LASTEXITCODE" }
     $pin = Get-Content (Join-Path $root 'player/libmpv.json') -Raw | ConvertFrom-Json
-    $wantLinks = @($pin.platforms.'darwin/arm64'.runtime_symlinks.PSObject.Properties).Count
+    $wantLinks = @($pin.platforms."darwin/$goarch".runtime_symlinks.PSObject.Properties).Count
     $haveLinks = @(Get-ChildItem -Path (Join-Path $stage 'Theia.app/Contents/Frameworks') -Recurse -Force |
         Where-Object { $_.LinkType -eq 'SymbolicLink' }).Count
     if ($wantLinks -gt 0 -and $haveLinks -ne $wantLinks) {
@@ -194,9 +207,9 @@ if ($Target -eq 'darwin-arm64') {
     # a short name on disk beside the published one (internal/setup
     # acceptedNames), because a working tree produces the short one.
     foreach ($program in @(
-        @{ asset = 'theia-server-darwin-arm64'; installed = 'theia-server' },
-        @{ asset = 'theia-setup-darwin-arm64'; installed = 'theia-setup' },
-        @{ asset = 'theia-launcher-darwin-arm64'; installed = 'theia' }
+        @{ asset = "theia-server-$Target"; installed = 'theia-server' },
+        @{ asset = "theia-setup-$Target"; installed = 'theia-setup' },
+        @{ asset = "theia-launcher-$Target"; installed = 'theia' }
     )) {
         $source = Get-DistProgram -Published $program.asset -Short $program.installed
         Copy-Item $source (Join-Path $stage $program.installed)
@@ -272,9 +285,11 @@ application, in Theia.app/Contents/Resources, beside the engine they cover.
 "@
     Set-Content -Path (Join-Path $stage 'START-HERE.txt') -Value $readme
 
-    Publish-OfflineArchive -Name $name -Stage $stage
+    Write-SetupPayloadArchive -Name $name -Stage $stage
     return
 }
+
+$goarch = $Target.Split('-')[1]
 
 $go = (Get-Command go -ErrorAction SilentlyContinue).Source
 if (-not $go) {
@@ -290,13 +305,13 @@ $binaryVersion = if ($Version -in @('dev', '0.0.0')) { $Version } else { "v$Vers
 # and failing there should not happen after the Go builds have run.
 if (-not $SkipPlayer) {
     Write-Host '==> Building the player and its engine' -ForegroundColor Cyan
-    & (Join-Path $root 'build-player.ps1') -Release -Bundle -Version $binaryVersion
+    & (Join-Path $root 'build-player.ps1') -Release -Bundle -Architecture $goarch -Version $binaryVersion
     if ($LASTEXITCODE -ne 0) { throw 'the player build failed' }
 }
 
 # A reused player bundle can be older than the requested archive. Check it
 # before rebuilding the other programs or replacing an existing archive.
-$playerExe = Join-Path $root 'dist\theia-player-windows-amd64\theia-player.exe'
+$playerExe = Join-Path $root "dist/theia-player-$Target/theia-player.exe"
 if (-not (Test-Path $playerExe)) {
     throw "the player bundle is missing from $playerExe; build it with .\build-player.ps1 -Release -Bundle -Version $binaryVersion"
 }
@@ -305,17 +320,16 @@ if ($LASTEXITCODE -ne 0 -or $playerVersion -ne "theia-player $binaryVersion") {
     throw "the player bundle reports '$playerVersion', expected 'theia-player $binaryVersion'; rebuild it for this archive"
 }
 
-$name = "theia-$Version-windows-amd64"
+$name = "theia-$Version-$Target"
 $stage = Join-Path $root "dist\$name"
-if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
-New-Item -ItemType Directory -Force -Path $stage | Out-Null
+Reset-Stage $stage
 
 if ($UseDistPrograms) {
     Write-Host '==> Copying the published Go components into the archive' -ForegroundColor Cyan
     foreach ($program in @(
-        @{ asset = 'theia-server-windows-amd64.exe'; installed = 'theia-server.exe' },
-        @{ asset = 'theia-setup-windows-amd64.exe'; installed = 'theia-setup.exe' },
-        @{ asset = 'theia-launcher-windows-amd64.exe'; installed = 'theia.exe' }
+        @{ asset = "theia-server-$Target.exe"; installed = 'theia-server.exe' },
+        @{ asset = "theia-setup-$Target.exe"; installed = 'theia-setup.exe' },
+        @{ asset = "theia-launcher-$Target.exe"; installed = 'theia.exe' }
     )) {
         $source = Join-Path $root "dist/$($program.asset)"
         if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
@@ -364,7 +378,7 @@ if ($UseDistPrograms) {
 }
 
 # The player bundle, already assembled with its engine by build-player.ps1.
-$playerBundle = Join-Path $root 'dist\theia-player-windows-amd64'
+$playerBundle = Join-Path $root "dist/theia-player-$Target"
 foreach ($file in 'theia-player.exe', 'libmpv-2.dll', 'LICENSE-libmpv.txt', 'NOTICE.md') {
     Copy-Item (Join-Path $playerBundle $file) $stage
 }
@@ -411,4 +425,4 @@ NOTICE.md names the exact build and its SHA-256.
 "@
 Set-Content -Path (Join-Path $stage 'START-HERE.txt') -Value $readme
 
-Publish-OfflineArchive -Name $name -Stage $stage
+Write-SetupPayloadArchive -Name $name -Stage $stage

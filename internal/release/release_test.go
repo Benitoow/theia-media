@@ -208,6 +208,22 @@ func TestExtractTakesOnlyWhatWasAskedFor(t *testing.T) {
 	}
 }
 
+func TestExtractAcceptsMacZipDotPrefix(t *testing.T) {
+	archive := makeArchive(t, map[string]string{
+		"./theia-server": "server",
+		"./Theia.app/Contents/MacOS/theia-player": "player",
+	})
+	dir := t.TempDir()
+	if _, err := Extract(archive, dir, []string{"theia-server", "Theia.app"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"theia-server", "Theia.app/Contents/MacOS/theia-player"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
+			t.Errorf("missing %s: %v", name, err)
+		}
+	}
+}
+
 func TestExtractRefusesAnIncompleteBundle(t *testing.T) {
 	// A player bundle without its licence is a licence breach. Half an
 	// extraction is a failure, and it says which file was missing.

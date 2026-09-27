@@ -16,7 +16,12 @@ set -uo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 media=""
-app="${THEIA_APP:-$root/dist/theia-player-darwin-arm64/Theia.app}"
+case "$(uname -m)" in
+	arm64) goarch=arm64 ;;
+	x86_64) goarch=amd64 ;;
+	*) echo "unsupported macOS architecture: $(uname -m)" >&2; exit 1 ;;
+esac
+app="${THEIA_APP:-$root/dist/theia-player-darwin-$goarch/Theia.app}"
 work="$(mktemp -d /tmp/theia-verify.XXXXXX)"
 pass=0
 fail=0
@@ -95,9 +100,9 @@ echo "== The server, on a throwaway data directory =="
 # first two and reported "no darwin server binary" about a directory that held
 # one.
 archive_dir=""
-[ -n "$archive_version" ] && archive_dir="$root/dist/theia-$archive_version-darwin-arm64"
-server="$root/theia-server-darwin-arm64"
-[ -x "$server" ] || server="$root/dist/theia-server-darwin-arm64"
+[ -n "$archive_version" ] && archive_dir="$root/dist/theia-$archive_version-darwin-$goarch"
+server="$root/theia-server-darwin-$goarch"
+[ -x "$server" ] || server="$root/dist/theia-server-darwin-$goarch"
 if [ ! -x "$server" ] && [ -n "$archive_dir" ]; then server="$archive_dir/theia-server"; fi
 if [ -x "$server" ]; then
 	data="$work/data"
@@ -112,6 +117,14 @@ if [ -x "$server" ]; then
 	done
 	if curl -sf http://127.0.0.1:8395/api/health >/dev/null 2>&1; then
 		ok "the server answers /api/health"
+		if curl -fsS http://127.0.0.1:8395/ -o "$work/interface.html" && grep -qi '<html' "$work/interface.html"; then
+			ok "the server serves the built interface"
+		else
+			bad "the server has no built interface"
+		fi
+		grep -q 'key_source=built-in' "$work/server.log" &&
+			ok "the server carries its built-in metadata key" ||
+			bad "the server has no built-in metadata key"
 		stats=$(curl -sf http://127.0.0.1:8395/api/library/stats || echo '{}')
 		ok "the scan finished: $stats"
 		home=$(curl -sf http://127.0.0.1:8395/api/library/home | head -c 120 || true)
@@ -122,7 +135,7 @@ if [ -x "$server" ]; then
 	kill "$server_pid" 2>/dev/null
 	wait "$server_pid" 2>/dev/null
 else
-	bad "no darwin server binary; build it with GOOS=darwin GOARCH=arm64 go build ./cmd/theia-server"
+	bad "no darwin server binary; build it with GOOS=darwin GOARCH=$goarch go build ./cmd/theia-server"
 fi
 
 echo
@@ -136,7 +149,41 @@ else
 	"$app/Contents/MacOS/theia-player" --media "$media" --mute --diagnostics \
 		--window 1280x720 --window-report "$report" >"$work/diagnostics.txt" 2>&1 &
 	player_pid=$!
-	sleep 12
+	ready=0
+	attempt=0
+	while [ "$attempt" -lt 15 ]; do
+		attempt=$((attempt + 1))
+		sleep 1
+		if ! kill -0 "$player_pid" 2>/dev/null; then
+			bad "the player exited before a frame could be inspected; see $work/diagnostics.txt"
+			break
+		fi
+		if [ -s "$report" ] && grep -Eq '"pos":[1-9]' "$work/diagnostics.txt"; then
+			ready=1
+			break
+		fi
+	done
+	if [ "$ready" -eq 0 ] && kill -0 "$player_pid" 2>/dev/null; then
+		bad "the player had no window report and advancing playback before capture"
+	fi
+	# Capture while the product is alive and after its own telemetry says a
+	# film is playing. A screenshot taken after exit is a desktop photograph.
+	if [ "$ready" -eq 1 ]; then sleep 2; fi
+	if [ "$ready" -eq 1 ] && kill -0 "$player_pid" 2>/dev/null && command -v screencapture >/dev/null 2>&1; then
+		picture="$work/player-screen.png"
+		if screencapture -x "$picture" >/dev/null 2>&1 && [ -s "$picture" ]; then
+			if [ -n "${THEIA_PROOF_DIR:-}" ]; then
+				mkdir -p "$THEIA_PROOF_DIR"
+				cp "$picture" "$THEIA_PROOF_DIR/player-screen.png"
+				picture="$THEIA_PROOF_DIR/player-screen.png"
+			fi
+			human "inspect the actual player frame and OSD in $picture"
+		else
+			human "the runner could not capture the player window; visual playback remains unverified"
+		fi
+	elif [ "$ready" -eq 0 ]; then
+		human "no product screenshot: the player was not ready while the fixture was running"
+	fi
 	kill "$player_pid" 2>/dev/null
 	wait "$player_pid" 2>/dev/null
 
@@ -185,9 +232,9 @@ fi
 
 echo
 echo "== The installer, into a throwaway home =="
-setup=""
-if [ -n "$archive_dir" ]; then setup="$archive_dir/theia-setup"; fi
-[ -x "$setup" ] || setup="$root/dist/theia-setup-darwin-arm64"
+setup="${THEIA_SETUP:-}"
+if [ -z "$setup" ] && [ -n "$archive_dir" ]; then setup="$archive_dir/theia-setup"; fi
+[ -x "$setup" ] || setup="$root/dist/theia-setup-darwin-$goarch"
 [ -x "$setup" ] || setup="$root/theia-setup"
 if [ -x "$setup" ]; then
 	fake_home="$work/home"
@@ -205,6 +252,27 @@ if [ -x "$setup" ]; then
 		sed 's/^/      /' "$work/install.log" | tail -25
 	fi
 	if [ "$installed" = 1 ]; then
+		installed_server="$fake_home/.local/lib/theia/theia-server"
+		if [ -x "$installed_server" ]; then
+			"$installed_server" --data-dir "$fake_home/.theia" --port 8396 >"$work/installed-server.log" 2>&1 &
+			installed_pid=$!
+			for _ in $(seq 1 40); do
+				curl -sf http://127.0.0.1:8396/api/health >/dev/null 2>&1 && break
+				sleep 0.5
+			done
+			if curl -fsS http://127.0.0.1:8396/ -o "$work/installed-interface.html" && grep -qi '<html' "$work/installed-interface.html"; then
+				ok "the installed server serves the built interface"
+			else
+				bad "the installed server has no built interface"
+			fi
+			grep -q 'key_source=built-in' "$work/installed-server.log" &&
+				ok "the installed server carries its built-in metadata key" ||
+				bad "the installed server has no built-in metadata key"
+			kill "$installed_pid" 2>/dev/null
+			wait "$installed_pid" 2>/dev/null
+		else
+			bad "the installed server binary is missing"
+		fi
 		# The autostart entry is opt-in, and that is the contract, not an
 		# oversight: `Plan.Service` is off unless asked for, because the founding
 		# spec's §11.7 keeps a hand-started server as the default and installing

@@ -195,6 +195,71 @@ func TestAReleaseArchiveIsInstalledWithoutUnpackingItFirst(t *testing.T) {
 	}
 }
 
+func TestSelfContainedSetupInstallsWithoutDownloading(t *testing.T) {
+	archive := filepath.Join(t.TempDir(), "payload.zip")
+	members := map[string]string{installerExecutable(runtime.GOOS): "plain maintenance tool"}
+	for _, name := range installedNames(RoleAllInOne) {
+		members[name] = "program " + name
+	}
+	for _, member := range bundleExtras() {
+		members[member] = bundleBody(member)
+	}
+	if runtime.GOOS == "darwin" {
+		members[darwinPlayerTree+"/"] = ""
+	}
+	makeZip(t, archive, members)
+	setup := filepath.Join(t.TempDir(), "theia-setup-"+runtime.GOOS+"-"+runtime.GOARCH)
+	if runtime.GOOS == "windows" {
+		setup += ".exe"
+	}
+	write(t, setup, "mock executable")
+	appendix, err := os.ReadFile(archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.OpenFile(setup, os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.Write(appendix); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if !selfArchive(setup, runtime.GOOS) {
+		t.Fatal("setup does not recognize its appended payload")
+	}
+	install := t.TempDir()
+	plan := Plan{Role: RoleAllInOne, DataDir: t.TempDir(), InstallDir: install, Port: 8395, Hostname: "theia"}
+	if _, err := InstallPrograms(context.Background(), plan, Source{From: setup}, nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range append(installedNames(RoleAllInOne), bundleExtras()...) {
+		if _, err := os.Stat(filepath.Join(install, name)); err != nil {
+			t.Errorf("missing installed %s: %v", name, err)
+		}
+	}
+	maintenance := filepath.Join(t.TempDir(), installerExecutable(runtime.GOOS))
+	if err := copySelfFrom(setup, maintenance); err != nil {
+		t.Fatal(err)
+	}
+	if got := read(t, maintenance); got != "plain maintenance tool" {
+		t.Errorf("installed maintenance tool = %q", got)
+	}
+}
+
+func TestMacSelfArchiveRecognizesZipDotPrefixes(t *testing.T) {
+	archive := filepath.Join(t.TempDir(), "mac-setup")
+	makeZip(t, archive, map[string]string{
+		"./theia-server": "server",
+		"./theia-setup":  "maintenance",
+	})
+	if !selfArchive(archive, "darwin") {
+		t.Fatal("a macOS zip payload with ./ member names was not recognized")
+	}
+}
+
 func TestAnIncompletePlayerBundleStopsTheInstallation(t *testing.T) {
 	// The player looks installed without its engine and does not start. Half a
 	// bundle is a failure, and the failure names what was missing.

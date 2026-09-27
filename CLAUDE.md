@@ -19,11 +19,12 @@ Vision profile 7, and does not read Matroska natively.
 Read decision 117 and `docs/spec-fondatrice.md` §14 before touching anything.
 They record exactly which founding clauses were superseded and which still bind.
 Windows x64 and macOS Apple Silicon have complete release artifacts. The Windows
-player was run on the maintainer's machine; the macOS player, installer and
-archive were run on a GitHub-hosted Apple Silicon Mac (decision 144). macOS audio
-output, hardware decoding, Gatekeeper and the OSD over a moving film still need
-an interactive Mac check. Other targets have server binaries only and must not be
-presented as complete products.
+player was run on the maintainer's machine. A post-release source audit found that
+the macOS application selects `vo=libmpv` but never creates a render context or
+draws a frame; the separate spike did, and the earlier runner checks measured
+playback progress rather than the application's picture (decision 149). Treat
+macOS playback as unverified until the real application renders a film. Other
+targets have server binaries only and must not be presented as complete products.
 
 **Publication is explicit.** `v3.3.6` is public; preparing a later release does
 not authorize publishing it. Never push, create or push a tag, create a release,
@@ -32,9 +33,10 @@ action. `release.yml` fires on a pushed `v*` tag, so a tag pushed "just to see
 CI" publishes binaries. `scripts/stub-release` remains the local release-shaped
 test path. When a task does not explicitly authorize publication, report what
 was verified locally instead. **A dispatch measures the pipeline without
-publishing** (decision 140): `gh workflow run release.yml --ref main` runs every
-gate and builds every artifact, and `publish` refuses anything that is not a
-pushed tag.
+publishing** (decision 140): `gh workflow run release.yml --ref main` runs the
+gates and builds artifacts, and `publish` refuses anything that is not a pushed
+tag. The current source guard deliberately fails until the macOS player draws
+real frames; a failed dispatch is evidence of that gate, not a release.
 
 ## Read these first, every session
 
@@ -278,20 +280,17 @@ with EPERM while cleaning up.
 ./build-release.ps1 -Version 3.3.6     # -> dist/theia-3.3.6-windows-amd64.zip
 ```
 
-The archive is **the offline path**: everything in one zip - the installer, the
-server, the player, the engine (`libmpv-2.dll`), the LGPL licence and a
-`START-HERE.txt`. Unpacked and run from inside the folder, the installer finds the
-programs beside itself and copies them with no network at all. It exists because
-the first version published three separate downloads and told the reader to put
-them together - and somebody who downloaded only the installer, which is what the
-README said to do first, got a configuration and nothing to run it.
+The ZIP built here is now an **internal setup payload**: it contains the setup,
+server, player, engine, LGPL licence and `START-HERE.txt`. The release job appends
+it to the public setup executable so that one download installs the platform
+product without another network fetch. The ZIP is not a separate public asset.
 
-**A person downloads one setup executable** for Windows x64 or macOS Apple
-Silicon. It fetches the rest, verified. Each also has an offline archive. Six
-server binaries remain separate components for the updater and installer; setup
-executables for targets without a verified player are not published as complete
-products. Decisions 138, 139 and 144 fix the fourteen-asset release surface, and
-`scripts/check-release-assets.ps1` refuses anything else.
+The currently published v3.3.6 still has the older fourteen-asset layout.
+Decision 150 changes the next release to two complete setups (Windows x64 and
+macOS Apple Silicon, once its picture is proven) and six exact server binary
+names for installed updaters. Windows ARM64, macOS Intel and Linux gain public
+setups only after native picture and installation proof. The eight-name
+`scripts/check-release-assets.ps1` enforces this pending surface.
 
 ## Building the native player
 
