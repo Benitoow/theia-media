@@ -4,7 +4,7 @@ Theia is a personal media server: no configuration, no account, no paywall. One
 user, their own films, their own machine.
 
 **V3.3 is the current release line.** `v3.2.0` is the last single-binary
-release; `v3.3.0` introduced the native generation and `v3.3.5` is the current
+release; `v3.3.0` introduced the native generation and `v3.3.6` is the current
 published maintenance release. V3.3 splits the product into three artifacts:
 `theia-server` (Go, headless, still serving the frozen Svelte interface as
 fallback playback), `theia-player` (Tauri 2 + Rust + libmpv - the native player,
@@ -25,7 +25,7 @@ output, hardware decoding, Gatekeeper and the OSD over a moving film still need
 an interactive Mac check. Other targets have server binaries only and must not be
 presented as complete products.
 
-**Publication is explicit.** `v3.3.5` is public; preparing a later release does
+**Publication is explicit.** `v3.3.6` is public; preparing a later release does
 not authorize publishing it. Never push, create or push a tag, create a release,
 or upload an asset without the maintainer's explicit instruction for that exact
 action. `release.yml` fires on a pushed `v*` tag, so a tag pushed "just to see
