@@ -2340,6 +2340,7 @@ fn player_stop() -> Result<(), String> {
 /// The window's corner radius, in logical pixels. Section 6b of the design
 /// system carries the reasoning: the reference is a Windows 11 caption bar, and
 /// Windows 11 rounds its own windows at 8.
+#[cfg(windows)]
 const WINDOW_CORNER_RADIUS: f64 = 8.0;
 
 /// Rounds the operating system window itself, not the page.
@@ -2386,9 +2387,6 @@ fn apply_round_region(hwnd: isize, width: u32, height: u32, scale: f64, rounded:
 /// bundle rather than from this code. The page's own `border-radius` still
 /// rounds what the page paints; what is missing here is the clipping of the
 /// surface below it, which only Windows offers.
-#[cfg(not(windows))]
-fn apply_round_region(_hwnd: isize, _width: u32, _height: u32, _scale: f64, _rounded: bool) {}
-
 /// Clears the window region: one cheap call, and the corners are square until
 /// it is put back.
 #[cfg(windows)]
@@ -2397,9 +2395,6 @@ fn clear_round_region(hwnd: isize) {
     use windows_sys::Win32::Graphics::Gdi::SetWindowRgn;
     unsafe { SetWindowRgn(hwnd as HWND, std::ptr::null_mut(), 1) };
 }
-
-#[cfg(not(windows))]
-fn clear_round_region(_hwnd: isize) {}
 
 /// What the window's own resize looked like from inside this process: how many
 /// events arrived, and the worst gap between two of them.
@@ -2420,6 +2415,7 @@ static RESIZE_TIMING: std::sync::Mutex<(Option<std::time::Instant>, u32, f64, f6
 ///
 /// `None` for the time means no resize is in flight. The telemetry thread is
 /// what puts the region back, so this costs no timer and no thread of its own.
+#[cfg(windows)]
 static RESIZE_STATE: std::sync::Mutex<(Option<std::time::Instant>, bool)> =
     std::sync::Mutex::new((None, true));
 
@@ -2454,9 +2450,6 @@ fn note_resize(hwnd: isize) {
     }
     state.0 = Some(now);
 }
-
-#[cfg(not(windows))]
-fn note_resize(_hwnd: isize) {}
 
 /// Puts the region back once the size has stopped moving.
 #[cfg(windows)]
