@@ -23,8 +23,18 @@ func writeBundle(t *testing.T, dir, marker string) map[string]string {
 	t.Helper()
 	before := map[string]string{}
 	for _, name := range bundleFiles(runtime.GOOS) {
+		if name == darwinPlayerTree {
+			if err := os.MkdirAll(filepath.Join(dir, name), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			continue
+		}
 		body := marker + " " + name
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o755); err != nil {
+		path := filepath.Join(dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
 			t.Fatal(err)
 		}
 		before[name] = digestOf([]byte(body))
@@ -62,9 +72,16 @@ func bundleZip(t *testing.T, marker string) []byte {
 	var buffer bytes.Buffer
 	writer := zip.NewWriter(&buffer)
 	for _, name := range bundleFiles(runtime.GOOS) {
-		entry, err := writer.Create(name)
+		entryName := name
+		if name == darwinPlayerTree {
+			entryName += "/"
+		}
+		entry, err := writer.Create(entryName)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if name == darwinPlayerTree {
+			continue
 		}
 		if _, err := entry.Write([]byte(marker + " " + name)); err != nil {
 			t.Fatal(err)
@@ -206,13 +223,13 @@ func TestSwapBundlePutsEveryFileBackWhenOneCannotBeReplaced(t *testing.T) {
 	before := writeBundle(t, install, "installed")
 	staged := t.TempDir()
 	names := bundleFiles(runtime.GOOS)
-	for _, name := range names[:len(names)-1] {
-		if err := os.WriteFile(filepath.Join(staged, name), []byte("new "+name), 0o755); err != nil {
-			t.Fatal(err)
+	if runtime.GOOS != "darwin" {
+		for _, name := range names[:len(names)-1] {
+			write(t, filepath.Join(staged, name), "new "+name)
 		}
 	}
 
-	if err := swapBundle(staged, install, names); err == nil {
+	if err := swapBundle(staged, install, swapMembers(names)); err == nil {
 		t.Fatalf("the swap accepted a bundle missing %s", names[len(names)-1])
 	}
 	assertUnchanged(t, install, before)
@@ -226,16 +243,15 @@ func TestSwapBundleReplacesEveryFileOfTheBundle(t *testing.T) {
 	writeBundle(t, install, "installed")
 	staged := t.TempDir()
 	names := bundleFiles(runtime.GOOS)
-	for _, name := range names {
-		if err := os.WriteFile(filepath.Join(staged, name), []byte("new "+name), 0o755); err != nil {
-			t.Fatal(err)
-		}
-	}
+	writeBundle(t, staged, "new")
 
-	if err := swapBundle(staged, install, names); err != nil {
+	if err := swapBundle(staged, install, swapMembers(names)); err != nil {
 		t.Fatalf("swapBundle: %v", err)
 	}
 	for _, name := range names {
+		if name == darwinPlayerTree {
+			continue
+		}
 		body, err := os.ReadFile(filepath.Join(install, name))
 		if err != nil {
 			t.Fatal(err)

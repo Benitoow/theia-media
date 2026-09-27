@@ -29,16 +29,14 @@ import (
 func fakeRelease(t *testing.T, dir string, withPlayer bool) {
 	t.Helper()
 	write(t, filepath.Join(dir, installed("theia-server")), "MZ the server")
-	if runtime.GOOS == "windows" {
-		// The launcher is published for Windows only, under its own name inside
-		// the installation: an archive of this platform holds one, and an
-		// archive of any other platform holds none.
+	if publishesLauncher(runtime.GOOS) {
+		// Complete platforms carry the launcher under its short installed name.
 		write(t, filepath.Join(dir, installed(launcherBase)), "MZ the launcher")
 	}
 	if !withPlayer {
 		return
 	}
-	write(t, filepath.Join(dir, installed("theia-player")), "MZ the player")
+	write(t, filepath.Join(dir, filepath.FromSlash(playerExecutablePath(runtime.GOOS))), "MZ the player")
 	for _, member := range bundleExtras() {
 		write(t, filepath.Join(dir, member), bundleBody(member))
 	}
@@ -175,6 +173,9 @@ func TestAReleaseArchiveIsInstalledWithoutUnpackingItFirst(t *testing.T) {
 	for _, member := range bundleExtras() {
 		members[member] = bundleBody(member)
 	}
+	if runtime.GOOS == "darwin" {
+		members[darwinPlayerTree+"/"] = ""
+	}
 	makeZip(t, archive, members)
 	install := t.TempDir()
 
@@ -199,7 +200,7 @@ func TestAnIncompletePlayerBundleStopsTheInstallation(t *testing.T) {
 	// bundle is a failure, and the failure names what was missing.
 	needsBundleExtras(t)
 	source := t.TempDir()
-	write(t, filepath.Join(source, installed("theia-player")), "MZ the player")
+	write(t, filepath.Join(source, filepath.FromSlash(playerExecutablePath(runtime.GOOS))), "MZ the player")
 	install := t.TempDir()
 
 	plan := Plan{Role: RolePlayer, DataDir: t.TempDir(), InstallDir: install, Port: 8395, Hostname: "theia"}

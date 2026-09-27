@@ -286,7 +286,7 @@ func swapBundle(staged, dir string, names []string) error {
 		aside := target + previousBundleSuffix
 		// A leftover from an earlier update that could not delete it. Best
 		// effort: the next successful update removes it.
-		os.Remove(aside)
+		os.RemoveAll(aside)
 		if fileExists(target) {
 			if err := os.Rename(target, aside); err != nil {
 				restore()
@@ -305,7 +305,7 @@ func swapBundle(staged, dir string, names []string) error {
 	// removed here, best effort: a file a running program still holds refuses and
 	// stays behind, and the next update removes it before it moves anything.
 	for _, name := range moved {
-		os.Remove(filepath.Join(dir, name+previousBundleSuffix))
+		os.RemoveAll(filepath.Join(dir, name+previousBundleSuffix))
 	}
 	return nil
 }
