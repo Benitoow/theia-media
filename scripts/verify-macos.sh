@@ -167,9 +167,29 @@ else
 	if [ "$ready" -eq 0 ] && kill -0 "$player_pid" 2>/dev/null; then
 		bad "the player had no window, advancing playback and rendered frames before capture"
 	fi
-	# Capture while the product is alive and after its own telemetry says a
-	# film is playing. A screenshot taken after exit is a desktop photograph.
-	if [ "$ready" -eq 1 ]; then sleep 2; fi
+	# Capture while the product is alive and after its own telemetry says a film
+	# is playing. A screenshot taken after exit is a desktop photograph.
+	if [ "$ready" -eq 1 ]; then
+		# Then give it time to draw *again*, because "frames advanced" is the
+		# check that decides whether the picture is a picture, and the runner's
+		# software renderer takes between one and six seconds per frame: the same
+		# code passed on one dispatch and failed the next, and nothing about the
+		# product had changed. `gl-renderer` in the diagnostics line says which
+		# renderer answered, and `last-render-ms` says how long the call in flight
+		# has been in flight. The wait is bounded, so a real hang is still
+		# reported as one instead of hidden behind it.
+		first_seen=$(grep -o 'render-frames: [0-9]*' "$work/diagnostics.txt" | head -1 | cut -d' ' -f2)
+		waited=0
+		while [ "$waited" -lt 30 ]; do
+			latest_seen=$(grep -o 'render-frames: [0-9]*' "$work/diagnostics.txt" | tail -1 | cut -d' ' -f2)
+			if [ -n "$latest_seen" ] && [ -n "$first_seen" ] && [ "$latest_seen" -gt "$first_seen" ]; then
+				printf 'INFO  the film drew again after %s s of waiting (%s -> %s frames)\n' "$waited" "$first_seen" "$latest_seen"
+				break
+			fi
+			sleep 1
+			waited=$((waited + 1))
+		done
+	fi
 	if [ "$ready" -eq 1 ] && kill -0 "$player_pid" 2>/dev/null && command -v screencapture >/dev/null 2>&1; then
 		if [ -n "${THEIA_PROOF_DIR:-}" ]; then mkdir -p "$THEIA_PROOF_DIR"; fi
 		# The window's own content first, then the screen: they answer different

@@ -49,6 +49,10 @@ static uint64_t gAttachedAtMs;
 static atomic_uint_fast64_t gLastTickMs;
 static atomic_uint_fast64_t gLastDrawMs;
 static atomic_uint_fast64_t gInRender;
+// When the render call that is in flight was entered. `in-render=1` says a call
+// has not returned; this says whether it has been inside for 40 ms or for six
+// seconds, which is the difference between a slow machine and a hang.
+static atomic_uint_fast64_t gLastRenderMs;
 // Which renderer answered. A frame rate means nothing without it: the same code
 // draws at the display's pace on a GPU and at a crawl under Apple's software
 // renderer, and the proof runner is a virtual machine with no GPU at all.
@@ -108,6 +112,7 @@ static void on_render_update(void *context)
         {0},
     };
     atomic_fetch_add_explicit(&gInRender, 1, memory_order_relaxed);
+    atomic_store_explicit(&gLastRenderMs, now_ms() - gAttachedAtMs, memory_order_relaxed);
     int result = gFrame(gRender, params);
     if (result < 0) {
         atomic_fetch_sub_explicit(&gInRender, 1, memory_order_relaxed);
@@ -247,6 +252,7 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
     atomic_store_explicit(&gInRender, 0, memory_order_relaxed);
     atomic_store_explicit(&gLastTickMs, 0, memory_order_relaxed);
     atomic_store_explicit(&gLastDrawMs, 0, memory_order_relaxed);
+    atomic_store_explicit(&gLastRenderMs, 0, memory_order_relaxed);
     gAttachedAtMs = now_ms();
     gCallback(gRender, on_render_update, NULL);
 
@@ -315,7 +321,7 @@ void theia_render_diagnostics(char *out, size_t capacity)
     uint64_t surface = atomic_load_explicit(&gSurface, memory_order_relaxed);
     snprintf(out, capacity,
              "attached=%d elapsed-ms=%llu ticks=%llu last-tick-ms=%llu ready=%llu draws=%llu "
-             "last-draw-ms=%llu in-render=%llu errors=%llu frames=%llu "
+             "last-draw-ms=%llu in-render=%llu last-render-ms=%llu errors=%llu frames=%llu "
              "notifications=%llu on-screen=%llu surface=%ux%u gl-renderer=\"%s\"",
              atomic_load_explicit(&gAttached, memory_order_relaxed) ? 1 : 0,
              (unsigned long long)(now_ms() - gAttachedAtMs),
@@ -325,6 +331,7 @@ void theia_render_diagnostics(char *out, size_t capacity)
              (unsigned long long)atomic_load_explicit(&gDraws, memory_order_relaxed),
              (unsigned long long)atomic_load_explicit(&gLastDrawMs, memory_order_relaxed),
              (unsigned long long)atomic_load_explicit(&gInRender, memory_order_relaxed),
+             (unsigned long long)atomic_load_explicit(&gLastRenderMs, memory_order_relaxed),
              (unsigned long long)atomic_load_explicit(&gErrors, memory_order_relaxed),
              (unsigned long long)atomic_load_explicit(&gFrames, memory_order_relaxed),
              (unsigned long long)atomic_load_explicit(&gNotifications, memory_order_relaxed),

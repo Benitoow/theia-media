@@ -150,16 +150,33 @@ conversion runs on the CPU. A rate asserted in the verifier would therefore be a
 property of the runner written down as a property of the player; it is printed as
 `INFO ... fps drawn, ... ticks/s offered` instead.
 
-Two things follow, and they are not the same size. **The architecture debt
-stands**: rendering still happens on the thread that owns the client API, and the
-rewrite to a thread of its own is what makes an app on real hardware honest.
-**And the picture arrived**: the next dispatch (`36476965274`) photographed the
-fixture's colour bars and timecode in the application's own window - named by
-`windowNumber` and read with `screencapture -l` - and on the screen as well. Both
-pictures are torn, which is what reading a surface mid-render looks like at
-0.45 fps on a software renderer; the rate is the runner's, and `gl-renderer` in
-the line is what says so. Whether the OSD reads well over a moving film is still
-a person's question, and `scripts/verify-macos.sh` still says `LOOK` for it.
+Two things follow, and they are not the same size. **And the picture arrived**:
+dispatch `36476965274` photographed the fixture's colour bars and timecode in the
+application's own window - named by `windowNumber` and read with
+`screencapture -l` - and on the screen as well. Both pictures are torn, which is
+what reading a surface mid-render looks like at half a frame per second on a
+software renderer. **The architecture debt stands**: rendering still happens on
+the thread that owns the client API, and the rewrite to a thread of its own is
+what makes an app on real hardware honest.
+
+Until that rewrite, the frame check here is flaky by construction on this
+machine. The dispatch after the one above (`36479591146`) failed the same check on
+the same code:
+
+```
+attached=1 elapsed-ms=8625 ... draws=2 last-draw-ms=2856 in-render=1
+last-render-ms=2857 frames=1 ... gl-renderer="Apple Software Renderer"
+```
+
+A draw entered at 2.8 s was still inside `mpv_render_context_render` when that
+line was printed at 8.6 s: one render took six seconds where the passing
+dispatch's took one, so whether two frames landed inside the verifier's window was
+luck. Two changes follow. `last-render-ms` joins the line, so "slow" and "stuck"
+are different numbers rather than the same `in-render=1`. And the verifier waits
+- bounded, thirty seconds - for the frame count to advance before it photographs
+and judges, because "frames advanced" is the check that decides whether the
+picture is a picture. Whether the OSD reads well over a moving film remains a
+person's question, and `scripts/verify-macos.sh` still says `LOOK` for it.
 
 ## Render sequence
 
