@@ -1061,6 +1061,20 @@ const UNIX_OPTIONS: &[(&str, &str)] = &[
     ("ao", "pipewire,pulse,alsa"),
 ];
 
+/// Whether this platform takes a window id at all.
+///
+/// macOS does not: mpv 0.41 removed `--wid` there - the file that read a view out
+/// of `WinID` is gone - and the film reaches the window through the render bridge
+/// instead. Windows and Linux both do: an `HWND`, and an X11 window id.
+///
+/// A mapping rather than a `cfg`, for the reason the option tables are one: the
+/// first version of the test below asserted the Windows behaviour unconditionally
+/// and failed on the macOS runner, which is the same class of fault decision 149
+/// found on Linux - a platform rule that only existed where nobody could read it.
+fn takes_window_id(platform: Platform) -> bool {
+    platform != Platform::Macos
+}
+
 /// The platforms this player builds for, named so the tables above can be read
 /// and tested from any of them.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -1108,13 +1122,11 @@ fn base_options(wid: isize, silent: bool) -> Vec<(&'static str, String)> {
     // A zero is left out rather than sent. `wid=0` is not "no embedding" to mpv,
     // it is a request for a window of the engine's own - so a Wayland session,
     // which has no id to hand over, would put the film in a second window beside
-    // the OSD instead of under it, and say nothing about why.
-    #[cfg(not(target_os = "macos"))]
-    if wid != 0 {
+    // the OSD instead of under it, and say nothing about why. macOS takes no id
+    // at all, whatever it is given: see [`takes_window_id`].
+    if takes_window_id(current_platform()) && wid != 0 {
         options.push(("wid", wid.to_string()));
     }
-    #[cfg(target_os = "macos")]
-    let _ = wid;
     options.extend(platform_options(current_platform(), dri_present()));
     options.extend([
         ("audio-channels", "auto".into()),
@@ -3026,25 +3038,16 @@ fn start_engine(wid: isize, media: Option<&str>, silent: bool) -> Result<(), Str
     for (name, value) in base_options(wid, silent) {
         match engine.set_option(name, &value) {
             Ok(()) => {}
-            // One exception, and only on macOS: the window handle. mpv 0.41 does
-            // not read `wid` there (see `base_options`), and what is expected is
-            // an option accepted and ignored - but if the shipped engine refuses
-            // the option outright instead, the player still has to start. That is
-            // the Mac's first check, and this arm is what keeps a refusal from
-            // being the answer. A film that plays that way plays in mpv's own
-            // window, with the OSD in a window of its own rather than over the
-            // picture, because the two are no longer the same window.
-            Err(e) if cfg!(target_os = "macos") && name == "wid" => {
-                eprintln!(
-                    "theia-player: mpv would not take {name}={value} ({e}); \
-                     a film will play in mpv's own window if it can draw one"
-                );
-            }
-            // Everything else failing is fatal, which is the behaviour this loop
-            // has always had: a vo, an ao or a hwdec this engine cannot honour
-            // stops the player rather than letting it play something worse in
-            // silence. (The comment this replaces said hwdec was allowed to fail;
-            // it has never been allowed to.)
+            // A refused option is fatal, which is the behaviour this loop has
+            // always had: a vo, an ao or a hwdec this engine cannot honour stops
+            // the player rather than letting it play something worse in silence.
+            // (The comment this replaces said hwdec was allowed to fail; it has
+            // never been allowed to.)
+            //
+            // A `wid` arm stood here and tolerated a refusal on macOS. It could
+            // not run: macOS is sent no window id at all - [`takes_window_id`]
+            // answers false there, and the test says so from any host - so the
+            // engine was never given a `wid` to refuse.
             Err(e) => return Err(e),
         }
     }
@@ -3562,7 +3565,8 @@ fn supervise_audio(app: &tauri::WebviewWindow) {
 #[cfg(test)]
 mod player_window_tests {
     use super::{
-        base_options, fitted_window_size, linux_video_output, manifest_key, platform_options, Platform,
+        base_options, fitted_window_size, linux_video_output, manifest_key, platform_options,
+        takes_window_id, Platform,
     };
 
     /// Linux is told to use Linux, and Windows still says what it always said.
@@ -3643,24 +3647,42 @@ mod player_window_tests {
         }
     }
 
-    /// A window id of zero is left out rather than sent.
+    /// A window id of zero is left out rather than sent, and macOS takes none
+    /// at all.
     ///
     /// `wid=0` is not "no embedding" to mpv: it asks for a window of the
     /// engine's own. A Wayland session has no id to hand over, so sending the
     /// zero would put the film in a second window beside the OSD and explain
     /// nothing. Zero is the honest answer, and this is what it must become.
+    ///
+    /// The macOS half is here because the first version of this test asserted the
+    /// Windows behaviour unconditionally and failed on the Mac runner: mpv 0.41
+    /// reads no `wid` there, so no value may be sent, and the rule that says so is
+    /// a mapping (`takes_window_id`) rather than a `cfg`.
     #[test]
-    fn a_zero_window_id_is_not_sent_as_a_wid() {
+    fn a_window_id_is_sent_only_where_the_engine_reads_one() {
+        assert!(!takes_window_id(Platform::Macos), "mpv 0.41 reads no wid on macOS");
+        assert!(takes_window_id(Platform::Windows));
+        assert!(takes_window_id(Platform::Unix));
+
         let without = base_options(0, true);
         assert!(
             !without.iter().any(|(key, _)| *key == "wid"),
             "a zero window id must not be sent: {without:?}"
         );
+
         let with = base_options(1234, true);
-        assert!(
-            with.iter().any(|(key, value)| *key == "wid" && value == "1234"),
-            "a real window id is still sent"
-        );
+        if cfg!(target_os = "macos") {
+            assert!(
+                !with.iter().any(|(key, _)| *key == "wid"),
+                "macOS must be sent no window id at all: {with:?}"
+            );
+        } else {
+            assert!(
+                with.iter().any(|(key, value)| *key == "wid" && value == "1234"),
+                "a real window id is still sent: {with:?}"
+            );
+        }
     }
 
     #[test]

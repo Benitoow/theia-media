@@ -35,8 +35,16 @@ The tables are a **mapping** now (`platform_options(platform)`), not three `cfg`
 blocks, and that is the fix for how the fault survived: a `cfg` block on Linux is
 invisible to every Windows machine and to every test. Three tests pin it -
 `the_linux_table_names_no_windows_backend`,
-`a_zero_window_id_is_not_sent_as_a_wid` and
+`a_window_id_is_sent_only_where_the_engine_reads_one` and
 `linux_asks_for_the_output_its_machine_can_use` - and all three run on any host.
+
+The same rule reaches the other side of the table: `wid` was filtered by
+`#[cfg(not(target_os = "macos"))]` for the same reason - mpv 0.41 reads no window
+id on macOS - and that `cfg` is now `takes_window_id(platform)`, asserted from any
+host along with the id the engine is actually given. The first version of that
+test asserted Windows' answer unconditionally and failed on the Mac runner of the
+additional-platform dispatch (run `36352144700`, 27 September 2026), which is what
+a rule kept in a `cfg` costs: it is read where it cannot be seen.
 
 ## Wayland, which is the open half
 
