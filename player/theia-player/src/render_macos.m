@@ -28,6 +28,18 @@ static RenderSwap gSwap;
 static RenderFree gFree;
 static atomic_uint_fast64_t gFrames;
 static atomic_uint_fast64_t gNotifications;
+// Why a picture is missing cannot be answered by a frame count, and the first
+// Mac run that had none could only say "1 -> 1". Each link of the chain is
+// counted where it happens - the tick that asks, the frame mpv says is ready,
+// the draw AppKit performs, the render that fails - and whether the window was
+// on screen while it did. `theia_render_diagnostics` prints them as one line.
+static atomic_uint_fast64_t gTicks;
+static atomic_uint_fast64_t gReady;
+static atomic_uint_fast64_t gDraws;
+static atomic_uint_fast64_t gErrors;
+static atomic_uint_fast64_t gOnScreen;
+static atomic_uint_fast64_t gSurface;
+static atomic_bool gAttached;
 
 @interface TheiaFilmView : NSOpenGLView
 @end
@@ -53,10 +65,15 @@ static void on_render_update(void *context)
 - (void)drawRect:(NSRect)dirty
 {
     (void)dirty;
+    atomic_fetch_add_explicit(&gDraws, 1, memory_order_relaxed);
     if (!gRender) return;
     [[self openGLContext] makeCurrentContext];
     [[self openGLContext] update];
     NSRect backing = [self convertRectToBacking:self.bounds];
+    atomic_store_explicit(
+        &gSurface,
+        ((uint64_t)(uint32_t)backing.size.width << 32) | (uint32_t)backing.size.height,
+        memory_order_relaxed);
     mpv_opengl_fbo fbo = {
         .fbo = 0,
         .w = (int)backing.size.width,
@@ -72,6 +89,7 @@ static void on_render_update(void *context)
     };
     int result = gFrame(gRender, params);
     if (result < 0) {
+        atomic_fetch_add_explicit(&gErrors, 1, memory_order_relaxed);
         fprintf(stderr, "theia-player: macOS frame render failed (%d)\n", result);
         return;
     }
@@ -84,6 +102,7 @@ static void on_render_update(void *context)
 
 void theia_render_detach(void)
 {
+    atomic_store_explicit(&gAttached, false, memory_order_relaxed);
     if (gTimer) {
         [gTimer invalidate];
         gTimer = nil;
@@ -175,6 +194,12 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
     }
     atomic_store_explicit(&gFrames, 0, memory_order_relaxed);
     atomic_store_explicit(&gNotifications, 0, memory_order_relaxed);
+    atomic_store_explicit(&gTicks, 0, memory_order_relaxed);
+    atomic_store_explicit(&gReady, 0, memory_order_relaxed);
+    atomic_store_explicit(&gDraws, 0, memory_order_relaxed);
+    atomic_store_explicit(&gErrors, 0, memory_order_relaxed);
+    atomic_store_explicit(&gOnScreen, 0, memory_order_relaxed);
+    atomic_store_explicit(&gSurface, 0, memory_order_relaxed);
     gCallback(gRender, on_render_update, NULL);
 
     // Advanced control requires update() after callback notifications. The
@@ -182,15 +207,59 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
     gTimer = [NSTimer timerWithTimeInterval:1.0 / 60.0 repeats:YES block:^(NSTimer *timer) {
         (void)timer;
         if (!gRender) return;
+        atomic_fetch_add_explicit(&gTicks, 1, memory_order_relaxed);
+        // Sampled here, on the main thread, because AppKit answers for its own
+        // thread: a window that is hidden or fully occluded is never asked to
+        // draw, and "no frames" would then be a fact about the window and not
+        // about the renderer.
+        NSWindow *window = [gView window];
+        bool onScreen = window != nil && window.isVisible &&
+            (window.occlusionState & NSWindowOcclusionStateVisible) != 0;
+        atomic_store_explicit(&gOnScreen, onScreen ? 1 : 0, memory_order_relaxed);
         [[gView openGLContext] makeCurrentContext];
-        atomic_exchange_explicit(&gNotifications, 0, memory_order_relaxed);
-        if (gUpdate(gRender) & MPV_RENDER_UPDATE_FRAME) [gView setNeedsDisplay:YES];
+        if (gUpdate(gRender) & MPV_RENDER_UPDATE_FRAME) {
+            atomic_fetch_add_explicit(&gReady, 1, memory_order_relaxed);
+            [gView setNeedsDisplay:YES];
+        }
     }];
     [[NSRunLoop mainRunLoop] addTimer:gTimer forMode:NSRunLoopCommonModes];
+    atomic_store_explicit(&gAttached, true, memory_order_relaxed);
     return true;
 }
 
 uint64_t theia_render_frames(void)
 {
     return atomic_load_explicit(&gFrames, memory_order_relaxed);
+}
+
+// Why a picture is missing, in one line a proof log can lift with a single grep.
+// `attached=0` with everything else at zero is a surface that was never made;
+// `ticks` without `ready` is mpv offering no frame; `ready` without `draws` is
+// AppKit never asking the view to draw - and `on-screen=0` while that happens
+// says the window, not the renderer, is the answer. The frame count alone said
+// "1 -> 1" and none of that.
+//
+// `notifications` counts mpv's own update callbacks and is monotonic - it is
+// reset when a surface is attached, not by the tick that reads it, so the only
+// thing it has to say is whether it rises while a film plays. A tick that
+// cleared it would have made "mpv never called us" and "mpv called and the
+// reader was a second late" the same number.
+// `surface` is the backing store the last draw asked for, printed as WxH, and
+// stays 0x0 until one happens.
+void theia_render_diagnostics(char *out, size_t capacity)
+{
+    if (capacity == 0) return;
+    uint64_t surface = atomic_load_explicit(&gSurface, memory_order_relaxed);
+    snprintf(out, capacity,
+             "attached=%d ticks=%llu ready=%llu draws=%llu errors=%llu frames=%llu "
+             "notifications=%llu on-screen=%llu surface=%ux%u",
+             atomic_load_explicit(&gAttached, memory_order_relaxed) ? 1 : 0,
+             (unsigned long long)atomic_load_explicit(&gTicks, memory_order_relaxed),
+             (unsigned long long)atomic_load_explicit(&gReady, memory_order_relaxed),
+             (unsigned long long)atomic_load_explicit(&gDraws, memory_order_relaxed),
+             (unsigned long long)atomic_load_explicit(&gErrors, memory_order_relaxed),
+             (unsigned long long)atomic_load_explicit(&gFrames, memory_order_relaxed),
+             (unsigned long long)atomic_load_explicit(&gNotifications, memory_order_relaxed),
+             (unsigned long long)atomic_load_explicit(&gOnScreen, memory_order_relaxed),
+             (unsigned)(surface >> 32), (unsigned)(surface & 0xffffffffu));
 }

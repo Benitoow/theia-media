@@ -202,6 +202,11 @@ else
 	else
 		bad "the position did not advance (pos '$first' -> '$last'); see $frames"
 	fi
+	# The chain behind the frame count, printed here rather than left in the
+	# artifact: the first Mac run reported "1 -> 1", and learning anything more
+	# meant downloading the diagnostics file. This line names which link stopped.
+	diag_line=$(grep -o 'render-diagnostics: .*' "$frames" | tail -1)
+	[ -n "$diag_line" ] && printf 'INFO  %s\n' "$diag_line"
 	first_frame=$(grep -o 'render-frames: [0-9]*' "$frames" | head -1 | cut -d' ' -f2)
 	last_frame=$(grep -o 'render-frames: [0-9]*' "$frames" | tail -1 | cut -d' ' -f2)
 	if [ -n "$first_frame" ] && [ -n "$last_frame" ] && [ "$last_frame" -gt "$first_frame" ]; then

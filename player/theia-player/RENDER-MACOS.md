@@ -58,14 +58,42 @@ The bridge compiles these AppKit classes and methods with the macOS SDK:
 | `addSubview:positioned:relativeTo:` | AppKit | `NSWindowBelow` relative to the WebView keeps the OSD above the film |
 | `NSTimer` | Foundation | main-thread render tick, including common run-loop modes |
 
-## Integrated candidate; native proof pending
+## Integrated candidate: the first Mac answer, and what it changed
 
-`src/render_macos.m` now implements the sequence below as an AppKit bridge;
+`src/render_macos.m` implements the sequence below as an AppKit bridge;
 `src/render_macos.rs` passes the borrowed mpv handle and view from the Tauri
 application. The build uses headers from the same digest-checked archive as its
-libmpv dylib. The verifier requires its frame counter to advance. This has not
-yet been compiled or seen drawing a frame on macOS, so the release gate remains
-closed.
+libmpv dylib.
+
+**Measured 28 September 2026**, on the `platform-proof` dispatch of commit
+`49917a6`: the app built and launched, its window reported 1280x720, playback
+advanced from 0.73 s to 3.92 s of the fixture - and the verifier failed the
+picture, `the application rendered no advancing frames (1 -> 1)`. Exactly one
+frame was rendered and never another. The old order created the render context
+*after* `mpv` had been handed the file; `mpv/render.h` says the context "needs to
+be created with `mpv_render_context_create()` before you start playback (or
+otherwise cause a VO to be created)", and `start_engine` now attaches the
+surface before its first `loadfile` for that reason.
+
+A frame count cannot say **where** a chain stopped, so each link now counts
+itself and `--diagnostics` prints them as one line:
+
+| Field | What a zero rules out |
+|---|---|
+| `attached` | the surface exists at all; 0 after a successful launch means the bridge never ran |
+| `ticks` | the main-thread timer runs at all |
+| `ready` | mpv offered a frame (`MPV_RENDER_UPDATE_FRAME`) |
+| `draws` | AppKit asked the view to draw |
+| `errors` | this bridge's own `mpv_render_context_render` returned a failure |
+| `frames` | a frame was rendered, flushed and reported swapped |
+| `notifications` | mpv's own update callback fired (monotonic, so it must rise) |
+| `on-screen` | the window was visible and not fully occluded at the last tick |
+| `surface` | the backing size the last draw asked for, `WxH`, `0x0` before one |
+
+`scripts/verify-macos.sh` echoes the last line into its log, so a failure names
+its link without downloading the artifact. What the Mac still has to answer is
+whether the ordering is the whole fault; until it draws a film, the gate this
+file was written for stays closed.
 
 ## Render sequence
 
@@ -81,11 +109,15 @@ In the macOS-only bridge:
    `API_TYPE=MPV_RENDER_API_TYPE_OPENGL`, the GL init params (whose
    `get_proc_address` is `dlsym(RTLD_DEFAULT, name)` - verified sufficient by the
    spike, whose symbols are all present in the pinned headers),
-   `ADVANCED_CONTROL=1`.
+   `ADVANCED_CONTROL=1`. **Before the first `loadfile`**, not after: the header
+   requires it "before you start playback (or otherwise cause a VO to be
+   created)", and the run of 28 September showed the cost of the other order -
+   one frame, then nothing, on a film whose position kept advancing.
 4. **The update callback.** Sets an `AtomicBool`; it must not touch GL.
 5. **The render tick** (an `NSTimer` at the display's rate to begin with):
-   if the flag is set, `mpv_render_context_update`, and when
-   `MPV_RENDER_UPDATE_FRAME` comes back, `setNeedsDisplay` on the view. The
+   `mpv_render_context_update` on every tick - `ADVANCED_CONTROL` requires it
+   after every callback, and not calling it can block mpv's core thread - and
+   when `MPV_RENDER_UPDATE_FRAME` comes back, `setNeedsDisplay` on the view. The
    `drawRect:` implementation in the Objective-C bridge makes the
    context current, renders with `OPENGL_FBO` (`fbo = 0`, `w`/`h` from the view's
    bounds **times the backing scale factor**) and `FLIP_Y = 1`, calls

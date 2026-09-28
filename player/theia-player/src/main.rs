@@ -3071,12 +3071,19 @@ fn start_engine(wid: isize, media: Option<&str>, silent: bool) -> Result<(), Str
     // diagnostics call can never race the engine's own startup.
     let _ = ENGINE_VERSION.set(engine.version());
 
+    // Before any file, on macOS, because mpv's own header says so: the renderer
+    // "needs to be created with `mpv_render_context_create()` before you start
+    // playback (or otherwise cause a VO to be created)" (`mpv/render.h`,
+    // Overview). The run of 28 September 2026 attached it after `loadfile` and
+    // drew exactly one frame while the position kept advancing. Whether the order
+    // is the whole explanation is the next Mac run's answer, and the
+    // `render-diagnostics` line is what will say so.
+    #[cfg(target_os = "macos")]
+    render_macos::attach(wid, &engine, &dll)?;
+
     if let Some(path) = media {
         engine.command(&["loadfile", path])?;
     }
-
-    #[cfg(target_os = "macos")]
-    render_macos::attach(wid, &engine, &dll)?;
 
     let mut session = Session {
         engine,
@@ -3456,6 +3463,13 @@ fn main() {
                         println!("{}", player_status());
                         #[cfg(target_os = "macos")]
                         println!("render-frames: {}", render_macos::frames());
+                        // The count alone cannot say where the picture stopped:
+                        // the first Mac run reported "1 -> 1" and nothing about
+                        // why. This line counts every link of the chain, so a
+                        // proof log answers the next question without another
+                        // round trip.
+                        #[cfg(target_os = "macos")]
+                        println!("render-diagnostics: {}", render_macos::diagnostics());
                         // What the engine holds for subtitles, read back from it
                         // and printed on change: the sheet's own sliders change
                         // it while a film plays, and a refusal leaves the engine
