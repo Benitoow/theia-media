@@ -18,10 +18,25 @@
 # Bringing a window forward is the second trap. SetForegroundWindow is refused
 # unless the caller already owns the foreground, so the script attaches to the
 # foreground thread first - the documented workaround - instead of leaving a
-# translucent terminal across the picture.
+# translucent terminal across the picture. It then checks that the target really
+# holds the foreground before reading a pixel, because a picture of whatever was
+# in front is indistinguishable from a picture of a broken program.
+#
+# Two ways in: `-Exe` launches the program, photographs it and closes it again;
+# `-ProcessId` photographs one the caller already started - which is what a proof
+# job needs, since that job owns the program's output and its lifetime.
 
+[CmdletBinding(DefaultParameterSetName = 'Exe')]
 param(
-    [Parameter(Mandatory = $true)][string]$Exe,
+    # The program to launch. It is closed again once the picture is taken, unless
+    # -Keep says otherwise.
+    [Parameter(ParameterSetName = 'Exe', Mandatory = $true)][string]$Exe,
+    # Or one that is already running: nothing is launched and nothing is stopped,
+    # because the caller owns that process - a proof job has already pointed the
+    # program's own output at a log it reads. Written after the Windows ARM64 job
+    # photographed a Windows Security dialog instead of the film (28 September
+    # 2026): a picture that cannot say what it photographed is not evidence.
+    [Parameter(ParameterSetName = 'Pid', Mandatory = $true)][int]$ProcessId,
     [string]$Arguments = '',
     [int]$Width = 1100,
     [int]$Height = 700,
@@ -50,6 +65,8 @@ param(
     # furniture. Off by default, like every other switch here.
     [switch]$Wake,
     # Leave the program running instead of closing it when the picture is taken.
+    # It has no effect with -ProcessId: a process this script did not start is
+    # never closed by it.
     [switch]$Keep
 )
 
@@ -92,21 +109,26 @@ Add-Type -Namespace Key -Name Input -MemberDefinition @'
 [StructLayout(LayoutKind.Sequential)] public struct INPUT { public uint type; public InputUnion U; }
 '@
 
-$started = Get-Date
-if ($Arguments -ne '') {
-    $process = Start-Process -FilePath $Exe -ArgumentList $Arguments -PassThru
+$what = if ($PSCmdlet.ParameterSetName -eq 'Pid') { "pid $ProcessId" } else { $Exe }
+if ($PSCmdlet.ParameterSetName -eq 'Pid') {
+    $process = Get-Process -Id $ProcessId -ErrorAction Stop
+    Write-Host "photographing pid $($process.Id), which is already running: nothing was launched"
 } else {
-    $process = Start-Process -FilePath $Exe -PassThru
+    if ($Arguments -ne '') {
+        $process = Start-Process -FilePath $Exe -ArgumentList $Arguments -PassThru
+    } else {
+        $process = Start-Process -FilePath $Exe -PassThru
+    }
+    Start-Sleep -Seconds $WaitSeconds
 }
-Start-Sleep -Seconds $WaitSeconds
 
 $target = Get-Process -Id $process.Id -ErrorAction SilentlyContinue
 if (-not $target) {
-    throw "the program exited before it could be photographed: $Exe"
+    throw "the program exited before it could be photographed: $what"
 }
 $window = $target.MainWindowHandle
 if ($window -eq [IntPtr]::Zero) {
-    throw "no window: $Exe has none, or it never drew one in $WaitSeconds seconds"
+    throw "no window: $what has none, or it never drew one in $WaitSeconds seconds"
 }
 
 $dpi = [Shot.Win]::GetDpiForWindow($window)
@@ -121,6 +143,7 @@ if (-not $FullScreen -and -not $NoResize) {
 
 # Take the foreground by attaching to whoever holds it: an unattached call is
 # refused, and the picture then shows whatever was in front instead.
+[Shot.Win]::ShowWindow($window, 9) | Out-Null   # SW_RESTORE, for a minimised window
 $foreground = [Shot.Win]::GetForegroundWindow()
 $holder = 0
 $holderThread = [Shot.Win]::GetWindowThreadProcessId($foreground, [ref]$holder)
@@ -129,6 +152,19 @@ $mine = [Shot.Win]::GetCurrentThreadId()
 [Shot.Win]::BringWindowToTop($window) | Out-Null
 [Shot.Win]::SetForegroundWindow($window) | Out-Null
 [Shot.Win]::AttachThreadInput($mine, $holderThread, $false) | Out-Null
+
+# And check it worked before a single pixel is read. A picture of a dialog that
+# happens to be in front looks exactly like a picture of a broken player: the
+# Windows ARM64 job saved a Windows Security prompt as `player-screen.png` and
+# the file was worth nothing. Refusing here costs a retry; saving it costs a
+# wrong conclusion. -FullScreen asks for the whole screen on purpose and is the
+# one mode where whatever is in front is the subject.
+if (-not $FullScreen) {
+    $front = [Shot.Win]::GetForegroundWindow()
+    if ($front -ne $window) {
+        throw "the picture would not show ${what}: another window ($front) holds the foreground"
+    }
+}
 
 if ($Wake) {
     # VK 0x58 is `x`, which the OSD binds to nothing: the keystroke wakes the
@@ -156,12 +192,16 @@ $rect = New-Object Shot.Win+RECT
 [Shot.Win]::GetWindowRect($window, [ref]$rect) | Out-Null
 $windowWidth = $rect.Right - $rect.Left
 $windowHeight = $rect.Bottom - $rect.Top
+# The screen is printed beside the window because a window larger than it cannot
+# be photographed whole: the pixels off the edge are not on any display, and the
+# picture would be part black without saying why.
+$screen = [System.Windows.Forms.SystemInformation]::VirtualScreen
 Write-Host "window rect $($rect.Left),$($rect.Top) -> $($rect.Right),$($rect.Bottom)  ($windowWidth x $windowHeight real pixels, $([math]::Round($windowWidth / ($dpi / 96))) CSS pixels)"
+Write-Host "screen $($screen.Width)x$($screen.Height) at $($screen.Left),$($screen.Top)"
 
 if ($FullScreen) {
-    $area = [System.Windows.Forms.SystemInformation]::VirtualScreen
-    $rect.Left = $area.Left; $rect.Top = $area.Top
-    $windowWidth = $area.Width; $windowHeight = $area.Height
+    $rect.Left = $screen.Left; $rect.Top = $screen.Top
+    $windowWidth = $screen.Width; $windowHeight = $screen.Height
 }
 if ($rect.Left -lt 0) { $rect.Left = 0 }
 if ($rect.Top -lt 0) { $rect.Top = 0 }
@@ -173,7 +213,7 @@ $bitmap.Save($Out, [System.Drawing.Imaging.ImageFormat]::Png)
 $graphics.Dispose(); $bitmap.Dispose()
 Write-Host "capture: $Out"
 
-if (-not $Keep) {
+if ($PSCmdlet.ParameterSetName -eq 'Exe' -and -not $Keep) {
     Stop-Process -Id $target.Id -Force -ErrorAction SilentlyContinue
     Start-Sleep -Milliseconds 400
     if (Get-Process -Id $target.Id -ErrorAction SilentlyContinue) {

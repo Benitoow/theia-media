@@ -315,6 +315,17 @@ if [ -x "$setup" ]; then
 		fi
 		[ -L "$fake_home/Applications/Theia.app" ] && ok "~/Applications/Theia.app is a link to the installation" || bad "no Theia.app link"
 		[ -L "$fake_home/.local/bin/theia" ] && ok "the theia command is linked into ~/.local/bin" || bad "no theia link"
+		# A link is not a program. The launcher is the command somebody types, so
+		# the installed one is run: `-version` names the build it came from and
+		# starts nothing.
+		if launcher_line=$(HOME="$fake_home" "$fake_home/.local/bin/theia" -version 2>&1); then
+			case "$launcher_line" in
+			theia\ *) ok "the installed theia command runs: $launcher_line" ;;
+			*) bad "the installed theia command answered '$launcher_line' instead of naming itself" ;;
+			esac
+		else
+			bad "the installed theia command failed to run"
+		fi
 		HOME="$fake_home" "$setup" --check --lang en | head -20
 		HOME="$fake_home" "$setup" --uninstall --yes >"$work/uninstall.log" 2>&1 &&
 			ok "the uninstall ran" || bad "the uninstall failed; see $work/uninstall.log"
