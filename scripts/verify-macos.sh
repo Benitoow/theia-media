@@ -365,6 +365,51 @@ if [ -x "$setup" ]; then
 		else
 			bad "the installed theia command failed to run"
 		fi
+		# The command's own promise, with nothing else running: it brings the
+		# server up by itself and then opens the player (decision 139). Nothing
+		# else here runs the launcher's own path - the server above was started by
+		# hand, and the player by the playback section.
+		#
+		# `THEIA_DATA_DIR` is named because `theia` reads its port from the
+		# standard data directory and knows nothing about the `--data-dir` this
+		# installation was given: the installation records it in that directory's
+		# `setup.json`, and nothing reads it back.
+		THEIA_DATA_DIR="$fake_home/.theia" "$fake_home/.local/bin/theia" >"$work/launcher.log" 2>&1 &
+		launcher_pid=$!
+		launcher_ready=0
+		for _ in $(seq 1 60); do
+			if curl -sf http://127.0.0.1:8383/api/health >/dev/null 2>&1; then
+				launcher_ready=1
+				break
+			fi
+			sleep 0.5
+		done
+		if [ "$launcher_ready" = 1 ]; then
+			ok "the theia command brought the installed server up by itself"
+		else
+			bad "the theia command did not bring a server up:"
+			sed 's/^/      /' "$work/launcher.log" | tail -10
+		fi
+		launcher_opened=0
+		for _ in $(seq 1 20); do
+			if pgrep -f "Theia.app/Contents/MacOS/theia-player" >/dev/null 2>&1; then
+				launcher_opened=1
+				break
+			fi
+			sleep 0.5
+		done
+		if [ "$launcher_opened" = 1 ]; then
+			ok "the theia command opened the player"
+		else
+			bad "the theia command did not open the player"
+		fi
+		# Everything it started goes with it: the uninstall below, and the
+		# machine it leaves behind, must not depend on a window that is still up.
+		kill "$launcher_pid" 2>/dev/null
+		wait "$launcher_pid" 2>/dev/null
+		pkill -f "Theia.app/Contents/MacOS/theia-player" 2>/dev/null
+		pkill -f "$fake_home/.local/lib/theia/theia-server" 2>/dev/null
+		sleep 1
 		HOME="$fake_home" "$setup" --check --lang en | head -20
 		HOME="$fake_home" "$setup" --uninstall --yes >"$work/uninstall.log" 2>&1 &&
 			ok "the uninstall ran" || bad "the uninstall failed; see $work/uninstall.log"

@@ -192,6 +192,56 @@ jobs:
             $client.Dispose()
             Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
           }
+      # The command somebody types, run with nothing else running: it must bring
+      # the server up and open the player by itself, which is what decision 139
+      # promises and what no check on this platform did - the install step starts
+      # the server by hand and only asks the launcher its version.
+      #
+      # `THEIA_DATA_DIR` is not a convenience here, it is the only way this can
+      # work: `theia` reads its port from `config.DataDir()`, which knows nothing
+      # about the `--data-dir` the installer was given (the installation records
+      # it in that directory's `setup.json`, and nothing reads it back). The
+      # default location would answer on the default port and talk about a
+      # library nobody installed.
+      - name: Open the product the way a person does
+        shell: pwsh
+        env:
+          THEIA_DATA_DIR: ${{ runner.temp }}\theia-data
+        run: |
+          $launcher = Join-Path "$env:RUNNER_TEMP\theia-install" 'theia.exe'
+          if (-not (Test-Path $launcher)) { throw 'the installed launcher is missing' }
+          $log = Join-Path (Resolve-Path out).Path 'launcher.log'
+          $theia = Start-Process -FilePath $launcher -RedirectStandardOutput $log -RedirectStandardError "$log.err" -PassThru
+          $client = [System.Net.Http.HttpClient]::new()
+          $client.Timeout = [TimeSpan]::FromSeconds(10)
+          try {
+            $health = $null
+            for ($second = 0; $second -lt 60 -and -not $health; $second++) {
+              Start-Sleep -Seconds 1
+              try { $health = $client.GetStringAsync('http://127.0.0.1:8398/api/health').Result } catch { }
+            }
+            if (-not $health) {
+              Get-Content $log, "$log.err" -ErrorAction SilentlyContinue
+              throw 'the launcher did not bring a server up on the port its installation was configured with'
+            }
+            Write-Host 'the launcher started the installed server, which answers /api/health'
+            $player = $null
+            for ($second = 0; $second -lt 60 -and -not $player; $second++) {
+              Start-Sleep -Seconds 1
+              $player = Get-Process -Name 'theia-player' -ErrorAction SilentlyContinue | Select-Object -First 1
+            }
+            if (-not $player) {
+              Get-Content $log, "$log.err" -ErrorAction SilentlyContinue
+              throw 'the launcher started the server but never opened the player'
+            }
+            Write-Host "the launcher opened the player (pid $($player.Id))"
+          }
+          finally {
+            $client.Dispose()
+            Get-Process -Name 'theia-player' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Get-Process -Name 'theia-server' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Stop-Process -Id $theia.Id -Force -ErrorAction SilentlyContinue
+          }
       - uses: actions/upload-artifact@v7
         if: always()
         with:
