@@ -107,6 +107,7 @@ Add-Type -Namespace Shot -Name Win -MemberDefinition @'
 [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
 [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT r);
 [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr hWnd, IntPtr hdc, uint flags);
+[DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
 [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr hWnd);
 public struct RECT { public int Left, Top, Right, Bottom; }
 '@
@@ -183,9 +184,21 @@ if (-not $FullScreen -and -not $PrintWindow) {
 }
 
 if ($Wake) {
+    # Two ways to wake the OSD's furniture, because one of them needs something
+    # a proof runner will not give: a keystroke through SendInput goes to
+    # whichever window holds the foreground, and the player never does there. A
+    # pointer that lands on the window is delivered to the window under the
+    # cursor whether or not it is focused, which is why the mouse is moved onto
+    # the window's own centre first.
+    $wakeRect = New-Object Shot.Win+RECT
+    if ([Shot.Win]::GetWindowRect($window, [ref]$wakeRect)) {
+        [Shot.Win]::SetCursorPos(
+            [int](($wakeRect.Left + $wakeRect.Right) / 2),
+            [int](($wakeRect.Top + $wakeRect.Bottom) / 2)) | Out-Null
+        Write-Host "moved the pointer onto the window's centre, which wakes the furniture without the foreground (-Wake)"
+    }
     # VK 0x58 is `x`, which the OSD binds to nothing: the keystroke wakes the
-    # furniture and does nothing else. Sent after the foreground, because
-    # SendInput goes to whichever window holds it.
+    # furniture and does nothing else.
     $size = [System.Runtime.InteropServices.Marshal]::SizeOf([type][Key.Input+INPUT])
     foreach ($flags in 0, 2) {   # 0 = key down, 2 = KEYEVENTF_KEYUP
         $stroke = New-Object Key.Input+KEYBDINPUT

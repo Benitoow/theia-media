@@ -153,13 +153,13 @@ property of the runner written down as a property of the player; it is printed a
 Two things follow, and they are not the same size. **The architecture debt
 stands**: rendering still happens on the thread that owns the client API, and the
 rewrite to a thread of its own is what makes an app on real hardware honest.
-**And the picture was still missing**: the screen capture of that run shows a
-wallpaper, the menu bar and the Dock - no window at all - while AppKit reported
-it visible and unoccluded. So the player now names its window (`windowNumber`) in
-the window report, and the verifier photographs *that* window with
-`screencapture -l` before photographing the screen. Whichever of the two shows
-the film decides whether the render path or the window's compositing is what a
-person cannot see.
+**And the picture arrived**: the next dispatch (`36476965274`) photographed the
+fixture's colour bars and timecode in the application's own window - named by
+`windowNumber` and read with `screencapture -l` - and on the screen as well. Both
+pictures are torn, which is what reading a surface mid-render looks like at
+0.45 fps on a software renderer; the rate is the runner's, and `gl-renderer` in
+the line is what says so. Whether the OSD reads well over a moving film is still
+a person's question, and `scripts/verify-macos.sh` still says `LOOK` for it.
 
 ## Render sequence
 
