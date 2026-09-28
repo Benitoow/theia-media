@@ -81,19 +81,54 @@ itself and `--diagnostics` prints them as one line:
 | Field | What a zero rules out |
 |---|---|
 | `attached` | the surface exists at all; 0 after a successful launch means the bridge never ran |
-| `ticks` | the main-thread timer runs at all |
+| `elapsed-ms` | how long the surface has existed - the denominator for `ticks` |
+| `ticks` / `last-tick-ms` | the main-thread timer runs at all, and when it last did |
 | `ready` | mpv offered a frame (`MPV_RENDER_UPDATE_FRAME`) |
-| `draws` | AppKit asked the view to draw |
+| `draws` / `last-draw-ms` | AppKit asked the view to draw, and when |
+| `in-render` | a `mpv_render_context_render` call is in flight right now (never entering it is the normal state) |
 | `errors` | this bridge's own `mpv_render_context_render` returned a failure |
 | `frames` | a frame was rendered, flushed and reported swapped |
 | `notifications` | mpv's own update callback fired (monotonic, so it must rise) |
 | `on-screen` | the window was visible and not fully occluded at the last tick |
 | `surface` | the backing size the last draw asked for, `WxH`, `0x0` before one |
 
-`scripts/verify-macos.sh` echoes the last line into its log, so a failure names
-its link without downloading the artifact. What the Mac still has to answer is
-whether the ordering is the whole fault; until it draws a film, the gate this
-file was written for stays closed.
+**Measured 28 September 2026**, on the dispatch of commit `2cb6ca7` (the
+`macos-intel` job), and this is the line it printed:
+
+```
+render-diagnostics: attached=1 ticks=12 ready=1 draws=2 errors=0 frames=1
+  notifications=20 on-screen=1 surface=1280x720
+```
+
+Everything on mpv's side is healthy: the callback fires (20 times), a frame is
+offered, the surface is the right size, the window is on screen, and the render
+call never *failed*. What stopped is the host: 12 ticks in a run of several
+seconds, and a second draw that was entered and never left.
+
+That is the failure the pinned header names. Its *Threading* section says the
+thread calling `mpv_render_*` "does not call libmpv API functions other than the
+mpv_render_* functions", that "there must be no lock or wait dependency from the
+render thread to a thread using other libmpv functions", and:
+
+> If you set `MPV_RENDER_PARAM_ADVANCED_CONTROL`, you promise that this won't
+> happen, and must absolutely guarantee it, or a real deadlock will freeze the
+> mpv core thread forever.
+
+This bridge breaks exactly that rule: it renders on the application's main
+thread, and the main thread is also the one calling `loadfile`, `set_option` and
+every status read. So `MPV_RENDER_PARAM_ADVANCED_CONTROL` is gone for now. Its
+cost is in the same header - without it the same mistake degrades to a timeout
+("playback quality will be degraded") instead of a freeze - and that cost is
+accepted only until rendering moves to a thread of its own, which the header
+recommends and which this file still owes. `elapsed-ms`, `last-tick-ms`,
+`last-draw-ms` and `in-render` are in the line above because that rewrite is the
+next thing to verify: they will say whether the main thread is still the thing
+that stops, or whether the loop now runs free.
+
+`scripts/verify-macos.sh` echoes the last line into its log and copies the
+player's whole raw diagnostics - mpv's messages included - into the proof
+artifact, so a failure names its link without downloading anything by hand.
+Until a Mac draws a film, the gate this file was written for stays closed.
 
 ## Render sequence
 

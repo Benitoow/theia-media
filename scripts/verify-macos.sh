@@ -187,6 +187,14 @@ else
 	fi
 	kill "$player_pid" 2>/dev/null
 	wait "$player_pid" 2>/dev/null
+	# The raw diagnostics travel with the evidence. They used to stay in the
+	# runner's temporary directory, so a failed frame check had to be explained
+	# from a single grepped line: the player's own log, and mpv's, are what say
+	# which link stopped and what the engine thought about it.
+	if [ -n "${THEIA_PROOF_DIR:-}" ] && [ -f "$work/diagnostics.txt" ]; then
+		mkdir -p "$THEIA_PROOF_DIR"
+		cp "$work/diagnostics.txt" "$THEIA_PROOF_DIR/player-diagnostics.txt"
+	fi
 
 	# The status frames are the machine-readable half of the diagnostics, and the
 	# keys are the player's own: `pos`, `vo`, `hwdec`, `ao`, `audioMode`. A check

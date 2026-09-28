@@ -40,6 +40,20 @@ static atomic_uint_fast64_t gErrors;
 static atomic_uint_fast64_t gOnScreen;
 static atomic_uint_fast64_t gSurface;
 static atomic_bool gAttached;
+// When, not just how many. `ticks=12` in a run that lasted seconds says the
+// timer stopped, and this says *when* it stopped and whether the thread that
+// stopped it was inside `mpv_render_context_render` when it did - which is the
+// difference between "AppKit asked for no more draws" and "the render call
+// never returned". Milliseconds since the surface was attached.
+static uint64_t gAttachedAtMs;
+static atomic_uint_fast64_t gLastTickMs;
+static atomic_uint_fast64_t gLastDrawMs;
+static atomic_uint_fast64_t gInRender;
+
+static uint64_t now_ms(void)
+{
+    return (uint64_t)(CFAbsoluteTimeGetCurrent() * 1000.0);
+}
 
 @interface TheiaFilmView : NSOpenGLView
 @end
@@ -66,6 +80,7 @@ static void on_render_update(void *context)
 {
     (void)dirty;
     atomic_fetch_add_explicit(&gDraws, 1, memory_order_relaxed);
+    atomic_store_explicit(&gLastDrawMs, now_ms() - gAttachedAtMs, memory_order_relaxed);
     if (!gRender) return;
     [[self openGLContext] makeCurrentContext];
     [[self openGLContext] update];
@@ -87,12 +102,15 @@ static void on_render_update(void *context)
         {MPV_RENDER_PARAM_FLIP_Y, &flip},
         {0},
     };
+    atomic_fetch_add_explicit(&gInRender, 1, memory_order_relaxed);
     int result = gFrame(gRender, params);
     if (result < 0) {
+        atomic_fetch_sub_explicit(&gInRender, 1, memory_order_relaxed);
         atomic_fetch_add_explicit(&gErrors, 1, memory_order_relaxed);
         fprintf(stderr, "theia-player: macOS frame render failed (%d)\n", result);
         return;
     }
+    atomic_fetch_sub_explicit(&gInRender, 1, memory_order_relaxed);
     [[self openGLContext] flushBuffer];
     gSwap(gRender);
     atomic_fetch_add_explicit(&gFrames, 1, memory_order_relaxed);
@@ -179,7 +197,26 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
         .get_proc_address = get_proc_address,
         .get_proc_address_ctx = NULL,
     };
-    int advanced = 1;
+    // No `MPV_RENDER_PARAM_ADVANCED_CONTROL`, and that is a correction rather
+    // than a preference. The header's Threading section says the thread calling
+    // `mpv_render_*` "does not call libmpv API functions other than the
+    // mpv_render_* functions", that "there must be no lock or wait dependency
+    // from the render thread to a thread using other libmpv functions", and:
+    // "If you set MPV_RENDER_PARAM_ADVANCED_CONTROL, you promise that this won't
+    // happen, and must absolutely guarantee it, or a real deadlock will freeze
+    // the mpv core thread forever."
+    //
+    // This bridge breaks exactly that rule: it renders on the application's main
+    // thread, which is also the thread calling `loadfile`, `set_option` and every
+    // status read. Measured on 28 September 2026 (run of commit `49917a6`, the
+    // `macos-intel` job): one frame reached the screen, the second draw never
+    // returned, and the timer stopped - `ticks=12` in a run of several seconds.
+    // Without advanced control, mpv does not wait for the host's handshake, so
+    // the documented failure degrades to a timeout instead of a freeze; the
+    // header notes the cost as "playback quality will be degraded", and that
+    // cost is accepted here only until rendering moves to its own thread, which
+    // is what this API recommends and what this file still owes.
+    int advanced = 0;
     mpv_render_param params[] = {
         {MPV_RENDER_PARAM_API_TYPE, (void *)MPV_RENDER_API_TYPE_OPENGL},
         {MPV_RENDER_PARAM_OPENGL_INIT_PARAMS, &gl},
@@ -200,14 +237,23 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
     atomic_store_explicit(&gErrors, 0, memory_order_relaxed);
     atomic_store_explicit(&gOnScreen, 0, memory_order_relaxed);
     atomic_store_explicit(&gSurface, 0, memory_order_relaxed);
+    atomic_store_explicit(&gInRender, 0, memory_order_relaxed);
+    atomic_store_explicit(&gLastTickMs, 0, memory_order_relaxed);
+    atomic_store_explicit(&gLastDrawMs, 0, memory_order_relaxed);
+    gAttachedAtMs = now_ms();
     gCallback(gRender, on_render_update, NULL);
 
-    // Advanced control requires update() after callback notifications. The
-    // timer runs in common modes so dragging a window cannot starve rendering.
+    // `update()` is what asks mpv whether there is a frame to draw, and it is
+    // still the right thing to call on every tick: the header says the user "is
+    // supposed to call this when the update callback was invoked (like all
+    // mpv_render_* functions, this has to happen on the render thread, and _not_
+    // from the update callback itself)". The timer runs in common modes so
+    // dragging a window cannot starve rendering.
     gTimer = [NSTimer timerWithTimeInterval:1.0 / 60.0 repeats:YES block:^(NSTimer *timer) {
         (void)timer;
         if (!gRender) return;
         atomic_fetch_add_explicit(&gTicks, 1, memory_order_relaxed);
+        atomic_store_explicit(&gLastTickMs, now_ms() - gAttachedAtMs, memory_order_relaxed);
         // Sampled here, on the main thread, because AppKit answers for its own
         // thread: a window that is hidden or fully occluded is never asked to
         // draw, and "no frames" would then be a fact about the window and not
@@ -251,12 +297,17 @@ void theia_render_diagnostics(char *out, size_t capacity)
     if (capacity == 0) return;
     uint64_t surface = atomic_load_explicit(&gSurface, memory_order_relaxed);
     snprintf(out, capacity,
-             "attached=%d ticks=%llu ready=%llu draws=%llu errors=%llu frames=%llu "
+             "attached=%d elapsed-ms=%llu ticks=%llu last-tick-ms=%llu ready=%llu draws=%llu "
+             "last-draw-ms=%llu in-render=%llu errors=%llu frames=%llu "
              "notifications=%llu on-screen=%llu surface=%ux%u",
              atomic_load_explicit(&gAttached, memory_order_relaxed) ? 1 : 0,
+             (unsigned long long)(now_ms() - gAttachedAtMs),
              (unsigned long long)atomic_load_explicit(&gTicks, memory_order_relaxed),
+             (unsigned long long)atomic_load_explicit(&gLastTickMs, memory_order_relaxed),
              (unsigned long long)atomic_load_explicit(&gReady, memory_order_relaxed),
              (unsigned long long)atomic_load_explicit(&gDraws, memory_order_relaxed),
+             (unsigned long long)atomic_load_explicit(&gLastDrawMs, memory_order_relaxed),
+             (unsigned long long)atomic_load_explicit(&gInRender, memory_order_relaxed),
              (unsigned long long)atomic_load_explicit(&gErrors, memory_order_relaxed),
              (unsigned long long)atomic_load_explicit(&gFrames, memory_order_relaxed),
              (unsigned long long)atomic_load_explicit(&gNotifications, memory_order_relaxed),

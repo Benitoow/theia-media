@@ -52,7 +52,7 @@ pub fn frames() -> u64 {
 /// loop beside the frame count, because "no advancing frames" is a symptom and
 /// this is the chain that produced it.
 pub fn diagnostics() -> String {
-    let mut line = [0_i8; 256];
+    let mut line = [0_i8; 512];
     unsafe { theia_render_diagnostics(line.as_mut_ptr(), line.len()) };
     unsafe { CStr::from_ptr(line.as_ptr()) }
         .to_string_lossy()
