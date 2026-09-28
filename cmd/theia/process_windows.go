@@ -7,9 +7,6 @@ import (
 	"syscall"
 )
 
-// exeSuffix is what an executable is called on this platform.
-const exeSuffix = ".exe"
-
 // createNoWindow is CREATE_NO_WINDOW, the flag that keeps a console program from
 // opening a console. The server is one, and it is started from a program that
 // has no console to hand it: without this flag a black window would appear

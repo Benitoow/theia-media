@@ -5,9 +5,12 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Benitoow/theia-media/internal/layout"
 )
 
 // What this program decides, and in which order, with the three things it does
@@ -97,6 +100,17 @@ func offTheMachine(t *testing.T) string {
 	return dir
 }
 
+// programName is the file this host's launcher looks for, given the base name a
+// test says out loud. `layout` answers it, because that is the one place that
+// knows a Mac player lives inside the application bundle - the mismatch that let
+// `theia` find no player on macOS while every test in this file passed.
+func programName(base string) string {
+	if base == "theia-player" {
+		return layout.PlayerExecutable(runtime.GOOS)
+	}
+	return layout.ServerExecutable(runtime.GOOS)
+}
+
 // installation writes the programs a case needs into a directory of its own,
 // which is the folder run is told to start them from.
 func installation(t *testing.T, programs ...string) string {
@@ -104,7 +118,13 @@ func installation(t *testing.T, programs ...string) string {
 	offTheMachine(t)
 	dir := t.TempDir()
 	for _, base := range programs {
-		if err := os.WriteFile(filepath.Join(dir, programName(base)), []byte("MZ"), 0o755); err != nil {
+		target := filepath.Join(dir, filepath.FromSlash(programName(base)))
+		// On macOS the player is inside `Theia.app`, so its directory has to
+		// exist before a test can pretend one does.
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(target, []byte("MZ"), 0o755); err != nil {
 			t.Fatal(err)
 		}
 	}

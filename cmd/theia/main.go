@@ -27,11 +27,13 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Benitoow/theia-media/internal/config"
+	"github.com/Benitoow/theia-media/internal/layout"
 )
 
 // version is overwritten at build time with -ldflags "-X main.version=v1.2.3",
@@ -121,18 +123,21 @@ type request struct {
 // launch starts what was asked for, from the folder this command lives in -
 // which is where the installer put its siblings.
 func launch(dir string, want request, out io.Writer) int {
-	server := filepath.Join(dir, programName("theia-server"))
-	player := filepath.Join(dir, programName("theia-player"))
+	server := filepath.Join(dir, filepath.FromSlash(layout.ServerExecutable(runtime.GOOS)))
+	// The player is not always a file beside this command: on macOS it is inside
+	// the application bundle, and `layout` is the one place that knows it.
+	playerName := layout.PlayerExecutable(runtime.GOOS)
+	player := filepath.Join(dir, filepath.FromSlash(playerName))
 	hasServer, hasPlayer := isFile(server), isFile(player)
 
 	switch {
 	case want.bare && !hasServer && !hasPlayer:
 		return fail(out, fmt.Errorf("neither %s nor %s is installed beside this command",
-			filepath.Base(server), filepath.Base(player)))
+			filepath.Base(server), playerName))
 	case want.server && !hasServer:
 		return fail(out, fmt.Errorf("%s is not installed beside this command", filepath.Base(server)))
 	case want.player && !hasPlayer:
-		return fail(out, fmt.Errorf("%s is not installed beside this command", filepath.Base(player)))
+		return fail(out, fmt.Errorf("%s is not installed beside this command", playerName))
 	}
 
 	if hasServer && (want.bare || want.server) {
@@ -220,9 +225,6 @@ func waitForPort(address string, timeout time.Duration) bool {
 		time.Sleep(100 * time.Millisecond)
 	}
 }
-
-// programName is what a program is called on this platform.
-func programName(base string) string { return base + exeSuffix }
 
 func isFile(path string) bool {
 	info, err := os.Stat(path)

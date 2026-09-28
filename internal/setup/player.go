@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
 
+	"github.com/Benitoow/theia-media/internal/layout"
 	"github.com/Benitoow/theia-media/internal/release"
 	"github.com/Benitoow/theia-media/internal/updater"
 )
@@ -102,14 +102,12 @@ func serverVersionBeside(dir string) (string, error) {
 // an app bundle - which is what gives a window an identity and a Dock icon - and
 // the file a shell can run is the one inside Contents/MacOS. This is the file the
 // update path asks for a version, and the one a running player holds open.
+//
+// Where that is belongs to `internal/layout`, because `cmd/theia` has to answer
+// the same question and answered it differently: it looked for a loose
+// `theia-player` and therefore found no player in any Mac installation.
 func playerExecutablePath(goos string) string {
-	if goos == "darwin" {
-		return path.Join("Theia.app", "Contents", "MacOS", "theia-player")
-	}
-	if goos == "windows" {
-		return "theia-player.exe"
-	}
-	return "theia-player"
+	return layout.PlayerExecutable(goos)
 }
 
 // playerBundleMembers is what an installation of the player consists of, as
