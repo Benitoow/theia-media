@@ -184,12 +184,12 @@ if (-not $FullScreen -and -not $PrintWindow) {
 }
 
 if ($Wake) {
-    # Two ways to wake the OSD's furniture, because one of them needs something
-    # a proof runner will not give: a keystroke through SendInput goes to
-    # whichever window holds the foreground, and the player never does there. A
-    # pointer that lands on the window is delivered to the window under the
-    # cursor whether or not it is focused, which is why the mouse is moved onto
-    # the window's own centre first.
+    # Three ways to wake the OSD's furniture, because the first needs something a
+    # proof runner will not give: a keystroke through SendInput goes to whichever
+    # window holds the foreground, and the player never does there. The other two
+    # are addressed at the window itself - a hover is delivered to the window
+    # under the cursor, and a click is the one input Windows hands to a window it
+    # has to activate first.
     $wakeRect = New-Object Shot.Win+RECT
     if ([Shot.Win]::GetWindowRect($window, [ref]$wakeRect)) {
         [Shot.Win]::SetCursorPos(
@@ -212,7 +212,22 @@ if ($Wake) {
         [Key.Input]::SendInput(1, @($input), $size) | Out-Null
         Start-Sleep -Milliseconds 60
     }
-    Write-Host "woke the OSD furniture with one keystroke (-Wake)"
+    # And a click, which is the one input Windows will deliver to a window that
+    # does not hold the foreground: the click activates it and then reaches the
+    # page. Needed because the hover above did not wake the furniture on the
+    # proof runner - the picture came back as the film with nothing over it.
+    foreach ($flags in 2, 4) {   # 2 = MOUSEEVENTF_LEFTDOWN, 4 = LEFTUP
+        $click = New-Object Key.Input+MOUSEINPUT
+        $click.dwFlags = $flags
+        $union = New-Object Key.Input+InputUnion
+        $union.mi = $click
+        $input = New-Object Key.Input+INPUT
+        $input.type = 0   # INPUT_MOUSE
+        $input.U = $union
+        [Key.Input]::SendInput(1, @($input), $size) | Out-Null
+        Start-Sleep -Milliseconds 60
+    }
+    Write-Host "clicked the film once, so the window is activated and the page sees an input (-Wake)"
 }
 
 Start-Sleep -Milliseconds 900
