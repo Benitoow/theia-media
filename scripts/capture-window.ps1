@@ -25,6 +25,12 @@
 # Two ways in: `-Exe` launches the program, photographs it and closes it again;
 # `-ProcessId` photographs one the caller already started - which is what a proof
 # job needs, since that job owns the program's output and its lifetime.
+#
+# Three ways to read the pixels: the screen where the window is (the default, and
+# the only one that says what a person would have seen), the whole screen
+# (`-FullScreen`), and the window's own content through Windows' `PrintWindow`
+# (`-PrintWindow`, which works when the window is behind something - a proof
+# machine's desktop is not ours, and its dialogs stole a picture once).
 
 [CmdletBinding(DefaultParameterSetName = 'Exe')]
 param(
@@ -45,6 +51,14 @@ param(
     # Photograph the whole screen rather than the window, to judge what a person
     # actually sees - including whatever is in front.
     [switch]$FullScreen,
+    # Photograph the window's own pixels through `PrintWindow` instead of reading
+    # the screen where the window happens to be. Written for a proof job on a
+    # machine whose desktop is not ours: the first attempt at this photographed a
+    # Windows Security dialog, and the guard below then refused to save it - which
+    # is correct and also useless, because the window's own content was never
+    # asked for. The screen modes stay the default: this one cannot see a dialog
+    # that is in front of the window, or say what a person would see.
+    [switch]$PrintWindow,
     # Photograph the window exactly where the program put it. Without this the
     # script resizes the window first, and that resize is the very interference
     # this switch exists to remove: moving the OS window from outside bypasses
@@ -92,6 +106,7 @@ Add-Type -Namespace Shot -Name Win -MemberDefinition @'
 [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint attach, uint attachTo, bool fAttach);
 [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
 [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT r);
+[DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr hWnd, IntPtr hdc, uint flags);
 [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr hWnd);
 public struct RECT { public int Left, Top, Right, Bottom; }
 '@
@@ -158,8 +173,9 @@ $mine = [Shot.Win]::GetCurrentThreadId()
 # Windows ARM64 job saved a Windows Security prompt as `player-screen.png` and
 # the file was worth nothing. Refusing here costs a retry; saving it costs a
 # wrong conclusion. -FullScreen asks for the whole screen on purpose and is the
-# one mode where whatever is in front is the subject.
-if (-not $FullScreen) {
+# one mode where whatever is in front is the subject, and -PrintWindow reads the
+# window's own pixels, so being in front is not part of what it photographs.
+if (-not $FullScreen -and -not $PrintWindow) {
     $front = [Shot.Win]::GetForegroundWindow()
     if ($front -ne $window) {
         throw "the picture would not show ${what}: another window ($front) holds the foreground"
@@ -208,7 +224,24 @@ if ($rect.Top -lt 0) { $rect.Top = 0 }
 
 $bitmap = New-Object System.Drawing.Bitmap($windowWidth, $windowHeight)
 $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-$graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)
+if ($PrintWindow) {
+    # PW_RENDERFULLCONTENT (0x2) is what makes this work for a window whose
+    # content is composited elsewhere - a WebView, a Direct3D swapchain - rather
+    # than drawn into the window's own device context by GDI.
+    $hdc = $graphics.GetHdc()
+    try {
+        $drawn = [Shot.Win]::PrintWindow($window, $hdc, 2)
+    } finally {
+        $graphics.ReleaseHdc($hdc)
+    }
+    Write-Host "PrintWindow asked the window for its own pixels: $drawn"
+    if (-not $drawn) {
+        $graphics.Dispose(); $bitmap.Dispose()
+        throw "the window ($window) did not answer PrintWindow"
+    }
+} else {
+    $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)
+}
 $bitmap.Save($Out, [System.Drawing.Imaging.ImageFormat]::Png)
 $graphics.Dispose(); $bitmap.Dispose()
 Write-Host "capture: $Out"

@@ -2879,11 +2879,22 @@ fn start_window_probe(window: tauri::WebviewWindow, wid: isize, requested: (u32,
             let outer = window.outer_size().unwrap_or_default();
             let scale = window.scale_factor().unwrap_or(1.0);
             let minimum = minimum_track_size(wid);
+            // The window server's id, on the platform that has one. `screencapture
+            // -l` takes this number, and it is how the Mac verifier photographs
+            // the film's window instead of the screen it may never appear on.
+            #[cfg(target_os = "macos")]
+            let window_number = window
+                .ns_window()
+                .map(render_macos::window_number)
+                .unwrap_or(0);
+            #[cfg(not(target_os = "macos"))]
+            let window_number = 0_u64;
             let report = serde_json::json!({
                 "requested": { "width": requested.0, "height": requested.1 },
                 "physical": { "width": physical.width, "height": physical.height },
                 "outer": { "width": outer.width, "height": outer.height },
                 "scaleFactor": scale,
+                "windowNumber": window_number,
                 "logical": {
                     "width": physical.width as f64 / scale,
                     "height": physical.height as f64 / scale,

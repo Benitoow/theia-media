@@ -18,6 +18,7 @@ extern "C" {
     ) -> bool;
     fn theia_render_frames() -> u64;
     fn theia_render_diagnostics(out: *mut c_char, capacity: usize);
+    fn theia_window_number(window: *mut c_void) -> u64;
     fn theia_render_detach();
 }
 
@@ -61,4 +62,12 @@ pub fn diagnostics() -> String {
 
 pub fn detach() {
     unsafe { theia_render_detach() }
+}
+
+/// The window server's own id for a window. `screencapture -l` takes this
+/// number, which is how the Mac verifier photographs the film's window rather
+/// than a desktop that belongs to the runner - the whole-screen capture of
+/// 28 September 2026 showed a wallpaper with no window on it at all.
+pub fn window_number(window: *mut c_void) -> u64 {
+    unsafe { theia_window_number(window) }
 }

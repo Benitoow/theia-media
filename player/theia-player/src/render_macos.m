@@ -49,6 +49,11 @@ static uint64_t gAttachedAtMs;
 static atomic_uint_fast64_t gLastTickMs;
 static atomic_uint_fast64_t gLastDrawMs;
 static atomic_uint_fast64_t gInRender;
+// Which renderer answered. A frame rate means nothing without it: the same code
+// draws at the display's pace on a GPU and at a crawl under Apple's software
+// renderer, and the proof runner is a virtual machine with no GPU at all.
+// Written once, at attach, from the context that is current then.
+static char gRenderer[128];
 
 static uint64_t now_ms(void)
 {
@@ -192,6 +197,8 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
     [gView setWantsBestResolutionOpenGLSurface:YES];
     [parent addSubview:gView positioned:NSWindowBelow relativeTo:webview];
     [[gView openGLContext] makeCurrentContext];
+    const GLubyte *renderer = glGetString(GL_RENDERER);
+    snprintf(gRenderer, sizeof(gRenderer), "%s", renderer ? (const char *)renderer : "unknown");
 
     mpv_opengl_init_params gl = {
         .get_proc_address = get_proc_address,
@@ -278,6 +285,16 @@ uint64_t theia_render_frames(void)
     return atomic_load_explicit(&gFrames, memory_order_relaxed);
 }
 
+// The window server's own id for a window: what `screencapture -l` wants when a
+// proof run has to photograph the film's window rather than the screen it may
+// not be on. Tauri hands over its NSWindow pointer and nothing else about it is
+// touched. Returns 0 when there is no window to name.
+uint64_t theia_window_number(void *window_pointer)
+{
+    if (!window_pointer) return 0;
+    return (uint64_t)[(__bridge NSWindow *)window_pointer windowNumber];
+}
+
 // Why a picture is missing, in one line a proof log can lift with a single grep.
 // `attached=0` with everything else at zero is a surface that was never made;
 // `ticks` without `ready` is mpv offering no frame; `ready` without `draws` is
@@ -299,7 +316,7 @@ void theia_render_diagnostics(char *out, size_t capacity)
     snprintf(out, capacity,
              "attached=%d elapsed-ms=%llu ticks=%llu last-tick-ms=%llu ready=%llu draws=%llu "
              "last-draw-ms=%llu in-render=%llu errors=%llu frames=%llu "
-             "notifications=%llu on-screen=%llu surface=%ux%u",
+             "notifications=%llu on-screen=%llu surface=%ux%u gl-renderer=\"%s\"",
              atomic_load_explicit(&gAttached, memory_order_relaxed) ? 1 : 0,
              (unsigned long long)(now_ms() - gAttachedAtMs),
              (unsigned long long)atomic_load_explicit(&gTicks, memory_order_relaxed),
@@ -312,5 +329,6 @@ void theia_render_diagnostics(char *out, size_t capacity)
              (unsigned long long)atomic_load_explicit(&gFrames, memory_order_relaxed),
              (unsigned long long)atomic_load_explicit(&gNotifications, memory_order_relaxed),
              (unsigned long long)atomic_load_explicit(&gOnScreen, memory_order_relaxed),
-             (unsigned)(surface >> 32), (unsigned)(surface & 0xffffffffu));
+             (unsigned)(surface >> 32), (unsigned)(surface & 0xffffffffu),
+             gRenderer);
 }

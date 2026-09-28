@@ -128,7 +128,38 @@ that stops, or whether the loop now runs free.
 `scripts/verify-macos.sh` echoes the last line into its log and copies the
 player's whole raw diagnostics - mpv's messages included - into the proof
 artifact, so a failure names its link without downloading anything by hand.
-Until a Mac draws a film, the gate this file was written for stays closed.
+
+**Measured 28 September 2026, the dispatch after that one**, and this is the
+series the artifact now carries:
+
+```
+elapsed-ms=2366 ticks=8  ready=1 draws=2 in-render=1 frames=1
+elapsed-ms=3492 ticks=8  ready=1 draws=2 in-render=1 frames=1
+elapsed-ms=4622 ticks=8  ready=1 draws=2 in-render=1 frames=1
+elapsed-ms=5662 ticks=9  ready=2 draws=3 in-render=1 frames=2
+elapsed-ms=6821 ticks=10 ready=3 draws=3 in-render=0 frames=3
+```
+
+The verifier passes: `PASS the actual application rendered frames: 1 -> 3`,
+`29 passed, 0 failed`. Frames reach the screen, and the deadlock is gone - but
+look at what the numbers cost. `in-render=1` for three consecutive samples, and
+one frame every ~1.2 s: **each `mpv_render_context_render` on that machine takes
+about a second**. The runner is a virtual Intel Mac with no GPU, so
+`gl-renderer` (now in the line) is the software renderer, and libplacebo's
+conversion runs on the CPU. A rate asserted in the verifier would therefore be a
+property of the runner written down as a property of the player; it is printed as
+`INFO ... fps drawn, ... ticks/s offered` instead.
+
+Two things follow, and they are not the same size. **The architecture debt
+stands**: rendering still happens on the thread that owns the client API, and the
+rewrite to a thread of its own is what makes an app on real hardware honest.
+**And the picture was still missing**: the screen capture of that run shows a
+wallpaper, the menu bar and the Dock - no window at all - while AppKit reported
+it visible and unoccluded. So the player now names its window (`windowNumber`) in
+the window report, and the verifier photographs *that* window with
+`screencapture -l` before photographing the screen. Whichever of the two shows
+the film decides whether the render path or the window's compositing is what a
+person cannot see.
 
 ## Render sequence
 

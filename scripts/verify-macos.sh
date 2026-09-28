@@ -171,10 +171,30 @@ else
 	# film is playing. A screenshot taken after exit is a desktop photograph.
 	if [ "$ready" -eq 1 ]; then sleep 2; fi
 	if [ "$ready" -eq 1 ] && kill -0 "$player_pid" 2>/dev/null && command -v screencapture >/dev/null 2>&1; then
+		if [ -n "${THEIA_PROOF_DIR:-}" ]; then mkdir -p "$THEIA_PROOF_DIR"; fi
+		# The window's own content first, then the screen: they answer different
+		# questions. The screen says what a person would have seen; the window
+		# says what the application drew. On 28 September 2026 the screen capture
+		# showed a wallpaper with no window on it at all, and the window's own
+		# content is the only one of the two that can prove the film reached it.
+		window_number=$(sed -n 's/.*"windowNumber":[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$report" 2>/dev/null | head -1)
+		if [ -n "$window_number" ] && [ "$window_number" -gt 0 ]; then
+			window_shot="$work/player-window.png"
+			if screencapture -x -o -l "$window_number" "$window_shot" >/dev/null 2>&1 && [ -s "$window_shot" ]; then
+				if [ -n "${THEIA_PROOF_DIR:-}" ]; then
+					cp "$window_shot" "$THEIA_PROOF_DIR/player-window.png"
+					window_shot="$THEIA_PROOF_DIR/player-window.png"
+				fi
+				human "the application's own window, captured by its window number ($window_number): $window_shot"
+			else
+				human "the window the player named ($window_number) did not answer screencapture -l"
+			fi
+		else
+			human "the player named no window number, so only the screen could be captured"
+		fi
 		picture="$work/player-screen.png"
 		if screencapture -x "$picture" >/dev/null 2>&1 && [ -s "$picture" ]; then
 			if [ -n "${THEIA_PROOF_DIR:-}" ]; then
-				mkdir -p "$THEIA_PROOF_DIR"
 				cp "$picture" "$THEIA_PROOF_DIR/player-screen.png"
 				picture="$THEIA_PROOF_DIR/player-screen.png"
 			fi
@@ -221,6 +241,17 @@ else
 		ok "the actual application rendered frames: $first_frame -> $last_frame"
 	else
 		bad "the application rendered no advancing frames ($first_frame -> $last_frame)"
+	fi
+	# How fast, said rather than asserted. The proof machine is virtual and has no
+	# GPU - `gl-renderer` in the line above is what says so - and the same code
+	# draws at the software renderer's pace there. A rate asserted here would be a
+	# property of the runner written down as a property of the player.
+	elapsed_ms=$(printf '%s\n' "$diag_line" | sed -n 's/.*elapsed-ms=\([0-9]*\).*/\1/p')
+	tick_count=$(printf '%s\n' "$diag_line" | sed -n 's/.*ticks=\([0-9]*\).*/\1/p')
+	frame_count=$(printf '%s\n' "$diag_line" | sed -n 's/.*frames=\([0-9]*\).*/\1/p')
+	if [ -n "$elapsed_ms" ] && [ "$elapsed_ms" -gt 0 ]; then
+		awk -v e="$elapsed_ms" -v f="${frame_count:-0}" -v t="${tick_count:-0}" \
+			'BEGIN { printf "INFO  %d frames and %d ticks in %d ms: %.2f fps drawn, %.1f ticks/s offered\n", f, t, e, f * 1000 / e, t * 1000 / e }'
 	fi
 	# `vo` and `hwdec` are printed rather than asserted, and the reason is the
 	# finding this path is built on: with `vo=libmpv` the *host* owns the video
