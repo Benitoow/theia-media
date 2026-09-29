@@ -317,7 +317,10 @@ which is decision 25 applied to a second interface.
 | Path | Contents |
 |---|---|
 | `theia-player/src/mpv.rs` | The whole FFI surface, on one page. Nothing above it touches a raw pointer. |
-| `theia-player/src/main.rs` | Window, session, IPC commands, the audio watchdog. |
+| `theia-player/src/main.rs` | Session, playback lifecycle, IPC commands, the audio watchdog. |
+| `theia-player/src/window.rs` | Native window sizing, rounded region, resize timing, and verification report. |
+| `theia-player/src/server.rs` | Discovery, HTTP client, stream URLs, and connection errors. |
+| `theia-player/src/server/models.rs` | JSON records returned by the server, plus artwork and track interpretation. |
 | `ui/src/App.tsx` | The OSD: transport, clock, notices, keyboard. |
 | `ui/src/lib/catalogues.js` | French and English sentences. The Rust side sends codes. |
 | `ui/src/components/MediaCard.tsx` | One film as the card grid draws it, with section 6.1's artwork fallbacks. |

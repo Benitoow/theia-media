@@ -23,10 +23,13 @@ player was run on the maintainer's machine. A post-release source audit found th
 the macOS application selects `vo=libmpv` but never creates a render context or
 draws a frame; the separate spike did, and the earlier runner checks measured
 playback progress rather than the application's picture (decision 149). Treat
-macOS playback as unverified until the real application renders a film. Other
-targets have server binaries only and must not be presented as complete products.
-An AppKit/OpenGL renderer candidate is in source, but no native build or film
-frame from the actual application has been observed yet.
+the Apple Silicon release playback as unverified until its packaged application
+renders film with the OSD. Other targets have server binaries only and must not
+be presented as complete products.
+An AppKit/OpenGL renderer candidate is in source. A packaged macOS Intel player
+has drawn generated film frames on a hosted runner, but its capture showed no
+visible OSD and the page measurement was null. Apple Silicon still needs a
+packaged film-and-OSD proof before a later release can be published.
 
 **Publication is explicit.** `v3.3.6` is public; preparing a later release does
 not authorize publishing it. Never push, create or push a tag, create a release,
