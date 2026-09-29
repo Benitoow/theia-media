@@ -147,7 +147,7 @@ elif [ -z "$media" ]; then
 else
 	report="$work/window-report.json"
 	"$app/Contents/MacOS/theia-player" --media "$media" --mute --diagnostics \
-		--window 1280x720 --window-report "$report" >"$work/diagnostics.txt" 2>&1 &
+		--window 1280x720 --window-report "$report" --proof-osd >"$work/diagnostics.txt" 2>&1 &
 	player_pid=$!
 	ready=0
 	attempt=0
@@ -189,6 +189,35 @@ else
 			sleep 1
 			waited=$((waited + 1))
 		done
+		# The page must answer for its own controls before a screenshot is called
+		# proof of composition. The probe wakes the real React mouse handler; a
+		# film-only window or an unresponsive webview fails this check.
+		osd_ready=0
+		for _ in $(seq 1 20); do
+			if python3 - "$report" <<'PY'
+import json
+import sys
+try:
+    page = json.load(open(sys.argv[1], encoding="utf-8")).get("page")
+    bar = page.get("bar") if isinstance(page, dict) else None
+    visible = (isinstance(bar, dict) and bar.get("hidden") is False
+               and bar.get("display") != "none" and float(bar.get("opacity", 0)) > 0
+               and bar.get("controlsVisible", 0) > 0)
+except (OSError, ValueError, TypeError):
+    visible = False
+sys.exit(0 if visible else 1)
+PY
+			then
+				osd_ready=1
+				break
+			fi
+			sleep 0.5
+		done
+		if [ "$osd_ready" -eq 1 ]; then
+			ok "the page reports visible OSD controls over the playing film"
+		else
+			bad "the page did not report visible OSD controls; window report: $(tr '\n' ' ' < "$report")"
+		fi
 	fi
 	if [ "$ready" -eq 1 ] && kill -0 "$player_pid" 2>/dev/null && command -v screencapture >/dev/null 2>&1; then
 		if [ -n "${THEIA_PROOF_DIR:-}" ]; then mkdir -p "$THEIA_PROOF_DIR"; fi

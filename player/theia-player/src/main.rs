@@ -2849,16 +2849,19 @@ fn minimum_track_size(_wid: isize) -> Option<(i32, i32)> {
 /// `wid` is the platform's window handle from `main`; only the Windows path uses
 /// it, for [`minimum_track_size`], and on macOS and the other Unix it is read by
 /// nothing.
-fn start_window_probe(window: tauri::WebviewWindow, wid: isize, requested: (u32, u32), path: PathBuf) {
+fn start_window_probe(window: tauri::WebviewWindow, wid: isize, requested: (u32, u32), path: PathBuf, wake_osd: bool) {
     std::thread::spawn(move || {
-        // Twenty seconds at two beats a second: long enough for a script to
-        // launch the player, wait for the film to draw and photograph it, and
-        // frequent enough that the file on disk describes the picture's own
-        // moment rather than the moment the window opened.
-        for _ in 0..40 {
+        // A hosted Mac's software renderer can take seconds per frame. Keep
+        // asking while the verifier waits for the next one.
+        let probe = if wake_osd {
+            format!("if (!window.__theiaProofWake) {{ window.__theiaProofWake = window.setInterval(() => document.querySelector('.osd')?.dispatchEvent(new MouseEvent('mousemove', {{ bubbles: true }})), 500); }} {VIEWPORT_PROBE}")
+        } else {
+            VIEWPORT_PROBE.to_string()
+        };
+        for _ in 0..120 {
             let (tx, rx) = std::sync::mpsc::channel();
             let asked = window.eval_with_callback(
-                VIEWPORT_PROBE,
+                &probe,
                 move |answer| {
                     let _ = tx.send(answer);
                 },
@@ -2866,7 +2869,7 @@ fn start_window_probe(window: tauri::WebviewWindow, wid: isize, requested: (u32,
             // The answer is waited for before the file is written, so the report
             // never says the page did not answer about a page that did.
             let page: serde_json::Value = match asked {
-                Ok(()) => match rx.recv_timeout(Duration::from_millis(400)) {
+                Ok(()) => match rx.recv_timeout(if cfg!(target_os = "macos") { Duration::from_secs(8) } else { Duration::from_millis(400) }) {
                     Ok(answer) if !answer.is_empty() => {
                         serde_json::from_str(&answer).unwrap_or(serde_json::Value::Null)
                     }
@@ -3307,7 +3310,8 @@ fn main() {
             round_webview_window(&window);
 
             if let (Some(requested), Some(path)) = (window_size, window_report.clone()) {
-                start_window_probe(window.clone(), wid, requested, PathBuf::from(path));
+                let wake_osd = std::env::args().any(|arg| arg == "--proof-osd");
+                start_window_probe(window.clone(), wid, requested, PathBuf::from(path), wake_osd);
             }
 
             // The handle mpv was given, printed because on Linux it is the one

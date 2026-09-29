@@ -3346,7 +3346,7 @@ dependencies = [
 
 [[package]]
 name = "theia-player"
-version = "3.3.6"
+version = "3.4.0"
 dependencies = [
  "cc",
  "gdkx11",

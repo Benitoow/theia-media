@@ -774,6 +774,33 @@ jobs:
           path: dist/public/theia-setup-darwin-arm64
           retention-days: 1
 
+      # Run the exact public setup and its packaged player on the CPU this
+      # release offers. The verifier keeps the film and OSD captures for a
+      # person's inspection; its frame and page checks are necessary but a
+      # green process alone cannot certify the picture.
+      - name: Prove the Apple Silicon product over a generated film
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          go run ./scripts/create-proof-media -out out/fixture.mp4 -seconds 60
+          setup="$PWD/dist/public/theia-setup-darwin-arm64"
+          proof_home="$RUNNER_TEMP/theia-public-playback"
+          mkdir -p "$proof_home/library"
+          HOME="$proof_home" "$setup" --role all-in-one --lang en \
+            --install-dir "$proof_home/.local/lib/theia" \
+            --data-dir "$proof_home/data" --library "$proof_home/library" \
+            --port 8399 --yes
+          THEIA_APP="$proof_home/.local/lib/theia/Theia.app" \
+            THEIA_PROOF_DIR=out THEIA_SETUP="$setup" \
+            ./scripts/verify-macos.sh -Media out/fixture.mp4 | tee out/verify.log
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: macos-arm64-proof
+          path: out/
+          retention-days: 14
+
   # The exact public release surface, checked on every run of this file - a
   # dispatch included. It used to live inside `publish`, which a dispatch skips,
   # so the one guard that says whether the fourteen names are right could only
@@ -808,10 +835,9 @@ jobs:
           go run ./scripts/check-setup-payload -setup staging/theia-setup-windows-amd64.exe -server staging/theia-server-windows-amd64.exe -target windows-amd64
           go run ./scripts/check-setup-payload -setup staging/theia-setup-darwin-arm64 -server staging/theia-server-darwin-arm64 -target darwin-arm64
 
-      # The render API is now integrated in source, but no Mac has built and
-      # photographed that *application* yet. Keep publication stopped until
-      # the native candidate is inspected and this gate is intentionally
-      # replaced with the evidence-backed check (decision 149).
+      # The Apple Silicon job now records the film and OSD from the public
+      # setup. Keep publication stopped until its captures have been inspected
+      # and this guard is replaced with the evidence-backed check (decision 149).
       - name: Await native macOS film-frame proof
         shell: bash
         run: |
