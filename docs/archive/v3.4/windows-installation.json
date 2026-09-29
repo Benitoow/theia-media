@@ -79,5 +79,8 @@
   "programDirectoryRemoved": true,
   "protectedDataAndMediaHashesUnchanged": true,
   "protectedFiles": 5,
-  "visualBoundary": "Registry, shortcuts, native diagnostics and real CLI install/uninstall verified; no Windows Settings/Flow Launcher UI or native fullscreen interaction."
+  "visualBoundary": "Registry, shortcuts, native diagnostics and real CLI install/uninstall verified; no Windows Settings/Flow Launcher UI or native fullscreen interaction.",
+  "bareLauncherStartedInstalledPlayerAndServer": true,
+  "barePlayerResponding": true,
+  "bareLaunchLatency": "Not measured: startup is detached; process presence was checked after initial enumeration."
 }
