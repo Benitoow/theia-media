@@ -22,6 +22,7 @@ import (
 func TestMain(m *testing.M) {
 	const testName = "Theia-tests"
 	previous := registeredName
+	registeredBefore := applicationIsRegistered(applicationKeyPath(previous))
 	registeredName = testName
 	keyPath := applicationKeyPath(testName)
 
@@ -44,8 +45,9 @@ func TestMain(m *testing.M) {
 
 	// And report a leak: a test that wrote to the real entry would otherwise be
 	// invisible until somebody looked at their own machine.
-	if previous != testName && applicationIsRegistered(applicationKeyPath(previous)) {
-		fmt.Fprintf(os.Stderr, "setup tests: the real applications-list entry %q was written during the run\n", previous)
+	if previous != testName && registeredBefore != applicationIsRegistered(applicationKeyPath(previous)) {
+		fmt.Fprintf(os.Stderr, "setup tests: the real applications-list entry %q changed during the run\n", previous)
+		code = 1
 	}
 	os.Exit(code)
 }

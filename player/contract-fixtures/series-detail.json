@@ -1,0 +1,139 @@
+{
+  "added_at": "2026-09-29T20:00:00Z",
+  "id": 1,
+  "kind": "series",
+  "metadata": {
+    "fetched_at": "2026-09-29T20:00:00Z",
+    "original_language": "en",
+    "status": "ok",
+    "tmdb_name": "The Show"
+  },
+  "next_unwatched": {
+    "added_at": "2026-09-29T20:00:00Z",
+    "episode_metadata": [
+      {
+        "episode_number": 1,
+        "id": 2,
+        "metadata": {
+          "fetched_at": "2026-09-29T20:00:00Z",
+          "status": "pending"
+        }
+      }
+    ],
+    "episode_numbers": [
+      1
+    ],
+    "files": [
+      {
+        "extension": "mkv",
+        "file_name": "Show.S01E01.mkv",
+        "id": 2,
+        "is_primary": true,
+        "media": {
+          "audio_tracks": [],
+          "status": "pending",
+          "subtitle_tracks": []
+        },
+        "modified_at": "2026-09-29T20:00:00Z",
+        "size_bytes": 1024
+      }
+    ],
+    "id": 2,
+    "kind": "episode",
+    "next_episode_id": 3,
+    "original_language": "en",
+    "progress": {
+      "duration_seconds": 1200,
+      "finished": false,
+      "position_seconds": 0
+    },
+    "season_id": 2,
+    "season_number": 1,
+    "series_id": 1,
+    "series_title": "Show",
+    "updated_at": "2026-09-29T20:00:00Z"
+  },
+  "resume_episode": {
+    "added_at": "2026-09-29T20:00:00Z",
+    "episode_metadata": [
+      {
+        "episode_number": 2,
+        "id": 3,
+        "metadata": {
+          "fetched_at": "2026-09-29T20:00:00Z",
+          "status": "pending"
+        }
+      }
+    ],
+    "episode_numbers": [
+      2
+    ],
+    "files": [
+      {
+        "extension": "mkv",
+        "file_name": "Show.S01E02.mkv",
+        "id": 3,
+        "is_primary": true,
+        "media": {
+          "audio_tracks": [],
+          "status": "pending",
+          "subtitle_tracks": []
+        },
+        "modified_at": "2026-09-29T20:00:00Z",
+        "size_bytes": 1024
+      }
+    ],
+    "id": 3,
+    "kind": "episode",
+    "next_episode_id": 4,
+    "original_language": "en",
+    "progress": {
+      "duration_seconds": 1200,
+      "finished": false,
+      "position_seconds": 420,
+      "watched_at": "2026-09-29T20:00:00Z"
+    },
+    "season_id": 2,
+    "season_number": 1,
+    "series_id": 1,
+    "series_title": "Show",
+    "updated_at": "2026-09-29T20:00:00Z"
+  },
+  "seasons": [
+    {
+      "added_at": "2026-09-29T20:00:00Z",
+      "id": 1,
+      "metadata": {
+        "fetched_at": "2026-09-29T20:00:00Z",
+        "status": "pending"
+      },
+      "season_number": 0,
+      "series_id": 1,
+      "updated_at": "2026-09-29T20:00:00Z"
+    },
+    {
+      "added_at": "2026-09-29T20:00:00Z",
+      "id": 2,
+      "metadata": {
+        "fetched_at": "2026-09-29T20:00:00Z",
+        "status": "pending"
+      },
+      "season_number": 1,
+      "series_id": 1,
+      "updated_at": "2026-09-29T20:00:00Z"
+    },
+    {
+      "added_at": "2026-09-29T20:00:00Z",
+      "id": 3,
+      "metadata": {
+        "fetched_at": "2026-09-29T20:00:00Z",
+        "status": "pending"
+      },
+      "season_number": 2,
+      "series_id": 1,
+      "updated_at": "2026-09-29T20:00:00Z"
+    }
+  ],
+  "title": "Show",
+  "updated_at": "2026-09-29T20:00:00Z"
+}

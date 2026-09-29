@@ -22,8 +22,10 @@
 //!                                 docs/v3.3.md); it changes nothing else.
 
 mod connection;
+mod device_state;
 mod mpv;
 mod platform;
+mod progress_queue;
 #[cfg(target_os = "macos")]
 mod render_macos;
 mod server;
@@ -132,6 +134,8 @@ struct Session {
     /// so a guard re-armed by the load would act inside that window and skip an
     /// episode. See `autoplay_next_episode`.
     end_handled: bool,
+    next_prompt_at: Option<Instant>,
+    progress_context: Option<(Playing, server::Client)>,
     /// The subtitle files still to be handed to mpv for this load.
     ///
     /// A queue rather than a flag, because an add can legitimately fail and
@@ -181,8 +185,7 @@ impl Session {
         self.start_at = start_at;
         // A new film starts as the file is: the rung belonged to the one before
         // it, and so did the tracks. The original language belonged to the film
-        // as well, and `play_movie` sets it back when it has one - an episode
-        // never does.
+        // as well; both movie and episode details set it before loading.
         self.original_language = None;
         self.quality = None;
         self.aid = None;
@@ -397,6 +400,8 @@ impl Session {
         // survive the viewer closing the film, or a later film's end would be
         // read as one already dealt with.
         self.end_handled = false;
+        self.next_prompt_at = None;
+        self.progress_context = None;
         self.audio_reason = None;
     }
 }
@@ -407,6 +412,24 @@ static SESSION: Mutex<Option<Session>> = Mutex::new(None);
 /// must work even when the engine could not start: a player that shows nothing
 /// at all because a DLL is missing is worse than one that says so.
 static CLIENT: Mutex<Option<server::Client>> = Mutex::new(None);
+static PLAYBACK_REQUEST: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static CONNECT_GENERATION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn ensure_current_client(client: &server::Client) -> Result<(), String> {
+    let current = client_snapshot()?;
+    if current.base() != client.base() || current.profile() != client.profile() {
+        return Err("playback request superseded".into());
+    }
+    Ok(())
+}
+
+fn client_snapshot() -> Result<server::Client, String> {
+    CLIENT
+        .lock()
+        .map_err(|_| "client state unavailable")?
+        .clone()
+        .ok_or_else(|| "no server is connected".into())
+}
 
 #[derive(Clone, Copy)]
 enum Playing {
@@ -1076,9 +1099,11 @@ fn player_osd_stats(worst_frame_ms: f64, slow_frames: u32, frames: u32, resize_e
 
 #[tauri::command]
 fn player_status() -> String {
+    let pending = progress_queue::pending();
+    let storage_failed = progress_queue::storage_failed();
     let guard = SESSION.lock().unwrap();
     let Some(session) = guard.as_ref() else {
-        return "{\"ready\":false}".into();
+        return serde_json::json!({"ready":false,"progressPending":pending,"progressStorageFailed":storage_failed}).to_string();
     };
     let engine = &session.engine;
     // Built by a serialiser rather than by hand. The hand-built version emitted
@@ -1127,6 +1152,10 @@ fn player_status() -> String {
         // is. Session state rather than an mpv property: the rung is a fact
         // about the address the film was fetched from.
         "quality": session.quality,
+        "nextEpisodeId": session.progress_context.as_ref().and_then(|(media, _)| match media { Playing::Episode { next, .. } => *next, _ => None }),
+        "ended": flag("eof-reached").unwrap_or(false),
+        "progressPending": pending,
+        "progressStorageFailed": storage_failed,
         // The picture's own accounting, which mpv has always kept and this
         // application never asked for: the rate it is actually presenting, and
         // the frames it or its decoder had to throw away. A film that looks
@@ -1257,7 +1286,9 @@ fn player_set_muted(muted: bool) -> Result<(), String> {
     let session = guard.as_ref().ok_or("the engine is not running")?;
     session
         .engine
-        .set_property("mute", if muted { "yes" } else { "no" })
+        .set_property("mute", if muted { "yes" } else { "no" })?;
+    device_state::audio(None, muted);
+    Ok(())
 }
 
 /// Sets the volume, as a fraction of full scale.
@@ -1286,7 +1317,9 @@ fn player_set_volume(volume: f64) -> Result<(), String> {
         .set_property("volume", &format!("{:.1}", fraction * 100.0))?;
     session
         .engine
-        .set_property("mute", if fraction > 0.0 { "no" } else { "yes" })
+        .set_property("mute", if fraction > 0.0 { "no" } else { "yes" })?;
+    device_state::audio(Some(fraction), fraction == 0.0);
+    Ok(())
 }
 
 /// Seeks, relative or absolute, in seconds. The mode is passed through rather
@@ -1455,8 +1488,7 @@ struct Playable {
 
 fn current_playable() -> Result<Playable, String> {
     let media = *CURRENT_MEDIA.lock().unwrap();
-    let guard = CLIENT.lock().unwrap();
-    let client = guard.as_ref().ok_or("no server is connected")?;
+    let client = client_snapshot()?;
     match media {
         Some(Playing::Movie(id)) => {
             let movie = client.movie(id)?;
@@ -1507,25 +1539,28 @@ impl Playable {
 /// server's - including whether an encoder is free, which changes while
 /// somebody else's film is being converted.
 #[tauri::command]
-fn player_qualities() -> Result<String, String> {
-    let playable = current_playable()?;
-    let (qualities, transcode) = {
-        let guard = CLIENT.lock().unwrap();
-        let client = guard.as_ref().ok_or("no server is connected")?;
-        let info = match (playable.movie, playable.episode) {
-            (_, Some(episode)) => client.episode_stream_info(episode, playable.file)?,
-            (Some(movie), _) => client.stream_info(movie, playable.file)?,
-            _ => return Err("nothing is playing".into()),
+async fn player_qualities() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let playable = current_playable()?;
+        let (qualities, transcode) = {
+            let client = client_snapshot()?;
+            let info = match (playable.movie, playable.episode) {
+                (_, Some(episode)) => client.episode_stream_info(episode, playable.file)?,
+                (Some(movie), _) => client.stream_info(movie, playable.file)?,
+                _ => return Err("nothing is playing".into()),
+            };
+            (info.qualities, info.transcode)
         };
-        (info.qualities, info.transcode)
-    };
-    let current = SESSION.lock().unwrap().as_ref().and_then(|s| s.quality);
-    Ok(serde_json::json!({
-        "current": current,
-        "qualities": qualities,
-        "transcode": transcode,
+        let current = SESSION.lock().unwrap().as_ref().and_then(|s| s.quality);
+        Ok(serde_json::json!({
+            "current": current,
+            "qualities": qualities,
+            "transcode": transcode,
+        })
+        .to_string())
     })
-    .to_string())
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// Opens what is playing again, at another rung or at another second of it.
@@ -1536,11 +1571,11 @@ fn player_qualities() -> Result<String, String> {
 /// owns - its title, its sidecar subtitles, the chosen tracks - is kept by
 /// `Session::reload_at`.
 fn reload_stream(height: Option<i64>, at: f64) -> Result<(), String> {
+    let request = PLAYBACK_REQUEST.load(std::sync::atomic::Ordering::SeqCst);
     let playable = current_playable()?;
     let (url, duration) = {
-        let guard = CLIENT.lock().unwrap();
-        let client = guard.as_ref().ok_or("no server is connected")?;
-        let url = playable.stream_url(client, height, at);
+        let client = client_snapshot()?;
+        let url = playable.stream_url(&client, height, at);
         // A pipe carries no length of its own, so the film's length comes from
         // the server - the same number the browser player's clock uses. Asked
         // for only when there is a rung: a file knows its own duration.
@@ -1558,6 +1593,9 @@ fn reload_stream(height: Option<i64>, at: f64) -> Result<(), String> {
     };
     let mut guard = SESSION.lock().unwrap();
     let session = guard.as_mut().ok_or("the engine is not running")?;
+    if request != PLAYBACK_REQUEST.load(std::sync::atomic::Ordering::SeqCst) {
+        return Err("playback request superseded".into());
+    }
     session.reload_at(url, at, height, duration)
 }
 
@@ -1569,16 +1607,20 @@ fn reload_stream(height: Option<i64>, at: f64) -> Result<(), String> {
 /// asks for the file as it is, which is the ladder's own first rung and the only
 /// one that reaches an amplifier untouched.
 #[tauri::command]
-fn player_set_quality(height: Option<i64>) -> Result<(), String> {
-    let at = {
-        let guard = SESSION.lock().unwrap();
-        let session = guard.as_ref().ok_or("the engine is not running")?;
-        // Where the film is *now*. A reload that used the original resume point
-        // would send somebody who changed quality an hour in back to the
-        // beginning.
-        session.position().unwrap_or(session.start_at)
-    };
-    reload_stream(height, at)
+async fn player_set_quality(height: Option<i64>) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let at = {
+            let guard = SESSION.lock().unwrap();
+            let session = guard.as_ref().ok_or("the engine is not running")?;
+            // Where the film is *now*. A reload that used the original resume point
+            // would send somebody who changed quality an hour in back to the
+            // beginning.
+            session.position().unwrap_or(session.start_at)
+        };
+        reload_stream(height, at)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// Chooses a track, or turns one off.
@@ -1824,6 +1866,10 @@ async fn player_local_server() -> Result<Option<String>, String> {
 /// sentence (decision 25); the console and `--server` print the transport's own
 /// words, because a person reading a terminal is debugging, not watching.
 fn connect_to(url: &str) -> Result<String, server::Refusal> {
+    connect_generation(url, None)
+}
+
+fn connect_generation(url: &str, generation: Option<u64>) -> Result<String, server::Refusal> {
     let probe = server::Client::with_timeout(url, Duration::from_secs(4));
     let health = probe.probe()?;
     let profiles = probe.profiles().map_err(server::Refusal::silent)?;
@@ -1840,7 +1886,14 @@ fn connect_to(url: &str) -> Result<String, server::Refusal> {
         client.set_profile(Some(profile.id));
     }
     let json = connection_payload(&client, &health, &profiles).map_err(server::Refusal::silent)?;
-    *CLIENT.lock().unwrap() = Some(client);
+    let mut guard = CLIENT.lock().unwrap();
+    if generation
+        .is_some_and(|value| value != CONNECT_GENERATION.load(std::sync::atomic::Ordering::SeqCst))
+    {
+        return Err(server::Refusal::silent("connection cancelled".into()));
+    }
+    PLAYBACK_REQUEST.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    *guard = Some(client);
     Ok(json)
 }
 
@@ -1876,13 +1929,12 @@ async fn player_current_server() -> Result<Option<String>, String> {
 }
 
 fn current_server_payload() -> Result<Option<String>, String> {
-    let guard = CLIENT.lock().unwrap();
-    let Some(client) = guard.as_ref() else {
+    let Some(client) = CLIENT.lock().unwrap().clone() else {
         return Ok(None);
     };
     let health = client.health()?;
     let profiles = client.profiles()?;
-    Ok(Some(connection_payload(client, &health, &profiles)?))
+    Ok(Some(connection_payload(&client, &health, &profiles)?))
 }
 
 /// External text tracks are optional: an unavailable `/info` must not stop the
@@ -1918,11 +1970,17 @@ fn start_session_playback(
     resume_at: f64,
     sidecars: Vec<Sidecar>,
     original_language: Option<String>,
+    progress_context: Option<(Playing, server::Client)>,
+    request: u64,
 ) -> Result<(), String> {
     let mut guard = SESSION.lock().unwrap();
     let session = guard.as_mut().ok_or("the engine is not running")?;
+    if request != PLAYBACK_REQUEST.load(std::sync::atomic::Ordering::SeqCst) {
+        return Err("playback request superseded".into());
+    }
     session.mark_loaded(url.to_string(), Some(title), resume_at, sidecars);
     session.original_language = original_language;
+    session.progress_context = progress_context;
     if let Err(error) = apply_playback_to(
         &session.engine,
         &session.playback,
@@ -1941,9 +1999,13 @@ fn start_session_playback(
 /// Starts a film. mpv is handed the stream URL and fetches it itself: it does
 /// range requests, buffering and seeking better than anything written here.
 fn play_movie(id: i64) -> Result<String, String> {
-    let (url, movie_id, title, resume_at, sidecars, original_language) = {
-        let guard = CLIENT.lock().unwrap();
-        let client = guard.as_ref().ok_or("no server is connected")?;
+    let request = PLAYBACK_REQUEST.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+    play_movie_request(id, request)
+}
+fn play_movie_request(id: i64, request: u64) -> Result<String, String> {
+    save_progress();
+    let (url, movie_id, title, resume_at, sidecars, original_language, playback_client) = {
+        let client = client_snapshot()?;
         // The list does not carry files; the detail does. One extra request is
         // the price of not shipping every file of every film to draw a row.
         let movie = client.movie(id)?;
@@ -1985,19 +2047,42 @@ fn play_movie(id: i64) -> Result<String, String> {
             // to the file, and empty is not a language: it becomes no request at
             // all, so the engine answers with the file's own default.
             Some(movie.metadata.original_language.clone()).filter(|language| !language.is_empty()),
+            client.clone(),
         )
     };
 
-    start_session_playback(&url, title, resume_at, sidecars, original_language)?;
+    ensure_current_client(&playback_client)?;
+    start_session_playback(
+        &url,
+        title,
+        resume_at,
+        sidecars,
+        original_language,
+        Some((Playing::Movie(movie_id), playback_client)),
+        request,
+    )?;
     *CURRENT_MEDIA.lock().unwrap() = Some(Playing::Movie(movie_id));
     Ok(url)
 }
 
 /// Starts one episode through the same engine and track path as a film.
 fn play_episode(id: i64) -> Result<String, String> {
-    let (url, episode_id, next_episode_id, title, resume_at, sidecars) = {
-        let guard = CLIENT.lock().unwrap();
-        let client = guard.as_ref().ok_or("no server is connected")?;
+    let request = PLAYBACK_REQUEST.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+    play_episode_request(id, request)
+}
+fn play_episode_request(id: i64, request: u64) -> Result<String, String> {
+    save_progress();
+    let (
+        url,
+        episode_id,
+        next_episode_id,
+        title,
+        resume_at,
+        sidecars,
+        original_language,
+        playback_client,
+    ) = {
+        let client = client_snapshot()?;
         let episode = client.episode(id)?;
         let file = episode
             .files
@@ -2043,12 +2128,28 @@ fn play_episode(id: i64) -> Result<String, String> {
             title,
             resume_at,
             sidecars,
+            Some(episode.original_language).filter(|language| !language.is_empty()),
+            client.clone(),
         )
     };
 
-    // Series metadata does not carry an original language. `None` lets mpv
-    // choose its own default instead of guessing which audio track to select.
-    start_session_playback(&url, title, resume_at, sidecars, None)?;
+    // Episode details carry the series original language before track selection.
+    ensure_current_client(&playback_client)?;
+    start_session_playback(
+        &url,
+        title,
+        resume_at,
+        sidecars,
+        original_language,
+        Some((
+            Playing::Episode {
+                id: episode_id,
+                next: next_episode_id,
+            },
+            playback_client,
+        )),
+        request,
+    )?;
     *CURRENT_MEDIA.lock().unwrap() = Some(Playing::Episode {
         id: episode_id,
         next: next_episode_id,
@@ -2068,10 +2169,17 @@ struct Sidecar {
 async fn player_connect(url: String) -> Result<String, String> {
     // The interface is handed a code, not a sentence: it owns the words
     // (decision 25) and the two failures do not earn the same advice.
-    tauri::async_runtime::spawn_blocking(move || connect_to(&url))
+    let generation = CONNECT_GENERATION.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+    tauri::async_runtime::spawn_blocking(move || connect_generation(&url, Some(generation)))
         .await
         .map_err(|error| format!("connecting to the server: {error}"))?
         .map_err(|refusal| refusal.code().to_string())
+}
+
+#[tauri::command]
+fn player_cancel_connect() {
+    let _guard = CLIENT.lock().unwrap();
+    CONNECT_GENERATION.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 }
 
 #[tauri::command]
@@ -2089,6 +2197,8 @@ fn player_disconnect(app: tauri::AppHandle) -> Result<(), String> {
     if CURRENT_MEDIA.lock().unwrap().is_some() {
         return Err("stop playback before changing servers".into());
     }
+    CONNECT_GENERATION.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    PLAYBACK_REQUEST.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     connection::forget(&app)?;
     *CLIENT.lock().unwrap() = None;
     Ok(())
@@ -2098,86 +2208,78 @@ fn player_disconnect(app: tauri::AppHandle) -> Result<(), String> {
 /// as `?profile=`, and is never a credential (decision 49).
 #[tauri::command]
 fn player_set_profile(id: Option<i64>) -> Result<(), String> {
+    if CURRENT_MEDIA.lock().unwrap().is_some() {
+        return Err("stop playback before changing profiles".into());
+    }
     let mut guard = CLIENT.lock().unwrap();
     let client = guard.as_mut().ok_or("no server is connected")?;
+    PLAYBACK_REQUEST.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     client.set_profile(id);
     Ok(())
 }
 
 #[tauri::command]
-fn player_profile_rename(id: i64, name: String) -> Result<String, String> {
-    let profile = {
-        let guard = CLIENT.lock().unwrap();
-        guard
-            .as_ref()
-            .ok_or("no server is connected")?
-            .rename_profile(id, &name)?
-    };
-    serde_json::to_string(&profile).map_err(|e| e.to_string())
+async fn player_profile_rename(id: i64, name: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let profile = { client_snapshot()?.rename_profile(id, &name)? };
+        serde_json::to_string(&profile).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn player_profile_set_avatar(
+async fn player_profile_set_avatar(
     id: i64,
     content_type: String,
     data: Vec<u8>,
 ) -> Result<String, String> {
-    let profile = {
-        let guard = CLIENT.lock().unwrap();
-        guard
-            .as_ref()
-            .ok_or("no server is connected")?
-            .set_profile_avatar(id, &content_type, &data)?
-    };
-    serde_json::to_string(&profile).map_err(|e| e.to_string())
+    tauri::async_runtime::spawn_blocking(move || {
+        let profile = { client_snapshot()?.set_profile_avatar(id, &content_type, &data)? };
+        serde_json::to_string(&profile).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn player_profile_clear_avatar(id: i64) -> Result<String, String> {
-    let profile = {
-        let guard = CLIENT.lock().unwrap();
-        guard
-            .as_ref()
-            .ok_or("no server is connected")?
-            .clear_profile_avatar(id)?
-    };
-    serde_json::to_string(&profile).map_err(|e| e.to_string())
+async fn player_profile_clear_avatar(id: i64) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let profile = { client_snapshot()?.clear_profile_avatar(id)? };
+        serde_json::to_string(&profile).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn player_update_status() -> Result<String, String> {
-    let status = {
-        let guard = CLIENT.lock().unwrap();
-        guard
-            .as_ref()
-            .ok_or("no server is connected")?
-            .update_status()?
-    };
-    serde_json::to_string(&status).map_err(|e| e.to_string())
+async fn player_update_status() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let status = { client_snapshot()?.update_status()? };
+        serde_json::to_string(&status).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn player_update_check() -> Result<String, String> {
-    let status = {
-        let guard = CLIENT.lock().unwrap();
-        guard
-            .as_ref()
-            .ok_or("no server is connected")?
-            .check_update()?
-    };
-    serde_json::to_string(&status).map_err(|e| e.to_string())
+async fn player_update_check() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let status = { client_snapshot()?.check_update()? };
+        serde_json::to_string(&status).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn player_update_apply() -> Result<String, String> {
-    let status = {
-        let guard = CLIENT.lock().unwrap();
-        guard
-            .as_ref()
-            .ok_or("no server is connected")?
-            .apply_update()?
-    };
-    serde_json::to_string(&status).map_err(|e| e.to_string())
+async fn player_update_apply() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let status = { client_snapshot()?.apply_update()? };
+        serde_json::to_string(&status).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// The library, for the OSD's grid.
@@ -2191,25 +2293,25 @@ fn player_update_apply() -> Result<String, String> {
 /// The `limit` argument stays because a caller may want a page, and it is
 /// clamped: this is not a way to ask a server for ten thousand films.
 #[tauri::command]
-fn player_library(limit: Option<u32>) -> Result<String, String> {
-    let movies = {
-        let guard = CLIENT.lock().unwrap();
-        let client = guard.as_ref().ok_or("no server is connected")?;
-        match limit {
-            Some(wanted) => client.movies(wanted.min(server::LIBRARY_CEILING), 0)?,
-            None => client.all_movies()?,
-        }
-    };
-    serde_json::to_string(&movies).map_err(|e| e.to_string())
+async fn player_library(limit: Option<u32>) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let movies = {
+            let client = client_snapshot()?;
+            match limit {
+                Some(wanted) => client.movies(wanted.min(server::LIBRARY_CEILING), 0)?,
+                None => client.all_movies()?,
+            }
+        };
+        serde_json::to_string(&movies).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 async fn player_movie_detail(id: i64) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let movie = {
-            let guard = CLIENT.lock().unwrap();
-            guard.as_ref().ok_or("no server is connected")?.movie(id)?
-        };
+        let movie = { client_snapshot()?.movie(id)? };
         serde_json::to_string(&movie).map_err(|e| e.to_string())
     })
     .await
@@ -2217,21 +2319,23 @@ async fn player_movie_detail(id: i64) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn player_series() -> Result<String, String> {
-    let series = {
-        let guard = CLIENT.lock().unwrap();
-        guard.as_ref().ok_or("no server is connected")?.series()?
-    };
-    serde_json::to_string(&series).map_err(|e| e.to_string())
+async fn player_series() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let series = { client_snapshot()?.series()? };
+        serde_json::to_string(&series).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn player_home() -> Result<String, String> {
-    let home = {
-        let guard = CLIENT.lock().unwrap();
-        guard.as_ref().ok_or("no server is connected")?.home()?
-    };
-    serde_json::to_string(&home).map_err(|e| e.to_string())
+async fn player_home() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let home = { client_snapshot()?.home()? };
+        serde_json::to_string(&home).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// What was watched, for the settings sheet's viewing section.
@@ -2240,61 +2344,59 @@ fn player_home() -> Result<String, String> {
 /// reports: a player that counted for itself would be a second definition of
 /// "watched" to keep in step with the first.
 #[tauri::command]
-fn player_watch_stats() -> Result<String, String> {
-    let stats = {
-        let guard = CLIENT.lock().unwrap();
-        guard
-            .as_ref()
-            .ok_or("no server is connected")?
-            .watch_stats()?
-    };
-    serde_json::to_string(&stats).map_err(|e| e.to_string())
+async fn player_watch_stats() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let stats = { client_snapshot()?.watch_stats()? };
+        serde_json::to_string(&stats).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn player_series_home() -> Result<String, String> {
-    let home = {
-        let guard = CLIENT.lock().unwrap();
-        guard
-            .as_ref()
-            .ok_or("no server is connected")?
-            .series_home()?
-    };
-    serde_json::to_string(&home).map_err(|e| e.to_string())
+async fn player_series_home() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let home = { client_snapshot()?.series_home()? };
+        serde_json::to_string(&home).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn player_series_detail(id: i64) -> Result<String, String> {
-    let series = {
-        let guard = CLIENT.lock().unwrap();
-        guard
-            .as_ref()
-            .ok_or("no server is connected")?
-            .series_detail(id)?
-    };
-    serde_json::to_string(&series).map_err(|e| e.to_string())
+async fn player_series_detail(id: i64) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let series = { client_snapshot()?.series_detail(id)? };
+        serde_json::to_string(&series).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn player_season(series_id: i64, season_number: i32) -> Result<String, String> {
-    let season = {
-        let guard = CLIENT.lock().unwrap();
-        guard
-            .as_ref()
-            .ok_or("no server is connected")?
-            .season(series_id, season_number)?
-    };
-    serde_json::to_string(&season).map_err(|e| e.to_string())
+async fn player_season(series_id: i64, season_number: i32) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let season = { client_snapshot()?.season(series_id, season_number)? };
+        serde_json::to_string(&season).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn player_play(id: i64) -> Result<String, String> {
-    play_movie(id)
+async fn player_play(id: i64) -> Result<String, String> {
+    let request = PLAYBACK_REQUEST.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+    tauri::async_runtime::spawn_blocking(move || play_movie_request(id, request))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn player_play_episode(id: i64) -> Result<String, String> {
-    play_episode(id)
+async fn player_play_episode(id: i64) -> Result<String, String> {
+    let request = PLAYBACK_REQUEST.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+    tauri::async_runtime::spawn_blocking(move || play_episode_request(id, request))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// One line from the interface into the player's own output.
@@ -2304,6 +2406,69 @@ fn player_play_episode(id: i64) -> Result<String, String> {
 /// preview does nothing" into a report with no evidence in either direction - the
 /// card swallows a failed preview by design, because the still is the fallback.
 /// This is the missing wire, and it prints where the engine's own lines print.
+#[tauri::command]
+async fn player_episode_history(id: i64, watched: bool) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let client = client_snapshot()?;
+        progress_queue::history(&client, id, watched)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn player_server_reachable(url: Option<String>) -> bool {
+    tauri::async_runtime::spawn_blocking(move || {
+        let target = url.or_else(|| {
+            client_snapshot()
+                .ok()
+                .map(|client| client.base().to_string())
+        });
+        target.is_some_and(|base| server::reachable(&base, Duration::from_secs(2)))
+    })
+    .await
+    .unwrap_or(false)
+}
+#[tauri::command]
+fn player_retry_progress() {
+    progress_queue::flush();
+}
+#[tauri::command]
+fn player_clean_diagnostic() -> String {
+    let status = serde_json::from_str::<serde_json::Value>(&player_status()).unwrap_or_default();
+    clean_diagnostic(&status).to_string()
+}
+fn clean_diagnostic(status: &serde_json::Value) -> serde_json::Value {
+    let mut result = serde_json::json!({"version": env!("CARGO_PKG_VERSION")});
+    for key in [
+        "engine",
+        "vo",
+        "ao",
+        "aid",
+        "sid",
+        "audioReason",
+        "hwdec",
+        "audioMode",
+        "videoCodec",
+        "volume",
+        "mute",
+        "quality",
+        "fps",
+        "drops",
+        "decoderDrops",
+        "progressPending",
+    ] {
+        if let Some(value) = status.get(key) {
+            if value.as_str().is_some_and(|text| {
+                text.len() > 80 || text.contains("://") || text.contains('@') || text.contains('\\')
+            }) {
+                continue;
+            }
+            result[key] = value.clone();
+        }
+    }
+    result
+}
 #[tauri::command]
 fn player_log(message: String) {
     println!("theia-player: osd: {message}");
@@ -2316,69 +2481,65 @@ fn player_log(message: String) {
 /// already has. The URL comes back absolute for the same reason artwork does -
 /// the interface never learns the server's address.
 ///
-/// A series has no clip and cannot have one: a series is not a file. Its cards
-/// keep their still, which is a limitation of the data rather than of this
-/// command.
+/// A series previews the first playable local episode through the same route.
 #[tauri::command]
-fn player_preview(kind: String, id: i64) -> Result<String, String> {
-    let guard = CLIENT.lock().unwrap();
-    let client = guard.as_ref().ok_or("no server is connected")?;
-    let payload = client.preview_clip(&kind, id)?;
-    serde_json::to_string(&payload).map_err(|e| e.to_string())
+async fn player_preview(kind: String, id: i64) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let client = client_snapshot()?;
+        let payload = client.preview_clip(&kind, id)?;
+        serde_json::to_string(&payload).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// Stops the current film and returns to the library without closing the app.
 #[tauri::command]
-fn player_stop() -> Result<(), String> {
-    save_progress();
-    {
-        let mut guard = SESSION.lock().unwrap();
-        let session = guard.as_mut().ok_or("the engine is not running")?;
-        session.engine.command(&["stop"])?;
-        session.clear_media();
-    }
-    *CURRENT_MEDIA.lock().unwrap() = None;
-    Ok(())
+async fn player_stop() -> Result<(), String> {
+    PLAYBACK_REQUEST.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    tauri::async_runtime::spawn_blocking(move || {
+        save_progress();
+        {
+            let mut guard = SESSION.lock().unwrap();
+            let session = guard.as_mut().ok_or("the engine is not running")?;
+            session.engine.command(&["stop"])?;
+            session.clear_media();
+        }
+        *CURRENT_MEDIA.lock().unwrap() = None;
+        // The durable device position already exists. Remote retries continue
+        // in the worker; returning to the library must not wait for a dead server.
+        Ok(())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// Writes the playhead back to the server. Deliberately the same call the
 /// browser player makes, so a film started in one is resumable in the other.
 fn save_progress() {
-    let Some(media) = *CURRENT_MEDIA.lock().unwrap() else {
+    let captured = SESSION.lock().ok().and_then(|guard| {
+        guard.as_ref().and_then(|session| {
+            session.progress_context.clone().map(|(media, client)| {
+                (
+                    media,
+                    client,
+                    session.position().unwrap_or(0.0),
+                    session.duration().unwrap_or(0.0),
+                )
+            })
+        })
+    });
+    let Some((media, client, position, duration)) = captured else {
         return;
     };
-    let (position, duration) = {
-        let Ok(guard) = SESSION.lock() else { return };
-        let Some(session) = guard.as_ref() else {
-            return;
-        };
-        // The film's clock, not mpv's: on a converted stream they differ by the
-        // `t=` the pipe was asked for, and a resume point written short by that
-        // much is a viewer sent backwards every time they change quality.
-        (
-            session.position().unwrap_or(0.0),
-            session.duration().unwrap_or(0.0),
-        )
-    };
     if position <= 0.5 {
-        return; // Nothing has been watched yet; a zero would erase a position.
+        return;
     }
-
-    let guard = match CLIENT.lock() {
-        Ok(g) => g,
-        Err(_) => return,
+    let (episode, id) = match media {
+        Playing::Movie(id) => (false, id),
+        Playing::Episode { id, .. } => (true, id),
     };
-    let Some(client) = guard.as_ref() else { return };
-    let result = match media {
-        Playing::Movie(id) => client.save_progress(id, position, duration),
-        // The id is what progress belongs to; the next episode travelling beside
-        // it is about what happens at the end of the file and has no business in
-        // somebody's watch history.
-        Playing::Episode { id, .. } => client.save_episode_progress(id, position, duration),
-    };
-    if let Err(e) = result {
-        eprintln!("theia-player: {e}");
-    }
+    progress_queue::enqueue(&client, episode, id, position, duration);
 }
 
 /// Starts the next episode when a file ends, if the viewer asked for that.
@@ -2420,11 +2581,16 @@ fn autoplay_next_episode() {
             if session.end_handled {
                 return;
             }
+            let since = session.next_prompt_at.get_or_insert_with(Instant::now);
+            if since.elapsed() < Duration::from_secs(10) {
+                return;
+            }
             session.end_handled = true;
             true
         } else {
             // No file has ended, so the next end is a fresh one.
             session.end_handled = false;
+            session.next_prompt_at = None;
             false
         }
     };
@@ -2455,13 +2621,14 @@ fn autoplay_next_episode() {
     save_progress();
     // The same path the library's own click takes, so the next episode resumes
     // where it was left, brings its sidecars and records its own progress.
-    match play_episode(next) {
+    let request = PLAYBACK_REQUEST.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+    std::thread::spawn(move || match play_episode_request(next, request) {
         Ok(_) => println!("theia-player: autoplaying episode {next}"),
         // Logged and dropped, never fatal: a thread that died here would take the
         // status frames, the audio watchdog and the progress saves with it, and
         // nobody would know why the player went quiet.
         Err(e) => eprintln!("theia-player: could not autoplay episode {next}: {e}"),
-    }
+    });
 }
 
 /// Starts the engine, or reports why it could not start. Called from setup so
@@ -2544,6 +2711,8 @@ fn start_engine(wid: isize, media: Option<&str>, silent: bool) -> Result<(), Str
         sidecar_tries: 0,
         sidecar_decided: false,
         end_handled: false,
+        next_prompt_at: None,
+        progress_context: None,
         audio_reason: None,
         quality: None,
         duration_hint: None,
@@ -2625,7 +2794,7 @@ fn main() {
             let limit = flag("--limit").and_then(|n| n.parse::<u32>().ok());
             match connect_to(&url)
                 .map_err(|refusal| refusal.to_string())
-                .and_then(|_| player_library(limit))
+                .and_then(|_| tauri::async_runtime::block_on(player_library(limit)))
             {
                 Ok(json) => println!("{json}"),
                 Err(e) => {
@@ -2671,6 +2840,11 @@ fn main() {
             player_local_server,
             player_discover,
             player_connect,
+            player_cancel_connect,
+            player_episode_history,
+            player_server_reachable,
+            player_retry_progress,
+            player_clean_diagnostic,
             player_saved_server,
             player_remember_server,
             player_disconnect,
@@ -2699,6 +2873,9 @@ fn main() {
         ])
         .setup(move |app| {
             let window = app.get_webview_window("main").expect("the main window");
+            let config_dir = app.path().app_config_dir()?;
+            progress_queue::init(config_dir.join("pending-progress.json"));
+            device_state::init(config_dir.join("device-state.json"));
             // The handle mpv draws into, and the one place it is chosen. mpv
             // calls it `wid` on Windows. macOS obtains an `NSView*` here but
             // does not pass it through `base_options` because mpv 0.41 ignores
@@ -2725,6 +2902,7 @@ fn main() {
             // opened mostly off-screen; size against this monitor before the
             // hidden window is ever shown.
             fit_initial_window(&window);
+            device_state::restore_window(&window);
 
             // `--window` is applied after the fitting and before anything is
             // drawn into the window, so mpv's surface is created at the final
@@ -2754,6 +2932,7 @@ fn main() {
             println!("theia-player: window id {wid}");
             match start_engine(wid, media.as_deref(), silent) {
                 Ok(()) => {
+                    device_state::restore_audio();
                     let version = player_version().unwrap_or_else(|| "unknown".into());
                     println!("theia-player: engine {version}");
                     let _ =
@@ -2863,6 +3042,7 @@ fn main() {
                     tick += 1;
                     if tick % 10 == 0 {
                         save_progress();
+                        progress_queue::flush();
                     }
                 }
             });
@@ -2955,6 +3135,7 @@ fn main() {
         .on_window_event(|window, event| {
             match event {
                 tauri::WindowEvent::CloseRequested { .. } => {
+                    device_state::save_window(window);
                     // The five-second periodic save is a safety net. Closing is an
                     // explicit boundary and records the exact playhead before the
                     // process disappears.
@@ -2971,7 +3152,9 @@ fn main() {
                 // the size has settled. Decision 147 carries the numbers.
                 tauri::WindowEvent::Resized(_) | tauri::WindowEvent::ScaleFactorChanged { .. } => {
                     note_resize_event(window);
+                    device_state::schedule_window(window);
                 }
+                tauri::WindowEvent::Moved(_) => device_state::schedule_window(window),
                 _ => {}
             }
         })
@@ -3606,5 +3789,21 @@ mod playback_tests {
         let text = serde_json::to_string(&prefs).expect("the preferences serialise");
         let back: PlaybackPreferences = serde_json::from_str(&text).expect("and read back");
         assert_eq!(back, prefs);
+    }
+}
+#[cfg(test)]
+mod closeout_tests {
+    #[test]
+    fn copied_diagnostic_contains_no_media_server_paths_or_profile() {
+        let raw = serde_json::json!({"engine":"mpv 0.41", "vo":"gpu-next", "volume":0.7,
+            "media":"http://user:secret@example.test/movie", "server":"private", "title":"Private title",
+            "path":"C:\\private\\file.mkv", "profile":2, "audioMode":"http://secret.test", "drops":4});
+        let clean = super::clean_diagnostic(&raw);
+        assert_eq!(clean["vo"], "gpu-next");
+        assert_eq!(clean["drops"], 4);
+        for key in ["media", "server", "title", "path", "profile", "audioMode"] {
+            assert!(clean.get(key).is_none());
+        }
+        assert_eq!(clean["version"], env!("CARGO_PKG_VERSION"));
     }
 }

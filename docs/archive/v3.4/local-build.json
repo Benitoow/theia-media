@@ -1,0 +1,59 @@
+{
+  "verifiedAt": "2026-09-29T22:02:57.692Z",
+  "scope": "Local compilation and --version only; native windows not launched",
+  "version": "3.4.0",
+  "artifacts": [
+    {
+      "path": "player/target/debug/theia-player.exe",
+      "bytes": 20828160,
+      "sha256": "cf07abe5881132d8dfda4483d3949d88843569d004629b8038cc89fcb04d366a"
+    },
+    {
+      "path": "player/target/v34-proof/theia-server.exe",
+      "bytes": 26496512,
+      "sha256": "0e07dfb64ec41820e4301922775ddb39141f98276e001ed9f98f66b747dc38a5"
+    },
+    {
+      "path": "player/target/v34-proof/theia-setup.exe",
+      "bytes": 13216768,
+      "sha256": "56583dd09df095d6f988a407f198616f3a52effeb115f0203983b73229ceb3f3"
+    },
+    {
+      "path": "player/target/v34-proof/theia.exe",
+      "bytes": 4679168,
+      "sha256": "6bbdd7f541d5507ec61ac46949a9cd4e86dfe65bd0f9d3d6d7fd5e9b3dfba991"
+    }
+  ],
+  "assets": [
+    {
+      "name": "index-0DT5O-HV.css",
+      "bytes": 72728,
+      "embedded": true
+    },
+    {
+      "name": "index-CfTse_Fb.js",
+      "bytes": 549412,
+      "embedded": true
+    },
+    {
+      "name": "MovieDetail-BkMfVKsF.js",
+      "bytes": 1600,
+      "embedded": true
+    },
+    {
+      "name": "PlayerHelp-D5Mlr8Kk.js",
+      "bytes": 984,
+      "embedded": true
+    },
+    {
+      "name": "ProfileDialog-B94nRBqQ.js",
+      "bytes": 4643,
+      "embedded": true
+    },
+    {
+      "name": "SettingsModal-DVp5b8fH.js",
+      "bytes": 30173,
+      "embedded": true
+    }
+  ]
+}

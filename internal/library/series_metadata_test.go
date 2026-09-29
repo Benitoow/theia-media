@@ -24,7 +24,7 @@ func TestSeriesScanFetchesOnlyLocalSeasonsAndCachesMetadata(t *testing.T) {
 			w.Write([]byte(`{"results":[{"id":95396,"name":"Severance","original_name":"Severance"}]}`))
 		case "/tv/95396":
 			w.Write([]byte(`{
-				"id":95396,"name":"Severance","original_name":"Severance",
+				"id":95396,"name":"Severance","original_name":"Severance","original_language":"en",
 				"overview":"Une séparation radicale","first_air_date":"2022-02-18",
 				"poster_path":"/poster.jpg","backdrop_path":"/backdrop.jpg","vote_average":8.4,
 				"genres":[{"name":"Drame"}],"created_by":[{"name":"Dan Erickson"}],
@@ -66,6 +66,9 @@ func TestSeriesScanFetchesOnlyLocalSeasonsAndCachesMetadata(t *testing.T) {
 		t.Fatalf("report=%+v calls=%d, want one series and three TMDB calls", report, calls.Load())
 	}
 	series := onlySeries(t, service)
+	if series.Metadata.OriginalLanguage != "en" {
+		t.Fatalf("original language was not persisted: %+v", series.Metadata)
+	}
 	detail, err := service.GetSeries(t.Context(), defaultProfileID, series.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -81,6 +84,10 @@ func TestSeriesScanFetchesOnlyLocalSeasonsAndCachesMetadata(t *testing.T) {
 	if season.Metadata.TMDBID != 141759 || season.Items[0].Episodes[0].Metadata.TMDBID != 2708354 ||
 		season.Items[0].Episodes[0].Metadata.RuntimeMinutes != 57 {
 		t.Fatalf("season metadata = %+v items=%+v", season.Metadata, season.Items)
+	}
+
+	if season.Items[0].OriginalLanguage != "en" {
+		t.Fatalf("episode language = %q", season.Items[0].OriginalLanguage)
 	}
 
 	before := calls.Load()

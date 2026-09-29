@@ -19,20 +19,21 @@ var (
 )
 
 type SeriesMetadata struct {
-	TMDBID       int      `json:"tmdb_id,omitempty"`
-	Name         string   `json:"tmdb_name,omitempty"`
-	OriginalName string   `json:"original_name,omitempty"`
-	Tagline      string   `json:"tagline,omitempty"`
-	Overview     string   `json:"overview,omitempty"`
-	FirstAirDate string   `json:"first_air_date,omitempty"`
-	LastAirDate  string   `json:"last_air_date,omitempty"`
-	PosterPath   string   `json:"poster_path,omitempty"`
-	BackdropPath string   `json:"backdrop_path,omitempty"`
-	VoteAverage  float64  `json:"vote_average,omitempty"`
-	Genres       []string `json:"genres,omitempty"`
-	Cast         []Credit `json:"cast,omitempty"`
-	Creators     []string `json:"creators,omitempty"`
-	Networks     []string `json:"networks,omitempty"`
+	TMDBID           int      `json:"tmdb_id,omitempty"`
+	Name             string   `json:"tmdb_name,omitempty"`
+	OriginalName     string   `json:"original_name,omitempty"`
+	OriginalLanguage string   `json:"original_language,omitempty"`
+	Tagline          string   `json:"tagline,omitempty"`
+	Overview         string   `json:"overview,omitempty"`
+	FirstAirDate     string   `json:"first_air_date,omitempty"`
+	LastAirDate      string   `json:"last_air_date,omitempty"`
+	PosterPath       string   `json:"poster_path,omitempty"`
+	BackdropPath     string   `json:"backdrop_path,omitempty"`
+	VoteAverage      float64  `json:"vote_average,omitempty"`
+	Genres           []string `json:"genres,omitempty"`
+	Cast             []Credit `json:"cast,omitempty"`
+	Creators         []string `json:"creators,omitempty"`
+	Networks         []string `json:"networks,omitempty"`
 
 	// AirStatus is whether the series has ended, as a code. Status, below, is
 	// the state of our own metadata lookup -- two different questions that both
@@ -54,6 +55,7 @@ type Series struct {
 	Metadata      SeriesMetadata `json:"metadata"`
 	Seasons       []Season       `json:"seasons,omitempty"`
 	ResumeEpisode *EpisodeItem   `json:"resume_episode,omitempty"`
+	NextUnwatched *EpisodeItem   `json:"next_unwatched,omitempty"`
 	AddedAt       time.Time      `json:"added_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
 }
@@ -102,20 +104,21 @@ type Episode struct {
 // file named S01E01E02 owns one item with two ordered members and one progress
 // position. Multiple encodes of the same member set appear under Files.
 type EpisodeItem struct {
-	Kind           string        `json:"kind"`
-	ID             int64         `json:"id"`
-	SeriesID       int64         `json:"series_id"`
-	SeriesTitle    string        `json:"series_title"`
-	SeasonID       int64         `json:"season_id"`
-	SeasonNumber   int           `json:"season_number"`
-	EpisodeNumbers []int         `json:"episode_numbers"`
-	Episodes       []Episode     `json:"episode_metadata"`
-	Files          []EpisodeFile `json:"files,omitempty"`
-	Progress       Progress      `json:"progress"`
-	NextEpisodeID  *int64        `json:"next_episode_id,omitempty"`
-	NextHasGap     bool          `json:"next_has_gap,omitempty"`
-	AddedAt        time.Time     `json:"added_at"`
-	UpdatedAt      time.Time     `json:"updated_at"`
+	Kind             string        `json:"kind"`
+	ID               int64         `json:"id"`
+	SeriesID         int64         `json:"series_id"`
+	SeriesTitle      string        `json:"series_title"`
+	OriginalLanguage string        `json:"original_language,omitempty"`
+	SeasonID         int64         `json:"season_id"`
+	SeasonNumber     int           `json:"season_number"`
+	EpisodeNumbers   []int         `json:"episode_numbers"`
+	Episodes         []Episode     `json:"episode_metadata"`
+	Files            []EpisodeFile `json:"files,omitempty"`
+	Progress         Progress      `json:"progress"`
+	NextEpisodeID    *int64        `json:"next_episode_id,omitempty"`
+	NextHasGap       bool          `json:"next_has_gap,omitempty"`
+	AddedAt          time.Time     `json:"added_at"`
+	UpdatedAt        time.Time     `json:"updated_at"`
 }
 
 type EpisodeFile struct {
@@ -137,7 +140,7 @@ type SeriesHome struct {
 
 const seriesColumns = `
 	id, title, year,
-	tmdb_id, tmdb_name, original_name, tagline, overview,
+	tmdb_id, tmdb_name, original_name, original_language, tagline, overview,
 	first_air_date, last_air_date, status,
 	poster_path, backdrop_path, vote_average, genres_json, cast_json, creators_json,
 	networks_json, certification, certification_country,
@@ -145,7 +148,7 @@ const seriesColumns = `
 
 const seriesColumnsAliased = `
 	se.id, se.title, se.year,
-	se.tmdb_id, se.tmdb_name, se.original_name, se.tagline, se.overview,
+	se.tmdb_id, se.tmdb_name, se.original_name, se.original_language, se.tagline, se.overview,
 	se.first_air_date, se.last_air_date, se.status,
 	se.poster_path, se.backdrop_path, se.vote_average, se.genres_json, se.cast_json, se.creators_json,
 	se.networks_json, se.certification, se.certification_country,
@@ -156,6 +159,7 @@ func scanSeries(row interface{ Scan(...any) error }) (Series, error) {
 		series                                 Series
 		year, tmdbID                           sql.NullInt64
 		name, original, tagline, overview      sql.NullString
+		originalLanguage                       sql.NullString
 		firstAir, lastAir, airStatus           sql.NullString
 		poster, backdrop, genresJSON, castJSON sql.NullString
 		creatorsJSON, networksJSON             sql.NullString
@@ -165,7 +169,7 @@ func scanSeries(row interface{ Scan(...any) error }) (Series, error) {
 		status                                 string
 	)
 	if err := row.Scan(&series.ID, &series.Title, &year,
-		&tmdbID, &name, &original, &tagline, &overview,
+		&tmdbID, &name, &original, &originalLanguage, &tagline, &overview,
 		&firstAir, &lastAir, &airStatus,
 		&poster, &backdrop, &vote, &genresJSON, &castJSON, &creatorsJSON,
 		&networksJSON, &certification, &certCountry,
@@ -178,6 +182,7 @@ func scanSeries(row interface{ Scan(...any) error }) (Series, error) {
 		TMDBID:               int(tmdbID.Int64),
 		Name:                 name.String,
 		OriginalName:         original.String,
+		OriginalLanguage:     originalLanguage.String,
 		Tagline:              tagline.String,
 		Overview:             overview.String,
 		FirstAirDate:         firstAir.String,
@@ -272,6 +277,10 @@ func (s *Store) GetSeries(ctx context.Context, profileID, id int64) (Series, err
 	if err != nil {
 		return Series{}, err
 	}
+	series.NextUnwatched, err = s.nextUnwatched(ctx, profileID, id)
+	if err != nil {
+		return Series{}, err
+	}
 	return series, nil
 }
 
@@ -293,6 +302,27 @@ func (s *Store) resumeEpisode(ctx context.Context, profileID, seriesID int64) (*
 	}
 	if err != nil {
 		return nil, fmt.Errorf("finding resume episode for series %d: %w", seriesID, err)
+	}
+	item, err := s.GetEpisodeItem(ctx, profileID, id)
+	if err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+// An explicit starting point across seasons, excluding specials and completed items.
+func (s *Store) nextUnwatched(ctx context.Context, profileID, seriesID int64) (*EpisodeItem, error) {
+	var id int64
+	err := s.db.QueryRowContext(ctx, `SELECT i.id FROM episode_items i
+ JOIN seasons s ON s.id = i.season_id
+ LEFT JOIN episode_progress ep ON ep.episode_item_id = i.id AND ep.profile_id = ?
+ WHERE s.series_id = ? AND s.season_number > 0 AND COALESCE(ep.finished, 0) = 0
+ ORDER BY s.season_number, i.first_episode, i.id LIMIT 1`, profileID, seriesID).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
 	}
 	item, err := s.GetEpisodeItem(ctx, profileID, id)
 	if err != nil {
@@ -374,7 +404,7 @@ func (s *Store) GetSeason(ctx context.Context, profileID, seriesID int64, number
 // Progress joins in from the viewer's own table; the duration stays on the item
 // because it describes the file. Same split as movieColumns, same reason.
 const episodeItemColumns = `
-	i.id, i.season_id, se.id, se.title, s.season_number,
+	i.id, i.season_id, se.id, se.title, COALESCE(se.original_language, ''), s.season_number,
 	i.episode_key, i.duration_seconds,
 	COALESCE(ep.position_seconds, 0), COALESCE(ep.watched_at, 0), COALESCE(ep.finished, 0),
 	i.added_at, i.updated_at`
@@ -396,7 +426,7 @@ func scanEpisodeItem(row interface{ Scan(...any) error }) (EpisodeItem, error) {
 		updatedAt          int64
 		finished           int
 	)
-	if err := row.Scan(&item.ID, &item.SeasonID, &item.SeriesID, &item.SeriesTitle,
+	if err := row.Scan(&item.ID, &item.SeasonID, &item.SeriesID, &item.SeriesTitle, &item.OriginalLanguage,
 		&item.SeasonNumber, &key, &duration, &item.Progress.PositionSeconds,
 		&watchedAt, &finished, &addedAt, &updatedAt); err != nil {
 		return EpisodeItem{}, err
@@ -494,37 +524,45 @@ func (s *Store) episodeMembers(ctx context.Context, itemID int64) ([]Episode, er
 	defer rows.Close()
 	var out []Episode
 	for rows.Next() {
-		var (
-			episode                    Episode
-			localTitle, name, overview sql.NullString
-			airDate, still             sql.NullString
-			tmdbID, runtime            sql.NullInt64
-			vote                       sql.NullFloat64
-			status                     string
-			fetchedAt                  int64
-		)
-		if err := rows.Scan(&episode.ID, &episode.Number, &localTitle,
-			&tmdbID, &name, &overview, &airDate, &still,
-			&runtime, &vote, &status, &fetchedAt); err != nil {
+		episode, err := scanEpisodeMetadata(rows)
+		if err != nil {
 			return nil, err
-		}
-		episode.LocalTitle = localTitle.String
-		episode.Metadata = EpisodeMetadata{
-			TMDBID:         int(tmdbID.Int64),
-			Name:           name.String,
-			Overview:       overview.String,
-			AirDate:        airDate.String,
-			StillPath:      still.String,
-			RuntimeMinutes: int(runtime.Int64),
-			VoteAverage:    vote.Float64,
-			Status:         status,
-		}
-		if fetchedAt > 0 {
-			episode.Metadata.FetchedAt = unix(fetchedAt)
 		}
 		out = append(out, episode)
 	}
 	return out, rows.Err()
+}
+
+func scanEpisodeMetadata(row interface{ Scan(...any) error }, prefix ...any) (Episode, error) {
+	var (
+		episode                    Episode
+		localTitle, name, overview sql.NullString
+		airDate, still             sql.NullString
+		tmdbID, runtime            sql.NullInt64
+		vote                       sql.NullFloat64
+		status                     string
+		fetchedAt                  int64
+	)
+	if err := row.Scan(append(prefix, &episode.ID, &episode.Number, &localTitle,
+		&tmdbID, &name, &overview, &airDate, &still,
+		&runtime, &vote, &status, &fetchedAt)...); err != nil {
+		return Episode{}, err
+	}
+	episode.LocalTitle = localTitle.String
+	episode.Metadata = EpisodeMetadata{
+		TMDBID:         int(tmdbID.Int64),
+		Name:           name.String,
+		Overview:       overview.String,
+		AirDate:        airDate.String,
+		StillPath:      still.String,
+		RuntimeMinutes: int(runtime.Int64),
+		VoteAverage:    vote.Float64,
+		Status:         status,
+	}
+	if fetchedAt > 0 {
+		episode.Metadata.FetchedAt = unix(fetchedAt)
+	}
+	return episode, nil
 }
 
 func (s *Store) nextEpisode(ctx context.Context, current EpisodeItem) (*int64, bool, error) {
@@ -556,35 +594,80 @@ func (s *Store) nextEpisode(ctx context.Context, current EpisodeItem) (*int64, b
 	return &id, hasGap, nil
 }
 
-func (s *Store) ContinueEpisodes(ctx context.Context, profileID int64, limit int) ([]EpisodeItem, error) {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT ep.episode_item_id
-		FROM episode_progress ep
-		WHERE ep.profile_id = ? AND ep.finished = 0 AND ep.watched_at > 0
-		  AND ep.position_seconds >= ?
-		ORDER BY ep.watched_at DESC, ep.episode_item_id DESC LIMIT ?`,
-		profileID, minimumRememberedSeconds, limit)
+// Home cards need identity, progress and artwork; files and next ids belong to
+// the episode detail loaded on playback. This row uses two bounded queries.
+func (s *Store) continueEpisodeRows(ctx context.Context, profileID int64, limit int) ([]EpisodeItem, error) {
+	rows, err := s.db.QueryContext(ctx, `WITH latest AS (
+ SELECT season.series_id, MAX(p.watched_at) AS watched_at
+ FROM episode_progress p
+ JOIN episode_items item ON item.id = p.episode_item_id
+ JOIN seasons season ON season.id = item.season_id
+ WHERE p.profile_id = ? AND p.finished = 0 AND p.watched_at > 0 AND p.position_seconds >= ?
+ GROUP BY season.series_id
+), chosen AS (
+ SELECT MAX(p.episode_item_id) AS id
+ FROM latest JOIN seasons season ON season.series_id = latest.series_id
+ JOIN episode_items item ON item.season_id = season.id
+ JOIN episode_progress p ON p.episode_item_id = item.id AND p.watched_at = latest.watched_at
+ WHERE p.profile_id = ? AND p.finished = 0 AND p.position_seconds >= ?
+ GROUP BY latest.series_id
+)
+ SELECT `+episodeItemColumns+episodeItemSource+`
+ JOIN chosen ON chosen.id = i.id
+ ORDER BY ep.watched_at DESC, i.id DESC LIMIT ?`, profileID, minimumRememberedSeconds, profileID, minimumRememberedSeconds, profileID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("listing episodes in progress: %w", err)
 	}
-	defer rows.Close()
-	var ids []int64
+	out := make([]EpisodeItem, 0)
 	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		ids = append(ids, id)
-	}
-	out := make([]EpisodeItem, 0, len(ids))
-	for _, id := range ids {
-		item, err := s.GetEpisodeItem(ctx, profileID, id)
+		item, err := scanEpisodeItem(rows)
 		if err != nil {
+			rows.Close()
 			return nil, err
 		}
 		out = append(out, item)
 	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
 	return out, nil
+}
+
+func (s *Store) ContinueEpisodes(ctx context.Context, profileID int64, limit int) ([]EpisodeItem, error) {
+	out, err := s.continueEpisodeRows(ctx, profileID, limit)
+	if err != nil {
+		return nil, err
+	}
+	indexes := make(map[int64]int, len(out))
+	ids := make([]string, 0, len(out))
+	for index, item := range out {
+		indexes[item.ID] = index
+		ids = append(ids, strconv.FormatInt(item.ID, 10))
+	}
+
+	if len(out) == 0 {
+		return out, nil
+	}
+	members, err := s.db.QueryContext(ctx, `SELECT m.episode_item_id, e.id, e.episode_number, e.local_title,
+ e.tmdb_id,e.name,e.overview,e.air_date,e.still_path,e.runtime_minutes,e.vote_average,e.metadata_status,e.metadata_fetched_at
+ FROM episode_item_members m JOIN episodes e ON e.id=m.episode_id
+ WHERE m.episode_item_id IN (`+strings.Join(ids, ",")+`) ORDER BY m.episode_item_id,m.ordinal`)
+	if err != nil {
+		return nil, err
+	}
+	defer members.Close()
+	for members.Next() {
+		var id int64
+		episode, err := scanEpisodeMetadata(members, &id)
+		if err != nil {
+			return nil, err
+		}
+		at := indexes[id]
+		out[at].Episodes = append(out[at].Episodes, episode)
+	}
+	return out, members.Err()
 }
 
 func (s *Store) RecentSeries(ctx context.Context, limit int) ([]Series, error) {

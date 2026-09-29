@@ -1424,3 +1424,21 @@ The site reflows at 1100px, 700px and the 390px floor. Controls remain at least
 44px, the range hit area remains 44px even though its painted rule is 4px, and
 the track popover stays inside the player. Motion uses §8 and disappears under
 `prefers-reduced-motion`; information does not.
+
+## Native 3.4 closeout surfaces (decision 156)
+
+The episode resume hero shares the film composition. With no interrupted item,
+its eyebrow can offer the next unwatched ordinary episode. Completed episode
+cards carry a discreet ink-backed text badge; watched/reset controls sit below
+the artwork with 44px targets. Reset uses a local accessible confirmation dialog.
+
+Near EOF the player offers a next-episode button above the OSD. Offline/pending
+save notices use the ink/parchment register and live status text; they do not
+replace the film. Keyboard help uses the shared accessible dialog, scrolls at
+the minimum viewport and keeps its copy action local. The quality tab remains
+visible to explain an unavailable ladder, including a busy/missing encoder.
+
+Large catalogue grids preserve list semantics and announce an item's position
+and total while windowing complete rows. Arrow/Home/End access and Tab across
+an unmounted boundary must remain usable. Returning from a detail restores the
+previous grid scroll only after its row spacers exist.

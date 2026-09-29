@@ -171,6 +171,8 @@ pub struct Series {
     #[serde(default)]
     pub resume_episode: Option<EpisodeItem>,
     #[serde(default)]
+    pub next_unwatched: Option<EpisodeItem>,
+    #[serde(default)]
     pub backdrop_url: String,
     /// The window-sized frame, as on a film.
     #[serde(default)]
@@ -181,6 +183,8 @@ pub struct Series {
 
 #[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
 pub struct SeriesMetadata {
+    #[serde(default)]
+    pub original_language: String,
     #[serde(
         default,
         rename(deserialize = "tmdb_name", serialize = "name"),
@@ -283,6 +287,8 @@ pub struct SeasonMetadata {
 
 #[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
 pub struct EpisodeItem {
+    #[serde(default)]
+    pub original_language: String,
     pub id: i64,
     pub series_id: i64,
     #[serde(default)]
@@ -478,6 +484,9 @@ impl Series {
         if let Some(episode) = self.resume_episode.as_mut() {
             episode.resolve_artwork(base);
         }
+        if let Some(episode) = self.next_unwatched.as_mut() {
+            episode.resolve_artwork(base);
+        }
     }
 }
 
@@ -639,6 +648,24 @@ mod tests {
         );
     }
 
+    #[test]
+    fn scanned_go_series_contract_keeps_language_progress_and_next_choice() {
+        let series: Series = serde_json::from_str(include_str!(
+            "../../../contract-fixtures/series-detail.json"
+        ))
+        .unwrap();
+        assert_eq!(series.metadata.original_language, "en");
+        assert_eq!(series.metadata.name, "The Show");
+        let resume = series.resume_episode.unwrap();
+        assert_eq!(resume.original_language, "en");
+        assert_eq!(resume.progress.position_seconds, 420.0);
+        assert_eq!(
+            resume.progress.watched_at.as_deref(),
+            Some("2026-09-29T20:00:00Z")
+        );
+        assert_eq!(series.next_unwatched.unwrap().episode_numbers, vec![1]);
+        assert!(!resume.files.is_empty());
+    }
     #[test]
     fn movie_detail_keeps_tmdb_credits() {
         let raw = serde_json::json!({

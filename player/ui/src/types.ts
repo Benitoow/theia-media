@@ -66,7 +66,8 @@ export type Series = {
 	hero_url?: string;
 	poster_url?: string;
 	seasons?: Season[];
-	resume_episode?: Episode;
+	resume_episode?: Episode | null;
+    next_unwatched?: Episode | null;
 };
 
 export type Season = {
@@ -211,6 +212,10 @@ export type FluidStats = {
 
 export type PlayerStatus = {
 	ready?: boolean;
+    ended?: boolean;
+    nextEpisodeId?: number | null;
+    progressPending?: number;
+    progressStorageFailed?: boolean;
 	media?: string | null;
 	title?: string | null;
 	pause?: boolean;
@@ -359,3 +364,5 @@ export type Server = {
 };
 
 export type DiscoveredServer = { name: string; url: string; version?: string };
+
+export type Section = 'home' | 'films' | 'series' | 'search';

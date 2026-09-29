@@ -65,8 +65,8 @@ function option(label: TrackLabel, chosen: boolean, choose: () => void, disabled
  * 2026, and it holds because there is no audio ladder to draw: the server
  * converts the sound only to carry the track that was chosen.
  *
- * The strip only exists when there is something to choose: one rung is not a
- * question, and a tab that opens onto a single row is furniture. */
+ * The quality tab stays reachable with a single rung so the viewer can
+ * understand whether the file or the server prevents another choice. */
 export const TrackMenu = forwardRef<TrackMenuHandle, Props>(
 	({ tracks, words, qualities, currentQuality, onPick, onPickQuality, t }, ref) => {
 		const root = useRef<HTMLDivElement>(null);
@@ -76,8 +76,8 @@ export const TrackMenu = forwardRef<TrackMenuHandle, Props>(
 		const ladder = qualities?.qualities ?? [];
 		// The file itself is always a rung; a ladder of one is the answer "there
 		// is nothing else", which is a statement rather than a choice.
-		const hasQuality = ladder.length > 1;
-		const active = hasQuality ? tab : 'languages';
+		const hasQuality = true;
+		const active = tab;
 
 		useImperativeHandle(ref, () => ({
 			moveFocus(step) {
@@ -169,7 +169,8 @@ export const TrackMenu = forwardRef<TrackMenuHandle, Props>(
 								</span>
 							) : null}
 						</h2>
-						<ul className="track-list" role="radiogroup" aria-label={t('qualityTab')}>
+						{(busy || ladder.length <= 1) && <p className="quality-explanation" role="status">{t(busy ? 'qualityBusy' : !qualities ? 'qualityLoading' : qualities.transcode?.available === false ? 'qualityNoEncoder' : 'qualityUnavailable')}</p>}
+                        <ul className="track-list" role="radiogroup" aria-label={t('qualityTab')}>
 							{ladder.map((rung) => {
 								// Height 0 is the file itself, and it is the only rung this
 								// player serves from the container: mpv reads it directly, so

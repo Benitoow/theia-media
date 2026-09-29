@@ -1,0 +1,76 @@
+{
+  "scope": "Headless Chromium, production UI, localhost, mocked native bridge; not native startup or real HTTP performance",
+  "browser": "151.0.7922.34",
+  "viewport": {
+    "width": 969,
+    "height": 609
+  },
+  "cold": {
+    "navigation": {
+      "name": "http://127.0.0.1:5199/",
+      "entryType": "navigation",
+      "startTime": 0,
+      "duration": 159.60000002384186,
+      "navigationId": 1059,
+      "initiatorType": "navigation",
+      "deliveryType": "",
+      "nextHopProtocol": "http/1.1",
+      "renderBlockingStatus": "non-blocking",
+      "contentType": "text/html",
+      "contentEncoding": "",
+      "workerStart": 0,
+      "workerRouterEvaluationStart": 0,
+      "workerCacheLookupStart": 0,
+      "workerMatchedSourceType": "",
+      "workerFinalSourceType": "",
+      "redirectStart": 0,
+      "redirectEnd": 0,
+      "fetchStart": 0.6000000238418579,
+      "domainLookupStart": 5.300000011920929,
+      "domainLookupEnd": 7.400000035762787,
+      "connectStart": 7.400000035762787,
+      "secureConnectionStart": 0,
+      "connectEnd": 10,
+      "requestStart": 10.300000011920929,
+      "responseStart": 14.800000011920929,
+      "firstInterimResponseStart": 0,
+      "finalResponseHeadersStart": 14.800000011920929,
+      "responseEnd": 16.100000023841858,
+      "transferSize": 672,
+      "encodedBodySize": 372,
+      "decodedBodySize": 372,
+      "responseStatus": 200,
+      "serverTiming": [],
+      "unloadEventStart": 0,
+      "unloadEventEnd": 0,
+      "domInteractive": 31.900000035762787,
+      "domContentLoadedEventStart": 159.5,
+      "domContentLoadedEventEnd": 159.60000002384186,
+      "domComplete": 159.60000002384186,
+      "loadEventStart": 159.60000002384186,
+      "loadEventEnd": 159.60000002384186,
+      "type": "navigate",
+      "redirectCount": 0,
+      "activationStart": 0,
+      "criticalCHRestart": 0,
+      "notRestoredReasons": null,
+      "confidence": {
+        "randomizedTriggerRate": 0.4994798,
+        "value": "high"
+      }
+    },
+    "paint": [
+      {
+        "name": "first-paint",
+        "startTime": 296
+      },
+      {
+        "name": "first-contentful-paint",
+        "startTime": 296
+      }
+    ],
+    "settingsLoaded": false
+  },
+  "connectionMs": 532.3784999999916,
+  "settingsFirstOpenMs": 123.38689999998314
+}

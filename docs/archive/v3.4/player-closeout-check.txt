@@ -1,0 +1,13 @@
+closeout: cancel discards late connection passed
+closeout: failed film endpoints preserve series and hero passed
+closeout: late detail stays closed after navigation passed
+closeout: watched action and confirmed reset passed
+closeout: episode end offers next and pending save passed
+closeout: keyboard help copies diagnostic and search focuses passed
+closeout: 1000-card grid passed; mounted 30
+closeout: failed new-profile endpoints cannot show old history passed
+closeout: single quality explains missing encoder passed
+closeout: keyboard help fits the minimum viewport passed
+closeout: fixture connect 699ms, first settings 170ms
+closeout: local fixture responsiveness and lazy settings passed
+render check passed, pictures in C:/Users/starx/.codex/worktrees/v34-readiness/Theia/player/ui/render-check

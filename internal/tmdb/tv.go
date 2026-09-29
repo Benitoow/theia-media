@@ -11,20 +11,21 @@ import (
 
 // TVSeries is the subset of TMDB's series details persisted by Theia.
 type TVSeries struct {
-	TMDBID       int
-	Name         string
-	OriginalName string
-	Tagline      string
-	Overview     string
-	FirstAirDate string
-	LastAirDate  string
-	PosterPath   string
-	BackdropPath string
-	VoteAverage  float64
-	Genres       []string
-	Cast         []Person
-	Creators     []string
-	Networks     []string
+	TMDBID           int
+	Name             string
+	OriginalName     string
+	OriginalLanguage string
+	Tagline          string
+	Overview         string
+	FirstAirDate     string
+	LastAirDate      string
+	PosterPath       string
+	BackdropPath     string
+	VoteAverage      float64
+	Genres           []string
+	Cast             []Person
+	Creators         []string
+	Networks         []string
 
 	// Status is a code, not TMDB's English label: the interface owns the
 	// sentence that says a series has ended (decision 25).
@@ -151,18 +152,19 @@ func pickTV(results []tvSearchResult, title string) int {
 }
 
 type tvDetailsResponse struct {
-	ID           int     `json:"id"`
-	Name         string  `json:"name"`
-	OriginalName string  `json:"original_name"`
-	Tagline      string  `json:"tagline"`
-	Overview     string  `json:"overview"`
-	FirstAirDate string  `json:"first_air_date"`
-	LastAirDate  string  `json:"last_air_date"`
-	PosterPath   string  `json:"poster_path"`
-	BackdropPath string  `json:"backdrop_path"`
-	VoteAverage  float64 `json:"vote_average"`
-	Status       string  `json:"status"`
-	Genres       []struct {
+	ID               int     `json:"id"`
+	Name             string  `json:"name"`
+	OriginalName     string  `json:"original_name"`
+	OriginalLanguage string  `json:"original_language"`
+	Tagline          string  `json:"tagline"`
+	Overview         string  `json:"overview"`
+	FirstAirDate     string  `json:"first_air_date"`
+	LastAirDate      string  `json:"last_air_date"`
+	PosterPath       string  `json:"poster_path"`
+	BackdropPath     string  `json:"backdrop_path"`
+	VoteAverage      float64 `json:"vote_average"`
+	Status           string  `json:"status"`
+	Genres           []struct {
 		Name string `json:"name"`
 	} `json:"genres"`
 	CreatedBy []struct {
@@ -195,17 +197,18 @@ func (c *Client) TVDetails(ctx context.Context, id int) (*TVSeries, error) {
 		return nil, err
 	}
 	series := &TVSeries{
-		TMDBID:       body.ID,
-		Name:         body.Name,
-		OriginalName: strings.TrimSpace(body.OriginalName),
-		Tagline:      strings.TrimSpace(body.Tagline),
-		Overview:     body.Overview,
-		FirstAirDate: body.FirstAirDate,
-		LastAirDate:  body.LastAirDate,
-		PosterPath:   body.PosterPath,
-		BackdropPath: body.BackdropPath,
-		VoteAverage:  body.VoteAverage,
-		Status:       seriesStatuses[strings.TrimSpace(body.Status)],
+		TMDBID:           body.ID,
+		Name:             body.Name,
+		OriginalName:     strings.TrimSpace(body.OriginalName),
+		OriginalLanguage: strings.TrimSpace(body.OriginalLanguage),
+		Tagline:          strings.TrimSpace(body.Tagline),
+		Overview:         body.Overview,
+		FirstAirDate:     body.FirstAirDate,
+		LastAirDate:      body.LastAirDate,
+		PosterPath:       body.PosterPath,
+		BackdropPath:     body.BackdropPath,
+		VoteAverage:      body.VoteAverage,
+		Status:           seriesStatuses[strings.TrimSpace(body.Status)],
 	}
 	for _, genre := range body.Genres {
 		series.Genres = append(series.Genres, genre.Name)

@@ -11,7 +11,8 @@
 		"check:render": "node scripts/render-check.mjs",
 		"prebuild": "npm run check:i18n && npm run check:types",
 		"build": "vite build",
-		"preview": "vite preview"
+		"preview": "vite preview",
+		"check:previews": "node scripts/check-preview-cache.mjs"
 	},
 	"dependencies": {
 		"@radix-ui/react-dialog": "^1.1.23",

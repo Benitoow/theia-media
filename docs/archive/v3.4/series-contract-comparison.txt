@@ -1,0 +1,12 @@
+goos: windows
+goarch: amd64
+pkg: github.com/Benitoow/theia-media/internal/library
+cpu: AMD Ryzen AI 9 HX 370 w/ Radeon 890M
+BenchmarkContinue12From1000Episodes-24            	     181	   2960430 ns/op	   29996 B/op	     567 allocs/op
+BenchmarkContinue12From1000Episodes-24            	     194	   2943802 ns/op	   29990 B/op	     567 allocs/op
+BenchmarkContinue12From1000Episodes-24            	     157	   4247258 ns/op	   30006 B/op	     568 allocs/op
+BenchmarkContinue12From1000EpisodesNPlusOne-24    	      79	   7404094 ns/op	  103339 B/op	    2527 allocs/op
+BenchmarkContinue12From1000EpisodesNPlusOne-24    	      72	   7621065 ns/op	  103350 B/op	    2527 allocs/op
+BenchmarkContinue12From1000EpisodesNPlusOne-24    	      50	  10574532 ns/op	  103441 B/op	    2529 allocs/op
+PASS
+ok  	github.com/Benitoow/theia-media/internal/library	7.927s

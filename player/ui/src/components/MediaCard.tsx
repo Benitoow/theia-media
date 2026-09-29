@@ -2,6 +2,7 @@ import { Play, Tv } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { preview, cachedPreview } from '../lib/previewCache';
 import { cn } from '../lib/utils';
 import { artworkCandidates, displayTitle, displayYear, imageURL } from '../lib/tmdb';
 import notFoundArt from '../assets/media-not-found.png';
@@ -17,6 +18,8 @@ const invoke = async <T,>(command: string, args?: Record<string, unknown>): Prom
 };
 
 type CommonProps = {
+    gridIndex?: number; gridTotal?: number;
+	footer?: React.ReactNode;
 	onOpen: (id: number) => void;
 	resumeLabel: string;
 	actionLabel: string;
@@ -50,7 +53,7 @@ type Props =
 	| (CommonProps & { kind: 'series'; item: Series })
 	| (CommonProps & { kind: 'episode'; item: Episode });
 
-export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLabel, reducedMotion, heading, seriesLabel, t }: Props) {
+export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLabel, reducedMotion, heading, seriesLabel, t, footer, gridIndex, gridTotal }: Props) {
 	const [failed, setFailed] = useState<string[]>([]);
 	const [clip, setClip] = useState('');
 	const [hovered, setHovered] = useState(false);
@@ -91,17 +94,18 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 	 * first, and the answer is cached against that file.
 	 */
 	const askForClip = () => {
-		if (reducedMotion || clip || asking.current) return;
+		if (reducedMotion || asking.current || (clip && cachedPreview(kind, item.id) === clip)) return;
+        setClip('');
 		asking.current = true;
 		const generation = requestGeneration.current;
 		let ticks = 0;
 		const ask = async () => {
 			ticks += 1;
 			try {
-				const answer = JSON.parse(await invoke<string>('player_preview', { kind, id: item.id })) as { state?: string; data_url?: string };
+				const answer = await preview(kind, item.id);
 				if (generation !== requestGeneration.current) return;
-				if (answer.state === 'ready' && answer.data_url) {
-					setClip(answer.data_url);
+				if (answer.state === 'ready' && answer.url) {
+					setClip(answer.url);
 					asking.current = false;
 					return;
 				}
@@ -147,7 +151,7 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 	};
 
 	return (
-		<li className="media-card">
+		<li className="media-card" data-grid-index={gridIndex} aria-posinset={gridIndex !== undefined ? gridIndex + 1 : undefined} aria-setsize={gridTotal}>
 			<button
 				className="film"
 				onClick={activate}
@@ -157,7 +161,8 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 				onBlur={leave}
 				aria-label={`${view.action} ${view.legend} ${view.title}`.trim()}
 			>
-				<span
+				{kind === 'episode' && view.finished && <span className="episode-completed label">{t('episodeWatched')}</span>}
+                <span
 					className={cn('film-art', artIsFallback && 'film-art--empty')}
 					// The frame's own picture, blurred behind whatever is drawn in
 					// it: a poster is contained rather than cropped, and containing a
@@ -209,6 +214,7 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 					{view.position >= 30 && !view.finished ? ` · ${resumeLabel} ${Math.max(1, Math.floor(view.position / 60))} min` : ''}
 				</span>
 			</button>
+            {footer}
 		</li>
 	);
 }

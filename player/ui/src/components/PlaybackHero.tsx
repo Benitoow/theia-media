@@ -9,10 +9,10 @@ import type { Episode, Movie, Series } from '../types';
 import { Button } from './ui/button';
 
 type Media = { kind: 'movie'; item: Movie } | { kind: 'episode'; item: Episode; series?: Series };
-type Props = { media: Media; resuming?: boolean; headingLevel?: 1 | 2; language: string; t: (key: string) => string; onPlay: (id: number) => void };
+type Props = { media: Media; resuming?: boolean; eyebrow?: string; headingLevel?: 1 | 2; language: string; t: (key: string) => string; onPlay: (id: number) => void };
 
 /** Films and episodes share the same resume surface and progress register. */
-export function PlaybackHero({ media, resuming = true, headingLevel = 1, language, t, onPlay }: Props) {
+export function PlaybackHero({ media, resuming = true, eyebrow, headingLevel = 1, language, t, onPlay }: Props) {
 	const Heading = headingLevel === 1 ? 'h1' : 'h2';
 	const movie = media.kind === 'movie' ? media.item : undefined;
 	const episode = media.kind === 'episode' ? media.item : undefined;
@@ -39,7 +39,7 @@ export function PlaybackHero({ media, resuming = true, headingLevel = 1, languag
 		<section className={`home-hero ${headingLevel === 2 ? 'home-hero--detail' : ''}`} aria-label={title}>
 			<img className="home-hero-art" src={heroArt} alt="" crossOrigin="anonymous" fetchPriority="high" onError={() => setHeroFailed(true)} />
 			<div className="home-hero-content">
-				<p className="label home-hero-eyebrow">{playing ? t('heroResumeEyebrow') : t('heroFeaturedEyebrow')}</p>
+				<p className="label home-hero-eyebrow">{eyebrow ?? (playing ? t('heroResumeEyebrow') : t('heroFeaturedEyebrow'))}</p>
 				<Heading className="home-hero-title">{title}</Heading>
 				{subtitle && <p className="home-hero-episode">{subtitle}</p>}
 				<div className="home-hero-meta">

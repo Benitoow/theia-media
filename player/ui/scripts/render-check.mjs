@@ -14,7 +14,7 @@
 // installing a second copy of it.
 
 import { createRequire } from 'node:module';
-import { mkdirSync, existsSync, readFileSync } from 'node:fs';
+import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -269,6 +269,7 @@ const SERIES_HOME = {
 	recent_series: [SERIES[0]],
 };
 
+const CLOSEOUT_ONLY = process.argv.includes('--closeout-only');
 const browser = await chromium.launch();
 let failures = 0;
 
@@ -2051,6 +2052,7 @@ async function openPage(
 		// is the point.
 		locale = 'en-US',
 		savedServer = null,
+        connectFails = false,
 		localServer = null,
 	} = {}
 ) {
@@ -2082,7 +2084,8 @@ async function openPage(
 	}
 
 	await page.addInitScript(
-		({ tracks, ladder, watching, movies, series, seriesDetail, season, status, discovered, home, seriesHome, preview, savedServer, localServer }) => {
+		({ tracks, ladder, watching, movies, series, seriesDetail, season, status, discovered, home, seriesHome, preview, savedServer, localServer, connectFails }) => {
+            window.__connectFails = connectFails;
 			window.__handlers = {};
 			window.__profiles = [
 				{ id: 1, name: 'Alex', is_default: true, has_avatar: false, avatar_version: 0 },
@@ -2110,7 +2113,15 @@ async function openPage(
 					invoke: async (cmd, args) => {
 						window.__commands.push(cmd);
 						window.__invocations.push({ cmd, args });
-						if (cmd === 'player_local_server') return localServer;
+						if (window.__delays?.[cmd]) await new Promise((resolve) => setTimeout(resolve, window.__delays[cmd]));
+                        if (window.__failCommands?.includes(cmd)) throw new Error('Endpoint unavailable');
+                        if (cmd === 'player_server_reachable') return window.__reachable !== false;
+                        if (cmd === 'player_clean_diagnostic') return JSON.stringify({version:'3.4.0', engine:'mpv', progressPending:0});
+                        if (cmd === 'player_episode_history') {
+                            window.__season = {...(window.__season ?? season), episodes:(window.__season ?? season).episodes.map(episode=>episode.id===args.id ? {...episode,progress:{...episode.progress,position_seconds:0,finished:args.watched}} : episode)};
+                            return null;
+                        }
+                        if (cmd === 'player_local_server') return localServer;
 						if (cmd === 'player_saved_server') return savedServer;
 						if (cmd === 'player_remember_server' || cmd === 'player_disconnect') return null;
 						// Nothing connected at boot in the harness: the whole
@@ -2221,7 +2232,7 @@ async function openPage(
 			};
 			window.__status = status;
 		},
-		{ tracks, ladder, watching: WATCHING, movies, series, seriesDetail, season, status: STATUS, discovered, home, seriesHome, preview, savedServer, localServer }
+		{ tracks, ladder, watching: WATCHING, movies, series, seriesDetail, season, status: STATUS, discovered, home, seriesHome, preview, savedServer, localServer, connectFails }
 	);
 	await page.goto(URL, { waitUntil: 'networkidle' });
 	await page.waitForTimeout(400);
@@ -2295,7 +2306,7 @@ async function assertSeriesJourney(page) {
 		const video = el.querySelector('video.film-clip');
 		return { present: Boolean(video), src: video?.getAttribute('src')?.slice(0, 22) ?? '' };
 	});
-	if (!seriesClip.present || seriesClip.src !== 'data:video/mp4;base64,') {
+	if (!seriesClip.present || !seriesClip.src.startsWith('blob:')) {
 		console.error(`a series card did not ask for a preview clip: ${JSON.stringify(seriesClip)}`);
 		failures++;
 	}
@@ -2408,6 +2419,7 @@ if (process.argv.includes('--series-resume-only')) {
 // one twice that size, so the picture was clipped by the *screen* while the OSD
 // was laid out correctly all along. The harness disagreed with the photograph,
 // and the harness was right - which is why the picture is not the authority here.
+if (!CLOSEOUT_ONLY) {
 {
 	for (const width of [550, 700, 833, 900]) {
 		const page = await openPage({ width, height: 700 });
@@ -2435,8 +2447,11 @@ if (process.argv.includes('--series-resume-only')) {
 		await page.close();
 	}
 }
+}
+
 
 // 1. The library panel, connected, films listed as cards.
+if (!CLOSEOUT_ONLY) {
 {
 	const page = await openPage({ width: 1280, height: 720 });
 	await page.fill('#theia-address', 'http://127.0.0.1:8395');
@@ -2681,7 +2696,7 @@ if (process.argv.includes('--series-resume-only')) {
 			console.error(`the clip is not a silent loop: ${JSON.stringify(clip)}`);
 			failures++;
 		}
-		if (!clip.src.startsWith('data:video/mp4;base64,')) {
+		if (!clip.src.startsWith('blob:')) {
 			console.error(`the clip is not the bytes the bridge handed over: ${clip.src.slice(0, 40)}`);
 			failures++;
 		}
@@ -3202,8 +3217,11 @@ if (process.argv.includes('--series-resume-only')) {
 	await assertSeriesJourney(seriesPage);
 	await seriesPage.close();
 }
+}
+
 
 // 2. A film playing, then the track menu.
+if (!CLOSEOUT_ONLY) {
 {
 	const page = await openPage({ width: 1280, height: 720 }, { frame: true });
 	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
@@ -3308,12 +3326,15 @@ if (process.argv.includes('--series-resume-only')) {
 	}
 	await page.close();
 }
+}
+
 
 // 3. A phone-width window, where the popover pins to the frame instead of
 //    hanging off the left edge, and where the control row has to fit rather
 //    than wrap. Every state a phone can be in is measured: the row did fit with
 //    the menu open and overflowed by 29px once the menu was closed and the
 //    spacer had nothing to give, so one state is not a check.
+if (!CLOSEOUT_ONLY) {
 {
 	const page = await openPage({ width: 390, height: 780 });
 
@@ -3366,6 +3387,8 @@ if (process.argv.includes('--series-resume-only')) {
 	}
 	await page.close();
 }
+}
+
 
 // 3b. The window's own minimum, which is the one width this campaign measured an
 //     overflow at and the one nobody had asserted.
@@ -3380,6 +3403,7 @@ if (process.argv.includes('--series-resume-only')) {
 // The assertion is written as three statements rather than one, because "it fits"
 // would also pass if the whole bar had been hidden: the bar is present, its five
 // controls are present, and only then does the clock read one number.
+if (!CLOSEOUT_ONLY) {
 {
 	const page = await openPage({ width: 320, height: 180 }, { frame: true });
 	await page.evaluate((status) => window.__handlers['player-status']?.({ payload: JSON.stringify(status) }), STATUS);
@@ -3450,6 +3474,8 @@ if (process.argv.includes('--series-resume-only')) {
 	}
 	await page.close();
 }
+}
+
 
 // 4. What the first four blocks could not see: the faces the OSD actually wears,
 //    the size of every target a finger can land on, and whether the keyboard
@@ -3462,6 +3488,7 @@ if (process.argv.includes('--series-resume-only')) {
 // somebody typed a server address and switching the interface to English on `l`.
 // Every one of them is a defect the previous four blocks passed straight
 // through, which is the whole argument for this block existing.
+if (!CLOSEOUT_ONLY) {
 {
 	// (a) the faces - measured in the library state, the one a person sees first
 	//     and the one whose title carries the display face.
@@ -3683,6 +3710,8 @@ if (process.argv.includes('--series-resume-only')) {
 	await assertNoticeLivesWithItsState(notices);
 	await notices.close();
 }
+}
+
 
 // The player's own window, at the scale a real display gives it.
 //
@@ -3692,6 +3721,7 @@ if (process.argv.includes('--series-resume-only')) {
 // menu - and the profile picture in it - out of the screen. The maintainer found
 // it by importing a photo and never seeing it. So the window the product is used
 // in is a viewport this harness checks, and `assertFits` names what sticks out.
+if (!CLOSEOUT_ONLY) {
 {
 	const page = await openPage({ width: 969, height: 609 });
 	await page.fill('#theia-address', 'http://127.0.0.1:8395');
@@ -3700,6 +3730,115 @@ if (process.argv.includes('--series-resume-only')) {
 	await assertFits(page, 'the player window (969x609)');
 	await page.screenshot({ path: join(OUT, '10-player-window.png') });
 	await page.close();
+}
+}
+
+
+// Accepted 3.4 closeout behaviours, with deliberately delayed/failed endpoints.
+async function closeoutCase(name, run) {
+ const page = await openPage({width:969,height:609});
+ try { await run(page); console.log('closeout: '+name+' passed'); }
+ catch(error) { console.error('closeout: '+name+': '+error.message); failures++; }
+ finally {await page.close();}
+}
+const connectCloseout = async(page)=> {await page.fill('#theia-address','http://127.0.0.1:8395');await page.click('button[type=submit]');await page.locator('.home-hero').waitFor();};
+await closeoutCase('cancel discards late connection', async(page)=> {
+ await page.evaluate(()=>{window.__delays={player_connect:1200};});
+ await page.fill('#theia-address','http://bad.test:8395');await page.click('button[type=submit]');
+ await page.getByRole('button',{name:catalogues.en.cancel,exact:true}).click();
+ await page.fill('#theia-address','http://replacement.test:8395');await page.waitForTimeout(1500);
+ if(await page.locator('.home-hero').count() || await page.inputValue('#theia-address')!=='http://replacement.test:8395')throw Error('cancelled connection changed the screen');
+});
+await closeoutCase('failed film endpoints preserve series and hero', async(page)=> {
+ await page.evaluate(()=>{window.__failCommands=['player_home','player_library'];});
+ await connectCloseout(page);
+ if(!(await page.locator('.home-hero').innerText()).includes('Shōgun'))throw Error('series hero was lost');
+ await page.getByRole('button',{name:'Series',exact:true}).click();await page.locator('.film').first().waitFor();
+});
+await closeoutCase('late detail stays closed after navigation',async(page)=> {
+ await connectCloseout(page);await page.getByRole('button',{name:'Series',exact:true}).click();
+ await page.evaluate(()=>{window.__delays={player_series_detail:1200};});await page.getByRole('button',{name:/Open series.*Shōgun/}).click();
+ await page.getByRole('button',{name:catalogues.en.films,exact:true}).click();await page.waitForTimeout(1500);
+ if(await page.locator('.season-tabs').count())throw Error('late detail reopened');
+});
+await closeoutCase('watched action and confirmed reset',async(page)=> {
+ await connectCloseout(page);await page.getByRole('button',{name:'Series',exact:true}).click();await page.getByRole('button',{name:/Open series.*Shōgun/}).click();
+ await page.locator('.episode-actions').first().waitFor();
+ await page.locator('.episode-actions').first().getByRole('button',{name:catalogues.en.markWatched,exact:true}).click();
+ await page.locator('.episode-completed').first().waitFor();
+ await page.locator('.episode-actions').first().getByRole('button',{name:catalogues.en.resetProgress,exact:true}).click();
+ const before=await page.evaluate(()=>window.__invocations.filter(c=>c.cmd==='player_episode_history').length);
+ await page.getByRole('dialog').getByRole('button',{name:catalogues.en.cancel,exact:true}).click();
+ if(await page.evaluate(()=>window.__invocations.filter(c=>c.cmd==='player_episode_history').length)!==before)throw Error('cancel modified history');
+ await page.locator('.episode-actions').first().getByRole('button',{name:catalogues.en.resetProgress,exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:catalogues.en.resetProgress,exact:true}).click();
+ await page.waitForTimeout(200);
+ if(await page.locator('.episode-completed').count())throw Error('reset kept completed badge');
+ const calls=await page.evaluate(()=>window.__invocations.filter(c=>c.cmd==='player_episode_history'));
+ if(calls.length!==2 || calls[0].args.watched!==true || calls[1].args.watched!==false)throw Error('history commands incorrect');
+});
+await closeoutCase('episode end offers next and pending save',async(page)=> {
+ await connectCloseout(page);await page.evaluate(s=>window.__handlers['player-status']({payload:JSON.stringify({...s,ended:true,nextEpisodeId:902,progressPending:1})}),STATUS);
+ await page.getByRole('button',{name:catalogues.en.nextEpisode,exact:true}).click();
+ if(!(await page.locator('.save-status').count()))throw Error('pending save was hidden');
+ const call=await page.evaluate(()=>window.__invocations.filter(c=>c.cmd==='player_play_episode').at(-1));if(call?.args?.id!==902)throw Error('wrong next episode');
+});
+await closeoutCase('keyboard help copies diagnostic and search focuses',async(page)=> {
+ await connectCloseout(page);await page.keyboard.press('?');await page.getByRole('dialog').waitFor();
+ await assertFits(page,'keyboard help 969x609');await page.getByRole('button',{name:catalogues.en.copyDiagnostic,exact:true}).click();
+ const diagnostic=await page.evaluate(()=>navigator.clipboard.readText());if(JSON.parse(diagnostic).version!=='3.4.0')throw Error('clipboard diagnostic missing');
+ await page.keyboard.press('Escape');await page.keyboard.press('Control+f');await page.locator('.search-field input').waitFor();
+ if(!await page.locator('.search-field input').evaluate(e=>e===document.activeElement))throw Error('search shortcut did not focus input');
+});
+{
+ const movies=Array.from({length:1000},(_,index)=>({...MOVIES[0],id:index+1000,title:'Film '+index,metadata:{...MOVIES[0].metadata,title:'Film '+index},progress:{position_seconds:0,finished:false}}));
+ const page=await openPage({width:969,height:609},{movies,savedServer:'http://127.0.0.1:8395'});
+ try {await page.getByRole('button',{name:catalogues.en.films,exact:true}).click();await page.locator('.films[data-virtual]').waitFor();await page.waitForTimeout(250);
+ const count=await page.locator('.media-card').count();if(count>=100)throw Error('mounted '+count+' of 1000 cards');
+ await page.locator('.films .film').first().focus();await page.keyboard.press('End');await page.waitForTimeout(250);
+ if(await page.evaluate(()=>document.activeElement?.closest('[data-grid-index]')?.dataset.gridIndex)!=='999')throw Error('last card unreachable by keyboard');
+ await page.keyboard.press('Home');await page.waitForTimeout(250);
+ if(await page.evaluate(()=>document.activeElement?.closest('[data-grid-index]')?.dataset.gridIndex)!=='0')throw Error('first card unreachable by keyboard');
+ await assertFits(page,'1000 card virtual catalogue');console.log('closeout: 1000-card grid passed; mounted '+count);
+ await page.keyboard.press('End');await page.waitForTimeout(250);const remembered=await page.locator('.library').evaluate(e=>e.scrollTop);
+ await page.locator('[data-grid-index="999"] .film').click();await page.locator('.movie-detail').waitFor();await page.locator('.library-back').click();await page.locator('.films[data-virtual]').waitFor();await page.waitForTimeout(400);
+ const restored=await page.locator('.library').evaluate(e=>e.scrollTop);if(restored<remembered*0.9)throw Error('scroll restored '+restored+' from '+remembered);
+ }catch(error){console.error('closeout: large catalogue: '+error.message);failures++;}finally{await page.close();}
+}
+
+await closeoutCase('failed new-profile endpoints cannot show old history',async(page)=> {
+ await connectCloseout(page);await page.evaluate(()=>{window.__failCommands=['player_home','player_series_home','player_library','player_series'];});
+ await page.getByRole('button',{name:catalogues.en.profiles,exact:true}).click();await page.locator('.profile-card-select').filter({hasText:'Lina'}).click();await page.waitForTimeout(400);
+ if(await page.locator('.home-hero,.film').count())throw Error('previous profile history survived');
+});
+await closeoutCase('single quality explains missing encoder',async(page)=> {
+ await connectCloseout(page);await page.evaluate(s=>{window.__ladder={qualities:[{height:0}],transcode:{available:false,kind:'',busy:false}};window.__handlers['player-status']({payload:JSON.stringify(s)});},STATUS);
+ await page.keyboard.press('c');await page.locator('[data-tab=quality]').click();
+ const reason=await page.locator('.quality-explanation').innerText();if(reason!==catalogues.en.qualityNoEncoder)throw Error('wrong unavailable reason: '+reason);
+});
+await closeoutCase('keyboard help fits the minimum viewport',async(page)=> {
+ await connectCloseout(page);await page.setViewportSize({width:320,height:180});await page.keyboard.press('?');await page.getByRole('dialog').waitFor();await assertFits(page,'keyboard help 320x180');
+ const box=await page.getByRole('dialog').boundingBox();if(!box || box.y<0 || box.y+box.height>180)throw Error('help dialog outside viewport');
+});
+
+await closeoutCase('local fixture responsiveness and lazy settings',async(page)=> {
+ const cold=await page.evaluate(()=>({navigation:performance.getEntriesByType('navigation')[0].toJSON(),paint:performance.getEntriesByType('paint').map(entry=>({name:entry.name,startTime:entry.startTime})),settingsLoaded:performance.getEntriesByType('resource').some(entry=>entry.name.includes('SettingsModal-'))}));
+ if(cold.settingsLoaded)throw Error('settings downloaded at startup');
+ const connectionStart=performance.now();await connectCloseout(page);const connectionMs=performance.now()-connectionStart;
+ const settingsStart=performance.now();await page.getByRole('button',{name:/^Settings/}).click();await page.getByRole('dialog').waitFor();const settingsFirstOpenMs=performance.now()-settingsStart;
+ if(connectionMs>2000 || settingsFirstOpenMs>2000)throw Error('local fixture exceeded 2s budget');
+ writeFileSync(join(OUT,'v34-responsiveness.json'),JSON.stringify({scope:'Headless Chromium, production UI, localhost, mocked native bridge; not native startup or real HTTP performance',browser:browser.version(),viewport:{width:969,height:609},cold,connectionMs,settingsFirstOpenMs},null,2));
+ console.log('closeout: fixture connect '+Math.round(connectionMs)+'ms, first settings '+Math.round(settingsFirstOpenMs)+'ms');
+});
+
+{
+ const page=await openPage({width:969,height:609},{savedServer:'http://127.0.0.1:8395',connectFails:true});
+ try {
+  if(await page.inputValue('#theia-address')!=='http://127.0.0.1:8395')throw Error('offline saved address was replaced');
+  await page.evaluate(()=>{window.__connectFails=false;window.__reachable=true;});
+  await page.locator('.home-hero').waitFor({timeout:20000});
+  console.log('closeout: initially offline saved server reconnects passed');
+ }catch(error){console.error('closeout: saved reconnect: '+error.message);failures++;}finally{await page.close();}
 }
 
 await browser.close();

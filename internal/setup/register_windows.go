@@ -74,6 +74,10 @@ func defaultApplication(plan Plan, version, uninstaller string) Application {
 // RepairRegistration restores the Windows applications-list entry of an
 // already installed product without reinstalling or starting any program.
 func RepairRegistration(installDir, version string) error {
+	return repairRegistrationAt(applicationKeyPath(registeredName), installDir, version)
+}
+
+func repairRegistrationAt(keyPath, installDir, version string) error {
 	uninstaller := filepath.Join(installDir, installerExecutable("windows"))
 	if !fileExists(uninstaller) {
 		return fmt.Errorf("setup: the installed uninstaller is missing: %s", uninstaller)
@@ -82,7 +86,14 @@ func RepairRegistration(installDir, version string) error {
 		return fmt.Errorf("setup: no Theia player or server is installed in %s", installDir)
 	}
 	plan := Plan{InstallDir: installDir, Version: version}
-	return registerApplication(applicationKeyPath(registeredName), defaultApplication(plan, installedVersion(plan), uninstaller))
+	if err := registerApplication(keyPath, defaultApplication(plan, installedVersion(plan), uninstaller)); err != nil {
+		return err
+	}
+	launcher := filepath.Join(installDir, programExecutable(launcherBase))
+	if fileExists(launcher) {
+		return registerAppPath(programExecutable(launcherBase), launcher)
+	}
+	return nil
 }
 
 // uninstallCommand quotes the path the way Windows reads it: plain double quotes

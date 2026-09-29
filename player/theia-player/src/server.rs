@@ -234,6 +234,7 @@ impl std::fmt::Display for Refusal {
 }
 
 /// A connection to one server.
+#[derive(Clone)]
 pub struct Client {
     agent: ureq::Agent,
     base: String,
@@ -279,6 +280,18 @@ impl Client {
 
     pub fn set_profile(&mut self, id: Option<i64>) {
         self.profile = id;
+    }
+
+    pub fn episode_history(&self, id: i64, watched: bool) -> Result<(), String> {
+        let path = format!(
+            "/api/library/episodes/{id}/{}",
+            if watched { "watched" } else { "progress" }
+        );
+        let response = self
+            .agent
+            .request(if watched { "PUT" } else { "DELETE" }, &self.url(&path))
+            .call();
+        response.map(|_| ()).map_err(|error| error.to_string())
     }
 
     /// Appends the profile, preserving any query the path already carries.
@@ -373,6 +386,7 @@ impl Client {
             "/api/library/movies?limit={limit}&offset={offset}"
         ))?;
         for movie in &mut list.movies {
+            crate::progress_queue::overlay(self, false, movie.id, &mut movie.progress);
             movie.resolve_artwork(&self.base);
         }
         Ok(list.movies)
@@ -390,6 +404,7 @@ impl Client {
 
     pub fn movie(&self, id: i64) -> Result<Movie, String> {
         let mut movie: Movie = self.get_json(&format!("/api/library/movies/{id}"))?;
+        crate::progress_queue::overlay(self, false, movie.id, &mut movie.progress);
         movie.resolve_artwork(&self.base);
         Ok(movie)
     }
@@ -403,6 +418,9 @@ impl Client {
             "/api/library/series?limit={limit}&offset={offset}"
         ))?;
         for series in &mut list.series {
+            if let Some(episode) = &mut series.resume_episode {
+                crate::progress_queue::overlay(self, true, episode.id, &mut episode.progress);
+            }
             series.resolve_artwork(&self.base);
         }
         Ok(list.series)
@@ -422,10 +440,12 @@ impl Client {
     pub fn home(&self) -> Result<HomeScreen, String> {
         let mut home: HomeScreen = self.get_json("/api/library/home")?;
         if let Some(hero) = &mut home.hero {
+            crate::progress_queue::overlay(self, false, hero.id, &mut hero.progress);
             hero.resolve_artwork(&self.base);
         }
         for row in &mut home.rows {
             for movie in &mut row.movies {
+                crate::progress_queue::overlay(self, false, movie.id, &mut movie.progress);
                 movie.resolve_artwork(&self.base);
             }
         }
@@ -437,6 +457,7 @@ impl Client {
     pub fn series_home(&self) -> Result<SeriesHome, String> {
         let mut home: SeriesHome = self.get_json("/api/library/series/home")?;
         for episode in &mut home.continue_watching {
+            crate::progress_queue::overlay(self, true, episode.id, &mut episode.progress);
             episode.resolve_artwork(&self.base);
         }
         for series in &mut home.recent_series {
@@ -466,6 +487,7 @@ impl Client {
             "/api/library/series/{series_id}/seasons/{season_number}"
         ))?;
         for episode in &mut season.items {
+            crate::progress_queue::overlay(self, true, episode.id, &mut episode.progress);
             episode.resolve_artwork(&self.base);
         }
         Ok(season)
@@ -521,6 +543,7 @@ impl Client {
 
     pub fn episode(&self, id: i64) -> Result<EpisodeItem, String> {
         let mut episode: EpisodeItem = self.get_json(&format!("/api/library/episodes/{id}"))?;
+        crate::progress_queue::overlay(self, true, episode.id, &mut episode.progress);
         episode.resolve_artwork(&self.base);
         Ok(episode)
     }
@@ -755,10 +778,15 @@ mod tests {
         // update separately, so this is a real combination until the installed
         // server updates itself - and it was "the home screen could not be
         // loaded" until this test existed.
-        let released: HomeScreen = serde_json::from_str(r#"{"hero":null,"rows":null,"total":0}"#)
-            .expect("a released server's empty home screen has to parse");
+        let released: HomeScreen = serde_json::from_str(include_str!(
+            "../../contract-fixtures/home-null-released.json"
+        ))
+        .expect("a released server's empty home screen has to parse");
         assert!(released.rows.is_empty());
         assert_eq!(released.total, 0);
+        let empty: HomeScreen =
+            serde_json::from_str(include_str!("../../contract-fixtures/home-empty.json")).unwrap();
+        assert!(empty.hero.is_none() && empty.rows.is_empty() && empty.total == 0);
 
         // And the shape the fixed server sends keeps working, with a row in it.
         let current: HomeScreen = serde_json::from_str(

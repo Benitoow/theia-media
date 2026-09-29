@@ -117,11 +117,22 @@ func TestRepairRegistrationUsesInstalledUninstaller(t *testing.T) {
 	install := t.TempDir()
 	write(t, filepath.Join(install, "theia-setup.exe"), "MZ")
 	write(t, filepath.Join(install, "theia-player.exe"), "MZ")
-	keyPath := applicationKeyPath(registeredName)
+	write(t, filepath.Join(install, "theia.exe"), "MZ")
+	keyPath := testKeyPath(t, "repair")
 	t.Cleanup(func() { unregisterApplication(keyPath) })
-	if err := RepairRegistration(install, "3.4.0"); err != nil {
+	if err := repairRegistrationAt(keyPath, install, "3.4.0"); err != nil {
 		t.Fatal(err)
 	}
+	launcherKey, err := registry.OpenKey(registry.CURRENT_USER, appPathsKey+`\theia.exe`, registry.QUERY_VALUE)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer launcherKey.Close()
+	target, _, err := launcherKey.GetStringValue("")
+	if err != nil || target != filepath.Join(install, "theia.exe") {
+		t.Fatalf("restored launcher = %q %v", target, err)
+	}
+
 	key, err := registry.OpenKey(registry.CURRENT_USER, keyPath, registry.QUERY_VALUE)
 	if err != nil {
 		t.Fatal(err)

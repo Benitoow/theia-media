@@ -3038,6 +3038,20 @@ html[data-resizing='true'] *::after {
 
 .home-hero-episode { margin: 0; font-size: var(--text-body); color: var(--color-parchment); }
 .home-hero-position { margin: 0; }
+.grid-spacer { grid-column: 1 / -1; pointer-events: none; }
+.episode-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.episode-actions > button { min-height: 44px; padding: 0.4rem 0.75rem; color: var(--color-parchment); font-size: 0.8rem; border-radius: var(--radius-card); }
+.episode-actions > button:hover { background: rgb(255 255 255 / 0.06); }
+.episode-completed { position: absolute; z-index: 2; top: 0.5rem; right: 0.5rem; background: var(--color-ink); color: var(--color-bone); padding: 0.25rem 0.5rem; border-radius: var(--radius-card); }
+.library > .help-trigger { position: fixed; z-index: 40; right: 1rem; bottom: 1rem; width: 44px; height: 44px; border-radius: 50%; background: var(--color-ink); color: var(--color-bone); border: 1px solid var(--color-faint); }
+.connection-status, .save-status { position: absolute; z-index: 45; left: 1rem; top: 3rem; max-width: calc(100% - 2rem); padding: 0.5rem 1rem; border-radius: var(--radius-card); background: var(--color-ink); color: var(--color-parchment); font-size: 0.8rem; }
+.save-status { top: 6rem; }
+.next-episode { position: absolute; z-index: 40; right: 1rem; bottom: clamp(3.5rem, 20vh, 9rem); max-width: calc(100% - 2rem); }
+.help-sheet, .episode-reset-sheet { display: block; padding: 1.5rem; overflow-y: auto; }
+.shortcut-list > div { display: grid; grid-template-columns: minmax(6rem, 1fr) 2fr; gap: 1rem; padding: 0.5rem 0; }
+.shortcut-list dd { margin: 0; }
+.shortcut-list kbd { color: var(--color-bone); font-family: var(--font-label); }
+.quality-explanation { color: var(--color-parchment); font-size: 0.85rem; padding-inline: 1rem; }
 .home-hero--detail { min-height: 18rem; margin-inline: 0; border-radius: var(--radius-card); }
 .home-hero--detail .home-hero-content { padding: clamp(1.5rem, 4vw, 3rem); }
 

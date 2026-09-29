@@ -201,6 +201,12 @@ func ApplyPlayerUpdate(ctx context.Context, client *http.Client, apiBase string,
 		return view, err
 	}
 
+	// Only maintained installs carry the tool needed by Windows' uninstall command.
+	if runtime.GOOS == "windows" && fileExists(filepath.Join(filepath.Dir(target.ExecPath), installerExecutable("windows"))) {
+		if err := RepairRegistration(filepath.Dir(target.ExecPath), rel.Tag); err != nil {
+			return view, fmt.Errorf("setup: repairing installation registration: %w", err)
+		}
+	}
 	view.State, view.Reason, view.Available = "ready", "", false
 	view.Latest = rel.Tag
 	// What is installed now, asked of the installed player rather than assumed

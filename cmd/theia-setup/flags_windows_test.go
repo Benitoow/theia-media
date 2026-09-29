@@ -28,15 +28,13 @@ import (
 // same redirected APPDATA, LOCALAPPDATA and USERPROFILE the other installer tests
 // use.
 //
-// **What this cannot isolate, and it is worth stating rather than hiding.** A real
-// install registers the application under `HKCU\Software\Theia`. The registry has
-// no APPDATA to redirect, and the key path is built from a name that is a constant
-// in a non-test binary; the suite's own `TestMain` redirects that name for the
-// in-process tests, which a subprocess cannot inherit. The tests below therefore
-// **never run a successful install through the binary**: they exercise refusals
-// and reads, which happen before the point of no return. A full `--from` install
-// end to end through `main` is unverified here, and it is reported as unverified
-// rather than papered over.
+// Filesystem redirection does not isolate HKCU. Link the subprocess with test
+// names for every registry root too: otherwise even --uninstall with no files
+// removes the real Windows Apps and App Paths entries. The production binary
+// keeps the package defaults; these overrides exist only in this test build.
+const isolatedRegistryFlags = "-X github.com/Benitoow/theia-media/internal/setup.registeredName=Theia-cli-tests " +
+	"-X github.com/Benitoow/theia-media/internal/setup.userPathKey=Software\\Theia\\CLItests\\Environment " +
+	"-X github.com/Benitoow/theia-media/internal/setup.appPathsKey=Software\\Theia\\CLItests\\AppPaths"
 
 // buildInstaller compiles cmd/theia-setup once for this test file.
 //
@@ -47,7 +45,7 @@ func buildInstaller(t *testing.T) string {
 	t.Helper()
 	out := filepath.Join(t.TempDir(), "theia-setup.exe")
 
-	cmd := exec.Command("go", "build", "-trimpath", "-o", out, "./cmd/theia-setup")
+	cmd := exec.Command("go", "build", "-trimpath", "-ldflags", isolatedRegistryFlags, "-o", out, "./cmd/theia-setup")
 	cmd.Dir = filepath.Join("..", "..")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Skipf("cannot build the installer (no Go toolchain?): %v\n%s", err, output)

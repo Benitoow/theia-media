@@ -97,14 +97,14 @@ func (s *Store) SaveSeriesMetadata(ctx context.Context, id int64, series *tmdb.T
 	}
 	res, err := s.db.ExecContext(ctx, `
 		UPDATE series SET
-			tmdb_id = ?, tmdb_name = ?, original_name = ?, tagline = ?, overview = ?,
+			tmdb_id = ?, tmdb_name = ?, original_name = ?, original_language = ?, tagline = ?, overview = ?,
 			first_air_date = ?, last_air_date = ?, status = ?,
 			poster_path = ?, backdrop_path = ?, vote_average = ?,
 			genres_json = ?, cast_json = ?, creators_json = ?, networks_json = ?,
 			certification = ?, certification_country = ?,
 			metadata_status = ?, metadata_fetched_at = ?, metadata_version = ?, updated_at = ?
 		WHERE id = ?`,
-		series.TMDBID, series.Name, series.OriginalName, series.Tagline, series.Overview,
+		series.TMDBID, series.Name, series.OriginalName, series.OriginalLanguage, series.Tagline, series.Overview,
 		series.FirstAirDate, series.LastAirDate, series.Status,
 		series.PosterPath, series.BackdropPath, series.VoteAverage,
 		string(genres), string(castJSON), string(creatorsJSON), string(networksJSON),
