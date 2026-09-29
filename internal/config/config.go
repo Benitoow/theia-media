@@ -38,6 +38,11 @@ const (
 	// localFileName is the development override, read from the working
 	// directory. Never committed, never written to.
 	localFileName = "config.local.json"
+
+	// DataDirEnv names the data directory for one run, ahead of anything the
+	// installation itself records. It is what the tests and the proof runs use
+	// to keep off the machine's own library.
+	DataDirEnv = "THEIA_DATA_DIR"
 )
 
 // The languages Theia ships. English is the base: it is what an absent, empty
@@ -121,11 +126,22 @@ func Default() Config {
 	}
 }
 
+// DataDirFromEnv reports the data directory the environment names, if it names
+// one. It exists so that a caller weighing another answer - the record an
+// installation keeps beside its programs - can tell "somebody said so for this
+// run" from "this machine's standard place".
+func DataDirFromEnv() (string, bool) {
+	if v := os.Getenv(DataDirEnv); v != "" {
+		return v, true
+	}
+	return "", false
+}
+
 // DataDir returns the directory holding Theia's configuration, database, cache
-// and downloaded ffmpeg binary. THEIA_DATA_DIR overrides it, which is what the
+// and downloaded ffmpeg binary. DataDirEnv overrides it, which is what the
 // tests and the portable "run it from a USB stick" case use.
 func DataDir() (string, error) {
-	if v := os.Getenv("THEIA_DATA_DIR"); v != "" {
+	if v, ok := DataDirFromEnv(); ok {
 		return v, nil
 	}
 	base, err := os.UserConfigDir()

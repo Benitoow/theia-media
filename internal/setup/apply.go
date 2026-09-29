@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Benitoow/theia-media/internal/config"
+	"github.com/Benitoow/theia-media/internal/layout"
 )
 
 // Action is one thing the installer did, as a code rather than a sentence. The
@@ -110,6 +111,18 @@ func Apply(plan Plan) (Result, error) {
 		return Result{}, err
 	}
 	result.Actions = append(result.Actions, Action{Kind: "wrote-role", Path: filepath.Join(plan.DataDir, machineFile)})
+
+	// Where the data is, beside the programs. The two facts are written at the
+	// same moment and from the same plan because they are two halves of one
+	// answer: the data directory holds the role, and the installation holds the
+	// pointer to the data directory - which is the half neither program inside
+	// the installation could work out for itself, and why an installation given
+	// `--data-dir` elsewhere used to start a server over the default one.
+	if strings.TrimSpace(plan.InstallDir) != "" {
+		if err := layout.WriteRecord(plan.InstallDir, plan.DataDir); err != nil {
+			return Result{}, fmt.Errorf("recording where the data lives: %w", err)
+		}
+	}
 
 	if plan.Role.WantsServer() {
 		// Load rather than write from scratch: the settings page may already have
@@ -254,9 +267,25 @@ type Status struct {
 	Update     *UpdateStatusView `json:"update,omitempty"`
 }
 
+// DataDirFor is where the installation a program belongs to keeps its data.
+//
+// It exists because the answer is not the machine's alone: an installation made
+// with `--data-dir` elsewhere keeps its library somewhere else, and both the
+// command a person types and this maintenance tool have to know it. The record
+// the installer writes beside the programs is what carries it, and a program
+// with no record beside it - one from an installation made before the record
+// existed, or one nobody has installed yet - falls to the standard location,
+// which is where the first of those really put its data (decision 153).
+func DataDirFor(self string) (string, error) {
+	if strings.TrimSpace(self) == "" {
+		return config.DataDir()
+	}
+	return layout.DataDir(layout.InstallDirOf(self))
+}
+
 // Inspect reads the machine's current state and changes nothing.
 func Inspect(self string) (Status, error) {
-	dir, err := config.DataDir()
+	dir, err := DataDirFor(self)
 	if err != nil {
 		return Status{}, err
 	}

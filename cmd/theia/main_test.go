@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Benitoow/theia-media/internal/config"
 	"github.com/Benitoow/theia-media/internal/layout"
 )
 
@@ -46,8 +47,15 @@ func watch(t *testing.T, answering bool) *watching {
 		openBrowser = previousOpen
 	})
 
-	spawn = func(path, _ string) error {
-		w.events = append(w.events, event{kind: "spawn", name: filepath.Base(path)})
+	spawn = func(path string, args []string, _ string) error {
+		// The arguments are part of what happened: the server is told which data
+		// directory to serve, and an order that did not say which would let the
+		// fault this pins come back (decision 153).
+		name := filepath.Base(path)
+		if len(args) > 0 {
+			name += " " + strings.Join(args, " ")
+		}
+		w.events = append(w.events, event{kind: "spawn", name: name})
 		return nil
 	}
 	reachable = func(address string) bool {
@@ -111,6 +119,14 @@ func programName(base string) string {
 	return layout.ServerExecutable(runtime.GOOS)
 }
 
+// serverSpawn is the server's spawn as the order prints it, with the data
+// directory the command tells it to serve. The directory is named on the command
+// line because the programs beside this one cannot work out which library they
+// belong to, and guessing the standard place was the fault (decision 153).
+func serverSpawn(dataDir string) string {
+	return "spawn:" + programName("theia-server") + " --data-dir " + dataDir
+}
+
 // launcherName is the file this program is installed as, and the name the
 // installer links into `~/.local/bin` - the link the test below is about.
 func launcherName() string {
@@ -157,7 +173,7 @@ func TestTheBareCommandStartsTheServerThenOpensThePlayer(t *testing.T) {
 	// first discovery attempt find a server.
 	want := []string{
 		"reachable:127.0.0.1:8383",
-		"spawn:" + programName("theia-server"),
+		serverSpawn(os.Getenv("THEIA_DATA_DIR")),
 		"wait:127.0.0.1:8383",
 		"spawn:" + programName("theia-player"),
 	}
@@ -189,12 +205,12 @@ func TestTheProgramsAreFoundThroughTheLinkSomebodyTyped(t *testing.T) {
 	}
 	w := watch(t, false)
 
-	if code, output := runIn(installationDir(link)); code != 0 {
+	if code, output := runIn(layout.InstallDirOf(link)); code != 0 {
 		t.Fatalf("theia exited %d: %s", code, output)
 	}
 	want := []string{
 		"reachable:127.0.0.1:8383",
-		"spawn:" + programName("theia-server"),
+		serverSpawn(os.Getenv("THEIA_DATA_DIR")),
 		"wait:127.0.0.1:8383",
 		"spawn:" + programName("theia-player"),
 	}
@@ -227,7 +243,7 @@ func TestTheServerCommandStartsTheServerAlone(t *testing.T) {
 	}
 	want := []string{
 		"reachable:127.0.0.1:8383",
-		"spawn:" + programName("theia-server"),
+		serverSpawn(os.Getenv("THEIA_DATA_DIR")),
 		"wait:127.0.0.1:8383",
 	}
 	if !w.equal(want...) {
@@ -263,7 +279,10 @@ func TestABareCommandOnAOneProgramMachineOpensThatOne(t *testing.T) {
 				continue
 			}
 			spawned++
-			if one.name != programName(only) {
+			// The first word is the program; the server's own spawn carries the
+			// data directory it was told to serve after it, which is not what
+			// this case is about.
+			if program := strings.Fields(one.name)[0]; program != programName(only) {
 				t.Errorf("theia with only %s also started %s", only, one.name)
 			}
 		}
@@ -289,7 +308,7 @@ func TestAServerWithNoPlayerOpensTheWebInterface(t *testing.T) {
 	}
 	want := []string{
 		"reachable:127.0.0.1:8383",
-		"spawn:" + programName("theia-server"),
+		serverSpawn(os.Getenv("THEIA_DATA_DIR")),
 		"wait:127.0.0.1:8383",
 		"open:http://127.0.0.1:8383/",
 	}
@@ -447,7 +466,7 @@ func TestAServerThatDoesNotComeUpIsSaidOutLoudWithoutStoppingThePlayer(t *testin
 	}
 	want := []string{
 		"reachable:127.0.0.1:8383",
-		"spawn:" + programName("theia-server"),
+		serverSpawn(os.Getenv("THEIA_DATA_DIR")),
 		"wait:127.0.0.1:8383",
 		"spawn:" + programName("theia-player"),
 	}
@@ -459,7 +478,7 @@ func TestAServerThatDoesNotComeUpIsSaidOutLoudWithoutStoppingThePlayer(t *testin
 func TestAProgramThatRefusesToStartIsReported(t *testing.T) {
 	dir := installation(t, "theia-server")
 	w := watch(t, false)
-	spawn = func(path, _ string) error {
+	spawn = func(path string, args []string, _ string) error {
 		w.events = append(w.events, event{kind: "spawn", name: filepath.Base(path)})
 		return errors.New("access is denied")
 	}
@@ -483,8 +502,64 @@ func TestTheAddressIsThePortTheServerWasConfiguredWith(t *testing.T) {
 	if code, output := runIn(dir, "server"); code != 0 {
 		t.Fatalf("theia server exited %d: %s", code, output)
 	}
-	want := []string{"reachable:127.0.0.1:9001", "spawn:" + programName("theia-server"), "wait:127.0.0.1:9001"}
+	want := []string{"reachable:127.0.0.1:9001", serverSpawn(os.Getenv("THEIA_DATA_DIR")), "wait:127.0.0.1:9001"}
 	if !w.equal(want...) {
 		t.Errorf("the order was %v, want %v", w.order(), want)
+	}
+}
+
+// The installation records which data directory it was made with, and this is
+// the whole point of the record: an installation given `--data-dir` elsewhere
+// used to get a command that probed the default port and then started a server
+// over the default directory - a library nobody installed (decision 153).
+func TestTheServerIsStartedOverTheDirectoryTheInstallationRecords(t *testing.T) {
+	installed := installation(t, "theia-server", "theia-player")
+	recorded := t.TempDir()
+	if err := layout.WriteRecord(installed, recorded); err != nil {
+		t.Fatal(err)
+	}
+	// The environment is somebody saying so for one run; with it out of the way,
+	// the record is the only answer left.
+	t.Setenv(config.DataDirEnv, "")
+	if err := os.WriteFile(filepath.Join(recorded, "config.json"), []byte(`{"port": 9002}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	w := watch(t, false)
+
+	if code, output := runIn(installed); code != 0 {
+		t.Fatalf("theia exited %d: %s", code, output)
+	}
+	want := []string{
+		"reachable:127.0.0.1:9002",
+		serverSpawn(recorded),
+		"wait:127.0.0.1:9002",
+		"spawn:" + programName("theia-player"),
+	}
+	if !w.equal(want...) {
+		t.Errorf("the order was %v, want %v", w.order(), want)
+	}
+}
+
+// A record that exists and cannot be read is refused rather than quietly
+// ignored. Looking in the wrong directory and saying nothing is the fault the
+// record was written to end, so a damaged one is not a reason to fall back to
+// the same silence.
+func TestARecordThatCannotBeReadIsSaidOutLoud(t *testing.T) {
+	installed := installation(t, "theia-server")
+	if err := os.WriteFile(filepath.Join(installed, layout.RecordFile), []byte("{"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(config.DataDirEnv, "")
+	w := watch(t, false)
+
+	code, output := runIn(installed)
+	if code != 1 {
+		t.Errorf("theia with a damaged record exited %d, want 1", code)
+	}
+	if !strings.Contains(output, layout.RecordFile) {
+		t.Errorf("the refusal does not name the file it could not read: %q", output)
+	}
+	if len(w.events) != 0 {
+		t.Errorf("theia started something anyway: %v", w.order())
 	}
 }

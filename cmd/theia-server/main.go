@@ -30,6 +30,7 @@ import (
 	"github.com/Benitoow/theia-media/internal/discovery"
 	"github.com/Benitoow/theia-media/internal/ffmpeg"
 	"github.com/Benitoow/theia-media/internal/imagecache"
+	"github.com/Benitoow/theia-media/internal/layout"
 	"github.com/Benitoow/theia-media/internal/library"
 	"github.com/Benitoow/theia-media/internal/preview"
 	"github.com/Benitoow/theia-media/internal/profiles"
@@ -97,8 +98,20 @@ func run() (runErr error) {
 
 	dataDir := *dataDirFlag
 	if dataDir == "" {
+		// Nothing was said on the command line, so where this program lives
+		// answers: an installation made with `--data-dir` elsewhere records it
+		// beside its programs, and a server that ignored that would open - and
+		// create - a library nobody installed. The launcher and the autostart
+		// entry both name the directory on the command line for the same reason;
+		// this is the path somebody typing `theia-server` in a terminal takes
+		// (decision 153). A server in a folder nobody installed has no record and
+		// falls to the standard location.
+		self, selfErr := os.Executable()
+		if selfErr != nil {
+			self = ""
+		}
 		var err error
-		if dataDir, err = config.DataDir(); err != nil {
+		if dataDir, err = layout.DataDir(layout.InstallDirOf(self)); err != nil {
 			return err
 		}
 	}

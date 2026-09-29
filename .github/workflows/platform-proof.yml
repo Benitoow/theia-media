@@ -197,16 +197,15 @@ jobs:
       # promises and what no check on this platform did - the install step starts
       # the server by hand and only asks the launcher its version.
       #
-      # `THEIA_DATA_DIR` is not a convenience here, it is the only way this can
-      # work: `theia` reads its port from `config.DataDir()`, which knows nothing
-      # about the `--data-dir` the installer was given (the installation records
-      # it in that directory's `setup.json`, and nothing reads it back). The
-      # default location would answer on the default port and talk about a
-      # library nobody installed.
+      # Nothing in the environment says where the data is, and that is the point:
+      # the installation records it beside its programs, so the command reads the
+      # directory it was made with and finds the port this machine was configured
+      # on. `THEIA_DATA_DIR` used to be named here because the launcher read
+      # `config.DataDir()` instead and would have talked about a library nobody
+      # installed - naming it from outside would now pass whatever the record
+      # said (decision 153).
       - name: Open the product the way a person does
         shell: pwsh
-        env:
-          THEIA_DATA_DIR: ${{ runner.temp }}\theia-data
         run: |
           $launcher = Join-Path "$env:RUNNER_TEMP\theia-install" 'theia.exe'
           if (-not (Test-Path $launcher)) { throw 'the installed launcher is missing' }

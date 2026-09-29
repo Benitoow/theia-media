@@ -21,8 +21,8 @@ const createNoWindow = 0x08000000
 // installation, which is what the shortcuts set too, so a relative path in
 // either program's own configuration resolves the same way however it was
 // started.
-func spawnDetached(path, dir string) error {
-	command := exec.Command(path)
+func spawnDetached(path string, args []string, dir string) error {
+	command := exec.Command(path, args...)
 	command.Dir = dir
 	command.SysProcAttr = &syscall.SysProcAttr{CreationFlags: createNoWindow}
 	return command.Start()

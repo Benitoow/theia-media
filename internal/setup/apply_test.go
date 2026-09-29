@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/Benitoow/theia-media/internal/config"
+	"github.com/Benitoow/theia-media/internal/layout"
 )
 
 // freePort asks the kernel for a port nobody is using, so the validation's own
@@ -225,5 +226,49 @@ func TestThePortCheckRefusesAPortSomebodyElseHolds(t *testing.T) {
 	}
 	if want := strconv.Itoa(port); !strings.Contains(err.Error(), want) {
 		t.Errorf("the refusal %q does not name the port", err)
+	}
+}
+
+// The installation records where its data is, beside the programs, because
+// neither program inside it can work that out for itself: `theia` decides which
+// port to probe and which directory to hand the server it starts, and this tool
+// has to keep and name the right library when it removes the programs. An
+// installation given `--data-dir` elsewhere used to get a command that started a
+// server over the default directory - a library nobody installed (decision 153).
+func TestApplyRecordsWhereTheDataLivesBesideThePrograms(t *testing.T) {
+	root := t.TempDir()
+	dataDir := filepath.Join(root, "data")
+	installDir := filepath.Join(root, "programs")
+	if err := os.MkdirAll(installDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	plan := Plan{Role: RoleAllInOne, DataDir: dataDir, InstallDir: installDir, Port: freePort(t), Hostname: "theia"}
+	if _, err := Apply(plan); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+
+	record, ok, err := layout.ReadRecord(installDir)
+	if err != nil || !ok {
+		t.Fatalf("no record beside the programs: ok=%v err=%v", ok, err)
+	}
+	if record.DataDir != dataDir {
+		t.Errorf("the record says %q, want %q", record.DataDir, dataDir)
+	}
+	// And it is the answer the programs there give when somebody asks, which is
+	// what makes the launcher and this tool agree about the library.
+	t.Setenv(config.DataDirEnv, "")
+	if got, err := DataDirFor(filepath.Join(installDir, "theia-setup")); err != nil || got != dataDir {
+		t.Errorf("DataDirFor = %q (%v), want %q", got, err, dataDir)
+	}
+
+	// Installing again over a different directory rewrites it, rather than
+	// leaving the installation pointing at where its data used to be.
+	moved := filepath.Join(root, "moved")
+	plan.DataDir = moved
+	if _, err := Apply(plan); err != nil {
+		t.Fatalf("Apply after moving the data: %v", err)
+	}
+	if record, _, err := layout.ReadRecord(installDir); err != nil || record.DataDir != moved {
+		t.Errorf("after moving the data the record says %q (%v), want %q", record.DataDir, err, moved)
 	}
 }

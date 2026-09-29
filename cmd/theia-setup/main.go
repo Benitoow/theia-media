@@ -87,11 +87,16 @@ func run() error {
 	setup.Version = version
 
 	text, _ := setup.CatalogueFor(*language)
-	defaultDir, err := config.DataDir()
+	// Where this machine's data is: the record beside the running tool's own
+	// programs first, because this tool travels with the installation it
+	// maintains - so `--uninstall` keeps the right library and `--check` answers
+	// about the right machine. A tool that was merely downloaded has no record
+	// beside it, and falls to the standard location (decision 153).
+	defaultDir, err := setup.DataDirFor(selfPath())
 	if err != nil {
 		return err
 	}
-	// `--data-dir` wins over where the machine would put it, on both paths. The
+	// `--data-dir` wins over what the installation recorded, on both paths. The
 	// form used to be handed the machine's directory whatever the flag said, so
 	// the question was asked, the summary proposed somewhere else, and the flag
 	// looked like it had been accepted. It had not.
@@ -315,7 +320,7 @@ func serviceAction(action string, jsonOutput bool, text setup.Catalogue) error {
 // currentPlan reads what this machine is configured as, so a service can be
 // installed later without re-answering every question.
 func currentPlan() (setup.Plan, error) {
-	dir, err := config.DataDir()
+	dir, err := setup.DataDirFor(selfPath())
 	if err != nil {
 		return setup.Plan{}, err
 	}

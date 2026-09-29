@@ -76,25 +76,7 @@ func main() {
 		fmt.Fprintf(out, "theia: locating this command: %v\n", err)
 		os.Exit(1)
 	}
-	os.Exit(run(installationDir(self), os.Args[1:], out))
-}
-
-// installationDir is the folder this command's siblings are in: the directory of
-// the file that is running, not of the name somebody typed.
-//
-// The two differ where the installer links this command into `~/.local/bin`
-// instead of copying it there, because that link is the name a terminal finds.
-// macOS hands a process the path it was started from, links unresolved, so the
-// directory of that path holds the link - and the link's siblings - while the
-// programs are beside the file it points at. Measured on the `macos-15-intel`
-// runner on 28 September 2026: the linked command started the installed server
-// and then opened a browser, because no player stands beside `~/.local/bin`;
-// a Mac installation keeps its player inside `Theia.app`.
-func installationDir(self string) string {
-	if resolved, err := filepath.EvalSymlinks(self); err == nil {
-		self = resolved
-	}
-	return filepath.Dir(self)
+	os.Exit(run(layout.InstallDirOf(self), os.Args[1:], out))
 }
 
 // run is the whole command line.
@@ -158,13 +140,22 @@ func launch(dir string, want request, out io.Writer) int {
 		return fail(out, fmt.Errorf("%s is not installed beside this command", playerName))
 	}
 
+	// Which library this installation serves, which the programs beside it cannot
+	// work out: the installer recorded it, and a command that guessed the
+	// standard place instead started a server over a directory nobody installed
+	// (decision 153).
+	dataDir, err := layout.DataDir(dir)
+	if err != nil {
+		return fail(out, err)
+	}
+
 	if hasServer && (want.bare || want.server) {
-		if err := ensureServer(server, out); err != nil {
+		if err := ensureServer(server, dataDir, out); err != nil {
 			return fail(out, err)
 		}
 	}
 	if hasPlayer && (want.bare || want.player) {
-		if err := spawn(player, dir); err != nil {
+		if err := spawn(player, nil, dir); err != nil {
 			return fail(out, fmt.Errorf("starting %s: %w", filepath.Base(player), err))
 		}
 		return 0
@@ -175,7 +166,7 @@ func launch(dir string, want request, out io.Writer) int {
 		// with no graphical session the opener refuses and the address is then
 		// the whole answer. It is not an error either way - the server is up,
 		// which is what this command promised.
-		url := "http://" + serverAddress() + "/"
+		url := "http://" + serverAddress(dataDir) + "/"
 		fmt.Fprintf(out, "theia: %s\n", url)
 		if err := openBrowser(url); err != nil {
 			fmt.Fprintf(out, "theia: no browser to open it with (%v)\n", err)
@@ -186,12 +177,16 @@ func launch(dir string, want request, out io.Writer) int {
 
 // ensureServer starts the server unless something is already answering on its
 // port, and comes back once it answers - or once it is clear that it will not.
-func ensureServer(server string, out io.Writer) error {
-	address := serverAddress()
+func ensureServer(server, dataDir string, out io.Writer) error {
+	address := serverAddress(dataDir)
 	if reachable(address) {
 		return nil
 	}
-	if err := spawn(server, filepath.Dir(server)); err != nil {
+	// The directory is named on the command line rather than left to the
+	// server's own default: the record says which one this installation was made
+	// with, and a server started without it would open - and create - the
+	// standard one.
+	if err := spawn(server, []string{"--data-dir", dataDir}, filepath.Dir(server)); err != nil {
 		return fmt.Errorf("starting %s: %w", filepath.Base(server), err)
 	}
 	// The player is opened next, and a moment spent here is the difference
@@ -207,15 +202,13 @@ func ensureServer(server string, out io.Writer) error {
 // serverAddress is where the server listens: the port it was configured with, on
 // the loopback address. The server binds every interface, so the loopback
 // address answers whenever it is up, whatever the machine's hostname is.
-func serverAddress() string {
+func serverAddress(dataDir string) string {
 	port := config.DefaultPort
-	if dir, err := config.DataDir(); err == nil {
-		// Load creates the data directory when it is absent. That is what the
-		// server would do a moment later anyway, and reading the port from
-		// somewhere else would be a second way to decide where the port lives.
-		if cfg, err := config.Load(dir); err == nil && cfg.Port != 0 {
-			port = cfg.Port
-		}
+	// Load creates the data directory when it is absent. That is what the server
+	// would do a moment later anyway, and reading the port from somewhere else
+	// would be a second way to decide where the port lives.
+	if cfg, err := config.Load(dataDir); err == nil && cfg.Port != 0 {
+		port = cfg.Port
 	}
 	return net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 }

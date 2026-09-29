@@ -185,8 +185,12 @@ go build -trimpath -o theia-setup.exe ./cmd/theia-setup
 `theia-setup` is the third artifact: Go and Charm, no CGO, and it crosses the
 same six targets with `CGO_ENABLED=0` (checked by CI, and locally with
 `GOOS`/`GOARCH`). It writes the server's configuration through
-`internal/config` rather than by hand, and its own record of the machine's
-declared role in `setup.json` beside it.
+`internal/config` rather than by hand, its record of the machine's declared role
+in `setup.json` inside the data directory, and - beside the programs it installs -
+`installation.json`, the one fact the programs there cannot work out for
+themselves: which data directory this installation was made with. `theia`,
+`theia-setup` and `theia-server` all read it, ahead of the standard location and
+behind `THEIA_DATA_DIR` (decision 153).
 
 **It installs the programs.** `%LOCALAPPDATA%\Programs\Theia` on Windows, per-user
 because elevation is never requested (decision 120). It finds what it needs

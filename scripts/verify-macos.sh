@@ -390,10 +390,12 @@ if [ -x "$setup" ]; then
 		# else here runs the launcher's own path - the server above was started by
 		# hand, and the player by the playback section.
 		#
-		# `THEIA_DATA_DIR` is named because `theia` reads its port from the
-		# standard data directory and knows nothing about the `--data-dir` this
-		# installation was given: the installation records it in that directory's
-		# `setup.json`, and nothing reads it back.
+		# No `THEIA_DATA_DIR` here, and that is the point of the check: the
+		# installation records where its data is beside its programs, so the
+		# command reads the directory it was made with - the same fact the
+		# launcher used to guess at the standard location and get wrong
+		# (decision 153). Naming it from outside would pass whatever the record
+		# said, which is how this was missed the first time.
 		#
 		# `--service` above loaded a launchd agent, and that agent is a server:
 		# measured on the `macos-15-intel` runner on 28 September 2026, it was
@@ -410,7 +412,7 @@ if [ -x "$setup" ]; then
 		if curl -sf http://127.0.0.1:8383/api/health >/dev/null 2>&1; then
 			printf 'INFO  something still answers on 8383 after the agent was unloaded; the check below is not the launcher alone\n'
 		fi
-		THEIA_DATA_DIR="$fake_home/.theia" "$fake_home/.local/bin/theia" >"$work/launcher.log" 2>&1 &
+		HOME="$fake_home" "$fake_home/.local/bin/theia" >"$work/launcher.log" 2>&1 &
 		launcher_pid=$!
 		launcher_ready=0
 		for _ in $(seq 1 60); do
