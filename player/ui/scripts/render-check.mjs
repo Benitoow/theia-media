@@ -152,7 +152,7 @@ const MOVIES = [
 		// The synopsis the preview shows, and the reason the second film has
 		// none: a preview that invents one is worse than a preview that says
 		// less, so both paths are exercised.
-		metadata: { backdrop_path: '/probe-backdrop.jpg', overview: 'A probe film about probes, long enough to be clamped by the frame it is drawn in.' },
+		metadata: { backdrop_path: '/probe-backdrop.jpg', overview: 'A probe film about probes, long enough to be clamped by the frame it is drawn in.', original_title: 'Probe Original', director: 'A. Director', cast: [{ name: 'A. Actor', character: 'The Probe' }], certification: 'PG-13' },
 		backdrop_url: '/api/images/w780/probe-backdrop.jpg',
 		poster_url: '/api/images/w500/probe-poster.jpg',
 		progress: { position_seconds: 0, duration_seconds: 600, finished: false },
@@ -1198,6 +1198,11 @@ async function assertEscapeLeavesFullscreenFirst(page) {
 		console.error(`fullscreen state changed but ${fullscreenPressed} control(s) expose aria-pressed=true`);
 		failures++;
 	}
+	const fullscreenRadius = await page.locator('.osd').evaluate((element) => getComputedStyle(element).borderTopLeftRadius);
+	if (fullscreenRadius !== '0px') {
+		console.error(`fullscreen kept a rounded window corner: ${fullscreenRadius}`);
+		failures++;
+	}
 
 	// (b) one Escape gives the window back and keeps the film.
 	await page.keyboard.press('Escape');
@@ -1272,6 +1277,19 @@ async function assertEscapeLeavesFullscreenFirst(page) {
 	now = await state();
 	if (now.fullscreen || now.closed) {
 		console.error(`after the menu, Escape did not simply leave fullscreen: ${JSON.stringify(now)}`);
+		failures++;
+	}
+	// The caption bar's restore button must exit fullscreen without maximizing
+	// the window underneath it.
+	await page.keyboard.press('f');
+	await page.evaluate(() => window.__fireResize());
+	await page.waitForTimeout(150);
+	await page.locator('.window-controls .window-control').nth(1).click();
+	await page.evaluate(() => window.__fireResize());
+	await page.waitForTimeout(150);
+	const restored = await page.evaluate(() => ({ fullscreen: window.__fullscreen, maximized: window.__maximized === true }));
+	if (restored.fullscreen || restored.maximized) {
+		console.error(`the caption bar did not restore from fullscreen cleanly: ${JSON.stringify(restored)}`);
 		failures++;
 	}
 	await page.evaluate(() => {
@@ -2032,6 +2050,8 @@ async function openPage(
 		// different products. en-US here, fr-FR where the system-French rule
 		// is the point.
 		locale = 'en-US',
+		savedServer = null,
+		localServer = null,
 	} = {}
 ) {
 	const page = await browser.newPage({
@@ -2062,7 +2082,7 @@ async function openPage(
 	}
 
 	await page.addInitScript(
-		({ tracks, ladder, watching, movies, series, seriesDetail, season, status, discovered, home, seriesHome, preview }) => {
+		({ tracks, ladder, watching, movies, series, seriesDetail, season, status, discovered, home, seriesHome, preview, savedServer, localServer }) => {
 			window.__handlers = {};
 			window.__profiles = [
 				{ id: 1, name: 'Alex', is_default: true, has_avatar: false, avatar_version: 0 },
@@ -2090,7 +2110,9 @@ async function openPage(
 					invoke: async (cmd, args) => {
 						window.__commands.push(cmd);
 						window.__invocations.push({ cmd, args });
-						if (cmd === 'player_local_server') return null;
+						if (cmd === 'player_local_server') return localServer;
+						if (cmd === 'player_saved_server') return savedServer;
+						if (cmd === 'player_remember_server' || cmd === 'player_disconnect') return null;
 						// Nothing connected at boot in the harness: the whole
 						// connection journey is a screen the checks drive.
 						if (cmd === 'player_current_server') return null;
@@ -2111,6 +2133,7 @@ async function openPage(
 						if (cmd === 'player_series_home') return JSON.stringify(seriesHome);
 						if (cmd === 'player_preview') return JSON.stringify(preview);
 						if (cmd === 'player_series_detail') return JSON.stringify(seriesDetail);
+						if (cmd === 'player_movie_detail') return JSON.stringify(movies.find((movie) => movie.id === Number(args?.id)));
 						if (cmd === 'player_season') return JSON.stringify(season);
 						if (cmd === 'player_discover') return JSON.stringify(discovered);
 						if (cmd === 'player_set_profile') return null;
@@ -2198,7 +2221,7 @@ async function openPage(
 			};
 			window.__status = status;
 		},
-		{ tracks, ladder, watching: WATCHING, movies, series, seriesDetail, season, status: STATUS, discovered, home, seriesHome, preview }
+		{ tracks, ladder, watching: WATCHING, movies, series, seriesDetail, season, status: STATUS, discovered, home, seriesHome, preview, savedServer, localServer }
 	);
 	await page.goto(URL, { waitUntil: 'networkidle' });
 	await page.waitForTimeout(400);
@@ -2282,8 +2305,8 @@ async function assertSeriesJourney(page) {
 	});
 	await page.getByRole('button', { name: /Play episode.*S01E01/ }).click();
 	const commands = await page.evaluate(() => window.__commands ?? []);
-	if (!commands.includes('player_play_episode')) {
-		console.error(`pressing an episode issued ${commands.join(', ') || 'no command'}`);
+	if (!commands.includes('player_play_episode') || commands.indexOf('player_set_playback') < 0 || commands.indexOf('player_set_playback') > commands.indexOf('player_play_episode')) {
+		console.error(`episode playback did not apply preferences before opening: ${commands.join(', ') || 'no command'}`);
 		failures++;
 	}
 }
@@ -3501,12 +3524,8 @@ async function assertSeriesJourney(page) {
 	await assertCaptionChrome(caption, 'caption bar at 1280');
 	await caption.close();
 
-	// (p) A film's own play path. The series journey asserts that pressing an
-	//     episode issues player_play_episode; the film half had no guard at all,
-	//     which is worth stating plainly: the maintainer pressed Play movie, and
-	//     nothing anywhere in this harness would have noticed either way. Both
-	//     the card and the button inside the preview lead to the same call, and
-	//     the id matters - a command that starts the wrong film is not "playing".
+	// (p) A card opens the native film record, then its Play button starts it.
+	//     Track preferences must reach mpv before the file is loaded.
 	const filmPlay = await openPage({ width: 1280, height: 720 });
 	// Connected, then on the film grid, so "the first card" is MOVIES[0] and the
 	// id in the assertion is a fact rather than a guess about which row drew
@@ -3521,13 +3540,46 @@ async function assertSeriesJourney(page) {
 		window.__invocations = [];
 	});
 	await filmPlay.locator('.film').first().click();
+	const detail = await filmPlay.locator('.movie-detail').innerText();
+	const detailCalls = await filmPlay.evaluate(() => window.__invocations ?? []);
+	if (!detail.includes('A probe film about probes') || !detail.includes('A. Actor') || !detail.includes('Probe Original') || detailCalls.some((call) => call.cmd === 'player_play') || !detailCalls.some((call) => call.cmd === 'player_movie_detail' && call.args?.id === 1)) {
+		console.error('the film card did not open the TMDB detail before playback');
+		failures++;
+	}
+	await filmPlay.getByRole('button', { name: 'Play movie', exact: true }).click();
 	await filmPlay.waitForTimeout(400);
 	const playCalls = await filmPlay.evaluate(() => (window.__invocations ?? []).filter((call) => call.cmd === 'player_play'));
 	if (playCalls.length !== 1 || playCalls[0].args?.id !== 1) {
 		console.error(`pressing the first card issued ${JSON.stringify(playCalls)}, expected exactly one player_play for film 1`);
 		failures++;
 	}
+	const filmCommands = await filmPlay.evaluate(() => (window.__invocations ?? []).map((call) => call.cmd));
+	if (filmCommands.indexOf('player_set_playback') < 0 || filmCommands.indexOf('player_set_playback') > filmCommands.indexOf('player_play')) {
+		console.error(`film playback did not apply preferences first: ${filmCommands.join(', ')}`);
+		failures++;
+	}
 	await filmPlay.close();
+
+	// A viewer's choice outranks the all-in-one installation on restart. The
+	// Settings action clears the connection and returns to the address form.
+	const savedChoice = await openPage({ width: 1280, height: 720 }, {
+		savedServer: 'http://192.0.2.7:8395',
+		localServer: 'http://127.0.0.1:8395',
+	});
+	const bootCalls = await savedChoice.evaluate(() => window.__invocations ?? []);
+	if (!bootCalls.some((call) => call.cmd === 'player_connect' && call.args?.url === 'http://192.0.2.7:8395') || bootCalls.some((call) => call.cmd === 'player_local_server')) {
+		console.error('startup did not prefer the saved server over the local installation');
+		failures++;
+	}
+	await savedChoice.getByRole('button', { name: /Settings/ }).click();
+	await savedChoice.locator('.settings-nav-item', { hasText: 'Server' }).click();
+	await savedChoice.getByRole('button', { name: 'Change server' }).click();
+	await savedChoice.locator('#theia-address').waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+	if (!(await savedChoice.locator('#theia-address').isVisible()) || !(await savedChoice.evaluate(() => (window.__commands ?? []).includes('player_disconnect')))) {
+		console.error('changing server did not disconnect and return to the address form');
+		failures++;
+	}
+	await savedChoice.close();
 
 	// (q) what a notice is attached to. The audio fallback is about one film's
 	//     sound and leaves with the film; an engine that will not start is not

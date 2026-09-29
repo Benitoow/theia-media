@@ -60,7 +60,8 @@ body {
 	   maximized window loses it with the curve (the rule below). */
 	box-shadow: inset 0 0 0 1px rgb(var(--channel-bone) / 0.1);
 }
-.osd[data-maximized='true'] {
+.osd[data-maximized='true'],
+.osd[data-fullscreen='true'] {
 	border-radius: 0;
 	box-shadow: none;
 }
@@ -923,8 +924,8 @@ button.action:focus-visible {
 	   makes the box 1.22 times the frame, the frame is therefore 9.016% inside
 	   it, and the radius needs no correction at all because nothing is scaled. */
 	inset: -11%;
-	filter: blur(22px) saturate(1.15) brightness(0.92);
-	opacity: 0.62;
+	filter: blur(22px) saturate(0.95) brightness(0.42);
+	opacity: 0.72;
 	/* Rounded in its own box, because an ancestor does not clip a filtered
 	   layer. 9.016% = (1 - 1/1.22) / 2, and the value is the frame's own. */
 	clip-path: inset(9.016% round var(--radius-card));
@@ -1431,6 +1432,49 @@ button.action:focus-visible {
 	object-fit: cover;
 	filter: saturate(0.84) contrast(1.04);
 }
+
+.movie-detail {
+	position: relative;
+	width: min(100%, 90rem);
+	min-height: 31rem;
+	margin-inline: auto;
+	overflow: hidden;
+	border-radius: var(--radius-card);
+	background: rgb(var(--channel-surface) / 0.92);
+}
+
+.movie-detail-art {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	opacity: 0.38;
+	mask-image: linear-gradient(to right, transparent 6%, #000 100%);
+}
+
+.movie-detail-content {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	min-height: 31rem;
+	width: min(100%, 46rem);
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	gap: 1rem;
+	padding: clamp(1.5rem, 5vw, 4rem);
+	background: linear-gradient(to right, rgb(var(--channel-surface) / 0.96), rgb(var(--channel-surface) / 0.65) 75%, transparent);
+}
+
+.movie-detail-tagline, .movie-detail-facts, .movie-detail-credit { margin: 0; }
+.movie-detail-tagline { font-size: 1.25rem; color: var(--color-accent); }
+.movie-detail-facts, .movie-detail-credit { color: rgb(var(--channel-bone) / 0.72); }
+.movie-detail-overview { max-width: 65ch; line-height: 1.6; }
+.movie-detail-cast h3 { margin: 0 0 0.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.movie-detail-cast ul { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin: 0; padding: 0; list-style: none; }
+.movie-detail-cast li { color: rgb(var(--channel-bone) / 0.86); }
+.movie-detail-cast li span { color: rgb(var(--channel-bone) / 0.6); }
 
 .library-nav {
 	position: sticky;

@@ -35,6 +35,10 @@ func defaultApplication(plan Plan, version, uninstaller string) Application {
 	}
 }
 
+func RepairRegistration(string, string) error {
+	return fmt.Errorf("setup: application registration is only available on Windows")
+}
+
 // removeAfterExit has no equivalent here, and does not need one: on a Unix system
 // a running file can be unlinked, so os.RemoveAll already emptied the folder and
 // this is never reached. Returning an error rather than nil keeps the caller

@@ -1205,14 +1205,16 @@ func firstInstalled(dir string, bases ...string) string {
 // It is asked of the installed server rather than taken from this tool, because
 // the two are not always the same number: an older installer fetches the current
 // release, and a list that said 3.3.0 about a 3.4.0 server would be wrong in the
-// one place somebody looks to find out what they have. Only the server is asked.
-// The player can be asked too since decision 143 - `theia-player -version` - and
-// is not, because a Windows applications list wants one version and the server is
-// the component that maintains its own: a list showing two numbers would be a
-// worse answer to a simpler question. What the player carries is asked where it
-// matters, by `--check-player`.
+// one place somebody looks to find out what they have. The server is asked first.
+// A player-only installation has no server to ask, so it reports its player's
+// version rather than the version of whichever setup binary happened to run.
 func installedVersion(plan Plan) string {
 	if path := firstInstalled(plan.InstallDir, "theia-server"); path != "" {
+		if reported, err := binaryVersion(path); err == nil && reported != "" {
+			return reported
+		}
+	}
+	if path := firstInstalled(plan.InstallDir, "theia-player"); path != "" {
 		if reported, err := binaryVersion(path); err == nil && reported != "" {
 			return reported
 		}

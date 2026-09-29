@@ -45,7 +45,10 @@ export function TitleBar({
 					: 'title-bar title-bar--overlay absolute inset-x-0 top-0 z-50 flex h-[3.25rem] items-center border-b border-transparent bg-transparent pl-3'
 			}
 			data-tauri-drag-region
-			onDoubleClick={onMaximize}
+			onDoubleClick={(event) => {
+				if ((event.target as HTMLElement).closest('button')) return;
+				onMaximize();
+			}}
 		>
 			<div className="flex min-w-0 flex-1 items-center gap-3" data-tauri-drag-region>
 				{playing && (

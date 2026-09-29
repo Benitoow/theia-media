@@ -58,6 +58,7 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { MediaCard } from './components/MediaCard';
+import { MovieDetail } from './components/MovieDetail';
 import { TitleBar } from './components/TitleBar';
 import { TrackMenu, type TrackMenuHandle } from './components/TrackMenu';
 import { Button } from './components/ui/button';
@@ -269,6 +270,7 @@ export default function App() {
 	const [homeError, setHomeError] = useState(false);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
+	const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 	const [selectedSeason, setSelectedSeason] = useState<Season | null>(null);
 	const [discovered, setDiscovered] = useState<DiscoveredServer[]>([]);
 	const [address, setAddress] = useState('http://');
@@ -392,10 +394,13 @@ export default function App() {
 					setLanguage(served);
 				}
 				setAddress(connected.url);
-				try {
-					localStorage.setItem('theia.player.server', connected.url);
-				} catch {
-					// Discovery remains the fallback when storage is disabled.
+				if (!quiet) {
+					try {
+						await invoke('player_remember_server', { url: connected.url });
+						localStorage.removeItem('theia.player.server');
+					} catch {
+						setErrorKey('saveServerFailed');
+					}
 				}
 				await Promise.all([loadLibrary(), loadHome(), refreshUpdateStatus()]);
 				return true;
@@ -523,6 +528,23 @@ export default function App() {
 				} catch {
 					// Nothing connected yet, which is the ordinary start.
 				}
+				let remembered: string | null = null;
+				try { remembered = await invoke<string | null>('player_saved_server'); } catch { /* First launch. */ }
+				if (!remembered) {
+					try { remembered = localStorage.getItem('theia.player.server'); } catch { /* Legacy storage unavailable. */ }
+				}
+				if (remembered) {
+					setAddress(remembered);
+					if (await connect(remembered, true)) {
+						// Migrate a legacy choice to the app's durable configuration.
+						try { await invoke('player_remember_server', { url: remembered }); localStorage.removeItem('theia.player.server'); } catch { /* Retry next launch. */ }
+						return;
+					}
+					// A chosen server stays chosen even while it is offline. The viewer
+					// can change it from the connect screen; discovery cannot replace it.
+					setErrorKey('connectionFailed');
+					return;
+				}
 				let local: string | null = null;
 				try {
 					local = await invoke<string | null>('player_local_server');
@@ -531,13 +553,6 @@ export default function App() {
 				}
 				if (cancelled) return;
 				if (local && (await connect(local, true))) return;
-				let remembered = '';
-				try {
-					remembered = localStorage.getItem('theia.player.server') ?? '';
-				} catch {
-					// Nothing to remember.
-				}
-				if (remembered && remembered !== local && (await connect(remembered, true))) return;
 				await findServers(true);
 			} finally {
 				if (!cancelled) setBooting(false);
@@ -732,18 +747,12 @@ export default function App() {
 
 	// What the settings sheet decided, handed to the engine.
 	//
-	// Sent the moment the engine can hear rather than only when Save is pressed,
-	// and sent again whenever the preferences change: a subtitle style that
-	// needed a restart to appear is a setting nobody can see the effect of, and
-	// the frame this rides on is a bridge call that costs nothing. `status.ready`
-	// is in the dependencies because the engine is created by the shell, not by
-	// this page - a preferences frame sent before it exists is refused, and the
-	// refusal is not worth a sentence: what is stored here is re-sent on the next
-	// change, and the engine starts from its own copy of the same defaults.
+	// Sent on mount and whenever a choice changes. `status.ready` describes a
+	// loaded film, not engine readiness: gating on it applied saved languages
+	// only after mpv had already selected tracks for the first film or episode.
 	useEffect(() => {
-		if (!status.ready) return;
 		void invoke('player_set_playback', { prefs: JSON.stringify(preferences.playback) }).catch(() => {});
-	}, [status.ready, preferences.playback]);
+	}, [preferences.playback]);
 
 	const wake = useCallback(() => {
 		if (idleTimer.current !== null) window.clearTimeout(idleTimer.current);
@@ -770,20 +779,25 @@ export default function App() {
 
 	// A notice belongs to the film that raised it, so a new film starts on a
 	// clean screen: the last one's sound is not this one's.
-	const playMovie = async (id: number) => {
+	const startPlayback = async (command: 'player_play' | 'player_play_episode', id: number, failure: string) => {
 		clearNotice();
 		try {
-			await invoke('player_play', { id });
+			await invoke('player_set_playback', { prefs: JSON.stringify(preferences.playback) }).catch(() => {});
+			await invoke(command, { id });
 		} catch {
-			setErrorKey('playFailed');
+			setErrorKey(failure);
 		}
 	};
-	const playEpisode = async (id: number) => {
-		clearNotice();
+	const playMovie = (id: number) => startPlayback('player_play', id, 'playFailed');
+	const playEpisode = (id: number) => startPlayback('player_play_episode', id, 'episodeFailed');
+	const openMovie = async (id: number) => {
+		setErrorKey(null);
 		try {
-			await invoke('player_play_episode', { id });
+			setSelectedMovie(JSON.parse(await invoke<string>('player_movie_detail', { id })) as Movie);
+			setSelectedSeries(null);
+			setSelectedSeason(null);
 		} catch {
-			setErrorKey('episodeFailed');
+			setErrorKey('movieFailed');
 		}
 	};
 	const openSeries = async (id: number) => {
@@ -970,6 +984,7 @@ export default function App() {
 					trackButton.current?.focus();
 				} else if (fullscreen) void setFullscreenState(false);
 				else if (status.media) void returnToLibrary();
+				else if (selectedMovie) setSelectedMovie(null);
 				else if (selectedSeries) {
 					setSelectedSeries(null);
 					setSelectedSeason(null);
@@ -978,7 +993,7 @@ export default function App() {
 		};
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
-	}, [fullscreen, profilesOpen, returnToLibrary, seek, selectedSeries, setFullscreenState, setVolumeTo, settingsOpen, status.media, switchLanguage, toggle, toggleFullscreen, trackMenuOpen, volume, wake]);
+	}, [fullscreen, profilesOpen, returnToLibrary, seek, selectedMovie, selectedSeries, setFullscreenState, setVolumeTo, settingsOpen, status.media, switchLanguage, toggle, toggleFullscreen, trackMenuOpen, volume, wake]);
 
 	const seconds = Number(status.pos) || 0;
 	const duration = Number(status.duration) || 0;
@@ -994,6 +1009,7 @@ export default function App() {
 		else toggle();
 	};
 	const moveToSection = (next: Section) => {
+		setSelectedMovie(null);
 		setSelectedSeries(null);
 		setSelectedSeason(null);
 		navigate(`/${next}`);
@@ -1007,6 +1023,25 @@ export default function App() {
 		navigate('/profiles');
 	};
 	const closeOverlay = () => navigate(`/${lastSection.current}`);
+	const changeServer = async () => {
+		try {
+			await invoke('player_disconnect');
+			try { localStorage.removeItem('theia.player.server'); localStorage.removeItem('theia.player.profile'); } catch { /* Native choice is already cleared. */ }
+			setServer(null);
+			setAddress('');
+			setMovies([]);
+			setSeries([]);
+			setHome(null);
+			setSeriesHome(null);
+			setSelectedSeries(null);
+			setSelectedMovie(null);
+			setSelectedSeason(null);
+			setErrorKey(null);
+			closeOverlay();
+		} catch {
+			setErrorKey('disconnectFailed');
+		}
+	};
 
 	return (
 		<MotionConfig reducedMotion={preferences.reducedMotion ? 'always' : 'user'}>
@@ -1015,6 +1050,7 @@ export default function App() {
 				data-section={section}
 				data-idle={idle}
 				data-maximized={maximized}
+				data-fullscreen={fullscreen}
 				onMouseMove={wake}
 				onClick={backgroundClick}
 				onPointerDown={() => {
@@ -1035,7 +1071,7 @@ export default function App() {
 				<TitleBar
 					title={status.title}
 					playing={Boolean(status.media)}
-					maximized={maximized}
+					maximized={maximized || fullscreen}
 					language={language}
 					labels={{ back: t('backToLibrary'), minimize: t('minimize'), maximize: t('maximize'), restore: t('restore'), close: t('close') }}
 					onBack={() => void returnToLibrary()}
@@ -1043,6 +1079,10 @@ export default function App() {
 					onMinimize={() => getAppWindow()?.minimize()}
 					onMaximize={async () => {
 						const appWindow = getAppWindow();
+						if (await appWindow?.isFullscreen()) {
+							await setFullscreenState(false);
+							return;
+						}
 						await appWindow?.toggleMaximize();
 						try {
 							setMaximized(Boolean(await appWindow?.isMaximized()));
@@ -1059,12 +1099,12 @@ export default function App() {
 				{!status.media && (
 					<Library
 						server={server} booting={booting} busy={busy} address={address} discovered={discovered}
-						movies={movies} series={series} section={section} settingsOpen={settingsOpen} selectedSeries={selectedSeries} selectedSeason={selectedSeason}
+						movies={movies} series={series} section={section} settingsOpen={settingsOpen} selectedMovie={selectedMovie} selectedSeries={selectedSeries} selectedSeason={selectedSeason}
 						profilesOpen={profilesOpen} updateStatus={updateStatus} searchQuery={searchQuery}
 						home={home} seriesHome={seriesHome} homeError={homeError} language={language}
 						errorKey={errorKey} reducedMotion={preferences.reducedMotion} t={t}
 						onAddress={setAddress} onSubmit={submit} onFind={() => void findServers()} onConnect={(url) => void connect(url)}
-						onSection={moveToSection} onSettings={openSettings} onProfiles={openProfiles} onSearchQuery={setSearchQuery} onMovie={playMovie} onSeries={openSeries}
+						onSection={moveToSection} onSettings={openSettings} onProfiles={openProfiles} onSearchQuery={setSearchQuery} onMovie={openMovie} onPlayMovie={playMovie} onBackMovie={() => setSelectedMovie(null)} onSeries={openSeries}
 						onEpisode={playEpisode} onSeason={openSeason}
 						onBackSeries={() => { setSelectedSeries(null); setSelectedSeason(null); }}
 					/>
@@ -1072,7 +1112,7 @@ export default function App() {
 
 				<SettingsModal
 					open={settingsOpen && !status.media} language={language} preferences={preferences} server={server} updateStatus={updateStatus} updateBusy={updateBusy} t={t}
-					onClose={closeOverlay} onCheckUpdate={() => void checkUpdate()} onApplyUpdate={() => void applyUpdate()}
+					onClose={closeOverlay} onChangeServer={() => void changeServer()} onCheckUpdate={() => void checkUpdate()} onApplyUpdate={() => void applyUpdate()}
 					onSave={(nextLanguage, nextPreferences) => {
 						persistLanguage(nextLanguage);
 						persistPreferences(nextPreferences);
@@ -1113,19 +1153,19 @@ export default function App() {
 type LibraryProps = {
 	server: Server | null; booting: boolean; busy: boolean; address: string; discovered: DiscoveredServer[];
 	movies: Movie[]; series: Series[]; section: Section; settingsOpen: boolean; profilesOpen: boolean; updateStatus: UpdateStatus | null;
-	searchQuery: string; selectedSeries: Series | null; selectedSeason: Season | null;
+	searchQuery: string; selectedMovie: Movie | null; selectedSeries: Series | null; selectedSeason: Season | null;
 	home: Home | null; seriesHome: SeriesHome | null; homeError: boolean; language: string;
 	errorKey: string | null; reducedMotion: boolean; t: (key: string) => string;
 	onAddress: (value: string) => void; onSubmit: (event: FormEvent) => void; onFind: () => void;
 	onConnect: (url: string) => void; onSection: (value: Section) => void; onSettings: () => void; onProfiles: () => void;
 	onSearchQuery: (value: string) => void;
-	onMovie: (id: number) => void; onSeries: (id: number) => void; onEpisode: (id: number) => void;
+	onMovie: (id: number) => void; onPlayMovie: (id: number) => void; onBackMovie: () => void; onSeries: (id: number) => void; onEpisode: (id: number) => void;
 	onSeason: (number: number) => void; onBackSeries: () => void;
 };
 
 function Library(props: LibraryProps) {
-	const { server, selectedSeries, selectedSeason, section, t } = props;
-	const title = selectedSeries ? displayTitle(selectedSeries) : undefined;
+	const { server, selectedMovie, selectedSeries, selectedSeason, section, t } = props;
+	const title = selectedMovie ? displayTitle(selectedMovie) : selectedSeries ? displayTitle(selectedSeries) : undefined;
 	const count = section === 'series' ? props.series.length : section === 'search' ? props.movies.length + props.series.length : props.movies.length;
 	const spotlightSource = section === 'series' ? props.series[0] : props.movies[0];
 	// The ambient picture is the same size of frame as the home's hero - a
@@ -1134,18 +1174,20 @@ function Library(props: LibraryProps) {
 
 	return (
 		<section className="library">
-			{spotlight && !selectedSeries && section !== 'home' && section !== 'search' && <div className="library-ambient" aria-hidden="true"><img src={spotlight} alt="" crossOrigin="anonymous" /></div>}
+			{spotlight && !selectedMovie && !selectedSeries && section !== 'home' && section !== 'search' && <div className="library-ambient" aria-hidden="true"><img src={spotlight} alt="" crossOrigin="anonymous" /></div>}
 			{server && <LibraryNav section={section} settingsOpen={props.settingsOpen} profilesOpen={props.profilesOpen} profiles={server.profiles ?? []} activeProfile={server.profile ?? null} serverURL={server.url} updateAvailable={Boolean(props.updateStatus?.available)} t={t} onSection={props.onSection} onSettings={props.onSettings} onProfiles={props.onProfiles} />}
+			{server && props.errorKey && <p className="hint hint--error" role="alert">{t(props.errorKey)}</p>}
 
 			{/* The home screen has no page heading: its hero is the heading. A
 			   series opened from one of the home's rows keeps its own. */}
-			{!(section === 'home' && !selectedSeries && server && !props.booting) && <div className={section === 'search' ? 'library-heading library-heading--centered' : 'library-heading'}>
+			{!(section === 'home' && !selectedMovie && !selectedSeries && server && !props.booting) && <div className={section === 'search' ? 'library-heading library-heading--centered' : 'library-heading'}>
+				{selectedMovie && <button className="library-back" onClick={props.onBackMovie}><ArrowLeft size={18} />{t(section === 'home' ? 'home' : 'allFilms')}</button>}
 				{selectedSeries && <button className="library-back" onClick={props.onBackSeries}><ArrowLeft size={18} />{t(section === 'home' ? 'home' : 'allSeries')}</button>}
 				{/* The search room is a centred stage with no eyebrow: the loop
 				   is the decoration and "Your library" said nothing there. */}
-				{section !== 'search' && <p className="library-eyebrow label">{server ? (selectedSeries ? t('seriesLabel') : t('yourLibrary')) : t('desktopPlayer')}</p>}
+				{section !== 'search' && <p className="library-eyebrow label">{server ? (selectedMovie ? t('filmSingular') : selectedSeries ? t('seriesLabel') : t('yourLibrary')) : t('desktopPlayer')}</p>}
 				<h1 className="library-title">{title || (server ? (section === 'series' ? t('series') : section === 'search' ? t('searchTitle') : t('allFilms')) : props.booting ? t('starting') : t('connectTitle'))}</h1>
-				{server && !selectedSeries && section !== 'search' && <p className="library-count label">{count} {t(section === 'series' ? (count === 1 ? 'seriesSingular' : 'seriesPlural') : (count === 1 ? 'filmSingular' : 'filmPlural'))}</p>}
+				{server && !selectedMovie && !selectedSeries && section !== 'search' && <p className="library-count label">{count} {t(section === 'series' ? (count === 1 ? 'seriesSingular' : 'seriesPlural') : (count === 1 ? 'filmSingular' : 'filmPlural'))}</p>}
 			</div>}
 
 			<AnimatePresence mode="wait">
@@ -1164,6 +1206,8 @@ function Library(props: LibraryProps) {
 						{props.discovered.length > 0 && <ul className="servers">{props.discovered.map((entry) => <li key={entry.url}><Button variant="outline" onClick={() => props.onConnect(entry.url)}>{entry.name} — {entry.url}</Button></li>)}</ul>}
 						<p className={`hint ${props.errorKey ? 'hint--error' : ''}`}>{props.errorKey ? t(props.errorKey) : t('noServer')}</p>
 					</motion.div>
+				) : selectedMovie ? (
+					<MovieDetail movie={selectedMovie} language={props.language} t={t} onPlay={() => props.onPlayMovie(selectedMovie.id)} />
 				) : selectedSeries ? (
 					<motion.div key={`series-${selectedSeries.id}`} className="contents" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
 						<div className="season-tabs">{selectedSeries.seasons?.map((season) => <button key={season.id} className={`season-tab label ${selectedSeason?.season_number === season.season_number ? 'season-tab--active' : ''}`} onClick={() => props.onSeason(season.season_number)}>{season.metadata?.name || `${t('season')} ${season.season_number}`}</button>)}</div>
@@ -1176,15 +1220,14 @@ function Library(props: LibraryProps) {
 						) : !props.home ? (
 							<p className="hint">{t('startingHint')}</p>
 						) : (
-							<HomeView home={props.home} seriesHome={props.seriesHome} language={props.language} reducedMotion={props.reducedMotion} t={t} onMovie={props.onMovie} onSeries={props.onSeries} onEpisode={props.onEpisode} />
+							<HomeView home={props.home} seriesHome={props.seriesHome} language={props.language} reducedMotion={props.reducedMotion} t={t} onMovie={props.onMovie} onPlayMovie={props.onPlayMovie} onSeries={props.onSeries} onEpisode={props.onEpisode} />
 						)}
 					</motion.div>
 				) : section === 'search' ? (
 					<SearchResults {...props} />
 				) : (
 					<motion.div key={section} className="contents" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}>
-						{section === 'series' ? (props.series.length ? <CardGrid>{props.series.map((item) => <MediaCard key={item.id} kind="series" item={item} onOpen={props.onSeries} resumeLabel={t('resumeAt')} actionLabel={t('openSeries')} kindLabel={t('seriesLabel')} reducedMotion={props.reducedMotion} t={props.t} />)}</CardGrid> : <p className="hint">{t('emptySeries')}</p>) : (props.movies.length ? <CardGrid>{props.movies.map((movie) => <MediaCard key={movie.id} kind="movie" item={movie} onOpen={props.onMovie} resumeLabel={t('resumeAt')} actionLabel={t('playMovie')} kindLabel={t('filmSingular')} reducedMotion={props.reducedMotion} t={props.t} />)}</CardGrid> : <p className="hint">{t('emptyLibrary')}</p>)}
-						{props.errorKey && <p className="hint hint--error">{t(props.errorKey)}</p>}
+						{section === 'series' ? (props.series.length ? <CardGrid>{props.series.map((item) => <MediaCard key={item.id} kind="series" item={item} onOpen={props.onSeries} resumeLabel={t('resumeAt')} actionLabel={t('openSeries')} kindLabel={t('seriesLabel')} reducedMotion={props.reducedMotion} t={props.t} />)}</CardGrid> : <p className="hint">{t('emptySeries')}</p>) : (props.movies.length ? <CardGrid>{props.movies.map((movie) => <MediaCard key={movie.id} kind="movie" item={movie} onOpen={props.onMovie} resumeLabel={t('resumeAt')} actionLabel={t('openMovie')} kindLabel={t('filmSingular')} reducedMotion={props.reducedMotion} t={props.t} />)}</CardGrid> : <p className="hint">{t('emptyLibrary')}</p>)}
 					</motion.div>
 				)}
 			</AnimatePresence>
@@ -1205,7 +1248,7 @@ function SearchResults(props: LibraryProps) {
 			</label>
 			{!query ? <p className="hint">{props.t('searchHint')}</p> : matchingMovies.length + matchingSeries.length === 0 ? <p className="hint">{props.t('noSearchResults')}</p> : (
 				<div className="search-results">
-					{matchingMovies.length > 0 && <section><h2 className="search-result-title label">{props.t('filmResults')} · {matchingMovies.length}</h2><CardGrid>{matchingMovies.map((movie) => <MediaCard key={movie.id} kind="movie" item={movie} onOpen={props.onMovie} resumeLabel={props.t('resumeAt')} actionLabel={props.t('playMovie')} kindLabel={props.t('filmSingular')} reducedMotion={props.reducedMotion} t={props.t} />)}</CardGrid></section>}
+					{matchingMovies.length > 0 && <section><h2 className="search-result-title label">{props.t('filmResults')} · {matchingMovies.length}</h2><CardGrid>{matchingMovies.map((movie) => <MediaCard key={movie.id} kind="movie" item={movie} onOpen={props.onMovie} resumeLabel={props.t('resumeAt')} actionLabel={props.t('openMovie')} kindLabel={props.t('filmSingular')} reducedMotion={props.reducedMotion} t={props.t} />)}</CardGrid></section>}
 					{matchingSeries.length > 0 && <section><h2 className="search-result-title label">{props.t('seriesResults')} · {matchingSeries.length}</h2><CardGrid>{matchingSeries.map((item) => <MediaCard key={item.id} kind="series" item={item} onOpen={props.onSeries} resumeLabel={props.t('resumeAt')} actionLabel={props.t('openSeries')} kindLabel={props.t('seriesLabel')} reducedMotion={props.reducedMotion} t={props.t} />)}</CardGrid></section>}
 				</div>
 			)}
@@ -1225,7 +1268,7 @@ const ROW_TITLES: Record<string, string> = {
 type HomeViewProps = {
 	home: Home; seriesHome: SeriesHome | null; language: string; reducedMotion: boolean;
 	t: (key: string) => string;
-	onMovie: (id: number) => void; onSeries: (id: number) => void; onEpisode: (id: number) => void;
+	onMovie: (id: number) => void; onPlayMovie: (id: number) => void; onSeries: (id: number) => void; onEpisode: (id: number) => void;
 };
 
 /**
@@ -1234,14 +1277,14 @@ type HomeViewProps = {
  * screen decides what it is called. The series rows sit after the film rows
  * on purpose - same as the web, where the two halves are answered separately.
  */
-function HomeView({ home, seriesHome, language, reducedMotion, t, onMovie, onSeries, onEpisode }: HomeViewProps) {
+function HomeView({ home, seriesHome, language, reducedMotion, t, onMovie, onPlayMovie, onSeries, onEpisode }: HomeViewProps) {
 	const rows: Array<{ kind: string; hint: string | null; cards: React.ReactNode }> = [];
 	for (const row of home.rows ?? []) {
 		rows.push({
 			kind: row.kind,
 			hint: row.kind === 'tonight' ? t('rowTonightHint') : null,
 			cards: row.movies.map((movie) => (
-				<MediaCard key={movie.id} kind="movie" item={movie} onOpen={onMovie} resumeLabel={t('resumeAt')} actionLabel={t('playMovie')} kindLabel={t('filmSingular')} reducedMotion={reducedMotion} t={t} />
+				<MediaCard key={movie.id} kind="movie" item={movie} onOpen={onMovie} resumeLabel={t('resumeAt')} actionLabel={t('openMovie')} kindLabel={t('filmSingular')} reducedMotion={reducedMotion} t={t} />
 			)),
 		});
 	}
@@ -1266,7 +1309,7 @@ function HomeView({ home, seriesHome, language, reducedMotion, t, onMovie, onSer
 	const hero = home.hero ?? null;
 	return (
 		<>
-			{hero && <HomeHero movie={hero} resuming={home.hero_kind === 'resume'} language={language} t={t} onPlay={onMovie} />}
+			{hero && <HomeHero movie={hero} resuming={home.hero_kind === 'resume'} language={language} t={t} onPlay={onPlayMovie} />}
 			{rows.map((row) => (
 				<MediaRow key={row.kind} title={t(ROW_TITLES[row.kind] ?? row.kind)} hint={row.hint} t={t} reducedMotion={reducedMotion}>
 					{row.cards}
@@ -1280,9 +1323,8 @@ function HomeView({ home, seriesHome, language, reducedMotion, t, onMovie, onSer
 /**
  * The film you were watching, stated properly rather than as a 3px rule: the
  * eyebrow says which of the two states this is, the progress bar carries what
- * is left, and the one button does the one thing. There is no "view details"
- * beside it - the player has no film page, and a button that led nowhere
- * would be worse than its absence.
+ * is left, and the one button starts or resumes playback. Cards open the
+ * detail; this explicitly labelled Play action keeps its direct meaning.
  */
 function HomeHero({ movie, resuming, language, t, onPlay }: { movie: Movie; resuming: boolean; language: string; t: (key: string) => string; onPlay: (id: number) => void }) {
 	const title = displayTitle(movie);
@@ -1665,7 +1707,7 @@ function SubtitlePane({ subtitles, t, onStyle, onReset }: {
 	);
 }
 
-function SettingsModal({ open, language, preferences, server, updateStatus, updateBusy, t, onClose, onSave, onCheckUpdate, onApplyUpdate }: { open: boolean; language: string; preferences: Preferences; server: Server | null; updateStatus: UpdateStatus | null; updateBusy: boolean; t: (key: string) => string; onClose: () => void; onSave: (language: string, preferences: Preferences) => void; onCheckUpdate: () => void; onApplyUpdate: () => void }) {
+function SettingsModal({ open, language, preferences, server, updateStatus, updateBusy, t, onClose, onChangeServer, onSave, onCheckUpdate, onApplyUpdate }: { open: boolean; language: string; preferences: Preferences; server: Server | null; updateStatus: UpdateStatus | null; updateBusy: boolean; t: (key: string) => string; onClose: () => void; onChangeServer: () => void; onSave: (language: string, preferences: Preferences) => void; onCheckUpdate: () => void; onApplyUpdate: () => void }) {
 	const [draftLanguage, setDraftLanguage] = useState(language);
 	const [draft, setDraft] = useState(preferences);
 	// What the copy button said last, and when it goes quiet again. The address
@@ -1929,6 +1971,7 @@ function SettingsModal({ open, language, preferences, server, updateStatus, upda
 									<div><dt>{t('version')}</dt><dd>{server.health.version}</dd></div>
 								</dl>}
 								{copyState !== 'idle' && <p className={`settings-copy-note${copyState === 'failed' ? ' settings-copy-note--error' : ''}`} role="status">{copyState === 'copied' ? t('addressCopied') : t('addressCopyFailed')}</p>}
+								{server && <Button variant="outline" onClick={onChangeServer}>{t('changeServer')}</Button>}
 							</section>
 						)}
 						{pane === 'update' && (

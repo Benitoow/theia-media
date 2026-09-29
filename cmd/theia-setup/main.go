@@ -51,25 +51,26 @@ func main() {
 
 func run() error {
 	var (
-		role        = flag.String("role", "", "what this machine is for: all-in-one, server, or player")
-		dataDir     = flag.String("data-dir", "", "directory holding the configuration, database and cache")
-		installDir  = flag.String("install-dir", "", "where to install the programs; empty means this user's standard place")
-		from        = flag.String("from", "", "a folder or .zip holding the programs, instead of downloading them")
-		library     = flag.String("library", "", "folders to scan, separated by the path-list separator")
-		port        = flag.Int("port", 0, "port the server listens on")
-		hostname    = flag.String("hostname", "", "name announced on the network")
-		service     = flag.Bool("service", false, "install an autostart entry for the server")
-		serviceCmd  = flag.String("service-action", "", "install, remove, or status")
-		check       = flag.Bool("check", false, "print what this machine is, changing nothing")
-		checkUpdate = flag.Bool("check-update", false, "ask GitHub Releases what the latest version is, downloading nothing")
-		update      = flag.Bool("update", false, "install the latest version of the server, verifying its digest")
-		checkPlayer = flag.Bool("check-player", false, "ask GitHub Releases what the latest player is, downloading nothing")
-		updatePl    = flag.Bool("update-player", false, "install the latest player bundle, verifying its digest")
-		jsonOutput  = flag.Bool("json", false, "print the result as JSON")
-		language    = flag.String("lang", "", "en or fr; English by default")
-		showVersion = flag.Bool("version", false, "print the version and exit")
-		yes         = flag.Bool("yes", false, "assume yes where a form would ask")
-		force       = flag.Bool("force", false, "install the programs again even when they are already there")
+		role               = flag.String("role", "", "what this machine is for: all-in-one, server, or player")
+		dataDir            = flag.String("data-dir", "", "directory holding the configuration, database and cache")
+		installDir         = flag.String("install-dir", "", "where to install the programs; empty means this user's standard place")
+		from               = flag.String("from", "", "a folder or .zip holding the programs, instead of downloading them")
+		library            = flag.String("library", "", "folders to scan, separated by the path-list separator")
+		port               = flag.Int("port", 0, "port the server listens on")
+		hostname           = flag.String("hostname", "", "name announced on the network")
+		service            = flag.Bool("service", false, "install an autostart entry for the server")
+		serviceCmd         = flag.String("service-action", "", "install, remove, or status")
+		check              = flag.Bool("check", false, "print what this machine is, changing nothing")
+		repairRegistration = flag.Bool("repair-registration", false, "restore the Windows applications-list entry of an existing installation")
+		checkUpdate        = flag.Bool("check-update", false, "ask GitHub Releases what the latest version is, downloading nothing")
+		update             = flag.Bool("update", false, "install the latest version of the server, verifying its digest")
+		checkPlayer        = flag.Bool("check-player", false, "ask GitHub Releases what the latest player is, downloading nothing")
+		updatePl           = flag.Bool("update-player", false, "install the latest player bundle, verifying its digest")
+		jsonOutput         = flag.Bool("json", false, "print the result as JSON")
+		language           = flag.String("lang", "", "en or fr; English by default")
+		showVersion        = flag.Bool("version", false, "print the version and exit")
+		yes                = flag.Bool("yes", false, "assume yes where a form would ask")
+		force              = flag.Bool("force", false, "install the programs again even when they are already there")
 		// The name comes from the setup package because the applications list
 		// registers this exact command line: two spellings of one flag is how an
 		// uninstall button stops working.
@@ -111,6 +112,18 @@ func run() error {
 		// window nobody sees would be an uninstall that appears to do nothing.
 		return runUninstall(*jsonOutput, text)
 	case *check:
+		return reportStatus(*jsonOutput, text)
+	case *repairRegistration:
+		install := *installDir
+		if install == "" {
+			install, err = setup.DefaultInstallDir()
+			if err != nil {
+				return err
+			}
+		}
+		if err := setup.RepairRegistration(install, version); err != nil {
+			return err
+		}
 		return reportStatus(*jsonOutput, text)
 	case *checkUpdate:
 		return updateAction(false, *jsonOutput, text)

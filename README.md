@@ -45,7 +45,7 @@ external database or separate web app to install.
 > preview and seven decisions behind it - beside a player that no longer sends a
 > status frame nobody reads. The product is three programs:
 > `theia-server` (the headless Go backend you already run, which keeps serving
-> the web interface for administration and fallback playback), `theia-player`
+> the web interface for administration and server settings), `theia-player`
 > (a native desktop player built on Tauri and libmpv) and `theia-setup` (the
 > installer, and the one file you download). A fourth command, `theia`, is what
 > you type: it starts the server if it is not answering and then opens the
@@ -81,13 +81,12 @@ house, not on taste.
 | One computer that holds the films and is plugged into the screen | **All-in-one** - the default answer in the installer | It serves and it plays. Nothing travels over the network, so nothing is limited by it. |
 | A small machine in a cupboard or a NAS, and a television, a laptop or a desktop you watch on | **Server only** on that machine, then **player only** on each device you watch on | The server indexes, stores and streams; the player uses the sound and picture hardware of the machine in front of you, which is where the difference is heard. |
 | A computer that only watches, with the films held elsewhere | **Player only** | No library is scanned or stored locally. It asks the server for the catalogue and the files. |
-| Anything else - a phone, a tablet, a television browser, a machine you have not decided about | **Nothing.** Open the address the server prints in any browser | The web interface is the complete administration surface and a working fallback player. It is simply not where the best sound and picture live. |
+| Anything else - a phone, a tablet, a television browser, a machine you have not decided about | **Nothing** for server administration; open the address the server prints in a browser | The web interface keeps server settings and administration. Browser playback is no longer supported from 3.4. |
 
 Two things the table cannot say. **The player runs on Windows x64 and, since
 3.3.4, on macOS Apple Silicon** - Windows on ARM and Linux have the server but
-no player, and the project does not ship what it has not seen work. **The browser
-is not a second-class citizen**: it plays everything it can decode, it holds the
-settings, and it is how you check what the server is doing.
+no player, and the project does not ship what it has not seen work. The browser
+keeps the server settings and diagnostics. Watching moves to the native player.
 
 ## Project phase: field testing
 
@@ -174,6 +173,8 @@ and the autostart record - the launchd agent included - and **keeps your data**:
 the library, the progress marks and the configuration stay in `%APPDATA%\Theia` on
 Windows and `~/Library/Application Support/Theia` on macOS, and the command says
 where they are. Nothing asks for administrator rights in either direction.
+From 3.4, on Windows, `theia-setup --repair-registration` restores a missing
+**Settings → Apps** entry without reinstalling or starting the player.
 
 | Platform | The download |
 | --- | --- |
@@ -266,7 +267,7 @@ would be advertising wearing a Markdown costume.
 | Cost | Free, GPL-3.0 | Local personal video is free; remote video and hardware transcoding use paid passes | Free, GPL-2.0, no premium tier | Free tier; several server and app features use Premiere |
 | Identity | No account; passwordless local profiles | Plex account model | Local users and permissions | Local users; optional Emby Connect |
 | Server setup | One native binary for the server, no Docker or external runtime; the V3.3 player is a second native application | Installers and NAS packages | Native packages, containers and NAS options | Installers, containers and many NAS options |
-| Clients | A native desktop player, and a responsive browser for administration and fallback | Browser plus wide TV, mobile, desktop and console coverage | Browser plus official and community apps | Browser plus TV and mobile apps |
+| Clients | A native desktop player, and a responsive browser for administration and server settings | Browser plus wide TV, mobile, desktop and console coverage | Browser plus official and community apps | Browser plus TV and mobile apps |
 | Hardware transcoding | Included; host capabilities are probed | Plex Pass | Included | Generally Premiere, with documented device exceptions |
 | Remote model | Embedded WireGuard, device keys, viewer-only routes | Account-based remote streaming; a paid pass is required for personal video away from home | You configure networking or a proxy | Manual access or Emby Connect |
 | Live TV, music, plugins | No | Yes | Yes | Yes |

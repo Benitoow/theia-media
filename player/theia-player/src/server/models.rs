@@ -349,6 +349,12 @@ pub struct Metadata {
     )]
     pub title: String,
     #[serde(default)]
+    pub original_title: String,
+    #[serde(default)]
+    pub tagline: String,
+    #[serde(default)]
+    pub genres: Vec<String>,
+    #[serde(default)]
     pub poster_path: String,
     #[serde(default)]
     pub backdrop_path: String,
@@ -369,6 +375,12 @@ pub struct Metadata {
     pub vote_average: f64,
     #[serde(default)]
     pub director: String,
+    #[serde(default)]
+    pub cast: Vec<Credit>,
+    #[serde(default)]
+    pub certification: String,
+    #[serde(default)]
+    pub certification_country: String,
     /// The language the film was made in, as TMDB stores it - `fr`, `en`.
     ///
     /// The one metadata field playback itself depends on: `vo` in the audio
@@ -377,6 +389,14 @@ pub struct Metadata {
     /// language and must not become one - the engine's own default answers then.
     #[serde(default)]
     pub original_language: String,
+}
+
+#[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct Credit {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub character: String,
 }
 
 /// What the server says about a card preview.
@@ -576,4 +596,25 @@ pub(super) struct SeriesList {
 pub(super) struct ProfileList {
     #[serde(default)]
     pub(super) profiles: Vec<Profile>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Metadata;
+
+    #[test]
+    fn movie_detail_keeps_tmdb_credits() {
+        let raw = serde_json::json!({
+            "tmdb_title": "Titre local",
+            "original_title": "Original title",
+            "cast": [{ "name": "A. Actor", "character": "The Probe" }],
+            "certification": "PG-13",
+            "certification_country": "US"
+        });
+        let detail: Metadata = serde_json::from_value(raw).unwrap();
+        let sent = serde_json::to_value(detail).unwrap();
+        assert_eq!(sent["original_title"], "Original title");
+        assert_eq!(sent["cast"][0]["name"], "A. Actor");
+        assert_eq!(sent["certification"], "PG-13");
+    }
 }

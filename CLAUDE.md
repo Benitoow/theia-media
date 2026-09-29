@@ -6,8 +6,8 @@ user, their own films, their own machine.
 **V3.3 is the current release line.** `v3.2.0` is the last single-binary
 release; `v3.3.0` introduced the native generation and `v3.3.6` is the current
 published maintenance release. V3.3 splits the product into three artifacts:
-`theia-server` (Go, headless, still serving the frozen Svelte interface as
-fallback playback), `theia-player` (Tauri 2 + Rust + libmpv - the native player,
+`theia-server` (Go, headless, still serving the Svelte administration and settings
+interface; browser playback support ended with decision 154), `theia-player` (Tauri 2 + Rust + libmpv - the native player,
 and where films are now meant to be watched) and `theia-setup` (Go + Charm, the
 installer and maintenance tool). A fourth program travels with them: `theia`,
 the command somebody types - the installer puts it and its siblings on the

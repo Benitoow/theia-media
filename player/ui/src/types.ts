@@ -13,12 +13,18 @@ export type MovieMetadata = {
 	title?: string;
 	tmdb_title?: string;
 	tmdb_name?: string;
+	original_title?: string;
+	tagline?: string;
+	genres?: string[];
 	overview?: string;
 	release_date?: string;
 	first_air_date?: string;
 	runtime_minutes?: number;
 	vote_average?: number;
 	director?: string;
+	cast?: { name: string; character?: string }[];
+	certification?: string;
+	certification_country?: string;
 	backdrop_path?: string;
 	poster_path?: string;
 	still_path?: string;

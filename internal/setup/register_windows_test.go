@@ -113,6 +113,29 @@ func TestTheApplicationIsRegisteredWhereWindowsListsIt(t *testing.T) {
 	}
 }
 
+func TestRepairRegistrationUsesInstalledUninstaller(t *testing.T) {
+	install := t.TempDir()
+	write(t, filepath.Join(install, "theia-setup.exe"), "MZ")
+	write(t, filepath.Join(install, "theia-player.exe"), "MZ")
+	keyPath := applicationKeyPath(registeredName)
+	t.Cleanup(func() { unregisterApplication(keyPath) })
+	if err := RepairRegistration(install, "3.4.0"); err != nil {
+		t.Fatal(err)
+	}
+	key, err := registry.OpenKey(registry.CURRENT_USER, keyPath, registry.QUERY_VALUE)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer key.Close()
+	command, _, err := key.GetStringValue("UninstallString")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := uninstallCommand(filepath.Join(install, "theia-setup.exe")); command != want {
+		t.Fatalf("UninstallString = %q, want %q", command, want)
+	}
+}
+
 func TestAnApplicationsEntryNeverNeedsAdministratorRights(t *testing.T) {
 	// Decision 120: this installer asks for no elevation. HKEY_CURRENT_USER is
 	// the whole reason that is possible, so the key path is asserted rather than

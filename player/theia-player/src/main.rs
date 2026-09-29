@@ -21,6 +21,7 @@
 //!                                 window's declared minimum (open risk 6 in
 //!                                 docs/v3.3.md); it changes nothing else.
 
+mod connection;
 mod mpv;
 mod platform;
 #[cfg(target_os = "macos")]
@@ -349,10 +350,10 @@ impl Session {
             options.push(format!("start={:.3}", self.start_at));
         }
         if let Some(aid) = self.aid {
-            options.push(format!("aid={aid}"));
+            options.push(if aid <= 0 { "aid=no".to_string() } else { format!("aid={aid}") });
         }
         if let Some(sid) = self.sid {
-            options.push(format!("sid={sid}"));
+            options.push(if sid <= 0 { "sid=no".to_string() } else { format!("sid={sid}") });
         } else if self.playback.subtitle_language == SubtitleLanguage::Off {
             // Somebody asked for no subtitles, and has not chosen a track for
             // this film, so the file is opened saying so. `sid=no` is mpv's own
@@ -1553,15 +1554,11 @@ fn player_set_quality(height: Option<i64>) -> Result<(), String> {
 /// non-positive id means "none", which is mpv's own convention for subtitles,
 /// passed through rather than translated into something clever.
 #[tauri::command]
-fn player_set_track(kind: String, id: i64) -> Result<(), String> {
-    let property = match kind.as_str() {
-        "audio" => "aid",
-        "subtitle" => "sid",
-        "video" => "vid",
-        other => return Err(format!("unknown track kind {other:?}")),
-    };
+fn player_set_track(kind: String, id: Option<i64>) -> Result<(), String> {
+    let property = track_property(&kind)?;
     let mut guard = SESSION.lock().unwrap();
     let session = guard.as_mut().ok_or("the engine is not running")?;
+    let id = id.unwrap_or(-1);
     let value = if id <= 0 { "no".to_string() } else { id.to_string() };
     session.engine.set_property(property, &value)?;
     // Remembered so the audio fallback's reload opens the same tracks. A
@@ -1581,6 +1578,15 @@ fn player_set_track(kind: String, id: i64) -> Result<(), String> {
         _ => {}
     }
     Ok(())
+}
+
+fn track_property(kind: &str) -> Result<&'static str, String> {
+    Ok(match kind {
+        "audio" => "aid",
+        "sub" | "subtitle" => "sid",
+        "video" => "vid",
+        other => return Err(format!("unknown track kind {other:?}")),
+    })
 }
 
 #[tauri::command]
@@ -1610,7 +1616,13 @@ fn player_load(path: String) -> Result<(), String> {
 /// failure: plenty of networks carry no multicast at all, and the OSD then
 /// offers the address field instead of pretending nothing exists.
 #[tauri::command]
-fn player_discover() -> Result<String, String> {
+async fn player_discover() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(discover_servers)
+        .await
+        .map_err(|error| format!("discovering servers: {error}"))?
+}
+
+fn discover_servers() -> Result<String, String> {
     let found = server::discover(Duration::from_secs(3))?;
     serde_json::to_string(&found).map_err(|e| e.to_string())
 }
@@ -1770,9 +1782,12 @@ async fn player_local_server() -> Result<Option<String>, String> {
 /// sentence (decision 25); the console and `--server` print the transport's own
 /// words, because a person reading a terminal is debugging, not watching.
 fn connect_to(url: &str) -> Result<String, server::Refusal> {
+    let probe = server::Client::with_timeout(url, Duration::from_secs(4));
+    let health = probe.probe()?;
+    let profiles = probe.profiles().map_err(server::Refusal::silent)?;
+    // Only discovery is impatient. The chosen server may be over a slower
+    // tunnel, and its library requests keep the normal timeout after connect.
     let mut client = server::Client::new(url);
-    let health = client.probe()?;
-    let profiles = client.profiles().map_err(server::Refusal::silent)?;
     // One profile is not a question (decision 50): adopt it rather than asking,
     // exactly as the web interface does.
     if profiles.len() == 1 {
@@ -1812,7 +1827,13 @@ fn connection_payload(
 /// line, which is what `--server` is for and what the shell used to override
 /// silently before it drew its first frame.
 #[tauri::command]
-fn player_current_server() -> Result<Option<String>, String> {
+async fn player_current_server() -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(current_server_payload)
+        .await
+        .map_err(|error| format!("reading the current server: {error}"))?
+}
+
+fn current_server_payload() -> Result<Option<String>, String> {
     let guard = CLIENT.lock().unwrap();
     let Some(client) = guard.as_ref() else {
         return Ok(None);
@@ -1999,10 +2020,33 @@ struct Sidecar {
 }
 
 #[tauri::command]
-fn player_connect(url: String) -> Result<String, String> {
+async fn player_connect(url: String) -> Result<String, String> {
     // The interface is handed a code, not a sentence: it owns the words
     // (decision 25) and the two failures do not earn the same advice.
-    connect_to(&url).map_err(|refusal| refusal.code().to_string())
+    tauri::async_runtime::spawn_blocking(move || connect_to(&url))
+        .await
+        .map_err(|error| format!("connecting to the server: {error}"))?
+        .map_err(|refusal| refusal.code().to_string())
+}
+
+#[tauri::command]
+fn player_saved_server(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    connection::remembered(&app)
+}
+
+#[tauri::command]
+fn player_remember_server(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    connection::remember(&app, &url)
+}
+
+#[tauri::command]
+fn player_disconnect(app: tauri::AppHandle) -> Result<(), String> {
+    if CURRENT_MEDIA.lock().unwrap().is_some() {
+        return Err("stop playback before changing servers".into());
+    }
+    connection::forget(&app)?;
+    *CLIENT.lock().unwrap() = None;
+    Ok(())
 }
 
 /// Chooses which viewing history the player writes to. It travels in the open,
@@ -2112,6 +2156,19 @@ fn player_library(limit: Option<u32>) -> Result<String, String> {
         }
     };
     serde_json::to_string(&movies).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn player_movie_detail(id: i64) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let movie = {
+            let guard = CLIENT.lock().unwrap();
+            guard.as_ref().ok_or("no server is connected")?.movie(id)?
+        };
+        serde_json::to_string(&movie).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -2567,6 +2624,9 @@ fn main() {
             player_local_server,
             player_discover,
             player_connect,
+            player_saved_server,
+            player_remember_server,
+            player_disconnect,
             player_set_profile,
             player_profile_rename,
             player_profile_set_avatar,
@@ -2575,6 +2635,7 @@ fn main() {
             player_update_check,
             player_update_apply,
             player_library,
+            player_movie_detail,
             player_series,
             player_home,
             player_series_home,
@@ -2587,8 +2648,7 @@ fn main() {
             player_play_episode,
             player_preview,
             player_log,
-            player_current_server,
-            player_log
+            player_current_server
         ])
         .setup(move |app| {
             let window = app.get_webview_window("main").expect("the main window");
@@ -2760,13 +2820,13 @@ fn main() {
                     // choice made in the first seconds must survive it.
                     std::thread::sleep(Duration::from_millis(1500));
                     if let Some(id) = audio_choice {
-                        match player_set_track("audio".into(), id) {
+                        match player_set_track("audio".into(), Some(id)) {
                             Ok(()) => println!("theia-player: audio track -> {id}"),
                             Err(e) => eprintln!("theia-player: audio track {id}: {e}"),
                         }
                     }
                     if let Some(id) = subtitle_choice {
-                        match player_set_track("subtitle".into(), id) {
+                        match player_set_track("subtitle".into(), Some(id)) {
                             Ok(()) => println!("theia-player: subtitle track -> {id}"),
                             Err(e) => eprintln!("theia-player: subtitle track {id}: {e}"),
                         }
@@ -3092,6 +3152,13 @@ mod player_window_tests {
 #[cfg(test)]
 mod playback_tests {
     use super::*;
+
+    #[test]
+    fn subtitle_menu_uses_the_same_track_name_as_the_engine() {
+        assert_eq!(track_property("sub").unwrap(), "sid");
+        assert_eq!(track_property("subtitle").unwrap(), "sid");
+        assert_eq!(track_property("audio").unwrap(), "aid");
+    }
 
     #[test]
     fn external_subtitles_keep_their_track_details_without_blocking_playback() {
