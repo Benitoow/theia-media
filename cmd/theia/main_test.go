@@ -111,6 +111,15 @@ func programName(base string) string {
 	return layout.ServerExecutable(runtime.GOOS)
 }
 
+// launcherName is the file this program is installed as, and the name the
+// installer links into `~/.local/bin` - the link the test below is about.
+func launcherName() string {
+	if runtime.GOOS == "windows" {
+		return "theia.exe"
+	}
+	return "theia"
+}
+
 // installation writes the programs a case needs into a directory of its own,
 // which is the folder run is told to start them from.
 func installation(t *testing.T, programs ...string) string {
@@ -146,6 +155,43 @@ func TestTheBareCommandStartsTheServerThenOpensThePlayer(t *testing.T) {
 	}
 	// The wait belongs between the two spawns: it is what makes the player's
 	// first discovery attempt find a server.
+	want := []string{
+		"reachable:127.0.0.1:8383",
+		"spawn:" + programName("theia-server"),
+		"wait:127.0.0.1:8383",
+		"spawn:" + programName("theia-player"),
+	}
+	if !w.equal(want...) {
+		t.Errorf("the order was %v, want %v", w.order(), want)
+	}
+}
+
+// The installer links this command into `~/.local/bin` on macOS and Linux, so
+// the name a person types is a link and the programs stand beside the file it
+// points at - which on macOS is a file inside `Theia.app`. A test that hands
+// `run` a directory cannot see the difference, and that is why the
+// `macos-15-intel` runner failed while every test here passed: the linked
+// command looked for both programs beside a folder that holds the link alone.
+func TestTheProgramsAreFoundThroughTheLinkSomebodyTyped(t *testing.T) {
+	dir := installation(t, "theia-server", "theia-player")
+	self := filepath.Join(dir, launcherName())
+	if err := os.WriteFile(self, []byte("MZ"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(t.TempDir(), "bin", launcherName())
+	if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Windows makes links only with a privilege the suite must not require. The
+	// platforms whose installations have one are the ones this runs on.
+	if err := os.Symlink(self, link); err != nil {
+		t.Skipf("this host does not make links: %v", err)
+	}
+	w := watch(t, false)
+
+	if code, output := runIn(installationDir(link)); code != 0 {
+		t.Fatalf("theia exited %d: %s", code, output)
+	}
 	want := []string{
 		"reachable:127.0.0.1:8383",
 		"spawn:" + programName("theia-server"),

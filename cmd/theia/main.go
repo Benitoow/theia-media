@@ -76,7 +76,25 @@ func main() {
 		fmt.Fprintf(out, "theia: locating this command: %v\n", err)
 		os.Exit(1)
 	}
-	os.Exit(run(filepath.Dir(self), os.Args[1:], out))
+	os.Exit(run(installationDir(self), os.Args[1:], out))
+}
+
+// installationDir is the folder this command's siblings are in: the directory of
+// the file that is running, not of the name somebody typed.
+//
+// The two differ where the installer links this command into `~/.local/bin`
+// instead of copying it there, because that link is the name a terminal finds.
+// macOS hands a process the path it was started from, links unresolved, so the
+// directory of that path holds the link - and the link's siblings - while the
+// programs are beside the file it points at. Measured on the `macos-15-intel`
+// runner on 28 September 2026: the linked command started the installed server
+// and then opened a browser, because no player stands beside `~/.local/bin`;
+// a Mac installation keeps its player inside `Theia.app`.
+func installationDir(self string) string {
+	if resolved, err := filepath.EvalSymlinks(self); err == nil {
+		self = resolved
+	}
+	return filepath.Dir(self)
 }
 
 // run is the whole command line.
