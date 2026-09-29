@@ -2,6 +2,7 @@ export type Progress = {
 	position_seconds?: number;
 	duration_seconds?: number;
 	finished?: boolean;
+	watched_at?: string | null;
 };
 
 /**
@@ -65,6 +66,7 @@ export type Series = {
 	hero_url?: string;
 	poster_url?: string;
 	seasons?: Season[];
+	resume_episode?: Episode;
 };
 
 export type Season = {
@@ -88,6 +90,7 @@ export type Episode = {
 		metadata?: { name?: string; still_path?: string; runtime_minutes?: number; overview?: string };
 	}>;
 	still_url?: string;
+	hero_url?: string;
 	progress?: Progress;
 };
 

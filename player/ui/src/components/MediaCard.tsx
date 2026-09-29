@@ -61,6 +61,7 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 	// and it is the whole reason a two-hour film's clip never appeared.
 	const hovering = useRef(false);
 	const asking = useRef(false);
+	const requestGeneration = useRef(0);
 	const timer = useRef<number | null>(null);
 	const view = useMemo(() => describe(kind, item, actionLabel, kindLabel, heading, seriesLabel, t), [kind, item, actionLabel, kindLabel, heading, seriesLabel, t]);
 	const artwork = view.art.find((url) => !failed.includes(url));
@@ -74,6 +75,8 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 	const stopAsking = () => {
 		if (timer.current !== null) window.clearTimeout(timer.current);
 		timer.current = null;
+		requestGeneration.current += 1;
+		asking.current = false;
 	};
 
 	/**
@@ -90,16 +93,20 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 	const askForClip = () => {
 		if (reducedMotion || clip || asking.current) return;
 		asking.current = true;
+		const generation = requestGeneration.current;
 		let ticks = 0;
 		const ask = async () => {
 			ticks += 1;
 			try {
 				const answer = JSON.parse(await invoke<string>('player_preview', { kind, id: item.id })) as { state?: string; data_url?: string };
+				if (generation !== requestGeneration.current) return;
 				if (answer.state === 'ready' && answer.data_url) {
 					setClip(answer.data_url);
+					asking.current = false;
 					return;
 				}
 			} catch (error) {
+				if (generation !== requestGeneration.current) return;
 				// No server, no ffmpeg, or nothing to sample: the still is the
 				// answer, and it is already on screen. The reason goes to the
 				// player's own output, because a card that fails silently is

@@ -2130,11 +2130,11 @@ async function openPage(
 						if (cmd === 'player_library') return JSON.stringify(movies);
 						if (cmd === 'player_series') return JSON.stringify(series);
 						if (cmd === 'player_home') return JSON.stringify(home);
-						if (cmd === 'player_series_home') return JSON.stringify(seriesHome);
-						if (cmd === 'player_preview') return JSON.stringify(preview);
-						if (cmd === 'player_series_detail') return JSON.stringify(seriesDetail);
+						if (cmd === 'player_series_home') return JSON.stringify(window.__seriesHome ?? seriesHome);
+						if (cmd === 'player_preview') return JSON.stringify(window.__previewAnswers?.shift() ?? preview);
+						if (cmd === 'player_series_detail') return JSON.stringify(window.__seriesDetail ?? seriesDetail);
 						if (cmd === 'player_movie_detail') return JSON.stringify(movies.find((movie) => movie.id === Number(args?.id)));
-						if (cmd === 'player_season') return JSON.stringify(season);
+						if (cmd === 'player_season') return JSON.stringify(window.__season ?? season);
 						if (cmd === 'player_discover') return JSON.stringify(discovered);
 						if (cmd === 'player_set_profile') return null;
 						if (cmd === 'player_profile_rename') {
@@ -2309,6 +2309,90 @@ async function assertSeriesJourney(page) {
 		console.error(`episode playback did not apply preferences before opening: ${commands.join(', ') || 'no command'}`);
 		failures++;
 	}
+}
+
+// An episode can own the hero, its series opens on the right season, and
+// returning from playback must read fresh progress rather than the old cards.
+async function assertEpisodeResumeSurfaces() {
+	const episode = { ...SEASON.episodes[0], id: 903, season_number: 2,
+		progress: { position_seconds: 420, duration_seconds: 4260, finished: false, watched_at: '2026-09-29T20:00:00Z' } };
+	const seriesDetail = { ...SERIES_DETAIL, resume_episode: episode };
+	const season = { ...SEASON, id: 92, season_number: 2, episodes: [episode] };
+	const home = { ...HOME, hero: { ...HOME.hero, progress: { ...HOME.hero.progress, watched_at: '2026-09-28T20:00:00Z' } } };
+	const seriesHome = { ...SERIES_HOME, continue_watching: [episode] };
+	const page = await openPage({ width: 969, height: 609 }, { home, seriesHome, seriesDetail, season, savedServer: 'http://127.0.0.1:8395' });
+	await page.locator('.home-hero').waitFor({ state: 'visible' });
+	let hero = await page.locator('.home-hero').innerText();
+	if (!hero.includes('Shōgun') || !hero.includes('S02E01') || !hero.toLowerCase().includes('7 min')) {
+		console.error(`the newest episode did not own the resume hero: ${JSON.stringify(hero)}`);
+		failures++;
+	}
+	await page.locator('.home-hero-action').click();
+	const played = await page.evaluate(() => (window.__invocations ?? []).filter((call) => call.cmd === 'player_play_episode').at(-1));
+	if (played?.args?.id !== 903) {
+		console.error(`the episode hero did not resume episode 903: ${JSON.stringify(played)}`);
+		failures++;
+	}
+	await page.getByRole('button', { name: 'Series', exact: true }).click();
+	await page.locator('.film').first().click();
+	await page.locator('.season-tab--active').waitFor({ state: 'visible' });
+	const seasonCalls = await page.evaluate(() => (window.__invocations ?? []).filter((call) => call.cmd === 'player_season'));
+	if (seasonCalls.at(-1)?.args?.seasonNumber !== 2 || !(await page.locator('.home-hero').innerText()).includes('S02E01')) {
+		console.error('opening a series did not select its interrupted episode and season');
+		failures++;
+	}
+	await assertFits(page, 'series resume at the native window size');
+	if (await page.locator('h1').count() !== 1) {
+		console.error('the series resume surface added a second page heading');
+		failures++;
+	}
+	await page.locator('.film').first().click();
+	await page.evaluate(({ episode, seriesDetail, season, seriesHome, status }) => {
+		const updated = { ...episode, progress: { ...episode.progress, position_seconds: 1200 } };
+		window.__seriesDetail = { ...seriesDetail, resume_episode: updated };
+		window.__season = { ...season, episodes: [updated] };
+		window.__seriesHome = { ...seriesHome, continue_watching: [updated] };
+		window.__handlers['player-status']?.({ payload: JSON.stringify(status) });
+	}, { episode, seriesDetail, season, seriesHome, status: STATUS });
+	await page.locator('.control--back').waitFor({ state: 'visible' });
+	await page.locator('.control--back').click();
+	await page.waitForFunction(() => document.querySelector('.film-legend')?.textContent?.includes('20 min'));
+	hero = await page.locator('.home-hero').innerText();
+	if (!hero.toLowerCase().includes('20 min')) {
+		console.error(`returning from the episode kept the old hero progress: ${JSON.stringify(hero)}`);
+		failures++;
+	}
+	await page.getByRole('button', { name: 'Home', exact: true }).click();
+	await page.waitForFunction(() => document.querySelector('.home-hero-position')?.textContent?.includes('20 min'));
+	await page.getByRole('button', { name: 'Search', exact: true }).click();
+	await page.locator('.search-field input').fill('shogun');
+	await page.locator('.search-results .film-name').waitFor({ state: 'visible' });
+	if (!(await page.locator('.search-results').innerText()).includes('Shōgun')) {
+		console.error('unaccented search did not find the series TMDB title');
+		failures++;
+	}
+	await page.close();
+
+	// A later film still wins, and a finished episode never replaces it.
+	for (const finished of [false, true]) {
+		const filmHome = { ...home, hero: { ...home.hero, progress: { ...home.hero.progress, watched_at: '2026-09-30T20:00:00Z' } } };
+		const candidates = { ...seriesHome, continue_watching: [{ ...episode, progress: { ...episode.progress, finished, watched_at: finished ? '2026-10-01T20:00:00Z' : episode.progress.watched_at } }] };
+		const film = await openPage({ width: 700, height: 720 }, { home: filmHome, seriesHome: candidates, savedServer: 'http://127.0.0.1:8395' });
+		const title = await film.locator('.home-hero-title').innerText();
+		if (title !== HOME.hero.title) {
+			console.error(`the movie resume hero was displaced incorrectly (finished=${finished}): ${title}`);
+			failures++;
+		}
+		await film.close();
+	}
+}
+
+await assertEpisodeResumeSurfaces();
+if (process.argv.includes('--series-resume-only')) {
+	await browser.close();
+	if (failures) { console.error(`${failures} series resume check(s) failed`); process.exit(1); }
+	console.log('series resume check passed');
+	process.exit(0);
 }
 
 // 0. The connect screen at the widths a high-DPI window really has.
@@ -2660,6 +2744,15 @@ async function assertSeriesJourney(page) {
 		console.error('the still went missing while the clip was being built');
 		failures++;
 	}
+	await building.evaluate((clip) => { window.__previewAnswers = [{ state: 'ready', data_url: clip }]; }, `data:video/mp4;base64,${PROBE_CLIP}`);
+	await building.mouse.move(0, 0);
+	await building.waitForTimeout(100);
+	await building.locator('.film').first().hover();
+	await building.waitForTimeout(500);
+	if ((await building.locator('video.film-clip').count()) !== 1) {
+		console.error('leaving a building preview prevented the next hover from asking again');
+		failures++;
+	}
 	await building.close();
 
 	// And the hero's synopsis, which the interface has always drawn and could
@@ -2673,6 +2766,7 @@ async function assertSeriesJourney(page) {
 			// A hero that is not resuming, because that is the state the synopsis
 			// is drawn in: the section shows either what is left or what the film
 			// is, never both.
+			seriesHome: { ...SERIES_HOME, continue_watching: [] },
 			home: {
 				...HOME,
 				hero_kind: 'featured',

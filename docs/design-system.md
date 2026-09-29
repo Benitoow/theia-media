@@ -1242,7 +1242,8 @@ web's own phone layout carries no wordmark either - the one-line rule outranks
 the mark.
 
 **The player's home screen.** The native shell opens on the web home's own
-composition rather than on the film grid: one hero for the film that was left -
+  composition rather than on the film grid: one hero for the film or episode most
+  recently left unfinished (decision 155) -
 tracked eyebrow, display title, year, runtime, director and rating, the progress
 bar with what is left, and one action in the label register - then the server's
 short rows, films first and series after. A row is a sideways strip that hides
@@ -1253,11 +1254,16 @@ player's only full-bleed picture: it runs to both window edges, carries the web
 hero's veil recipe over artwork at 78%, and is framed from the top per §5.
 Cards are untouched - no display serif, no accent at rest beyond the 3px
 progress rule. Three things the web home carries are deliberately absent, and
-the reason is the player itself: **no *Voir la fiche*** (there is no film page
-to open, and the web's own hero button opens its player), **no *Au programme*
+  the reason is the player itself: **no *Voir la fiche*** beside the hero's
+  direct playback action (film cards now open a native detail), **no *Au programme*
 dock and no *Tout voir* links** (all of those point at filtered library views -
 by progress, sort or duration - that the player's library does not have yet;
-copy without the machinery is worse than its absence). See decision 130.
+  copy without the machinery is worse than its absence). See decisions 130 and
+  155. An episode hero names the series and the episode and states the saved
+  minute. The series page reuses it in an inset frame with an h2 under the
+  page's h1, before the season tabs; the resumed season opens first. Finished
+  episodes do not offer resume, and returning from playback refreshes the saved
+  position on both the hero and the cards.
 
 **The interface language layer.** English is the base and French
 ships as a second complete catalogue (decision 137). An installation is set up in

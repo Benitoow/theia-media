@@ -1,7 +1,6 @@
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import {
 	ArrowLeft,
-	ArrowRight,
 	Check,
 	ChevronLeft,
 	ChevronRight,
@@ -59,6 +58,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { MediaCard } from './components/MediaCard';
 import { MovieDetail } from './components/MovieDetail';
+import { PlaybackHero } from './components/PlaybackHero';
 import { TitleBar } from './components/TitleBar';
 import { TrackMenu, type TrackMenuHandle } from './components/TrackMenu';
 import { Button } from './components/ui/button';
@@ -72,7 +72,8 @@ import { Switch } from './components/ui/switch';
 import notFoundArt from './assets/media-not-found.png';
 import { catalogues, initialLanguage, storedLanguage, trackVocabulary } from './lib/catalogues.js';
 import { artworkCandidates, displayTitle, displayYear, imageURL } from './lib/tmdb';
-import { formatRuntime } from './lib/utils';
+import { formatRuntime, searchText } from './lib/utils';
+import { isResumable, resumeEpisode, watchedAt } from './lib/progress';
 import { PLAYBACK_DEFAULTS } from './types';
 import type { DiscoveredServer, Home, HomeRow, Movie, PlaybackPreferences, PlayerStatus, Profile, QualityLadder, Season, Series, SeriesHome, Server, SubtitleStyle, Track, TrackVocabulary, UpdateStatus, WatchStats } from './types';
 
@@ -425,6 +426,7 @@ export default function App() {
 		try {
 			await invoke('player_set_profile', { id });
 			setServer((current) => current ? { ...current, profile: id } : current);
+			setSelectedMovie(null);
 			setSelectedSeries(null);
 			setSelectedSeason(null);
 			localStorage.setItem('theia.player.profile', String(id));
@@ -805,7 +807,8 @@ export default function App() {
 		try {
 			const detail = JSON.parse(await invoke<string>('player_series_detail', { id })) as Series;
 			setSelectedSeries(detail);
-			const first = detail.seasons?.[0];
+			const resume = detail.resume_episode ?? seriesHome?.continue_watching.find((episode) => episode.series_id === id);
+			const first = detail.seasons?.find((season) => season.season_number === resume?.season_number) ?? detail.seasons?.[0];
 			setSelectedSeason(
 				first
 					? (JSON.parse(
@@ -841,12 +844,22 @@ export default function App() {
 			await invoke('player_stop');
 			setStatus((current) => ({ ...current, media: null, title: null, pos: null, duration: null, pause: false }));
 			await Promise.all([loadLibrary(), loadHome()]);
+			if (selectedSeries && selectedSeason) {
+				try {
+					const [detail, season] = await Promise.all([
+						invoke<string>('player_series_detail', { id: selectedSeries.id }),
+						invoke<string>('player_season', { seriesId: selectedSeries.id, seasonNumber: selectedSeason.season_number }),
+					]);
+					setSelectedSeries(JSON.parse(detail) as Series);
+					setSelectedSeason(JSON.parse(season) as Season);
+				} catch { setErrorKey('seriesFailed'); }
+			}
 		} catch {
 			setErrorKey('stopFailed');
 		} finally {
 			setReturning(false);
 		}
-	}, [clearNotice, loadHome, loadLibrary, returning, status.media]);
+	}, [clearNotice, loadHome, loadLibrary, returning, selectedSeason, selectedSeries, status.media]);
 
 	const refreshTracks = async () => {
 		try {
@@ -1165,6 +1178,9 @@ type LibraryProps = {
 
 function Library(props: LibraryProps) {
 	const { server, selectedMovie, selectedSeries, selectedSeason, section, t } = props;
+	const resumedEpisode = selectedSeries?.resume_episode ?? resumeEpisode([
+		...(props.seriesHome?.continue_watching ?? []), ...(selectedSeason?.episodes ?? []),
+	].filter((episode) => episode.series_id === selectedSeries?.id));
 	const title = selectedMovie ? displayTitle(selectedMovie) : selectedSeries ? displayTitle(selectedSeries) : undefined;
 	const count = section === 'series' ? props.series.length : section === 'search' ? props.movies.length + props.series.length : props.movies.length;
 	const spotlightSource = section === 'series' ? props.series[0] : props.movies[0];
@@ -1210,6 +1226,7 @@ function Library(props: LibraryProps) {
 					<MovieDetail movie={selectedMovie} language={props.language} t={t} onPlay={() => props.onPlayMovie(selectedMovie.id)} />
 				) : selectedSeries ? (
 					<motion.div key={`series-${selectedSeries.id}`} className="contents" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+						{resumedEpisode && isResumable(resumedEpisode.progress) && <PlaybackHero media={{ kind: 'episode', item: resumedEpisode, series: selectedSeries }} headingLevel={2} language={props.language} t={t} onPlay={props.onEpisode} />}
 						<div className="season-tabs">{selectedSeries.seasons?.map((season) => <button key={season.id} className={`season-tab label ${selectedSeason?.season_number === season.season_number ? 'season-tab--active' : ''}`} onClick={() => props.onSeason(season.season_number)}>{season.metadata?.name || `${t('season')} ${season.season_number}`}</button>)}</div>
 						{selectedSeason?.episodes?.length ? <CardGrid>{selectedSeason.episodes.map((episode) => <MediaCard key={episode.id} kind="episode" item={episode} seriesLabel={displayTitle(selectedSeries)} onOpen={props.onEpisode} resumeLabel={t('resumeAt')} actionLabel={t('playEpisode')} kindLabel={t('episodeUntitled')} reducedMotion={props.reducedMotion} t={props.t} />)}</CardGrid> : <p className="hint">{t('emptySeason')}</p>}
 					</motion.div>
@@ -1236,9 +1253,9 @@ function Library(props: LibraryProps) {
 }
 
 function SearchResults(props: LibraryProps) {
-	const query = props.searchQuery.trim().toLocaleLowerCase();
-	const matchingMovies = query ? props.movies.filter((item) => `${displayTitle(item)} ${displayYear(item) ?? ''}`.toLocaleLowerCase().includes(query)) : [];
-	const matchingSeries = query ? props.series.filter((item) => `${displayTitle(item)} ${displayYear(item) ?? ''}`.toLocaleLowerCase().includes(query)) : [];
+	const query = searchText(props.searchQuery.trim());
+	const matchingMovies = query ? props.movies.filter((item) => searchText(`${displayTitle(item)} ${displayYear(item) ?? ''}`).includes(query)) : [];
+	const matchingSeries = query ? props.series.filter((item) => searchText(`${displayTitle(item)} ${displayYear(item) ?? ''}`).includes(query)) : [];
 	return (
 		<motion.div key="search" className="contents search-view" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
 			<label className="search-field">
@@ -1307,9 +1324,11 @@ function HomeView({ home, seriesHome, language, reducedMotion, t, onMovie, onPla
 		});
 	}
 	const hero = home.hero ?? null;
+	const episode = resumeEpisode(seriesHome?.continue_watching ?? []);
+	const episodeIsLatest = episode && (!hero || home.hero_kind !== 'resume' || watchedAt(episode.progress) > watchedAt(hero.progress));
 	return (
 		<>
-			{hero && <HomeHero movie={hero} resuming={home.hero_kind === 'resume'} language={language} t={t} onPlay={onPlayMovie} />}
+			{episodeIsLatest ? <PlaybackHero media={{ kind: 'episode', item: episode, series: seriesHome?.recent_series.find((series) => series.id === episode.series_id) }} language={language} t={t} onPlay={onEpisode} /> : hero && <PlaybackHero media={{ kind: 'movie', item: hero }} resuming={home.hero_kind === 'resume'} language={language} t={t} onPlay={onPlayMovie} />}
 			{rows.map((row) => (
 				<MediaRow key={row.kind} title={t(ROW_TITLES[row.kind] ?? row.kind)} hint={row.hint} t={t} reducedMotion={reducedMotion}>
 					{row.cards}
@@ -1317,70 +1336,6 @@ function HomeView({ home, seriesHome, language, reducedMotion, t, onMovie, onPla
 			))}
 			{!hero && rows.length === 0 && <p className="hint">{t('emptyLibrary')}</p>}
 		</>
-	);
-}
-
-/**
- * The film you were watching, stated properly rather than as a 3px rule: the
- * eyebrow says which of the two states this is, the progress bar carries what
- * is left, and the one button starts or resumes playback. Cards open the
- * detail; this explicitly labelled Play action keeps its direct meaning.
- */
-function HomeHero({ movie, resuming, language, t, onPlay }: { movie: Movie; resuming: boolean; language: string; t: (key: string) => string; onPlay: (id: number) => void }) {
-	const title = displayTitle(movie);
-	const yearValue = displayYear(movie);
-	const year = yearValue ? String(yearValue) : '';
-	const runtime = formatRuntime(movie.metadata?.runtime_minutes, language);
-	const director = movie.metadata?.director ?? '';
-	const rating = movie.metadata?.vote_average ?? 0;
-	const [heroFailed, setHeroFailed] = useState(false);
-	useEffect(() => setHeroFailed(false), [movie.id]);
-	// The not-found plate answers when no artwork exists or the picture
-	// failed; an item that has its own artwork keeps it. The hero is a frame the
-	// size of a window, so it draws `hero_url` - the backdrop the player resolved
-	// at `original`, because this interface never learns the address a URL would
-	// be built from. The card candidates are the fallback they have always been,
-	// and a w1280 is what a card-sized field would have drawn here instead.
-	const heroArt = heroFailed ? notFoundArt : (movie.hero_url ?? artworkCandidates(movie, 'w1280')[0] ?? notFoundArt);
-	const position = movie.progress?.position_seconds ?? 0;
-	const duration = movie.progress?.duration_seconds ?? 0;
-	const playing = resuming && position > 0 && duration > 0;
-	const percent = playing ? Math.min(100, (position / duration) * 100) : 0;
-	const remaining = playing ? formatRuntime(Math.round((duration - position) / 60), language) : null;
-	const overview = playing ? '' : movie.metadata?.overview ?? '';
-	return (
-		<section className="home-hero" aria-label={title}>
-			<img className="home-hero-art" src={heroArt} alt="" crossOrigin="anonymous" fetchPriority="high" onError={() => setHeroFailed(true)} />
-			<div className="home-hero-content">
-				<p className="label home-hero-eyebrow">{playing ? t('heroResumeEyebrow') : t('heroFeaturedEyebrow')}</p>
-				<h1 className="home-hero-title">{title}</h1>
-				<div className="home-hero-meta">
-					{year && <span className="label">{year}</span>}
-					{runtime && <span className="label">{runtime}</span>}
-					{director && <span className="label">{director}</span>}
-					{rating > 0 && (
-						<span className="home-hero-rating">
-							<span className="home-hero-rating-figure">{rating.toLocaleString(language === 'en' ? 'en-US' : 'fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
-							<span className="label">{t('ratingScale')}</span>
-						</span>
-					)}
-				</div>
-				{playing ? (
-					<div className="home-hero-progress">
-						<div className="home-hero-progress-track"><div className="home-hero-progress-played" style={{ width: `${percent}%` }} /></div>
-						{remaining && <span className="label home-hero-remaining">{t('remainingPattern').replace('{d}', remaining)}</span>}
-					</div>
-				) : overview ? (
-					<p className="home-hero-overview">{overview}</p>
-				) : null}
-				<div className="home-hero-actions">
-					<Button className="home-hero-action" onClick={() => onPlay(movie.id)}>
-						{playing ? t('resume') : t('playMovie')}
-						<ArrowRight size={17} aria-hidden="true" />
-					</Button>
-				</div>
-			</div>
-		</section>
 	);
 }
 

@@ -3036,6 +3036,11 @@ html[data-resizing='true'] *::after {
 	text-wrap: balance;
 }
 
+.home-hero-episode { margin: 0; font-size: var(--text-body); color: var(--color-parchment); }
+.home-hero-position { margin: 0; }
+.home-hero--detail { min-height: 18rem; margin-inline: 0; border-radius: var(--radius-card); }
+.home-hero--detail .home-hero-content { padding: clamp(1.5rem, 4vw, 3rem); }
+
 .home-hero-meta {
 	display: flex;
 	flex-wrap: wrap;

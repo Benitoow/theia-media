@@ -47,14 +47,15 @@ type SeriesMetadata struct {
 }
 
 type Series struct {
-	Kind      string         `json:"kind"`
-	ID        int64          `json:"id"`
-	Title     string         `json:"title"`
-	Year      int            `json:"year,omitempty"`
-	Metadata  SeriesMetadata `json:"metadata"`
-	Seasons   []Season       `json:"seasons,omitempty"`
-	AddedAt   time.Time      `json:"added_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	Kind          string         `json:"kind"`
+	ID            int64          `json:"id"`
+	Title         string         `json:"title"`
+	Year          int            `json:"year,omitempty"`
+	Metadata      SeriesMetadata `json:"metadata"`
+	Seasons       []Season       `json:"seasons,omitempty"`
+	ResumeEpisode *EpisodeItem   `json:"resume_episode,omitempty"`
+	AddedAt       time.Time      `json:"added_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
 }
 
 type SeasonMetadata struct {
@@ -267,7 +268,37 @@ func (s *Store) GetSeries(ctx context.Context, profileID, id int64) (Series, err
 	if err != nil {
 		return Series{}, err
 	}
+	series.ResumeEpisode, err = s.resumeEpisode(ctx, profileID, id)
+	if err != nil {
+		return Series{}, err
+	}
 	return series, nil
+}
+
+// The series detail owns its resume choice across every season. The short home
+// row is not a complete history and cannot answer this for an older show.
+func (s *Store) resumeEpisode(ctx context.Context, profileID, seriesID int64) (*EpisodeItem, error) {
+	var id int64
+	err := s.db.QueryRowContext(ctx, `
+		SELECT ep.episode_item_id
+		FROM episode_progress ep
+		JOIN episode_items i ON i.id = ep.episode_item_id
+		JOIN seasons s ON s.id = i.season_id
+		WHERE ep.profile_id = ? AND s.series_id = ? AND ep.finished = 0
+		  AND ep.watched_at > 0 AND ep.position_seconds >= ?
+		ORDER BY ep.watched_at DESC, ep.episode_item_id DESC LIMIT 1`,
+		profileID, seriesID, minimumRememberedSeconds).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("finding resume episode for series %d: %w", seriesID, err)
+	}
+	item, err := s.GetEpisodeItem(ctx, profileID, id)
+	if err != nil {
+		return nil, err
+	}
+	return &item, nil
 }
 
 const seasonColumns = `

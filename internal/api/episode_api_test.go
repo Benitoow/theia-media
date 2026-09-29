@@ -90,7 +90,7 @@ func TestSeriesCatalogueDetailSeasonAndEpisodeContracts(t *testing.T) {
 }
 
 func TestEpisodeProgressAndSeriesHome(t *testing.T) {
-	handler, _, _, items := episodeFixture(t)
+	handler, _, series, items := episodeFixture(t)
 	path := "/api/library/episodes/" + strconvID(items[0].ID) + "/progress"
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodPut, path,
@@ -111,11 +111,72 @@ func TestEpisodeProgressAndSeriesHome(t *testing.T) {
 	if len(payload.Continue) != 1 || payload.Continue[0].ID != items[0].ID {
 		t.Fatalf("continue watching = %+v", payload.Continue)
 	}
+	var detail library.Series
+	decodeInto(t, get(t, handler, "/api/library/series/"+strconvID(series.ID)), &detail)
+	if detail.ResumeEpisode == nil || detail.ResumeEpisode.ID != items[0].ID ||
+		detail.ResumeEpisode.Progress.PositionSeconds != 180 || detail.ResumeEpisode.Progress.WatchedAt == nil {
+		t.Fatalf("series resume = %+v", detail.ResumeEpisode)
+	}
+	created := do(t, handler, http.MethodPost, "/api/profiles", `{"name":"Second viewer"}`)
+	if created.StatusCode != http.StatusCreated {
+		t.Fatalf("create profile = %d", created.StatusCode)
+	}
+	var profile struct {
+		ID int64 `json:"id"`
+	}
+	decodeInto(t, created, &profile)
+	detail = library.Series{}
+	decodeInto(t, get(t, handler, "/api/library/series/"+strconvID(series.ID)+"?profile="+strconvID(profile.ID)), &detail)
+	if detail.ResumeEpisode != nil {
+		t.Fatal("series resume leaked between profiles")
+	}
 
 	reset := httptest.NewRecorder()
 	handler.ServeHTTP(reset, httptest.NewRequest(http.MethodDelete, path, nil))
 	if reset.Code != http.StatusNoContent {
 		t.Fatalf("reset = %d", reset.Code)
+	}
+	detail = library.Series{}
+	decodeInto(t, get(t, handler, "/api/library/series/"+strconvID(series.ID)), &detail)
+	if detail.ResumeEpisode != nil {
+		t.Fatal("reset episode remained the series resume choice")
+	}
+	res := do(t, handler, http.MethodPut, path, `{"position_seconds":1190,"duration_seconds":1200}`)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("finishing episode = %d", res.StatusCode)
+	}
+	detail = library.Series{}
+	decodeInto(t, get(t, handler, "/api/library/series/"+strconvID(series.ID)), &detail)
+	if detail.ResumeEpisode != nil {
+		t.Fatal("finished episode remained the series resume choice")
+	}
+}
+
+func TestSeriesResumeAcrossSeasons(t *testing.T) {
+	handler, service, root := newMovieFileTestServer(t)
+	writeEpisodeMedia(t, root, "Shows/Severance (2022)/Season 01/S01E01.mp4", "first")
+	writeEpisodeMedia(t, root, "Shows/Severance (2022)/Season 02/S02E01.mp4", "second")
+	if _, err := service.Scan(t.Context(), []string{root}); err != nil {
+		t.Fatal(err)
+	}
+	series, err := service.ListSeries(t.Context(), 10, 0)
+	if err != nil || len(series) != 1 {
+		t.Fatalf("series = %+v, err = %v", series, err)
+	}
+	season, err := service.GetSeason(t.Context(), defaultProfileID, series[0].ID, 2)
+	if err != nil || len(season.Items) != 1 {
+		t.Fatalf("season = %+v, err = %v", season, err)
+	}
+	path := "/api/library/episodes/" + strconvID(season.Items[0].ID) + "/progress"
+	res := do(t, handler, http.MethodPut, path, `{"position_seconds":420,"duration_seconds":1200}`)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("save second-season progress = %d", res.StatusCode)
+	}
+	var detail library.Series
+	decodeInto(t, get(t, handler, "/api/library/series/"+strconvID(series[0].ID)), &detail)
+	if detail.ResumeEpisode == nil || detail.ResumeEpisode.ID != season.Items[0].ID ||
+		detail.ResumeEpisode.SeasonNumber != 2 || detail.ResumeEpisode.Progress.PositionSeconds != 420 {
+		t.Fatalf("second-season resume = %+v", detail.ResumeEpisode)
 	}
 }
 

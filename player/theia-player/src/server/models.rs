@@ -169,6 +169,8 @@ pub struct Series {
     #[serde(default)]
     pub seasons: Vec<Season>,
     #[serde(default)]
+    pub resume_episode: Option<EpisodeItem>,
+    #[serde(default)]
     pub backdrop_url: String,
     /// The window-sized frame, as on a film.
     #[serde(default)]
@@ -179,7 +181,11 @@ pub struct Series {
 
 #[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
 pub struct SeriesMetadata {
-    #[serde(default)]
+    #[serde(
+        default,
+        rename(deserialize = "tmdb_name", serialize = "name"),
+        alias = "name"
+    )]
     pub name: String,
     #[serde(default)]
     pub poster_path: String,
@@ -304,6 +310,8 @@ pub struct EpisodeItem {
     pub next_episode_id: Option<i64>,
     #[serde(default)]
     pub still_url: String,
+    #[serde(default)]
+    pub hero_url: String,
 }
 
 #[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
@@ -436,6 +444,8 @@ pub struct Progress {
     pub duration_seconds: f64,
     #[serde(default)]
     pub finished: bool,
+    #[serde(default)]
+    pub watched_at: Option<String>,
 }
 
 impl Movie {
@@ -465,6 +475,9 @@ impl Series {
         self.backdrop_url = image_url(base, &self.metadata.backdrop_path, "w780");
         self.hero_url = image_url(base, &self.metadata.backdrop_path, "original");
         self.poster_url = image_url(base, &self.metadata.poster_path, "w500");
+        if let Some(episode) = self.resume_episode.as_mut() {
+            episode.resolve_artwork(base);
+        }
     }
 }
 
@@ -476,6 +489,7 @@ impl EpisodeItem {
             .map(|episode| episode.metadata.still_path.as_str())
             .unwrap_or_default();
         self.still_url = image_url(base, path, "w780");
+        self.hero_url = image_url(base, path, "original");
     }
 
     pub fn title(&self) -> String {
@@ -600,7 +614,30 @@ pub(super) struct ProfileList {
 
 #[cfg(test)]
 mod tests {
-    use super::Metadata;
+    use super::{Metadata, Series};
+
+    #[test]
+    fn series_detail_keeps_its_resume_episode_and_watch_time() {
+        let mut series: Series = serde_json::from_value(serde_json::json!({
+            "id": 9, "metadata": { "tmdb_name": "Shōgun" },
+            "resume_episode": { "id": 901, "series_id": 9,
+                "progress": { "position_seconds": 420, "watched_at": "2026-09-29T20:00:00Z" },
+                "episode_metadata": [{ "id": 901, "metadata": { "still_path": "/still.jpg" } }]
+            }
+        }))
+        .unwrap();
+        series.resolve_artwork("http://127.0.0.1:8395");
+        let sent = serde_json::to_value(series).unwrap();
+        assert_eq!(sent["metadata"]["name"], "Shōgun");
+        assert_eq!(
+            sent["resume_episode"]["progress"]["watched_at"],
+            "2026-09-29T20:00:00Z"
+        );
+        assert_eq!(
+            sent["resume_episode"]["still_url"],
+            "http://127.0.0.1:8395/api/images/w780/still.jpg"
+        );
+    }
 
     #[test]
     fn movie_detail_keeps_tmdb_credits() {

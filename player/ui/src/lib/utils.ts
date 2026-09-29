@@ -5,6 +5,11 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
+/** Typing an unaccented title should still find its TMDB spelling. */
+export function searchText(value: string): string {
+	return value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
 /**
  * The runtime register, shared by the hero and anything else that states how
  * long something is. French runs "1 h 35", English "1 hr 35 min" - the same
