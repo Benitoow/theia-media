@@ -30,6 +30,9 @@ export type Movie = {
 	year?: number;
 	metadata?: MovieMetadata;
 	backdrop_url?: string;
+	// The same backdrop at the size a frame that fills a window draws it; the
+	// player resolves it because the interface never learns the server address.
+	hero_url?: string;
 	poster_url?: string;
 	progress?: Progress;
 };
@@ -52,6 +55,8 @@ export type Series = {
 		tagline?: string;
 	};
 	backdrop_url?: string;
+	// As on a film: the window-sized frame the ambient picture draws.
+	hero_url?: string;
 	poster_url?: string;
 	seasons?: Season[];
 };

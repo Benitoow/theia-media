@@ -1128,7 +1128,9 @@ function Library(props: LibraryProps) {
 	const title = selectedSeries ? displayTitle(selectedSeries) : undefined;
 	const count = section === 'series' ? props.series.length : section === 'search' ? props.movies.length + props.series.length : props.movies.length;
 	const spotlightSource = section === 'series' ? props.series[0] : props.movies[0];
-	const spotlight = spotlightSource ? artworkCandidates(spotlightSource, 'w1280')[0] : undefined;
+	// The ambient picture is the same size of frame as the home's hero - a
+	// wallpaper behind the nav - so it draws the player's window-sized URL too.
+	const spotlight = spotlightSource ? (spotlightSource.hero_url ?? artworkCandidates(spotlightSource, 'w1280')[0]) : undefined;
 
 	return (
 		<section className="library">
@@ -1292,8 +1294,12 @@ function HomeHero({ movie, resuming, language, t, onPlay }: { movie: Movie; resu
 	const [heroFailed, setHeroFailed] = useState(false);
 	useEffect(() => setHeroFailed(false), [movie.id]);
 	// The not-found plate answers when no artwork exists or the picture
-	// failed; an item that has its own artwork keeps it.
-	const heroArt = heroFailed ? notFoundArt : (artworkCandidates(movie, 'w1280')[0] ?? notFoundArt);
+	// failed; an item that has its own artwork keeps it. The hero is a frame the
+	// size of a window, so it draws `hero_url` - the backdrop the player resolved
+	// at `original`, because this interface never learns the address a URL would
+	// be built from. The card candidates are the fallback they have always been,
+	// and a w1280 is what a card-sized field would have drawn here instead.
+	const heroArt = heroFailed ? notFoundArt : (movie.hero_url ?? artworkCandidates(movie, 'w1280')[0] ?? notFoundArt);
 	const position = movie.progress?.position_seconds ?? 0;
 	const duration = movie.progress?.duration_seconds ?? 0;
 	const playing = resuming && position > 0 && duration > 0;

@@ -70,6 +70,7 @@ export function displayYear(item: Dated | null | undefined): number | string | n
 
 type Artworked = {
 	backdrop_url?: string;
+	hero_url?: string;
 	poster_url?: string;
 	still_url?: string;
 	metadata?: {

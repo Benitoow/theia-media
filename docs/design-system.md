@@ -698,7 +698,12 @@ a player.
   The copy sits on the page's ink, which is why the hero's veils are gone with
   it - there is nothing left behind the text but the page. The one addition is a
   short fade at the top, because the hero starts below the page's own top
-  padding while the library's picture starts at the scroller's edge.
+  padding while the library's picture starts at the scroller's edge. **The
+  picture is drawn at the resolution of its frame** (decision 152): the hero and
+  the ambient picture draw `hero_url`, the backdrop the player resolved at
+  `original`, because a card's `w780` stretched across a 2568-pixel window is
+  scaled about 1.9x - which is what the maintainer saw and reported on
+  29 September 2026.
 - **One filled control**, the play button, in `--bone` rather than gold: the
   accent still has to mean "look here" everywhere else on the screen.
 - **The furniture hides** after three seconds of no pointer, no key and no state

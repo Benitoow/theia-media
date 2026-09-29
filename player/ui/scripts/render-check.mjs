@@ -171,6 +171,10 @@ const MOVIES = [
 		title: 'Resume Test',
 		year: 2022,
 		backdrop_url: '/api/images/w780/resume.jpg',
+		// The frame the home's hero draws, which is not the card's picture: the
+		// player resolves this one at `original`, and the assertion below is
+		// that the hero draws this rather than the w780 beside it.
+		hero_url: '/api/images/original/resume.jpg',
 		progress: { position_seconds: 102.4, duration_seconds: 150, finished: false },
 	},
 	{
@@ -2349,6 +2353,16 @@ async function assertSeriesJourney(page) {
 	}
 	if ((await page.locator('.home-hero-progress-played').count()) !== 1) {
 		console.error('the home hero drew no progress bar for a film under way');
+		failures++;
+	}
+	// The hero is a frame the size of a window, so it draws the picture the
+	// player resolved for one. Both URLs are in the fixture on purpose: a hero
+	// drawing the card's w780 is exactly the fault this has to be able to catch
+	// - it was the maintainer's report of 29 September 2026, a picture too small
+	// for its frame at 200% scaling.
+	const heroSource = await page.locator('.home-hero-art').getAttribute('src');
+	if (heroSource !== HOME.hero.hero_url) {
+		console.error(`the home hero drew "${heroSource}", expected its window-sized ${HOME.hero.hero_url}`);
 		failures++;
 	}
 	const homeRows = await page.locator('.home-row').count();

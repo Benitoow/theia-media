@@ -220,6 +220,11 @@ pub struct Movie {
     /// server answered.
     #[serde(default)]
     pub backdrop_url: String,
+    /// The same backdrop at the size a frame that fills a window draws it - the
+    /// home's hero and the library's ambient picture. A card is 336 CSS pixels
+    /// wide; those two are most of a window, and one size cannot serve both.
+    #[serde(default)]
+    pub hero_url: String,
     #[serde(default)]
     pub poster_url: String,
 }
@@ -239,6 +244,9 @@ pub struct Series {
     pub seasons: Vec<Season>,
     #[serde(default)]
     pub backdrop_url: String,
+    /// The window-sized frame, as on a film.
+    #[serde(default)]
+    pub hero_url: String,
     #[serde(default)]
     pub poster_url: String,
 }
@@ -485,18 +493,31 @@ pub struct Progress {
 }
 
 impl Movie {
-    /// Fills in the two artwork URLs a card needs, once, as the film arrives.
-    /// The alternative is the OSD knowing the server's address, which is the
-    /// connection's business and not the interface's.
+    /// Fills in the artwork URLs a card and a window-sized frame need, once, as
+    /// the film arrives. The alternative is the OSD knowing the server's
+    /// address, which is the connection's business and not the interface's.
+    ///
+    /// Three sizes, because a screen holds three sizes of frame: a card's w780,
+    /// a w500 poster, and `hero_url` for the home's hero and the library's
+    /// ambient picture. The last is a measurement rather than a taste - on
+    /// 29 September 2026 the maintainer sent the player's home photographed on
+    /// a 2568-pixel window at 200% scaling, where the w1280 that used to serve
+    /// the hero is stretched about 1.9x and reads as a picture too small for its
+    /// frame. The interface cannot ask for another size when it draws (it has no
+    /// address to build a URL from), so every size it may need is resolved here.
     fn resolve_artwork(&mut self, base: &str) {
         self.backdrop_url = image_url(base, &self.metadata.backdrop_path, "w780");
+        self.hero_url = image_url(base, &self.metadata.backdrop_path, "original");
         self.poster_url = image_url(base, &self.metadata.poster_path, "w500");
     }
 }
 
 impl Series {
+    /// The same three sizes as a film: a card, a poster, and the frame a window
+    /// draws.
     fn resolve_artwork(&mut self, base: &str) {
         self.backdrop_url = image_url(base, &self.metadata.backdrop_path, "w780");
+        self.hero_url = image_url(base, &self.metadata.backdrop_path, "original");
         self.poster_url = image_url(base, &self.metadata.poster_path, "w500");
     }
 }
@@ -957,14 +978,12 @@ impl Client {
     /// The home screen: one hero and the short rows the server built, in the
     /// order it built them.
     ///
-    /// The hero is drawn across most of the window, so its backdrop is
-    /// resolved again at w1280 - the w780 a card lives on would be soft at
-    /// that size. Everything else stays on the card sizes.
+    /// Nothing here is re-resolved at a size of its own: the hero draws the
+    /// `hero_url` every item already carries, and the rows draw the card sizes.
     pub fn home(&self) -> Result<HomeScreen, String> {
         let mut home: HomeScreen = self.get_json("/api/library/home")?;
         if let Some(hero) = &mut home.hero {
             hero.resolve_artwork(&self.base);
-            hero.backdrop_url = image_url(&self.base, &hero.metadata.backdrop_path, "w1280");
         }
         for row in &mut home.rows {
             for movie in &mut row.movies {
@@ -1456,6 +1475,30 @@ mod tests {
         assert!(card["metadata"].get("tmdb_title").is_none());
         assert_eq!(movie.backdrop_url, "http://host:8395/api/images/w780/b.jpg");
         assert_eq!(movie.poster_url, "http://host:8395/api/images/w500/p.jpg");
+    }
+
+    /// The frames that fill a window - the home's hero and the library's ambient
+    /// picture - are not the frame a card draws, and one size cannot serve both:
+    /// the w1280 that used to serve the hero is stretched about 1.9x on a
+    /// 2568-pixel window at 200% scaling, which is the picture the maintainer
+    /// reported as too small for its frame on 29 September 2026. The card keeps
+    /// w780, because a hero-sized picture in every card would be paid for on
+    /// every row.
+    #[test]
+    fn a_window_sized_frame_is_resolved_wider_than_a_card() {
+        let mut movie: Movie = serde_json::from_str(
+            r#"{"id":4,"title":"Dune: Part Two","metadata":{"backdrop_path":"/b.jpg"}}"#,
+        )
+        .expect("the server's own shape should parse");
+        movie.resolve_artwork("http://host:8395/");
+        assert_eq!(movie.hero_url, "http://host:8395/api/images/original/b.jpg");
+        assert_eq!(movie.backdrop_url, "http://host:8395/api/images/w780/b.jpg");
+
+        // A film TMDB never matched gets no hero URL rather than one that 404s.
+        let mut unmatched: Movie = serde_json::from_str(r#"{"id":5,"title":"Unmatched"}"#)
+            .expect("a film TMDB never matched still has to parse");
+        unmatched.resolve_artwork("http://host:8395");
+        assert_eq!(unmatched.hero_url, "");
     }
 
     #[test]
