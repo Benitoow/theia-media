@@ -350,10 +350,18 @@ impl Session {
             options.push(format!("start={:.3}", self.start_at));
         }
         if let Some(aid) = self.aid {
-            options.push(if aid <= 0 { "aid=no".to_string() } else { format!("aid={aid}") });
+            options.push(if aid <= 0 {
+                "aid=no".to_string()
+            } else {
+                format!("aid={aid}")
+            });
         }
         if let Some(sid) = self.sid {
-            options.push(if sid <= 0 { "sid=no".to_string() } else { format!("sid={sid}") });
+            options.push(if sid <= 0 {
+                "sid=no".to_string()
+            } else {
+                format!("sid={sid}")
+            });
         } else if self.playback.subtitle_language == SubtitleLanguage::Off {
             // Somebody asked for no subtitles, and has not chosen a track for
             // this film, so the file is opened saying so. `sid=no` is mpv's own
@@ -410,7 +418,10 @@ enum Playing {
     /// owner, and so the paths that already clear the media - `player_stop`,
     /// `clear_media` - clear this too. `None` is not "do not autoplay": it is
     /// the server saying there is no next episode.
-    Episode { id: i64, next: Option<i64> },
+    Episode {
+        id: i64,
+        next: Option<i64>,
+    },
 }
 
 /// The playable record currently owned by mpv. Keeping the kind beside the id
@@ -615,8 +626,8 @@ fn stored_playback() -> PlaybackPreferences {
 /// keeping the same choices in `localStorage` - but the store still happened.
 #[tauri::command]
 fn player_set_playback(prefs: String) -> Result<(), String> {
-    let parsed: PlaybackPreferences =
-        serde_json::from_str(&prefs).map_err(|e| format!("reading the playback preferences: {e}"))?;
+    let parsed: PlaybackPreferences = serde_json::from_str(&prefs)
+        .map_err(|e| format!("reading the playback preferences: {e}"))?;
     parsed.validate()?;
     *PLAYBACK.lock().unwrap() = parsed;
     apply_playback()
@@ -681,7 +692,11 @@ fn apply_playback() -> Result<(), String> {
     // The session keeps its own copy because `load_options` reads it while the
     // session lock is held, and this is one of the two places that writes it.
     session.playback = prefs;
-    apply_playback_to(&session.engine, &session.playback, session.original_language.as_deref())
+    apply_playback_to(
+        &session.engine,
+        &session.playback,
+        session.original_language.as_deref(),
+    )
 }
 
 /// Sets every property the preferences decide, and names the ones the engine
@@ -755,7 +770,10 @@ fn playback_properties(
         // it off. A player that inherits its units renders a size nobody chose.
         ("sub-scale-by-window", "yes".to_string()),
         ("sub-font", style.font.family().to_string()),
-        ("sub-bold", if style.bold { "yes" } else { "no" }.to_string()),
+        (
+            "sub-bold",
+            if style.bold { "yes" } else { "no" }.to_string(),
+        ),
     ];
     // The outline inverts on dark text - part of what the sheet promises - and
     // both colours are set even when a background box makes them inert, so that
@@ -1047,7 +1065,12 @@ static OSD_STATS: std::sync::Mutex<Option<OsdStats>> = std::sync::Mutex::new(Non
 #[tauri::command]
 fn player_osd_stats(worst_frame_ms: f64, slow_frames: u32, frames: u32, resize_events: u32) {
     if let Ok(mut guard) = OSD_STATS.lock() {
-        *guard = Some(OsdStats { worst_frame_ms, slow_frames, frames, resize_events });
+        *guard = Some(OsdStats {
+            worst_frame_ms,
+            slow_frames,
+            frames,
+            resize_events,
+        });
     }
 }
 
@@ -1132,7 +1155,11 @@ fn player_status() -> String {
 
 #[tauri::command]
 fn player_version() -> Option<String> {
-    SESSION.lock().unwrap().as_ref().and_then(|s| s.engine.version())
+    SESSION
+        .lock()
+        .unwrap()
+        .as_ref()
+        .and_then(|s| s.engine.version())
 }
 
 /// The engine the player ships, as it was pinned.
@@ -1315,7 +1342,9 @@ fn supervise_subtitles() {
         Ok(g) => g,
         Err(_) => return,
     };
-    let Some(session) = guard.as_mut() else { return };
+    let Some(session) = guard.as_mut() else {
+        return;
+    };
     if session.sidecars.is_empty() {
         return;
     }
@@ -1323,7 +1352,8 @@ fn supervise_subtitles() {
     // once the container has been read, and before that `sid` is absent, which
     // would otherwise be read as "nothing is selected". A file that never
     // reports a duration still gets its subtitles, via `path`.
-    let open = session.engine.property("duration").is_some() || session.engine.property("path").is_some();
+    let open =
+        session.engine.property("duration").is_some() || session.engine.property("path").is_some();
     if !open {
         return;
     }
@@ -1366,8 +1396,12 @@ fn supervise_subtitles() {
             return;
         }
     }
-    let Some(list) = session.engine.property("track-list") else { return };
-    let Ok(tracks) = serde_json::from_str::<Vec<serde_json::Value>>(&list) else { return };
+    let Some(list) = session.engine.property("track-list") else {
+        return;
+    };
+    let Ok(tracks) = serde_json::from_str::<Vec<serde_json::Value>>(&list) else {
+        return;
+    };
     let wanted = tracks
         .iter()
         .find(|track| {
@@ -1559,7 +1593,11 @@ fn player_set_track(kind: String, id: Option<i64>) -> Result<(), String> {
     let mut guard = SESSION.lock().unwrap();
     let session = guard.as_mut().ok_or("the engine is not running")?;
     let id = id.unwrap_or(-1);
-    let value = if id <= 0 { "no".to_string() } else { id.to_string() };
+    let value = if id <= 0 {
+        "no".to_string()
+    } else {
+        id.to_string()
+    };
     session.engine.set_property(property, &value)?;
     // Remembered so the audio fallback's reload opens the same tracks. A
     // non-positive id is a deliberate "none" (subtitles off) and is kept as
@@ -1659,9 +1697,11 @@ fn theia_data_dir() -> Option<PathBuf> {
     }
     #[cfg(target_os = "macos")]
     {
-        return std::env::var_os("HOME")
-            .map(PathBuf::from)
-            .map(|home| home.join("Library").join("Application Support").join("Theia"));
+        return std::env::var_os("HOME").map(PathBuf::from).map(|home| {
+            home.join("Library")
+                .join("Application Support")
+                .join("Theia")
+        });
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     {
@@ -1694,9 +1734,11 @@ fn local_server_install() -> Result<Option<(PathBuf, String)>, String> {
 
     let config_path = data_dir.join("config.json");
     let port = match std::fs::read(&config_path) {
-        Ok(data) => serde_json::from_slice::<LocalServerConfig>(&data)
-            .map_err(|e| format!("reading {}: {e}", config_path.display()))?
-            .port,
+        Ok(data) => {
+            serde_json::from_slice::<LocalServerConfig>(&data)
+                .map_err(|e| format!("reading {}: {e}", config_path.display()))?
+                .port
+        }
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => default_server_port(),
         Err(e) => return Err(format!("reading {}: {e}", config_path.display())),
     };
@@ -1981,7 +2023,10 @@ fn play_episode(id: i64) -> Result<String, String> {
             .join("-");
         let episode_title = episode.title();
         let title = if episode_title.is_empty() {
-            format!("{} · S{:02}{number}", episode.series_title, episode.season_number)
+            format!(
+                "{} · S{:02}{number}",
+                episode.series_title, episode.season_number
+            )
         } else {
             format!(
                 "{} · S{:02}{number} · {episode_title}",
@@ -2175,10 +2220,7 @@ async fn player_movie_detail(id: i64) -> Result<String, String> {
 fn player_series() -> Result<String, String> {
     let series = {
         let guard = CLIENT.lock().unwrap();
-        guard
-            .as_ref()
-            .ok_or("no server is connected")?
-            .series()?
+        guard.as_ref().ok_or("no server is connected")?.series()?
     };
     serde_json::to_string(&series).map_err(|e| e.to_string())
 }
@@ -2187,10 +2229,7 @@ fn player_series() -> Result<String, String> {
 fn player_home() -> Result<String, String> {
     let home = {
         let guard = CLIENT.lock().unwrap();
-        guard
-            .as_ref()
-            .ok_or("no server is connected")?
-            .home()?
+        guard.as_ref().ok_or("no server is connected")?.home()?
     };
     serde_json::to_string(&home).map_err(|e| e.to_string())
 }
@@ -2310,7 +2349,9 @@ fn save_progress() {
     };
     let (position, duration) = {
         let Ok(guard) = SESSION.lock() else { return };
-        let Some(session) = guard.as_ref() else { return };
+        let Some(session) = guard.as_ref() else {
+            return;
+        };
         // The film's clock, not mpv's: on a converted stream they differ by the
         // `t=` the pipe was asked for, and a resume point written short by that
         // much is a viewer sent backwards every time they change quality.
@@ -2372,7 +2413,9 @@ fn autoplay_next_episode() {
             Ok(guard) => guard,
             Err(_) => return,
         };
-        let Some(session) = guard.as_mut() else { return };
+        let Some(session) = guard.as_mut() else {
+            return;
+        };
         if session.engine.property("eof-reached").as_deref() == Some("yes") {
             if session.end_handled {
                 return;
@@ -2391,7 +2434,11 @@ fn autoplay_next_episode() {
     // The end has been recorded whether or not anything comes of it: a
     // preference turned on ten minutes after the film finished must not start an
     // episode the viewer has moved on from.
-    if !PLAYBACK.lock().map(|guard| guard.auto_play_next).unwrap_or(false) {
+    if !PLAYBACK
+        .lock()
+        .map(|guard| guard.auto_play_next)
+        .unwrap_or(false)
+    {
         return;
     }
     let next = match *CURRENT_MEDIA.lock().unwrap() {
@@ -2691,7 +2738,13 @@ fn main() {
 
             if let (Some(requested), Some(path)) = (window_size, window_report.clone()) {
                 let wake_osd = std::env::args().any(|arg| arg == "--proof-osd");
-                start_window_probe(window.clone(), wid, requested, PathBuf::from(path), wake_osd);
+                start_window_probe(
+                    window.clone(),
+                    wid,
+                    requested,
+                    PathBuf::from(path),
+                    wake_osd,
+                );
             }
 
             // The handle mpv was given, printed because on Linux it is the one
@@ -2703,7 +2756,8 @@ fn main() {
                 Ok(()) => {
                     let version = player_version().unwrap_or_else(|| "unknown".into());
                     println!("theia-player: engine {version}");
-                    let _ = window.emit("player-event", "{\"kind\":\"engine\",\"state\":\"ready\"}");
+                    let _ =
+                        window.emit("player-event", "{\"kind\":\"engine\",\"state\":\"ready\"}");
                 }
                 Err(e) => {
                     // The page is the only thing that can explain this to a
@@ -2781,7 +2835,13 @@ fn main() {
                     let mut value: serde_json::Value =
                         serde_json::from_str(&frame).unwrap_or(serde_json::Value::Null);
                     if let Some(map) = value.as_object_mut() {
-                        for key in ["sinceStartMs", "osdWorstFrameMs", "osdSlowFrames", "osdFrames", "osdResizeEvents"] {
+                        for key in [
+                            "sinceStartMs",
+                            "osdWorstFrameMs",
+                            "osdSlowFrames",
+                            "osdFrames",
+                            "osdResizeEvents",
+                        ] {
                             map.remove(key);
                         }
                     }
@@ -2832,7 +2892,10 @@ fn main() {
                         }
                     }
                     std::thread::sleep(Duration::from_secs(1));
-                    println!("theia-player: tracks now {}", player_tracks().unwrap_or_default());
+                    println!(
+                        "theia-player: tracks now {}",
+                        player_tracks().unwrap_or_default()
+                    );
                 });
             }
 
@@ -2933,11 +2996,15 @@ fn supervise_audio(app: &tauri::WebviewWindow) {
         Ok(g) => g,
         Err(_) => return,
     };
-    let Some(session) = guard.as_mut() else { return };
+    let Some(session) = guard.as_mut() else {
+        return;
+    };
     if session.audio != AudioMode::Passthrough {
         return;
     }
-    let Some(loaded_at) = session.loaded_at else { return };
+    let Some(loaded_at) = session.loaded_at else {
+        return;
+    };
     if loaded_at.elapsed() < GRACE {
         return;
     }
@@ -3006,7 +3073,10 @@ mod player_window_tests {
             !keys.contains(&"gpu-api") && !keys.contains(&"gpu-context"),
             "the graphics API and context are the session's answer, not ours: {keys:?}"
         );
-        assert!(values.contains(&"auto-safe"), "hardware decoding where it exists");
+        assert!(
+            values.contains(&"auto-safe"),
+            "hardware decoding where it exists"
+        );
 
         let windows = platform_options(Platform::Windows, true);
         assert!(
@@ -3016,7 +3086,9 @@ mod player_window_tests {
             "Windows keeps D3D11"
         );
         assert!(
-            windows.iter().any(|(key, value)| *key == "ao" && *value == "wasapi"),
+            windows
+                .iter()
+                .any(|(key, value)| *key == "ao" && *value == "wasapi"),
             "Windows keeps WASAPI"
         );
     }
@@ -3037,12 +3109,16 @@ mod player_window_tests {
 
         let without_dri = platform_options(Platform::Unix, false);
         assert!(
-            without_dri.iter().any(|(key, value)| *key == "vo" && value == "x11"),
+            without_dri
+                .iter()
+                .any(|(key, value)| *key == "vo" && value == "x11"),
             "no DRI device means the software output: {without_dri:?}"
         );
         let with_dri = platform_options(Platform::Unix, true);
         assert!(
-            with_dri.iter().any(|(key, value)| *key == "vo" && value == "gpu-next"),
+            with_dri
+                .iter()
+                .any(|(key, value)| *key == "vo" && value == "gpu-next"),
             "a DRI device keeps gpu-next: {with_dri:?}"
         );
 
@@ -3071,7 +3147,10 @@ mod player_window_tests {
     /// a mapping (`takes_window_id`) rather than a `cfg`.
     #[test]
     fn a_window_id_is_sent_only_where_the_engine_reads_one() {
-        assert!(!takes_window_id(Platform::Macos), "mpv 0.41 reads no wid on macOS");
+        assert!(
+            !takes_window_id(Platform::Macos),
+            "mpv 0.41 reads no wid on macOS"
+        );
         assert!(takes_window_id(Platform::Windows));
         assert!(takes_window_id(Platform::Unix));
 
@@ -3089,7 +3168,8 @@ mod player_window_tests {
             );
         } else {
             assert!(
-                with.iter().any(|(key, value)| *key == "wid" && value == "1234"),
+                with.iter()
+                    .any(|(key, value)| *key == "wid" && value == "1234"),
                 "a real window id is still sent: {with:?}"
             );
         }
@@ -3271,15 +3351,24 @@ mod playback_tests {
         ] {
             let error = serde_json::from_str::<PlaybackPreferences>(payload)
                 .expect_err("this payload names no setting the sheet can produce");
-            assert!(error.to_string().contains("unknown variant"), "{payload}: {error}");
+            assert!(
+                error.to_string().contains("unknown variant"),
+                "{payload}: {error}"
+            );
         }
         // The two colours travel as free text, because a background is `none` or
         // a colour - so they are checked by the validator, which names the field
         // the way the sheet knows it.
         let wrong_ink = style_with(|style| style.colour = "blue".to_string());
-        assert!(wrong_ink.validate().unwrap_err().contains("subtitleStyle.colour"));
+        assert!(wrong_ink
+            .validate()
+            .unwrap_err()
+            .contains("subtitleStyle.colour"));
         let wrong_box = style_with(|style| style.background = "#EDE7D".to_string());
-        assert!(wrong_box.validate().unwrap_err().contains("subtitleStyle.background"));
+        assert!(wrong_box
+            .validate()
+            .unwrap_err()
+            .contains("subtitleStyle.background"));
         // And what the sheet can produce passes, including the background box.
         assert!(PlaybackPreferences::default().validate().is_ok());
         let boxed = style_with(|style| style.background = "#203040".to_string());
@@ -3331,7 +3420,10 @@ mod playback_tests {
         // none, so the alpha is written here - opaque, which is what the paper the
         // interface is drawn on is.
         assert_eq!(opaque_colour("#EDE7DC"), "#FFEDE7DC");
-        assert_eq!(property(&PlaybackPreferences::default(), "sub-color"), "#FFEDE7DC");
+        assert_eq!(
+            property(&PlaybackPreferences::default(), "sub-color"),
+            "#FFEDE7DC"
+        );
         // Another shape goes through unchanged rather than mangled: the engine's
         // own refusal is the answer, and `apply_playback_to` prints it.
         assert_eq!(opaque_colour("red"), "red");
@@ -3474,15 +3566,27 @@ mod playback_tests {
     fn the_font_choices_are_the_generic_families() {
         // Generic names, because the engine resolves them through its own font
         // provider and the OSD ships no font the engine could load.
-        assert_eq!(property(&style_with(|style| style.font = Font::Standard), "sub-font"), "sans-serif");
-        assert_eq!(property(&style_with(|style| style.font = Font::Serif), "sub-font"), "serif");
-        assert_eq!(property(&style_with(|style| style.font = Font::Mono), "sub-font"), "monospace");
+        assert_eq!(
+            property(&style_with(|style| style.font = Font::Standard), "sub-font"),
+            "sans-serif"
+        );
+        assert_eq!(
+            property(&style_with(|style| style.font = Font::Serif), "sub-font"),
+            "serif"
+        );
+        assert_eq!(
+            property(&style_with(|style| style.font = Font::Mono), "sub-font"),
+            "monospace"
+        );
     }
 
     #[test]
     fn bold_is_the_engines_own_flag() {
         assert_eq!(property(&PlaybackPreferences::default(), "sub-bold"), "no");
-        assert_eq!(property(&style_with(|style| style.bold = true), "sub-bold"), "yes");
+        assert_eq!(
+            property(&style_with(|style| style.bold = true), "sub-bold"),
+            "yes"
+        );
     }
 
     #[test]

@@ -17,7 +17,8 @@ use std::path::{Path, PathBuf};
 type MpvCreate = unsafe extern "C" fn() -> *mut c_void;
 type MpvInitialize = unsafe extern "C" fn(*mut c_void) -> c_int;
 type MpvSetOptionString = unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char) -> c_int;
-type MpvSetPropertyString = unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char) -> c_int;
+type MpvSetPropertyString =
+    unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char) -> c_int;
 type MpvGetPropertyString = unsafe extern "C" fn(*mut c_void, *const c_char) -> *mut c_char;
 type MpvCommand = unsafe extern "C" fn(*mut c_void, *const *const c_char) -> c_int;
 type MpvFree = unsafe extern "C" fn(*mut c_void);
@@ -81,7 +82,9 @@ pub fn engine_path() -> Result<PathBuf, String> {
     }
 
     let exe = std::env::current_exe().map_err(|e| format!("locating the executable: {e}"))?;
-    let dir = exe.parent().ok_or("the executable has no parent directory")?;
+    let dir = exe
+        .parent()
+        .ok_or("the executable has no parent directory")?;
     // The bundle layout is tried second, so a copy dropped next to the binary -
     // how development runs - still wins.
     #[cfg(target_os = "macos")]

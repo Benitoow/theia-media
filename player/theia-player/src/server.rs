@@ -40,8 +40,8 @@ pub struct Discovered {
 /// Browses for servers. Best-effort by construction: an error here means "no
 /// server was found this way", never "the player cannot work".
 pub fn discover(timeout: Duration) -> Result<Vec<Discovered>, String> {
-    let daemon = mdns_sd::ServiceDaemon::new()
-        .map_err(|e| format!("starting the mDNS browser: {e}"))?;
+    let daemon =
+        mdns_sd::ServiceDaemon::new().map_err(|e| format!("starting the mDNS browser: {e}"))?;
     let receiver = daemon
         .browse(SERVICE_TYPE)
         .map_err(|e| format!("browsing for {SERVICE_TYPE}: {e}"))?;
@@ -59,9 +59,7 @@ pub fn discover(timeout: Duration) -> Result<Vec<Discovered>, String> {
                     .find(|a| a.is_ipv4())
                     .or_else(|| info.get_addresses().iter().next());
                 let Some(address) = address else { continue };
-                let version = info
-                    .get_property_val_str("version")
-                    .map(|v| v.to_string());
+                let version = info.get_property_val_str("version").map(|v| v.to_string());
                 let url = format!("http://{}:{}", address, info.get_port());
                 if found.iter().any(|s| s.url == url) {
                     continue;
@@ -217,9 +215,9 @@ impl Refusal {
     /// the true one.
     fn of(error: ureq::Error) -> Refusal {
         let kind = match error.kind() {
-            ureq::ErrorKind::InvalidUrl
-            | ureq::ErrorKind::UnknownScheme
-            | ureq::ErrorKind::Dns => RefusalKind::Unreadable,
+            ureq::ErrorKind::InvalidUrl | ureq::ErrorKind::UnknownScheme | ureq::ErrorKind::Dns => {
+                RefusalKind::Unreadable
+            }
             _ => RefusalKind::Silent,
         };
         Refusal {
@@ -265,9 +263,7 @@ impl Client {
     /// moved, and an address that is still unreadable is reported as such.
     pub fn with_timeout(base: &str, timeout: Duration) -> Client {
         Client {
-            agent: ureq::AgentBuilder::new()
-                .timeout(timeout)
-                .build(),
+            agent: ureq::AgentBuilder::new().timeout(timeout).build(),
             base: base.trim().trim_end_matches('/').to_string(),
             profile: None,
         }
@@ -373,7 +369,9 @@ impl Client {
     }
 
     pub fn movies(&self, limit: u32, offset: u32) -> Result<Vec<Movie>, String> {
-        let mut list: MovieList = self.get_json(&format!("/api/library/movies?limit={limit}&offset={offset}"))?;
+        let mut list: MovieList = self.get_json(&format!(
+            "/api/library/movies?limit={limit}&offset={offset}"
+        ))?;
         for movie in &mut list.movies {
             movie.resolve_artwork(&self.base);
         }
@@ -512,7 +510,9 @@ impl Client {
     /// card preview and a client that will read whatever it is given should say
     /// what it is willing to read.
     fn preview_data(&self, url: &str) -> Result<String, String> {
-        let response = self.agent.get(url)
+        let response = self
+            .agent
+            .get(url)
             .call()
             .map_err(|e| format!("fetching the preview: {e}"))?;
         let bytes = read_preview(response.into_reader())?;
@@ -579,11 +579,7 @@ impl Client {
         self.get_json(&format!("/api/stream/{movie_id}/files/{file_id}/info"))
     }
 
-    pub fn episode_stream_info(
-        &self,
-        episode_id: i64,
-        file_id: i64,
-    ) -> Result<StreamInfo, String> {
+    pub fn episode_stream_info(&self, episode_id: i64, file_id: i64) -> Result<StreamInfo, String> {
         self.get_json(&format!(
             "/api/library/episodes/{episode_id}/files/{file_id}/stream/info"
         ))
@@ -602,12 +598,7 @@ impl Client {
         ))
     }
 
-    pub fn episode_subtitle_url(
-        &self,
-        episode_id: i64,
-        file_id: i64,
-        track_id: i64,
-    ) -> String {
+    pub fn episode_subtitle_url(&self, episode_id: i64, file_id: i64, track_id: i64) -> String {
         self.url(&format!(
             "/api/library/episodes/{episode_id}/files/{file_id}/subtitles/{track_id}"
         ))
@@ -744,7 +735,9 @@ mod tests {
     #[test]
     fn a_preview_is_complete_or_refused() {
         assert_eq!(read_preview(&b"clip"[..]).unwrap(), b"clip");
-        assert!(read_preview(std::io::empty()).unwrap_err().contains("empty"));
+        assert!(read_preview(std::io::empty())
+            .unwrap_err()
+            .contains("empty"));
         assert_eq!(
             read_preview(std::io::repeat(0).take(PREVIEW_LIMIT))
                 .unwrap()
@@ -804,7 +797,11 @@ mod tests {
         // And the URL the interface is handed, built the way watch_stats builds
         // it: an empty path means an empty URL, which is the placeholder.
         assert_eq!(
-            image_url("http://127.0.0.1:8383", &stats.top_series[0].poster_path, "w185"),
+            image_url(
+                "http://127.0.0.1:8383",
+                &stats.top_series[0].poster_path,
+                "w185"
+            ),
             "http://127.0.0.1:8383/api/images/w185/7O4iVfOMQmdCSxhOg1WnzG1AgYT.jpg"
         );
     }
@@ -864,7 +861,8 @@ mod tests {
         };
         assert_eq!(typo.code(), "address_unreadable");
 
-        let Err(closed) = Client::with_timeout("http://127.0.0.1:1", Duration::from_millis(500)).probe()
+        let Err(closed) =
+            Client::with_timeout("http://127.0.0.1:1", Duration::from_millis(500)).probe()
         else {
             panic!("nothing listens on port 1");
         };
@@ -1034,7 +1032,11 @@ fn base64(bytes: &[u8]) -> String {
     const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
-        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let b = [
+            chunk[0],
+            *chunk.get(1).unwrap_or(&0),
+            *chunk.get(2).unwrap_or(&0),
+        ];
         let n = ((b[0] as u32) << 16) | ((b[1] as u32) << 8) | b[2] as u32;
         out.push(ALPHABET[(n >> 18) as usize & 63] as char);
         out.push(ALPHABET[(n >> 12) as usize & 63] as char);
