@@ -318,6 +318,7 @@ which is decision 25 applied to a second interface.
 |---|---|
 | `theia-player/src/mpv.rs` | The whole FFI surface, on one page. Nothing above it touches a raw pointer. |
 | `theia-player/src/main.rs` | Session, playback lifecycle, IPC commands, the audio watchdog. |
+| `theia-player/src/platform.rs` | mpv options and window handle policy for Windows, macOS, and Linux. |
 | `theia-player/src/window.rs` | Native window sizing, rounded region, resize timing, and verification report. |
 | `theia-player/src/server.rs` | Discovery, HTTP client, stream URLs, and connection errors. |
 | `theia-player/src/server/models.rs` | JSON records returned by the server, plus artwork and track interpretation. |
