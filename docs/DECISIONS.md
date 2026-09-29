@@ -6535,8 +6535,14 @@ port 9177 - the bare command started the server over that directory,
 created (`theia.db`, `logs`, `cache`) are in the recorded directory;
 `theia-setup --check --json` from the same folder reported `data_dir` as the
 recorded one and `port` as 9177. The macOS verifier and the Windows ARM64 proof
-job no longer set `THEIA_DATA_DIR` for their launcher steps, so the next dispatch
-runs that check the way a person would - which is the thing to look at next.
+job no longer set `THEIA_DATA_DIR` for their launcher steps, and the dispatch of
+29 September 2026 (run `36557687775`) ran that check the way a person would on
+both: macOS Intel ended 31 passed, 0 failed, 4 for a person to look at, with the
+command bringing the installed server up by itself and opening the player;
+Windows ARM64's installed launcher started the server on port 8398 - the port
+that installation was configured with - and opened the player. On both platforms
+the directory served and the port probed came from the record beside the
+programs, because nothing else was left to say where they were.
 
 ## 8. Logistics
 **Status:** living · **Topics:** process
