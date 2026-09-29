@@ -20,6 +20,8 @@ pub use models::*;
 use std::io::Read;
 use std::time::{Duration, Instant};
 
+const PREVIEW_LIMIT: u64 = 8 << 20;
+
 /// The service the server announces. It is the product's own name rather than
 /// `_http._tcp`, so a browser finds Theia instead of finding "a web server".
 pub const SERVICE_TYPE: &str = "_theia._tcp.local.";
@@ -101,12 +103,28 @@ fn converted_query(height: i64, start: f64) -> String {
     format!("t={at:.3}&h={height}")
 }
 
-/// How many films one request asks for, and the ceiling on the walk that reads
+/// How many films or series one request asks for, and the ceiling on a walk of
 /// the whole library. A personal collection is a few hundred rows; the ceiling
 /// exists so a server that always answers with a full page cannot keep the loop
 /// going forever.
 pub const LIBRARY_PAGE: u32 = 200;
 pub const LIBRARY_CEILING: u32 = 5000;
+
+fn collect_pages<T>(
+    mut fetch: impl FnMut(u32, u32) -> Result<Vec<T>, String>,
+) -> Result<Vec<T>, String> {
+    let mut all = Vec::new();
+    let mut offset = 0;
+    loop {
+        let mut batch = fetch(LIBRARY_PAGE, offset)?;
+        let got = batch.len() as u32;
+        all.append(&mut batch);
+        offset += got;
+        if got < LIBRARY_PAGE || all.len() as u32 >= LIBRARY_CEILING {
+            return Ok(all);
+        }
+    }
+}
 
 /// Builds the URL for a cached TMDB image, or an empty string when there is
 /// nothing to draw. A free function rather than a method because resolving a
@@ -369,17 +387,7 @@ impl Client {
     /// back short is the last one; the ceiling is what stops a server that always
     /// answers with a full page from looping forever.
     pub fn all_movies(&self) -> Result<Vec<Movie>, String> {
-        let mut all = Vec::new();
-        let mut offset = 0;
-        loop {
-            let mut batch = self.movies(LIBRARY_PAGE, offset)?;
-            let got = batch.len() as u32;
-            all.append(&mut batch);
-            offset += got;
-            if got < LIBRARY_PAGE || all.len() as u32 >= LIBRARY_CEILING {
-                return Ok(all);
-            }
-        }
+        collect_pages(|limit, offset| self.movies(limit, offset))
     }
 
     pub fn movie(&self, id: i64) -> Result<Movie, String> {
@@ -389,7 +397,13 @@ impl Client {
     }
 
     pub fn series(&self) -> Result<Vec<Series>, String> {
-        let mut list: SeriesList = self.get_json("/api/library/series?limit=500&offset=0")?;
+        collect_pages(|limit, offset| self.series_page(limit, offset))
+    }
+
+    fn series_page(&self, limit: u32, offset: u32) -> Result<Vec<Series>, String> {
+        let mut list: SeriesList = self.get_json(&format!(
+            "/api/library/series?limit={limit}&offset={offset}"
+        ))?;
         for series in &mut list.series {
             series.resolve_artwork(&self.base);
         }
@@ -498,19 +512,10 @@ impl Client {
     /// card preview and a client that will read whatever it is given should say
     /// what it is willing to read.
     fn preview_data(&self, url: &str) -> Result<String, String> {
-        const LIMIT: u64 = 8 << 20;
-        let response = ureq::get(url)
+        let response = self.agent.get(url)
             .call()
             .map_err(|e| format!("fetching the preview: {e}"))?;
-        let mut bytes = Vec::new();
-        response
-            .into_reader()
-            .take(LIMIT)
-            .read_to_end(&mut bytes)
-            .map_err(|e| format!("reading the preview: {e}"))?;
-        if bytes.is_empty() {
-            return Err("the preview was empty".into());
-        }
+        let bytes = read_preview(response.into_reader())?;
         Ok(format!("data:video/mp4;base64,{}", base64(&bytes)))
     }
 
@@ -692,6 +697,23 @@ impl Client {
     }
 }
 
+/// Read one complete preview or reject it. Reading one byte past the limit
+/// distinguishes an exact-fit clip from one that would be silently truncated.
+fn read_preview(reader: impl Read) -> Result<Vec<u8>, String> {
+    let mut bytes = Vec::new();
+    reader
+        .take(PREVIEW_LIMIT + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|e| format!("reading the preview: {e}"))?;
+    if bytes.is_empty() {
+        return Err("the preview was empty".into());
+    }
+    if bytes.len() as u64 > PREVIEW_LIMIT {
+        return Err("the preview exceeds 8 MiB".into());
+    }
+    Ok(bytes)
+}
+
 /// A bounded health probe for startup orchestration.
 ///
 /// It deliberately does not mutate the connected client. The OSD owns the
@@ -704,6 +726,35 @@ pub fn reachable(base: &str, timeout: Duration) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Read;
+
+    #[test]
+    fn a_full_series_page_does_not_hide_the_next_one() {
+        let mut offsets = Vec::new();
+        let ids: Vec<u32> = collect_pages(|limit, offset| {
+            offsets.push(offset);
+            Ok((offset..(offset + limit).min(501)).collect())
+        })
+        .unwrap();
+        assert_eq!(ids.len(), 501);
+        assert_eq!(offsets, [0, 200, 400]);
+        assert_eq!(ids[500], 500);
+    }
+
+    #[test]
+    fn a_preview_is_complete_or_refused() {
+        assert_eq!(read_preview(&b"clip"[..]).unwrap(), b"clip");
+        assert!(read_preview(std::io::empty()).unwrap_err().contains("empty"));
+        assert_eq!(
+            read_preview(std::io::repeat(0).take(PREVIEW_LIMIT))
+                .unwrap()
+                .len() as u64,
+            PREVIEW_LIMIT
+        );
+        assert!(read_preview(std::io::repeat(0).take(PREVIEW_LIMIT + 1))
+            .unwrap_err()
+            .contains("exceeds 8 MiB"));
+    }
 
     #[test]
     fn a_null_row_list_from_a_released_server_is_an_empty_one() {

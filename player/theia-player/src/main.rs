@@ -1822,6 +1822,59 @@ fn player_current_server() -> Result<Option<String>, String> {
     Ok(Some(connection_payload(client, &health, &profiles)?))
 }
 
+/// External text tracks are optional: an unavailable `/info` must not stop the
+/// film or episode, and the embedded tracks remain playable.
+fn subtitle_sidecars(
+    info: Result<server::StreamInfo, String>,
+    url_for: impl Fn(i64) -> String,
+    kind: &str,
+) -> Vec<Sidecar> {
+    match info {
+        Ok(info) => info
+            .subtitle_tracks
+            .into_iter()
+            .filter(|track| track.fetchable())
+            .map(|track| Sidecar {
+                url: url_for(track.id),
+                title: track.title,
+                language: track.language,
+            })
+            .collect(),
+        Err(error) => {
+            eprintln!("theia-player: no external subtitles for this {kind}: {error}");
+            Vec::new()
+        }
+    }
+}
+
+/// Both library paths prepare the same session and start the same engine. Keep
+/// the language choice before `loadfile`, where mpv selects the file's tracks.
+fn start_session_playback(
+    url: &str,
+    title: String,
+    resume_at: f64,
+    sidecars: Vec<Sidecar>,
+    original_language: Option<String>,
+) -> Result<(), String> {
+    let mut guard = SESSION.lock().unwrap();
+    let session = guard.as_mut().ok_or("the engine is not running")?;
+    session.mark_loaded(url.to_string(), Some(title), resume_at, sidecars);
+    session.original_language = original_language;
+    if let Err(error) = apply_playback_to(
+        &session.engine,
+        &session.playback,
+        session.original_language.as_deref(),
+    ) {
+        eprintln!("theia-player: playback preferences not applied: {error}");
+    }
+    // A newly selected title plays even if the previous one was paused.
+    if let Err(error) = session.load(url, Some(false)) {
+        session.loaded_at = None;
+        return Err(error);
+    }
+    Ok(())
+}
+
 /// Starts a film. mpv is handed the stream URL and fetches it itself: it does
 /// range requests, buffering and seeking better than anything written here.
 fn play_movie(id: i64) -> Result<String, String> {
@@ -1849,22 +1902,11 @@ fn play_movie(id: i64) -> Result<String, String> {
         // failure here costs the external tracks and nothing else - the film
         // still plays, and anything embedded in the container is still there -
         // so it is not allowed to stop the load.
-        let sidecars = match client.stream_info(movie.id, file.id) {
-            Ok(info) => info
-                .subtitle_tracks
-                .iter()
-                .filter(|track| track.fetchable())
-                .map(|track| Sidecar {
-                    url: client.subtitle_url(movie.id, file.id, track.id),
-                    title: track.title.clone(),
-                    language: track.language.clone(),
-                })
-                .collect(),
-            Err(e) => {
-                eprintln!("theia-player: no external subtitles for this film: {e}");
-                Vec::new()
-            }
-        };
+        let sidecars = subtitle_sidecars(
+            client.stream_info(movie.id, file.id),
+            |track| client.subtitle_url(movie.id, file.id, track),
+            "film",
+        );
         (
             client.stream_url(movie.id, file.id, None, resume_at),
             movie.id,
@@ -1883,38 +1925,7 @@ fn play_movie(id: i64) -> Result<String, String> {
         )
     };
 
-    {
-        let mut session_guard = SESSION.lock().unwrap();
-        let session = session_guard.as_mut().ok_or("the engine is not running")?;
-        // The resume point and the track choices are passed *with the load*,
-        // not as properties set beforehand: `file-local-options/start` is
-        // refused by mpv with "error accessing property", which the first run
-        // of this found the honest way. A file-local option belongs to the
-        // loadfile command's own argument list, and that is where it goes.
-        session.mark_loaded(url.clone(), Some(title), resume_at, sidecars);
-        session.original_language = original_language;
-        // Applied before the load, because the language lists are read when the
-        // file's own tracks are chosen and that happens in the load below: a
-        // `vo` list left over from the previous film would pick this one's audio
-        // by the wrong tongue. A refusal is logged and the film plays: a
-        // subtitle colour the engine would not take is not a reason to refuse
-        // somebody their film.
-        if let Err(e) = apply_playback_to(
-            &session.engine,
-            &session.playback,
-            session.original_language.as_deref(),
-        ) {
-            eprintln!("theia-player: playback preferences not applied to this film: {e}");
-        }
-        // A film started from the library plays. Without this it inherits the
-        // pause state of whatever was on screen before, which is how a viewer
-        // who paused one film and opened another got a frozen picture.
-        if let Err(e) = session.load(&url, Some(false)) {
-            // Nothing was loaded, so the watchdog must not act on it.
-            session.loaded_at = None;
-            return Err(e);
-        }
-    }
+    start_session_playback(&url, title, resume_at, sidecars, original_language)?;
     *CURRENT_MEDIA.lock().unwrap() = Some(Playing::Movie(movie_id));
     Ok(url)
 }
@@ -1936,22 +1947,11 @@ fn play_episode(id: i64) -> Result<String, String> {
         } else {
             episode.progress.position_seconds
         };
-        let sidecars = match client.episode_stream_info(episode.id, file.id) {
-            Ok(info) => info
-                .subtitle_tracks
-                .iter()
-                .filter(|track| track.fetchable())
-                .map(|track| Sidecar {
-                    url: client.episode_subtitle_url(episode.id, file.id, track.id),
-                    title: track.title.clone(),
-                    language: track.language.clone(),
-                })
-                .collect(),
-            Err(e) => {
-                eprintln!("theia-player: no external subtitles for this episode: {e}");
-                Vec::new()
-            }
-        };
+        let sidecars = subtitle_sidecars(
+            client.episode_stream_info(episode.id, file.id),
+            |track| client.episode_subtitle_url(episode.id, file.id, track),
+            "episode",
+        );
         let number = episode
             .episode_numbers
             .iter()
@@ -1980,34 +1980,9 @@ fn play_episode(id: i64) -> Result<String, String> {
         )
     };
 
-    {
-        let mut session_guard = SESSION.lock().unwrap();
-        let session = session_guard.as_mut().ok_or("the engine is not running")?;
-        session.mark_loaded(url.clone(), Some(title), resume_at, sidecars);
-        // No original language, deliberately, and this is where the limit bites:
-        // `SeriesMetadata` in `internal/library/series.go` carries no
-        // `original_language`, so a series cannot say what tongue it was made in
-        // and there is nothing here to guess from. A `vo` preference therefore
-        // degrades to the engine's own default on an episode - which is the
-        // honest answer, since inventing one would pick a track nobody asked for.
-        // `mark_loaded` has already left this `None`.
-        // Applied before the load for the same reason as in `play_movie`: the
-        // language lists are consulted when the file's tracks are chosen.
-        if let Err(e) = apply_playback_to(
-            &session.engine,
-            &session.playback,
-            session.original_language.as_deref(),
-        ) {
-            eprintln!("theia-player: playback preferences not applied to this episode: {e}");
-        }
-        // A film started from the library plays. Without this it inherits the
-        // pause state of whatever was on screen before, which is how a viewer
-        // who paused one film and opened another got a frozen picture.
-        if let Err(e) = session.load(&url, Some(false)) {
-            session.loaded_at = None;
-            return Err(e);
-        }
-    }
+    // Series metadata does not carry an original language. `None` lets mpv
+    // choose its own default instead of guessing which audio track to select.
+    start_session_playback(&url, title, resume_at, sidecars, None)?;
     *CURRENT_MEDIA.lock().unwrap() = Some(Playing::Episode {
         id: episode_id,
         next: next_episode_id,
@@ -3117,6 +3092,20 @@ mod player_window_tests {
 #[cfg(test)]
 mod playback_tests {
     use super::*;
+
+    #[test]
+    fn external_subtitles_keep_their_track_details_without_blocking_playback() {
+        let info: server::StreamInfo = serde_json::from_str(
+            r#"{"subtitle_tracks":[{"id":3,"language":"fra","title":"French","is_external":true,"kind":"text"},{"id":4,"is_external":false,"kind":"text"}]}"#,
+        )
+        .unwrap();
+        let sidecars = subtitle_sidecars(Ok(info), |id| format!("/subtitles/{id}"), "film");
+        assert_eq!(sidecars.len(), 1);
+        assert_eq!(sidecars[0].url, "/subtitles/3");
+        assert_eq!(sidecars[0].title, "French");
+        assert_eq!(sidecars[0].language, "fra");
+        assert!(subtitle_sidecars(Err("offline".into()), |_| unreachable!(), "film").is_empty());
+    }
 
     /// The defaults as the struct builds them, with one part of the style
     /// changed - so a test says only what it is about.
