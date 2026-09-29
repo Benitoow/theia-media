@@ -1,0 +1,204 @@
+{
+  "date": "2026-09-30 Europe/Paris",
+  "build": "3.4.0 debug native Windows x64",
+  "engineSha256": "6f059354c5c45b41192cc52d867d94c0044edb48207c4efd2ea1244208c55359",
+  "film": {
+    "first": {
+      "aid": 1,
+      "ao": null,
+      "audioMode": "passthrough",
+      "audioReason": null,
+      "decoderDrops": 0,
+      "drops": 0,
+      "duration": 11026.75,
+      "ended": false,
+      "engine": "mpv v0.41.0-1049-g0b7ed670f",
+      "fps": 23.809524,
+      "hwdec": "d3d11va",
+      "mute": true,
+      "nextEpisodeId": null,
+      "osdFrames": null,
+      "osdSlowFrames": null,
+      "osdWorstFrameMs": null,
+      "pause": false,
+      "pos": 0.0,
+      "progressPending": 0,
+      "progressStorageFailed": false,
+      "quality": null,
+      "ready": true,
+      "sid": 1,
+      "sinceStartMs": 1938,
+      "vo": "gpu-next",
+      "volume": 0.35
+    },
+    "last": {
+      "aid": 1,
+      "ao": "wasapi",
+      "audioMode": "pcm",
+      "audioReason": "endpoint-refused-bitstream",
+      "decoderDrops": 0,
+      "drops": 0,
+      "duration": 11026.75,
+      "ended": true,
+      "engine": "mpv v0.41.0-1049-g0b7ed670f",
+      "fps": 23.809524,
+      "hwdec": "d3d11va",
+      "mute": true,
+      "nextEpisodeId": null,
+      "osdFrames": 98,
+      "osdSlowFrames": 0,
+      "osdWorstFrameMs": 9.5,
+      "pause": true,
+      "pos": 299.792,
+      "progressPending": 0,
+      "progressStorageFailed": false,
+      "quality": null,
+      "ready": true,
+      "sid": null,
+      "sinceStartMs": 283810,
+      "vo": "gpu-next",
+      "volume": 0.35
+    },
+    "maxDrops": 0,
+    "maxPending": 1,
+    "samples": 274
+  },
+  "episode": {
+    "first": {
+      "aid": 1,
+      "ao": null,
+      "audioMode": "passthrough",
+      "audioReason": null,
+      "decoderDrops": 0,
+      "drops": 0,
+      "duration": 1801.408,
+      "ended": false,
+      "engine": "mpv v0.41.0-1049-g0b7ed670f",
+      "fps": 24.0,
+      "hwdec": "d3d11va",
+      "mute": true,
+      "nextEpisodeId": 12,
+      "osdFrames": null,
+      "osdSlowFrames": null,
+      "osdWorstFrameMs": null,
+      "pause": false,
+      "pos": 0.0,
+      "progressPending": 0,
+      "progressStorageFailed": false,
+      "quality": null,
+      "ready": true,
+      "sid": 1,
+      "sinceStartMs": 1813,
+      "vo": "gpu-next",
+      "volume": 0.35
+    },
+    "last": {
+      "aid": 2,
+      "ao": "wasapi",
+      "audioMode": "pcm",
+      "audioReason": "endpoint-refused-bitstream",
+      "decoderDrops": 0,
+      "drops": 0,
+      "duration": 1801.408,
+      "ended": false,
+      "engine": "mpv v0.41.0-1049-g0b7ed670f",
+      "fps": 24.0,
+      "hwdec": "d3d11va",
+      "mute": true,
+      "nextEpisodeId": 12,
+      "osdFrames": 119,
+      "osdSlowFrames": 0,
+      "osdWorstFrameMs": 9.6,
+      "pause": false,
+      "pos": 215.792,
+      "progressPending": 1,
+      "progressStorageFailed": false,
+      "quality": null,
+      "ready": true,
+      "sid": 1,
+      "sinceStartMs": 219668,
+      "vo": "gpu-next",
+      "volume": 0.35
+    },
+    "maxDrops": 0,
+    "maxPending": 1,
+    "samples": 212
+  },
+  "offlineRestart": {
+    "pendingMax": 1,
+    "pendingAfterRecovery": 0,
+    "volume": 0.35,
+    "muted": true,
+    "osdReporting": false
+  },
+  "connectionTimeout": {
+    "timeoutSeconds": 4.125,
+    "exitCode": 1,
+    "test": "native CLI health probe against a local silent HTTP server; no UI responsiveness claim"
+  },
+  "episodeChain": {
+    "episodeStarts": [
+      {
+        "nextEpisodeId": 2,
+        "sinceStartMs": 1818,
+        "position": 0.375
+      },
+      {
+        "nextEpisodeId": 3,
+        "sinceStartMs": 20407,
+        "position": 0.458333
+      },
+      {
+        "nextEpisodeId": null,
+        "sinceStartMs": 39072,
+        "position": 0.541667
+      }
+    ],
+    "lastEpisodeStayedEnded": true,
+    "lastStatusMs": 215606,
+    "droppedFrames": 0,
+    "osdReporting": true
+  },
+  "window": {
+    "logical": {
+      "height": 180.0,
+      "width": 320.0
+    },
+    "minimumTrackSize": {
+      "height": 720,
+      "width": 1280
+    },
+    "outer": {
+      "height": 360,
+      "width": 640
+    },
+    "page": {
+      "bar": {
+        "bottom": 180,
+        "controls": 7,
+        "controlsVisible": 3,
+        "display": "flex",
+        "height": 128,
+        "hidden": false,
+        "left": 0,
+        "opacity": "1",
+        "top": 52,
+        "width": 320
+      },
+      "devicePixelRatio": 2,
+      "idle": "false",
+      "innerHeight": 180,
+      "innerWidth": 320
+    },
+    "physical": {
+      "height": 360,
+      "width": 640
+    },
+    "requested": {
+      "height": 360,
+      "width": 640
+    },
+    "scaleFactor": 2.0
+  },
+  "visualBoundary": "Native Computer Use unavailable: listWindows/getApp/launch_app undefined after refresh. No native screenshot or click/fullscreen interaction observed. Web server settings navigation and expansion observed in Computer Use."
+}

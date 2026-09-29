@@ -10,6 +10,35 @@ import (
 // Uninstalling is the one operation that can lose somebody's library, so what is
 // checked here is mostly what it does *not* remove.
 
+func TestUninstallRefusesToRemoveContainedHistoryOrMedia(t *testing.T) {
+	for _, kind := range []string{"same-data", "nested-data", "nested-media"} {
+		t.Run(kind, func(t *testing.T) {
+			install := t.TempDir()
+			protected := filepath.Join(install, "keep.txt")
+			write(t, protected, "keep")
+			plan := Plan{InstallDir: install, DataDir: t.TempDir()}
+			switch kind {
+			case "same-data":
+				plan.DataDir = install
+			case "nested-data":
+				plan.DataDir = filepath.Join(install, "data")
+			case "nested-media":
+				plan.LibraryPaths = []string{filepath.Join(install, "films")}
+			}
+			if _, err := Uninstall(plan, ShortcutTargets{}, nil); err == nil {
+				t.Fatal("unsafe uninstall accepted")
+			}
+			if content, err := os.ReadFile(protected); err != nil || string(content) != "keep" {
+				t.Fatalf("protected file changed: %v", err)
+			}
+			plan.Role, plan.Port, plan.Hostname = RolePlayer, 8395, "theia"
+			if err := plan.Validate(); err == nil {
+				t.Fatal("unsafe installation accepted")
+			}
+		})
+	}
+}
+
 // fakeInstallation builds what the installer leaves: programs in one folder,
 // entries in a Start Menu folder and on the Desktop, a data directory, and a
 // registered application.

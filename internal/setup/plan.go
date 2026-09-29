@@ -112,6 +112,9 @@ func (p *Plan) Validate() error {
 		}
 		p.InstallDir = absolute
 	}
+	if err := validateProgramDirectory(*p); err != nil {
+		return err
+	}
 
 	if p.Port < 1 || p.Port > 65535 {
 		return fmt.Errorf("port %d is not a port", p.Port)
@@ -133,6 +136,35 @@ func (p *Plan) Validate() error {
 			return fmt.Errorf("the folder %s cannot be read: %w", path, err)
 		case !info.IsDir():
 			return fmt.Errorf("%s is a file, not a folder", path)
+		}
+	}
+	return nil
+}
+
+// Program removal is recursive. An installation must never contain the data
+// directory or a watched media directory, including older hand-written plans.
+func validateProgramDirectory(p Plan) error {
+	if strings.TrimSpace(p.InstallDir) == "" {
+		var err error
+		p.InstallDir, err = DefaultInstallDir()
+		if err != nil {
+			return err
+		}
+	}
+	install, err := filepath.Abs(p.InstallDir)
+	if err != nil {
+		return err
+	}
+	for _, path := range append([]string{p.DataDir}, p.LibraryPaths...) {
+		if strings.TrimSpace(path) == "" {
+			continue
+		}
+		absolute, err := filepath.Abs(path)
+		if err != nil {
+			return err
+		}
+		if within(absolute, install) {
+			return fmt.Errorf("the installation directory must not contain the data or media directory %s", path)
 		}
 	}
 	return nil

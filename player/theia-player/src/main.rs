@@ -2873,7 +2873,7 @@ fn main() {
         ])
         .setup(move |app| {
             let window = app.get_webview_window("main").expect("the main window");
-            let config_dir = app.path().app_config_dir()?;
+            let config_dir = connection::config_dir(app.handle())?;
             progress_queue::init(config_dir.join("pending-progress.json"));
             device_state::init(config_dir.join("device-state.json"));
             // The handle mpv draws into, and the one place it is chosen. mpv
@@ -2932,7 +2932,7 @@ fn main() {
             println!("theia-player: window id {wid}");
             match start_engine(wid, media.as_deref(), silent) {
                 Ok(()) => {
-                    device_state::restore_audio();
+                    device_state::restore_audio(silent);
                     let version = player_version().unwrap_or_else(|| "unknown".into());
                     println!("theia-player: engine {version}");
                     let _ =

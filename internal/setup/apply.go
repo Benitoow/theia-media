@@ -283,6 +283,20 @@ func DataDirFor(self string) (string, error) {
 	return layout.DataDir(layout.InstallDirOf(self))
 }
 
+// InstallDirFor recognises the installed maintenance tool's own record before
+// falling back to the standard directory of an older or downloaded setup.
+func InstallDirFor(self string) (string, error) {
+	if strings.TrimSpace(self) != "" {
+		dir := layout.InstallDirOf(self)
+		if _, present, err := layout.ReadRecord(dir); err != nil {
+			return "", err
+		} else if present {
+			return dir, nil
+		}
+	}
+	return DefaultInstallDir()
+}
+
 // Inspect reads the machine's current state and changes nothing.
 func Inspect(self string) (Status, error) {
 	dir, err := DataDirFor(self)
@@ -291,7 +305,7 @@ func Inspect(self string) (Status, error) {
 	}
 	// Where the programs would be. Reported even when the folder does not exist
 	// yet, because "there is nothing installed" is the answer to a fair question.
-	installDir, err := DefaultInstallDir()
+	installDir, err := InstallDirFor(self)
 	if err != nil {
 		installDir = ""
 	}

@@ -1,12 +1,17 @@
 {
-  "verifiedAt": "2026-09-29T22:02:57.692Z",
-  "scope": "Local compilation and --version only; native windows not launched",
+  "verifiedAt": "2026-09-29T22:40:42.452855+00:00",
+  "scope": "Local production/debug builds, --version and sanitised Windows native/installation probes; see native-runtime.json and windows-installation.json. Native Computer Use/fullscreen/quality and packaged Mac gate remain open.",
   "version": "3.4.0",
   "artifacts": [
     {
       "path": "player/target/debug/theia-player.exe",
-      "bytes": 20828160,
-      "sha256": "cf07abe5881132d8dfda4483d3949d88843569d004629b8038cc89fcb04d366a"
+      "bytes": 20828672,
+      "sha256": "f2e5c359016ed01970ae5c7f480deae3d8b8bcabd9e8808dc1d011fb262e15d5"
+    },
+    {
+      "path": "player/target/release/theia-player.exe",
+      "bytes": 15023104,
+      "sha256": "00d253e507abd70246e50160fac6725c3a2dcbc77173241aee759d373fd44eaf"
     },
     {
       "path": "player/target/v34-proof/theia-server.exe",
@@ -15,13 +20,13 @@
     },
     {
       "path": "player/target/v34-proof/theia-setup.exe",
-      "bytes": 13216768,
-      "sha256": "56583dd09df095d6f988a407f198616f3a52effeb115f0203983b73229ceb3f3"
+      "bytes": 13220864,
+      "sha256": "42dd4568be1d81543d225957884c51c451739e8ef370a06377243dd1a1ab46f8"
     },
     {
       "path": "player/target/v34-proof/theia.exe",
       "bytes": 4679168,
-      "sha256": "6bbdd7f541d5507ec61ac46949a9cd4e86dfe65bd0f9d3d6d7fd5e9b3dfba991"
+      "sha256": "7f8b6bb5dc28f8822662edd145bb76470f2d8c233bc459f76f45a7d4188bcf9b"
     }
   ],
   "assets": [

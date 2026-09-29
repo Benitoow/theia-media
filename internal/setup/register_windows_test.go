@@ -170,7 +170,8 @@ func TestTheFolderIsRemovedAfterTheProgramExits(t *testing.T) {
 	// uninstall reported that some files could not be removed.
 	// A space in the path on purpose: a profile folder is "C:\Users\John Doe" often
 	// enough, and a command built by string concatenation breaks exactly there.
-	dir := filepath.Join(t.TempDir(), "an installation")
+	dir := filepath.Join(t.TempDir(), "an installation %THEIA_TEST_FOLDER% !literal!")
+	t.Setenv("THEIA_TEST_FOLDER", "must not expand")
 	write(t, filepath.Join(dir, "theia-setup.exe"), "MZ pretending to be the running tool")
 
 	if err := removeAfterExit(dir); err != nil {

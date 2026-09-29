@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 // The command line, driven for real.
@@ -34,7 +35,8 @@ import (
 // keeps the package defaults; these overrides exist only in this test build.
 const isolatedRegistryFlags = "-X github.com/Benitoow/theia-media/internal/setup.registeredName=Theia-cli-tests " +
 	"-X github.com/Benitoow/theia-media/internal/setup.userPathKey=Software\\Theia\\CLItests\\Environment " +
-	"-X github.com/Benitoow/theia-media/internal/setup.appPathsKey=Software\\Theia\\CLItests\\AppPaths"
+	"-X github.com/Benitoow/theia-media/internal/setup.appPathsKey=Software\\Theia\\CLItests\\AppPaths " +
+	"-X github.com/Benitoow/theia-media/internal/setup.taskName=Theia-cli-tests"
 
 // buildInstaller compiles cmd/theia-setup once for this test file.
 //
@@ -204,6 +206,60 @@ func TestUninstallOnAMachineWithNothingInstalledSucceedsAndKeepsTheLibrary(t *te
 	}
 	if strings.TrimSpace(output) == "" {
 		t.Error("the uninstall printed nothing at all")
+	}
+}
+
+func TestInstalledUninstallerRemovesItsCustomDirectoryAndKeepsDefaultInstallation(t *testing.T) {
+	exe := buildInstaller(t)
+	root := t.TempDir()
+	env, _, local, _ := isolatedEnv(t, root)
+	custom := filepath.Join(root, "custom installation")
+	data := filepath.Join(root, "data")
+	standard := filepath.Join(local, "Programs", "Theia")
+	for _, dir := range []string{custom, data, standard} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	installed := filepath.Join(custom, "theia-setup.exe")
+	bytes, err := os.ReadFile(exe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(installed, bytes, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	record, _ := json.Marshal(map[string]string{"data_dir": data})
+	if err := os.WriteFile(filepath.Join(custom, "installation.json"), record, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	history := filepath.Join(data, "theia.db")
+	sentinel := filepath.Join(standard, "keep.txt")
+	for _, path := range []string{history, sentinel} {
+		if err := os.WriteFile(path, []byte("keep"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	code, output := runSetup(t, installed, root, env, "--uninstall", "--json")
+	if code != 0 {
+		t.Fatalf("uninstall exited %d: %s", code, output)
+	}
+	// Windows releases the running setup after exit; its hidden removal helper
+	// must finish the custom directory without touching the standard one.
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if _, err := os.Stat(custom); os.IsNotExist(err) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if _, err := os.Stat(custom); !os.IsNotExist(err) {
+		t.Fatalf("custom installation remains: %v", err)
+	}
+	for _, path := range []string{history, sentinel} {
+		if bytes, err := os.ReadFile(path); err != nil || string(bytes) != "keep" {
+			t.Fatalf("uninstall changed %s: %v", path, err)
+		}
 	}
 }
 

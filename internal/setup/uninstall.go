@@ -36,6 +36,9 @@ var registeredName = applicationKeyName
 
 // Uninstall undoes an installation.
 func Uninstall(plan Plan, targets ShortcutTargets, text Catalogue) (Result, error) {
+	if err := validateProgramDirectory(plan); err != nil {
+		return Result{}, err
+	}
 	result := Result{
 		Role:     plan.Role,
 		DataDir:  plan.DataDir,

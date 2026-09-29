@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -228,10 +229,10 @@ func removeAfterExit(dir string) error {
 		return fmt.Errorf("setup: creating the removal script: %w", err)
 	}
 	path := script.Name()
-	body := "@echo off\r\n" +
+	body := "@echo off\r\nsetlocal DisableDelayedExpansion\r\n" +
 		"rem Written by theia-setup: removes an installation once the tool that asked has exited.\r\n" +
 		"ping -n 2 127.0.0.1 >nul\r\n" +
-		"rmdir /s /q \"" + dir + "\"\r\n" +
+		"rmdir /s /q \"" + strings.ReplaceAll(dir, "%", "%%") + "\"\r\n" +
 		"del \"%~f0\"\r\n"
 	if _, err := script.WriteString(body); err != nil {
 		script.Close()

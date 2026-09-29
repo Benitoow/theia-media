@@ -36,9 +36,10 @@ import (
 const (
 	autostartScheduledTask = "scheduled-task"
 	autostartStartupEntry  = "startup-entry"
-
-	taskName = "Theia"
 )
+
+// Tests isolate the scheduled-task identity as well as filesystem locations.
+var taskName = "Theia"
 
 func installAutostart(plan Plan, server string) (string, error) {
 	if isElevated() {

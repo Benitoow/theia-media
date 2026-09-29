@@ -32,6 +32,7 @@ func TestMain(m *testing.M) {
 	// this function already exists to prevent.
 	userPathKey = `Software\Theia\tests\Environment`
 	appPathsKey = `Software\Theia\tests\App Paths`
+	taskName = "Theia-unit-tests"
 
 	code := m.Run()
 
@@ -41,7 +42,6 @@ func TestMain(m *testing.M) {
 	// this used to make would leave both behind on whoever ran the suite.
 	deleteKeyTree(keyPath)
 	deleteKeyTree(`Software\Theia\tests`)
-	deleteKeyTree(`Software\Theia`)
 
 	// And report a leak: a test that wrote to the real entry would otherwise be
 	// invisible until somebody looked at their own machine.

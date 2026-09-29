@@ -1,0 +1,83 @@
+{
+  "date": "2026-09-30 Europe/Paris",
+  "setupSource": "real self-contained setup with test-only registry and scheduled-task identities",
+  "offlinePayloadMembers": 7,
+  "installedReleasePlayerMatchesBuild": true,
+  "customInstallCheckCorrect": true,
+  "registeredBeforeRemoval": true,
+  "startMenuTargetsVerified": 3,
+  "launcherStartsRecordedServerOnPort": 8396,
+  "secondServerLaunchKeepsSamePid": true,
+  "repairRestoresAppPaths": true,
+  "releaseEpisodeChain": [
+    {
+      "nextEpisodeId": 2,
+      "sinceStartMs": 1861
+    },
+    {
+      "nextEpisodeId": 3,
+      "sinceStartMs": 20406
+    },
+    {
+      "nextEpisodeId": null,
+      "sinceStartMs": 38990
+    }
+  ],
+  "releaseLastEpisodeStayedEnded": true,
+  "releaseDroppedFrames": 0,
+  "nativeWindowReport": {
+    "logical": {
+      "height": 270.0,
+      "width": 480.0
+    },
+    "minimumTrackSize": {
+      "height": 720,
+      "width": 1280
+    },
+    "outer": {
+      "height": 540,
+      "width": 960
+    },
+    "page": {
+      "bar": {
+        "bottom": 270,
+        "controls": 7,
+        "controlsVisible": 3,
+        "display": "flex",
+        "height": 128,
+        "hidden": false,
+        "left": 0,
+        "opacity": "1",
+        "top": 142,
+        "width": 480
+      },
+      "devicePixelRatio": 2,
+      "idle": "false",
+      "innerHeight": 270,
+      "innerWidth": 480
+    },
+    "physical": {
+      "height": 540,
+      "width": 960
+    },
+    "requested": {
+      "height": 540,
+      "width": 960
+    },
+    "scaleFactor": 2.0
+  },
+  "uninstallActions": [
+    "removed-shortcut",
+    "removed-shortcut",
+    "removed-shortcut",
+    "unregistered-application",
+    "removed-from-path",
+    "unregistered-app-path",
+    "removed-program-later",
+    "kept-data"
+  ],
+  "programDirectoryRemoved": true,
+  "protectedDataAndMediaHashesUnchanged": true,
+  "protectedFiles": 5,
+  "visualBoundary": "Registry, shortcuts, native diagnostics and real CLI install/uninstall verified; no Windows Settings/Flow Launcher UI or native fullscreen interaction."
+}

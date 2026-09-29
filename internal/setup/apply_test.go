@@ -260,6 +260,13 @@ func TestApplyRecordsWhereTheDataLivesBesideThePrograms(t *testing.T) {
 	if got, err := DataDirFor(filepath.Join(installDir, "theia-setup")); err != nil || got != dataDir {
 		t.Errorf("DataDirFor = %q (%v), want %q", got, err, dataDir)
 	}
+	if got, err := InstallDirFor(filepath.Join(installDir, "theia-setup")); err != nil || got != installDir {
+		t.Fatalf("InstallDirFor = %q (%v), want custom directory %q", got, err, installDir)
+	}
+	status, err := Inspect(filepath.Join(installDir, "theia-setup"))
+	if err != nil || status.InstallDir != installDir {
+		t.Fatalf("Inspect install directory = %q (%v), want %q", status.InstallDir, err, installDir)
+	}
 
 	// Installing again over a different directory rewrites it, rather than
 	// leaving the installation pointing at where its data used to be.

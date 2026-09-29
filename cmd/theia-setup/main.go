@@ -116,7 +116,7 @@ func run() error {
 	case *repairRegistration:
 		install := *installDir
 		if install == "" {
-			install, err = setup.DefaultInstallDir()
+			install, err = setup.InstallDirFor(selfPath())
 			if err != nil {
 				return err
 			}
@@ -194,7 +194,7 @@ func runUninstall(jsonOutput bool, text setup.Catalogue) error {
 	if err != nil {
 		return err
 	}
-	if plan.InstallDir, err = setup.DefaultInstallDir(); err != nil {
+	if plan.InstallDir, err = setup.InstallDirFor(selfPath()); err != nil {
 		return err
 	}
 	result, err := setup.Uninstall(plan, setup.InstalledTargets(), text)

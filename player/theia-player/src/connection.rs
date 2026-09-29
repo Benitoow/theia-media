@@ -4,11 +4,18 @@
 use std::path::{Path, PathBuf};
 use tauri::Manager;
 
-fn choice_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+/// Keep native proof runs off the viewer's server choice and device history.
+pub(super) fn config_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    if let Some(path) = std::env::var_os("THEIA_PLAYER_CONFIG_DIR").filter(|p| !p.is_empty()) {
+        return Ok(PathBuf::from(path));
+    }
     app.path()
         .app_config_dir()
-        .map(|dir| dir.join("server-address.txt"))
         .map_err(|error| format!("finding the player configuration: {error}"))
+}
+
+fn choice_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    config_dir(app).map(|dir| dir.join("server-address.txt"))
 }
 
 pub(super) fn remembered(app: &tauri::AppHandle) -> Result<Option<String>, String> {

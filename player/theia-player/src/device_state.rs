@@ -52,7 +52,14 @@ pub(super) fn audio(volume: Option<f64>, muted: bool) {
         state.muted = muted;
     });
 }
-pub(super) fn restore_audio() {
+fn restored_mute(saved: bool, silent: bool) -> &'static str {
+    if saved || silent {
+        "yes"
+    } else {
+        "no"
+    }
+}
+pub(super) fn restore_audio(silent: bool) {
     let state = STATE.get().and_then(|s| s.lock().ok().map(|g| g.1.clone()));
     if let Some(state) = state {
         if let Ok(guard) = crate::SESSION.lock() {
@@ -67,9 +74,20 @@ pub(super) fn restore_audio() {
                 }
                 let _ = session
                     .engine
-                    .set_property("mute", if state.muted { "yes" } else { "no" });
+                    .set_property("mute", restored_mute(state.muted, silent));
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod audio_tests {
+    #[test]
+    fn explicit_silent_probe_wins_over_unmuted_device_state() {
+        assert_eq!(super::restored_mute(false, true), "yes");
+        assert_eq!(super::restored_mute(true, true), "yes");
+        assert_eq!(super::restored_mute(false, false), "no");
+        assert_eq!(super::restored_mute(true, false), "yes");
     }
 }
 pub(super) fn save_window(window: &tauri::Window) {
