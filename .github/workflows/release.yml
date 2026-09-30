@@ -8,13 +8,18 @@ on:
   # change to this file is tried before it meets a tag, and how the pipeline's
   # own timing is measured.
   workflow_dispatch:
+    inputs:
+      version:
+        description: Version to embed in the verified downloads without publishing
+        type: string
+        default: '0.0.0'
 
 # The version every job names its artifacts after. On a pushed tag it is the
 # tag; on a dispatch - which publishes nothing - it is 0.0.0, so the artifacts
 # and the surface guard agree and a dry run proves the pipeline without claiming
 # a release number.
 env:
-  THEIA_VERSION: ${{ github.event_name == 'push' && github.ref_name || '0.0.0' }}
+  THEIA_VERSION: ${{ github.event_name == 'push' && github.ref_name || inputs.version || '0.0.0' }}
 
 permissions:
   contents: write
@@ -114,35 +119,15 @@ jobs:
           # player made five of them look like complete products when they are
           # not (decision 138). V3.3.4 adds macOS Apple Silicon, whose player is
           # built on a macOS runner below.
-          case "${{ matrix.goos }}/${{ matrix.goarch }}" in
-            windows/amd64)
-              go build -buildvcs=false -trimpath \
-                -ldflags "-s -w -X main.version=${version}" \
-                -o "dist/theia-setup-windows-amd64.exe" \
-                ./cmd/theia-setup
-              # The `theia` command: windowed, because it is what the product's
-              # Start Menu entry starts and a console build would flash a black
-              # rectangle on every click. The published name says what it is; the
-              # installed one is `theia.exe` (internal/release.LauncherName).
-              go build -buildvcs=false -trimpath \
-                -ldflags "-s -w -H=windowsgui -X main.version=${version}" \
-                -o "dist/theia-launcher-windows-amd64.exe" \
-                ./cmd/theia
-              ;;
-            darwin/arm64)
-              # No -H=windowsgui and no .exe: the macOS command is an ordinary
-              # executable, and `open` is what the launcher uses to start the
-              # player's app bundle.
-              go build -buildvcs=false -trimpath \
-                -ldflags "-s -w -X main.version=${version}" \
-                -o "dist/theia-setup-darwin-arm64" \
-                ./cmd/theia-setup
-              go build -buildvcs=false -trimpath \
-                -ldflags "-s -w -X main.version=${version}" \
-                -o "dist/theia-launcher-darwin-arm64" \
-                ./cmd/theia
-              ;;
-          esac
+          target="${{ matrix.goos }}-${{ matrix.goarch }}"
+          go build -buildvcs=false -trimpath \
+            -ldflags "-s -w -X main.version=${version}" \
+            -o "dist/theia-setup-${target}${{ matrix.ext }}" ./cmd/theia-setup
+          launcher_flags="-s -w -X main.version=${version}"
+          if [ '${{ matrix.goos }}' = windows ]; then launcher_flags="$launcher_flags -H=windowsgui"; fi
+          go build -buildvcs=false -trimpath -ldflags "$launcher_flags" \
+            -o "dist/theia-launcher-${target}${{ matrix.ext }}" ./cmd/theia
+
           ls -l dist
 
       # The binary has to actually run, and report the version it was tagged
@@ -801,13 +786,21 @@ jobs:
           path: out/
           retention-days: 14
 
+  additional-platforms:
+    needs: [interface, build]
+    uses: ./.github/workflows/platform-proof.yml
+    with:
+      version: ${{ github.event_name == 'push' && github.ref_name || inputs.version || '0.0.0' }}
+      reuse_artifacts: true
+    secrets: inherit
+
   # The exact public release surface, checked on every run of this file - a
   # dispatch included. It used to live inside `publish`, which a dispatch skips,
   # so the one guard that says whether the fourteen names are right could only
   # ever be tried by publishing something. What a dry run is for is exactly this.
   surface:
     name: Check the exact public release surface
-    needs: [build, player, player-macos, package-macos]
+    needs: [build, player, player-macos, package-macos, additional-platforms]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -832,27 +825,29 @@ jobs:
       - name: Check each setup contains the matching public server
         shell: bash
         run: |
-          go run ./scripts/check-setup-payload -setup staging/theia-setup-windows-amd64.exe -server staging/theia-server-windows-amd64.exe -target windows-amd64
-          go run ./scripts/check-setup-payload -setup staging/theia-setup-darwin-arm64 -server staging/theia-server-darwin-arm64 -target darwin-arm64
+          for target in windows-amd64 windows-arm64 darwin-amd64 darwin-arm64 linux-amd64 linux-arm64; do
+            ext=''
+            case "$target" in windows-*) ext=.exe ;; esac
+            go run ./scripts/check-setup-payload -setup "staging/theia-setup-$target$ext" -server "staging/theia-server-$target$ext" -target "$target"
+          done
 
-      # The Apple Silicon job now records the film and OSD from the public
-      # setup. Keep publication stopped until its captures have been inspected
-      # and this guard is replaced with the evidence-backed check (decision 149).
-      - name: Await native macOS film-frame proof
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: '*proof'
+          path: playback-proof
+
+      - name: Reject missing film pictures in native package evidence
         shell: bash
         run: |
-          if ! git grep -q 'mpv_render_context_create' -- player/theia-player/src; then
-            echo '::error::The macOS player has no render context; playback progress cannot prove a picture.'
-            exit 1
-          fi
-          echo '::error::The integrated macOS renderer has not been built and visually verified on a Mac.'
-          exit 1
+          for picture in playback-proof/macos-arm64-proof/player-window.png playback-proof/macos-intel-proof/out/player-window.png playback-proof/linux-amd64-proof/player-window.png playback-proof/linux-arm64-proof/player-window.png; do
+            go run ./scripts/check-playback-picture -image "$picture"
+          done
 
   publish:
     name: Publish the release
     # Every gate, explicitly: the jobs no longer chain through each other, so
     # this is the one place that says what a release requires.
-    needs: [validate, release-gates, build, player, player-macos, package-macos, surface]
+    needs: [validate, release-gates, build, player, player-macos, package-macos, additional-platforms, surface]
     # A dispatch measures the pipeline; only a pushed tag publishes.
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -884,4 +879,8 @@ jobs:
             "staging/theia-server-linux-arm64#Linux ARM64 server for existing updaters" \
             "staging/theia-server-darwin-amd64#macOS Intel server for existing updaters" \
             "staging/theia-server-darwin-arm64#macOS Apple Silicon server for existing updaters" \
-            "staging/theia-setup-darwin-arm64#Theia ${version} for macOS Apple Silicon"
+            "staging/theia-setup-darwin-arm64#Theia ${version} for macOS Apple Silicon" \
+            "staging/theia-setup-darwin-amd64#Theia ${version} for macOS Intel" \
+            "staging/theia-setup-windows-arm64.exe#Theia ${version} for Windows ARM64" \
+            "staging/theia-setup-linux-amd64#Theia ${version} for Ubuntu 24.04 x64" \
+            "staging/theia-setup-linux-arm64#Theia ${version} for Ubuntu 24.04 ARM64"

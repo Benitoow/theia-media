@@ -3064,6 +3064,11 @@ fn main() {
             // window of its own - and a person debugging a machine they cannot
             // see has no other way to tell those apart.
             println!("theia-player: window id {wid}");
+            // AppKit must realise its compositor before libmpv binds to the
+            // OpenGL context. Showing it only after engine creation let the
+            // layer-backed context change beneath the renderer at first paint.
+            #[cfg(target_os = "macos")]
+            let _ = window.show();
             match start_engine(wid, media.as_deref(), silent) {
                 Ok(()) => {
                     device_state::restore_audio(silent);

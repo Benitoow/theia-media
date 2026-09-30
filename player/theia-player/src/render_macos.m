@@ -106,11 +106,9 @@ static void on_render_update(void *context)
     };
     // A layer-backed NSOpenGLView may draw into AppKit's framebuffer rather
     // than framebuffer zero. Use the target bound by this view's context.
-#if defined(__x86_64__)
     GLint framebuffer = 0;
     glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &framebuffer);
     fbo.fbo = framebuffer;
-#endif
     if (fbo.w <= 0 || fbo.h <= 0) return;
     int flip = 1;
     mpv_render_param params[] = {
@@ -208,15 +206,13 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
     gView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     [gView setWantsBestResolutionOpenGLSurface:YES];
     [parent addSubview:gView positioned:NSWindowBelow relativeTo:webview];
-    // Keep the GL picture in the same compositor as WKWebView. An Intel
-    // runner otherwise drew frames but photographed black beneath the OSD.
-    // AppKit creates the layer's GL context before mpv binds to it below.
-#if defined(__x86_64__)
-    // Intel needs layer composition to put the film below WKWebView. On
-    // Apple Silicon the native OpenGL surface already composes correctly;
-    // forcing a layer there produced a black picture in the packaged test.
+    // Realise layer composition before binding mpv, while the window is on
+    // screen. A context created for a hidden view can be replaced by AppKit
+    // on first paint, leaving mpv's resources in the old context.
+    [parent setWantsLayer:YES];
     [gView setWantsLayer:YES];
-#endif
+    [parent layoutSubtreeIfNeeded];
+    [gView displayIfNeeded];
     [[gView openGLContext] makeCurrentContext];
     const GLubyte *renderer = glGetString(GL_RENDERER);
     snprintf(gRenderer, sizeof(gRenderer), "%s", renderer ? (const char *)renderer : "unknown");

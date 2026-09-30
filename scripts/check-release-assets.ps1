@@ -27,6 +27,10 @@ $expected = @(
     'theia-server-linux-arm64'
     'theia-server-windows-amd64.exe'
     'theia-server-windows-arm64.exe'
+    'theia-setup-darwin-amd64'
+    'theia-setup-linux-amd64'
+    'theia-setup-linux-arm64'
+    'theia-setup-windows-arm64.exe'
     'theia-setup-darwin-arm64'
     'theia-setup-windows-amd64.exe'
 ) | Sort-Object
