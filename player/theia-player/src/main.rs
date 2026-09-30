@@ -2729,6 +2729,9 @@ fn autoplay_next_episode() {
 fn start_engine(wid: isize, media: Option<&str>, silent: bool) -> Result<(), String> {
     let dll = mpv::engine_path()?;
     let engine = Engine::load(&dll)?;
+    if std::env::args().any(|a| a == "--diagnostics") {
+        engine.enable_diagnostics()?;
+    }
 
     for (name, value) in base_options(wid, silent) {
         match engine.set_option(name, &value) {
@@ -3259,6 +3262,9 @@ fn main() {
                     let mut last_style = String::new();
                     loop {
                         std::thread::sleep(Duration::from_secs(1));
+                        if let Some(session) = SESSION.lock().unwrap().as_ref() {
+                            session.engine.print_diagnostics();
+                        }
                         println!("{}", player_status());
                         #[cfg(target_os = "macos")]
                         println!("render-frames: {}", render_macos::frames());

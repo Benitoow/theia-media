@@ -25,6 +25,24 @@ type MpvFree = unsafe extern "C" fn(*mut c_void);
 type MpvErrorString = unsafe extern "C" fn(c_int) -> *const c_char;
 type MpvTerminateDestroy = unsafe extern "C" fn(*mut c_void);
 type MpvClientApiVersion = unsafe extern "C" fn() -> u32;
+type MpvRequestLogMessages = unsafe extern "C" fn(*mut c_void, *const c_char) -> c_int;
+type MpvWaitEvent = unsafe extern "C" fn(*mut c_void, f64) -> *const MpvEvent;
+
+#[repr(C)]
+struct MpvEvent {
+    id: c_int,
+    error: c_int,
+    reply_userdata: u64,
+    data: *const c_void,
+}
+
+#[repr(C)]
+struct MpvLogMessage {
+    prefix: *const c_char,
+    level: *const c_char,
+    text: *const c_char,
+    log_level: c_int,
+}
 
 /// The engine, loaded and ready. Dropping it terminates mpv.
 pub struct Engine {
@@ -40,6 +58,8 @@ pub struct Engine {
     free: MpvFree,
     error_string: MpvErrorString,
     terminate: MpvTerminateDestroy,
+    request_log: MpvRequestLogMessages,
+    wait_event: MpvWaitEvent,
 }
 
 // The context is mpv's own and is documented as safe to use from several
@@ -149,6 +169,10 @@ impl Engine {
             }
 
             let engine = Engine {
+                request_log: *lib.get(b"mpv_request_log_messages")
+                    .map_err(|e| format!("mpv_request_log_messages: {e}"))?,
+                wait_event: *lib.get(b"mpv_wait_event")
+                    .map_err(|e| format!("mpv_wait_event: {e}"))?,
                 initialize: *lib
                     .get(b"mpv_initialize")
                     .map_err(|e| format!("mpv_initialize: {e}"))?,
@@ -185,6 +209,32 @@ impl Engine {
             return Err(format!("mpv_initialize failed: {}", self.error(code)));
         }
         Ok(())
+    }
+
+    /// Diagnostic mode alone requests engine logs. Drain nonblocking under the
+    /// session lock; event data belongs to mpv until the next wait call.
+    pub fn enable_diagnostics(&self) -> Result<(), String> {
+        let code = unsafe { (self.request_log)(self.ctx, c"info".as_ptr()) };
+        if code < 0 { return Err(self.error(code)); }
+        Ok(())
+    }
+
+    pub fn print_diagnostics(&self) {
+        // Bound each drain so a chatty engine cannot starve session commands.
+        for _ in 0..200 {
+            let event = unsafe { &*(self.wait_event)(self.ctx, 0.0) };
+            if event.id == 0 { break; }
+            if event.id == 2 && !event.data.is_null() {
+                let message = unsafe { &*event.data.cast::<MpvLogMessage>() };
+                if !message.prefix.is_null() && !message.text.is_null() {
+                    let prefix = unsafe { CStr::from_ptr(message.prefix) }.to_string_lossy();
+                    let text = unsafe { CStr::from_ptr(message.text) }.to_string_lossy();
+                    eprint!("mpv[{prefix}]: {text}");
+                }
+            } else if event.error < 0 {
+                eprintln!("mpv event {}: {}", event.id, self.error(event.error));
+            }
+        }
     }
 
     fn error(&self, code: c_int) -> String {
