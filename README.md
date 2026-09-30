@@ -190,8 +190,8 @@ sudo apt install libmpv2 libwebkit2gtk-4.1-0 libayatana-appindicator3-1
 ```
 
 Theia ships a pinned libmpv library; Ubuntu supplies its desktop, codec, audio
-and driver dependencies. The Linux engine generation differs from Windows/Mac,
-so codec/HDR behaviour must be checked on the actual machine.
+and driver dependencies. The first Linux release uses software decoding and
+rendering in SDR. Hardware acceleration and HDR output are not available yet.
 
 The six standalone `theia-server-<os>-<arch>[.exe]` files remain for existing
 server updaters. Player, launcher and engine files are carried inside the six

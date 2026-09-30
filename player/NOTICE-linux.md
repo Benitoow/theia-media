@@ -17,6 +17,6 @@ Theia's source. The build verifies both before packaging. Ubuntu's desktop,
 codec, audio and driver dependencies are installed by the operating system;
 this package does not redistribute them. On Ubuntu 24.04 install libmpv2,
 libwebkit2gtk-4.1-0 and libayatana-appindicator3-1 before starting the player.
-An X11 session or XWayland is required. Newer codec/HDR support is not inferred
-from the Windows/macOS engine generation or from a passing software-rendered
-test.
+An X11 session or XWayland is required. This first Linux release uses software
+decoding and GTK-painted software rendering in SDR. Hardware acceleration and
+HDR output are not available. Codec support depends on Ubuntu's libraries.

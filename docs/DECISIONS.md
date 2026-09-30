@@ -6814,8 +6814,13 @@ These dates are estimates, not release commitments. No payment code ships in 3.4
 requires a complete engine, installer, launcher and film/OSD proof on each CPU.
 Compilation alone remains insufficient. The candidate distribution is Ubuntu
 24.04, amd64/arm64, with X11 or XWayland. The player defaults to GDK's X11
-backend because mpv embedding uses an X11 id; an explicit backend override
-remains available, but native Wayland embedding is not claimed.
+backend for the tested desktop session; an explicit backend override remains
+available, but native Wayland support is not claimed. Native X11 embedding
+proved insufficient for a transparent GTK overlay: counters advanced while
+captures lost either the film or controls. The initial Linux app therefore
+uses libmpv's software render API and GTK-owned painting under the web plane.
+Hardware decoding/rendering and HDR output are not offered by this initial
+Linux path. They require a separate native render implementation and proof.
 
 The unmodified Ubuntu `libmpv2 0.37.0-1ubuntu4` archives and extracted libraries
 are pinned by size and SHA-256. Ubuntu's copyright notice identifies this binary

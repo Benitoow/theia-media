@@ -28,6 +28,8 @@ mod engine_compat;
 mod mpv;
 mod platform;
 mod progress_queue;
+#[cfg(not(any(windows, target_os = "macos")))]
+mod render_linux;
 #[cfg(target_os = "macos")]
 mod render_macos;
 mod server;
@@ -2778,9 +2780,19 @@ fn start_engine(wid: isize, media: Option<&str>, silent: bool) -> Result<(), Str
     // `render-diagnostics` line is what will say so.
     #[cfg(target_os = "macos")]
     render_macos::attach(wid, &engine, &dll)?;
+    #[cfg(not(any(windows, target_os = "macos")))]
+    render_linux::attach(&engine, &dll)?;
 
     if let Some(path) = media {
-        engine.command(&["loadfile", path])?;
+        if let Err(error) = engine.command(&["loadfile", path]) {
+            // Render workers borrow this handle. Stop them before a failed
+            // startup drops the local engine.
+            #[cfg(target_os = "macos")]
+            render_macos::detach();
+            #[cfg(not(any(windows, target_os = "macos")))]
+            render_linux::detach();
+            return Err(error);
+        }
     }
 
     let mut session = Session {
@@ -2983,12 +2995,17 @@ fn main() {
         // A stale accelerated WebKit backing store can show the startup page
         // forever on a software-only X display, while DOM probes see the OSD.
         // Let WebKit paint through GTK when no accessible render node exists.
-        for name in ["WEBKIT_DISABLE_COMPOSITING_MODE", "WEBKIT_DISABLE_DMABUF_RENDERER"] {
+        for name in [
+            "WEBKIT_DISABLE_COMPOSITING_MODE",
+            "WEBKIT_DISABLE_DMABUF_RENDERER",
+        ] {
             if std::env::var_os(name).is_none() {
                 std::env::set_var(name, "1");
             }
         }
-        eprintln!("theia-player: no accessible DRI render node; using software video and WebKit painting");
+        eprintln!(
+            "theia-player: no accessible DRI render node; using software video and WebKit painting"
+        );
     }
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -3280,6 +3297,8 @@ fn main() {
                         println!("{}", player_status());
                         #[cfg(target_os = "macos")]
                         println!("render-frames: {}", render_macos::frames());
+                        #[cfg(not(any(windows, target_os = "macos")))]
+                        println!("render-frames: {}", render_linux::frames());
                         // The count alone cannot say where the picture stopped:
                         // the first Mac run reported "1 -> 1" and nothing about
                         // why. This line counts every link of the chain, so a
@@ -3321,6 +3340,8 @@ fn main() {
                     save_progress();
                     #[cfg(target_os = "macos")]
                     render_macos::detach();
+                    #[cfg(not(any(windows, target_os = "macos")))]
+                    render_linux::detach();
                 }
                 // The region is a snapshot of a size, so a window that keeps
                 // growing would be clipped to the shape it used to have - but
@@ -3421,7 +3442,10 @@ mod player_window_tests {
         let keys: Vec<&str> = linux.iter().map(|(key, _)| *key).collect();
         let values: Vec<&str> = linux.iter().map(|(_, value)| value.as_str()).collect();
 
-        assert!(values.contains(&"gpu-next,x11"), "Linux tries GPU then software X11");
+        assert!(
+            values.contains(&"libmpv"),
+            "Linux renders through its host canvas"
+        );
         assert!(
             !values
                 .iter()
@@ -3436,8 +3460,8 @@ mod player_window_tests {
             "the graphics API and context are the session's answer, not ours: {keys:?}"
         );
         assert!(
-            values.contains(&"auto-safe"),
-            "hardware decoding where it exists"
+            values.contains(&"no"),
+            "the initial Linux renderer declares software decoding"
         );
 
         let windows = platform_options(Platform::Windows, true);
@@ -3466,21 +3490,21 @@ mod player_window_tests {
     /// one keeps libplacebo over Vulkan or EGL.
     #[test]
     fn linux_asks_for_the_output_its_machine_can_use() {
-        assert_eq!(linux_video_output(true), "gpu-next,x11");
-        assert_eq!(linux_video_output(false), "x11");
+        assert_eq!(linux_video_output(true), "libmpv");
+        assert_eq!(linux_video_output(false), "libmpv");
 
         let without_dri = platform_options(Platform::Unix, false);
         assert!(
             without_dri
                 .iter()
-                .any(|(key, value)| *key == "vo" && value == "x11"),
+                .any(|(key, value)| *key == "vo" && value == "libmpv"),
             "no DRI device means the software output: {without_dri:?}"
         );
         let with_dri = platform_options(Platform::Unix, true);
         assert!(
             with_dri
                 .iter()
-                .any(|(key, value)| *key == "vo" && value == "gpu-next,x11"),
+                .any(|(key, value)| *key == "vo" && value == "libmpv"),
             "a DRI device prefers GPU but retains X11 fallback: {with_dri:?}"
         );
 
@@ -3514,7 +3538,7 @@ mod player_window_tests {
             "mpv 0.41 reads no wid on macOS"
         );
         assert!(takes_window_id(Platform::Windows));
-        assert!(takes_window_id(Platform::Unix));
+        assert!(!takes_window_id(Platform::Unix));
 
         let without = base_options(0, true);
         assert!(
@@ -3523,10 +3547,10 @@ mod player_window_tests {
         );
 
         let with = base_options(1234, true);
-        if cfg!(target_os = "macos") {
+        if !cfg!(windows) {
             assert!(
                 !with.iter().any(|(key, _)| *key == "wid"),
-                "macOS must be sent no window id at all: {with:?}"
+                "host render bridges must be sent no window id: {with:?}"
             );
         } else {
             assert!(

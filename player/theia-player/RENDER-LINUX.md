@@ -1,5 +1,30 @@
 # Drawing the film on Linux
 
+## Current V3.4 candidate
+
+Linux now uses `vo=libmpv`, `hwdec=no` and the software render API in
+`src/render_linux.rs`. A dedicated worker produces aligned BGR0 images; GTK
+paints the latest image beneath the existing WebKit interface through
+GtkOverlay. The bounded latest-frame slot cannot grow into a frame queue.
+No native mpv child window can cover the controls. The worker stops and frees
+its render context before the engine is dropped, including failed startup.
+
+Run 36736248025 confirmed that an opaque 24-bit X11 child still did not paint
+the film beneath the controls. The host-owned canvas replaces that failed
+embedding path. Native packaged film/OSD capture is still required on both
+architectures. The initial Linux path is SDR, with software decoding/rendering;
+hardware acceleration and HDR output are unavailable.
+
+X11/XWayland remains the tested session contract. The outer X window id is
+only used for diagnostic/capture probes and is never sent to the engine.
+Ubuntu 24.04 libmpv2 0.37.0-1ubuntu4 is pinned in `../libmpv.json` with its
+archive/library hashes and licensing obligations (decision 162).
+
+## Historical investigation
+
+The sections below preserve the earlier hypotheses and failed embedding
+experiments. They do not describe the current output or engine contract.
+
 Decision 149 named two source-level blockers for Linux: its `PLATFORM_OPTIONS`
 selected Windows D3D11 and WASAPI, and the window handle it handed to mpv was
 zero. This file is the specification and the record for that work - what the

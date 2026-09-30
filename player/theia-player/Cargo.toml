@@ -45,11 +45,9 @@ windows-sys = { version = "0.59", features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 
-# The X11 window id mpv is pointed at, and nothing else. A Tauri window on Linux
-# is a GTK one, and its portable `raw_window_handle` handle answers `Unavailable`
-# (measured on 27 September 2026 in WSLg), so the id is read from GTK's own X11
-# window. Both crates are already in the graph through tauri and wry, and are
-# pinned to the 0.18 line those two use.
+# GTK paints the Linux film canvas beneath the WebKit controls. gdkx11 names
+# the outer window for diagnostics and native capture probes. Both crates are
+# already in the graph through tauri/wry and use their matching 0.18 line.
 [target.'cfg(not(any(windows, target_os = "macos")))'.dependencies]
 gtk = "0.18"
 gdkx11 = "0.18"

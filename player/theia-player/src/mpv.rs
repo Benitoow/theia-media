@@ -131,9 +131,9 @@ pub fn engine_path() -> Result<PathBuf, String> {
 }
 
 impl Engine {
-    /// Borrowed by the macOS render bridge while this Engine owns the handle.
+    /// Borrowed by the native render bridge while this Engine owns the handle.
     /// Its render context is freed before the engine can be replaced or dropped.
-    #[cfg(target_os = "macos")]
+    #[cfg(not(windows))]
     pub fn raw_context(&self) -> *mut c_void {
         self.ctx
     }
@@ -169,9 +169,11 @@ impl Engine {
             }
 
             let engine = Engine {
-                request_log: *lib.get(b"mpv_request_log_messages")
+                request_log: *lib
+                    .get(b"mpv_request_log_messages")
                     .map_err(|e| format!("mpv_request_log_messages: {e}"))?,
-                wait_event: *lib.get(b"mpv_wait_event")
+                wait_event: *lib
+                    .get(b"mpv_wait_event")
                     .map_err(|e| format!("mpv_wait_event: {e}"))?,
                 initialize: *lib
                     .get(b"mpv_initialize")
@@ -215,7 +217,9 @@ impl Engine {
     /// session lock; event data belongs to mpv until the next wait call.
     pub fn enable_diagnostics(&self) -> Result<(), String> {
         let code = unsafe { (self.request_log)(self.ctx, c"info".as_ptr()) };
-        if code < 0 { return Err(self.error(code)); }
+        if code < 0 {
+            return Err(self.error(code));
+        }
         Ok(())
     }
 
@@ -223,7 +227,9 @@ impl Engine {
         // Bound each drain so a chatty engine cannot starve session commands.
         for _ in 0..200 {
             let event = unsafe { &*(self.wait_event)(self.ctx, 0.0) };
-            if event.id == 0 { break; }
+            if event.id == 0 {
+                break;
+            }
             if event.id == 2 && !event.data.is_null() {
                 let message = unsafe { &*event.data.cast::<MpvLogMessage>() };
                 if !message.prefix.is_null() && !message.text.is_null() {
