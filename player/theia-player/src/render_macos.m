@@ -209,7 +209,12 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
     // Keep the GL picture in the same compositor as WKWebView. An Intel
     // runner otherwise drew frames but photographed black beneath the OSD.
     // AppKit creates the layer's GL context before mpv binds to it below.
+#if defined(__x86_64__)
+    // Intel needs layer composition to put the film below WKWebView. On
+    // Apple Silicon the native OpenGL surface already composes correctly;
+    // forcing a layer there produced a black picture in the packaged test.
     [gView setWantsLayer:YES];
+#endif
     [[gView openGLContext] makeCurrentContext];
     const GLubyte *renderer = glGetString(GL_RENDERER);
     snprintf(gRenderer, sizeof(gRenderer), "%s", renderer ? (const char *)renderer : "unknown");
