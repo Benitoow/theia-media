@@ -234,6 +234,16 @@ In the macOS-only bridge:
 
 ## What this file does not decide
 
+### 30 September: the Intel picture must survive OSD composition
+
+Run 36708087170 advanced render frames and painted controls, but both captures
+showed black where the generated film should have been. The automated success
+does not qualify Intel for publication. The film view now opts into AppKit layer
+backing and passes the context's currently bound draw framebuffer to mpv.
+[Apple's layer-backed OpenGL guidance](https://developer.apple.com/library/archive/documentation/GraphicsAnimation/Conceptual/HighResolutionOSX/CapturingScreenContents/CapturingScreenContents.html)
+describes the separate context AppKit assigns to this view. This repair still
+requires a new Intel and Apple Silicon capture before either changed binary ships.
+
 Nothing about the OSD's markup, the tracks popover, subtitles or the status
 telemetry: those are platform-independent and already work. Nothing about Windows:
 `wid` stays exactly as it is there, and the `gpu-api`/`gpu-context` values are

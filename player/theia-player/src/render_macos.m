@@ -104,6 +104,11 @@ static void on_render_update(void *context)
         .h = (int)backing.size.height,
         .internal_format = 0,
     };
+    // A layer-backed NSOpenGLView may draw into AppKit's framebuffer rather
+    // than framebuffer zero. Use the target bound by this view's context.
+    GLint framebuffer = 0;
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &framebuffer);
+    fbo.fbo = framebuffer;
     if (fbo.w <= 0 || fbo.h <= 0) return;
     int flip = 1;
     mpv_render_param params[] = {
@@ -201,6 +206,10 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
     gView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     [gView setWantsBestResolutionOpenGLSurface:YES];
     [parent addSubview:gView positioned:NSWindowBelow relativeTo:webview];
+    // Keep the GL picture in the same compositor as WKWebView. An Intel
+    // runner otherwise drew frames but photographed black beneath the OSD.
+    // AppKit creates the layer's GL context before mpv binds to it below.
+    [gView setWantsLayer:YES];
     [[gView openGLContext] makeCurrentContext];
     const GLubyte *renderer = glGetString(GL_RENDERER);
     snprintf(gRenderer, sizeof(gRenderer), "%s", renderer ? (const char *)renderer : "unknown");
