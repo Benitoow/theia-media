@@ -50,88 +50,72 @@ static WORKER: Mutex<Option<Worker>> = Mutex::new(None);
 static FRAMES: AtomicU64 = AtomicU64::new(0);
 
 pub fn prepare(window: &tauri::WebviewWindow) -> Result<(), String> {
-    let host = window.gtk_window().map_err(|e| e.to_string())?;
-    let content = host.child().ok_or("the GTK window has no interface")?;
-    host.remove(&content);
-    let canvas = gtk::DrawingArea::new();
-    canvas.set_has_window(false);
-    canvas.set_hexpand(true);
-    canvas.set_vexpand(true);
     let surface = Surface {
         frame: Arc::new(Mutex::new(None)),
         size: Arc::new(Mutex::new((1280, 720, 1))),
     };
-    let sizing = surface.size.clone();
-    canvas.connect_size_allocate(move |widget, allocation| {
-        let scale = widget.scale_factor();
-        *sizing.lock().unwrap() = (
-            allocation.width().max(1) * scale,
-            allocation.height().max(1) * scale,
-            scale,
-        );
-    });
-    let latest = surface.frame.clone();
-    let painted = Rc::new(RefCell::new(None::<(gtk::cairo::ImageSurface, i32)>));
-    canvas.connect_draw(move |_, cairo| {
-        if let Some(frame) = latest.lock().unwrap().take() {
-            match gtk::cairo::ImageSurface::create_for_data(
-                frame.pixels,
-                gtk::cairo::Format::Rgb24,
-                frame.width,
-                frame.height,
-                frame.stride,
-            ) {
-                Ok(image) => *painted.borrow_mut() = Some((image, frame.scale)),
-                Err(error) => eprintln!("theia-player: GTK film image: {error}"),
-            }
-        }
-        cairo.set_source_rgb(0.0, 0.0, 0.0);
-        let _ = cairo.paint();
-        if let Some((image, scale)) = painted.borrow().as_ref() {
-            let _ = cairo.save();
-            cairo.scale(1.0 / f64::from(*scale), 1.0 / f64::from(*scale));
-            if cairo.set_source_surface(image, 0.0, 0.0).is_ok() {
+    SURFACE.with(|slot| *slot.borrow_mut() = Some(surface.clone()));
+    window
+        .with_webview(move |platform| {
+            let browser = platform.inner();
+            let sizing = surface.size.clone();
+            browser.connect_size_allocate(move |widget, allocation| {
+                let scale = widget.scale_factor();
+                *sizing.lock().unwrap() = (
+                    allocation.width().max(1) * scale,
+                    allocation.height().max(1) * scale,
+                    scale,
+                );
+            });
+            let latest = surface.frame.clone();
+            let painted = Rc::new(RefCell::new(None::<(gtk::cairo::ImageSurface, i32)>));
+            // WebKit paints the transparent controls first. DEST_OVER then fills
+            // their unused alpha with film pixels in this same GTK drawing surface.
+            // Native sibling windows instead punched holes through the top-level
+            // X pixmap, and moving WebKit also disrupted its initial navigation.
+            browser.connect_local("draw", true, move |values| {
+                let Ok(cairo) = values[1].get::<gtk::cairo::Context>() else {
+                    return Some(false.to_value());
+                };
+                if let Some(frame) = latest.lock().unwrap().take() {
+                    match gtk::cairo::ImageSurface::create_for_data(
+                        frame.pixels,
+                        gtk::cairo::Format::Rgb24,
+                        frame.width,
+                        frame.height,
+                        frame.stride,
+                    ) {
+                        Ok(image) => *painted.borrow_mut() = Some((image, frame.scale)),
+                        Err(error) => eprintln!("theia-player: GTK film image: {error}"),
+                    }
+                }
+                let _ = cairo.save();
+                cairo.set_operator(gtk::cairo::Operator::DestOver);
+                if let Some((image, scale)) = painted.borrow().as_ref() {
+                    cairo.scale(1.0 / f64::from(*scale), 1.0 / f64::from(*scale));
+                    if cairo.set_source_surface(image, 0.0, 0.0).is_ok() {
+                        let _ = cairo.paint();
+                    }
+                }
+                cairo.set_source_rgb(0.0, 0.0, 0.0);
                 let _ = cairo.paint();
-            }
-            let _ = cairo.restore();
-        }
-        gtk::glib::Propagation::Proceed
-    });
-    let planes = gtk::Overlay::new();
-    planes.add(&canvas);
-    // WebKit needs its own transparent native window. Sharing the canvas's
-    // parent drawing window prevented navigation/IPC on the native runner.
-    let osd = gtk::EventBox::new();
-    osd.set_visible_window(true);
-    osd.set_app_paintable(true);
-    if let Some(screen) = gtk::prelude::WidgetExt::screen(&host) {
-        if let Some(visual) = screen.rgba_visual() {
-            osd.set_visual(Some(&visual));
-        }
-    }
-    let css = gtk::CssProvider::new();
-    css.load_from_data(b".theia-osd-plane { background-color: transparent; }")
-        .map_err(|error| error.to_string())?;
-    osd.style_context().add_class("theia-osd-plane");
-    osd.style_context()
-        .add_provider(&css, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
-    osd.add(&content);
-    planes.add_overlay(&osd);
-    planes.set_overlay_pass_through(&osd, false);
-    host.add(&planes);
-    planes.show_all();
-    let weak_canvas = canvas.downgrade();
-    gtk::glib::timeout_add_local(Duration::from_millis(16), move || {
-        match weak_canvas.upgrade() {
-            Some(canvas) => {
-                canvas.queue_draw();
-                gtk::glib::ControlFlow::Continue
-            }
-            None => gtk::glib::ControlFlow::Break,
-        }
-    });
-    SURFACE.with(|slot| *slot.borrow_mut() = Some(surface));
-    Ok(())
+                let _ = cairo.restore();
+                Some(false.to_value())
+            });
+            let weak_browser = browser.downgrade();
+            gtk::glib::timeout_add_local(Duration::from_millis(16), move || {
+                match weak_browser.upgrade() {
+                    Some(browser) => {
+                        if surface.frame.lock().unwrap().is_some() {
+                            browser.queue_draw();
+                        }
+                        gtk::glib::ControlFlow::Continue
+                    }
+                    None => gtk::glib::ControlFlow::Break,
+                }
+            });
+        })
+        .map_err(|error| error.to_string())
 }
 
 unsafe extern "C" fn notified(_: *mut c_void) {}

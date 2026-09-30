@@ -4,9 +4,10 @@
 
 Linux now uses `vo=libmpv`, `hwdec=no` and the software render API in
 `src/render_linux.rs`. A dedicated worker produces aligned BGR0 images; GTK
-paints the latest image beneath the existing WebKit interface through
-GtkOverlay. The bounded latest-frame slot cannot grow into a frame queue.
-No native mpv child window can cover the controls. The worker stops and frees
+composites the latest image behind the existing WebKit controls, using Cairo's
+DEST_OVER in the web widget's draw callback. Both share one drawing surface;
+the widget tree is preserved. The bounded latest-frame slot cannot grow into a
+frame queue. No native mpv child window can cover the controls. The worker stops and frees
 its render context before the engine is dropped, including failed startup.
 
 Run 36736248025 confirmed that an opaque 24-bit X11 child still did not paint
@@ -19,6 +20,16 @@ X11/XWayland remains the tested session contract. The outer X window id is
 only used for diagnostic/capture probes and is never sent to the engine.
 Ubuntu 24.04 libmpv2 0.37.0-1ubuntu4 is pinned in `../libmpv.json` with its
 archive/library hashes and licensing obligations (decision 162).
+
+Runs 36740463039 and 36741745497 exposed the GTK surface failure: the CPU
+renderer advanced, but native child transparency erased the film. Reparenting
+WebKit also stalled its initial navigation in the local reproduction. The final
+approach paints behind WebKit's transparent pixels without moving its widget.
+An isolated Ubuntu 26.04 Xvfb test with the system mpv 0.41 passed the actual
+film/controls capture and the DOM probe on 30 September. Its fixture clock and
+playhead both advanced to nine seconds. This is debugging evidence, not proof
+for the Ubuntu 24.04 package with pinned mpv 0.37; both native package checks
+remain mandatory.
 
 ## Historical investigation
 
