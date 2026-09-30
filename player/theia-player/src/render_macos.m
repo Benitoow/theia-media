@@ -63,6 +63,11 @@ static NSOpenGLContext *gBoundContext;
 static atomic_uint_fast64_t gContextChanges;
 static atomic_uint_fast64_t gPixel;
 static bool gDebugPixels;
+static GLuint gFilmFramebuffer;
+static GLuint gFilmTexture;
+static int gFilmWidth, gFilmHeight;
+static atomic_uint_fast64_t gTargetFramebuffer;
+static atomic_uint_fast64_t gGlError;
 
 static uint64_t now_ms(void)
 {
@@ -112,12 +117,40 @@ static void on_render_update(void *context)
         .h = (int)backing.size.height,
         .internal_format = 0,
     };
-    // A layer-backed NSOpenGLView may draw into AppKit's framebuffer rather
-    // than framebuffer zero. Use the target bound by this view's context.
+    // Keep mpv's render target separate from AppKit's drawable. AppKit owns
+    // the destination (including any layer-backed framebuffer); mpv gets a
+    // complete colour texture with dimensions controlled by this bridge.
     GLint framebuffer = 0;
     glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &framebuffer);
-    fbo.fbo = framebuffer;
+    atomic_store_explicit(&gTargetFramebuffer, framebuffer, memory_order_relaxed);
     if (fbo.w <= 0 || fbo.h <= 0) return;
+    if (!gFilmFramebuffer) {
+        glGenFramebuffers(1, &gFilmFramebuffer);
+        glGenTextures(1, &gFilmTexture);
+    }
+    glBindTexture(GL_TEXTURE_2D, gFilmTexture);
+    if (gFilmWidth != fbo.w || gFilmHeight != fbo.h) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, fbo.w, fbo.h, 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        gFilmWidth = fbo.w;
+        gFilmHeight = fbo.h;
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, gFilmFramebuffer);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                           gFilmTexture, 0);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        atomic_fetch_add_explicit(&gErrors, 1, memory_order_relaxed);
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        return;
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    fbo.fbo = gFilmFramebuffer;
+    fbo.internal_format = GL_RGBA8;
     int flip = 1;
     mpv_render_param params[] = {
         {MPV_RENDER_PARAM_OPENGL_FBO, &fbo},
@@ -143,12 +176,21 @@ static void on_render_update(void *context)
         glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo.fbo);
         glReadBuffer(fbo.fbo == 0 ? GL_BACK : GL_COLOR_ATTACHMENT0);
         unsigned char pixel[4] = {0};
-        glReadPixels(fbo.w / 2, fbo.h / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+        glReadPixels(fbo.w / 4, fbo.h / 4, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
         atomic_store_explicit(&gPixel,
             ((uint64_t)pixel[0] << 24) | ((uint64_t)pixel[1] << 16) |
             ((uint64_t)pixel[2] << 8) | pixel[3], memory_order_relaxed);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, previousRead);
     }
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, gFilmFramebuffer);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
+    glDrawBuffer(framebuffer == 0 ? GL_BACK : GL_COLOR_ATTACHMENT0);
+    glDisable(GL_SCISSOR_TEST);
+    glBlitFramebuffer(0, 0, fbo.w, fbo.h, 0, 0, fbo.w, fbo.h,
+                      GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    atomic_store_explicit(&gGlError, glGetError(), memory_order_relaxed);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
     [[self openGLContext] flushBuffer];
     gSwap(gRender);
     atomic_fetch_add_explicit(&gFrames, 1, memory_order_relaxed);
@@ -169,6 +211,11 @@ void theia_render_detach(void)
         gFree(gRender);
         gRender = NULL;
     }
+    if (gFilmFramebuffer) glDeleteFramebuffers(1, &gFilmFramebuffer);
+    if (gFilmTexture) glDeleteTextures(1, &gFilmTexture);
+    gFilmFramebuffer = gFilmTexture = 0;
+    gFilmWidth = gFilmHeight = 0;
+    gBoundContext = nil;
     [gView removeFromSuperview];
     gView = nil;
     if (gLibrary) {
@@ -251,6 +298,8 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
     gDebugPixels = getenv("THEIA_RENDER_DEBUG") != NULL;
     atomic_store_explicit(&gContextChanges, 0, memory_order_relaxed);
     atomic_store_explicit(&gPixel, 0, memory_order_relaxed);
+    atomic_store_explicit(&gTargetFramebuffer, 0, memory_order_relaxed);
+    atomic_store_explicit(&gGlError, 0, memory_order_relaxed);
     const GLubyte *renderer = glGetString(GL_RENDERER);
     snprintf(gRenderer, sizeof(gRenderer), "%s", renderer ? (const char *)renderer : "unknown");
 
@@ -371,7 +420,7 @@ void theia_render_diagnostics(char *out, size_t capacity)
     snprintf(out, capacity,
              "attached=%d elapsed-ms=%llu ticks=%llu last-tick-ms=%llu ready=%llu draws=%llu "
              "last-draw-ms=%llu in-render=%llu last-render-ms=%llu errors=%llu frames=%llu "
-             "notifications=%llu on-screen=%llu surface=%ux%u gl-renderer=\"%s\" context-changes=%llu pixel-rgba=%08llx",
+             "notifications=%llu on-screen=%llu surface=%ux%u gl-renderer=\"%s\" context-changes=%llu pixel-rgba=%08llx target-fbo=%llu gl-error=%llu",
              atomic_load_explicit(&gAttached, memory_order_relaxed) ? 1 : 0,
              (unsigned long long)(now_ms() - gAttachedAtMs),
              (unsigned long long)atomic_load_explicit(&gTicks, memory_order_relaxed),
@@ -388,5 +437,7 @@ void theia_render_diagnostics(char *out, size_t capacity)
              (unsigned)(surface >> 32), (unsigned)(surface & 0xffffffffu),
              gRenderer,
              (unsigned long long)atomic_load_explicit(&gContextChanges, memory_order_relaxed),
-             (unsigned long long)atomic_load_explicit(&gPixel, memory_order_relaxed));
+             (unsigned long long)atomic_load_explicit(&gPixel, memory_order_relaxed),
+             (unsigned long long)atomic_load_explicit(&gTargetFramebuffer, memory_order_relaxed),
+             (unsigned long long)atomic_load_explicit(&gGlError, memory_order_relaxed));
 }

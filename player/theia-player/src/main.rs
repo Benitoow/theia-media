@@ -3409,7 +3409,7 @@ mod player_window_tests {
         let keys: Vec<&str> = linux.iter().map(|(key, _)| *key).collect();
         let values: Vec<&str> = linux.iter().map(|(_, value)| value.as_str()).collect();
 
-        assert!(values.contains(&"gpu-next"), "Linux draws through gpu-next");
+        assert!(values.contains(&"gpu-next,x11"), "Linux tries GPU then software X11");
         assert!(
             !values
                 .iter()
@@ -3454,7 +3454,7 @@ mod player_window_tests {
     /// one keeps libplacebo over Vulkan or EGL.
     #[test]
     fn linux_asks_for_the_output_its_machine_can_use() {
-        assert_eq!(linux_video_output(true), "gpu-next");
+        assert_eq!(linux_video_output(true), "gpu-next,x11");
         assert_eq!(linux_video_output(false), "x11");
 
         let without_dri = platform_options(Platform::Unix, false);
@@ -3468,8 +3468,8 @@ mod player_window_tests {
         assert!(
             with_dri
                 .iter()
-                .any(|(key, value)| *key == "vo" && value == "gpu-next"),
-            "a DRI device keeps gpu-next: {with_dri:?}"
+                .any(|(key, value)| *key == "vo" && value == "gpu-next,x11"),
+            "a DRI device prefers GPU but retains X11 fallback: {with_dri:?}"
         );
 
         // Windows and macOS are not asked the question: their tables carry the

@@ -17,8 +17,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Benitoow/theia-media/releases/download/v3.3.6/theia-setup-windows-amd64.exe">Download for Windows x64</a> ·
-  <a href="https://github.com/Benitoow/theia-media/releases/download/v3.3.6/theia-setup-darwin-arm64">Download for macOS Apple Silicon</a> ·
+  <a href="https://github.com/Benitoow/theia-media/releases/download/v3.4.0/theia-setup-windows-amd64.exe">Download for Windows x64</a> ·
+  <a href="https://github.com/Benitoow/theia-media/releases/download/v3.4.0/theia-setup-darwin-arm64">Download for macOS Apple Silicon</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
@@ -26,10 +26,10 @@
 
 ![The Theia home screen: the navigation, the film showing tonight and the rows below it](docs/screenshots/home.webp)
 
-Theia turns folders of films and series into a private cinema for the browsers
-already on your television, phone and computer. Run one installer, add your
-folders and watch. There is no Theia account, subscription, Docker stack,
-external database or separate web app to install.
+Theia turns folders of films and series into a private cinema. Desktop apps
+handle playback, and a small server looks after your library. Phones and TVs
+can still use the existing browser viewer. There is no cloud account,
+telemetry, Docker stack or external database to install.
 
 | One file | Built for choosing | Private by default |
 | --- | --- | --- |
@@ -38,22 +38,17 @@ external database or separate web app to install.
 ## V3.3: playback leaves the browser
 
 > [!IMPORTANT]
-> **`v3.3.6` is the current download.** It keeps the player's V3.3.5
-> settings and strengthens installation and release checks on both complete
-> platforms. V3.3.5 added **Lecture** (the next episode started
-> automatically, the audio language, the subtitles) and **Sous-titres** - a
-> preview and seven decisions behind it - beside a player that no longer sends a
-> status frame nobody reads. The product is three programs:
-> `theia-server` (the headless Go backend you already run, which keeps serving
-> the web interface for administration and server settings), `theia-player`
-> (a native desktop player built on Tauri and libmpv) and `theia-setup` (the
-> installer, and the one file you download). A fourth command, `theia`, is what
-> you type: it starts the server if it is not answering and then opens the
-> player, and the installer puts it and its siblings on your `PATH`. `v3.2.0`
-> was the last release of the single-binary line, and an installed v3.2 updates
-> into this one by itself. **`v3.3.4` is the first release that also installs on
-> macOS Apple Silicon**: the player there draws the film itself, because the
-> pinned engine presents no window of its own on that platform (decision 144).
+> **`v3.4.0` closes V3.** Native film and series details, darker previews,
+> episode progress, next-episode playback, remembered server/audio/window
+> settings and a redesigned cast rail are together in this release.
+> Desktop applications and the server receive active support. The web viewer
+> remains available for phones and TVs without ongoing viewing development;
+> web server settings and administration remain maintained.
+>
+> The download is a complete setup containing the server, launcher, native
+> player and media engine. It offers server-only, player-only and all-in-one.
+> Run the new setup to upgrade from 3.3; an automatic server update alone does
+> not replace the old player and installer. [Read the release notes](docs/releases/v3.4.0.md).
 
 The reason is not novelty. A browser cannot hand an untouched Dolby TrueHD,
 DTS-HD MA or Atmos stream to an amplifier, renders only the HDR10 base layer of
@@ -61,15 +56,12 @@ a Dolby Vision profile 7 file, and remuxes every Matroska file before it can
 play it. A native player can. The server stays as small as it is: no GPU driver,
 no graphical dependency, the same SQLite, the same library.
 
-The reasoning, the superseded clauses and the honest validation boundary are
-written down in [decision 117](docs/DECISIONS.md) and
-[the V3.3 record](docs/v3.3.md). Windows is the platform verified on real
-hardware this project owns. macOS Apple Silicon was verified on a GitHub-hosted
-`macos-14` runner - real Apple Silicon, with the film on screen and photographed
-there - and what that runner could not answer (hardware decoding, a real audio
-endpoint, Gatekeeper's first refusal of an unsigned download, and the interface
-over a moving film) is named in the release notes rather than implied. Linux and
-Windows on ARM have the server and no player.
+The reasoning and validation boundary are recorded in
+[decision 117](docs/DECISIONS.md), [the V3.3 record](docs/v3.3.md) and
+[the release verification record](docs/v3.4-release-readiness.md). Native
+runner tests cover installation, the launcher and a generated film with visible
+controls. They do not establish HDR, hardware decoding, real audio endpoints or
+downloaded-app reputation checks on every machine.
 
 ## Which program goes where
 
@@ -83,20 +75,22 @@ house, not on taste.
 | A computer that only watches, with the films held elsewhere | **Player only** | No library is scanned or stored locally. It asks the server for the catalogue and the files. |
 | A phone, tablet or television browser | **Nothing**; open the address the server prints in a browser | The existing web viewer remains available. Active web viewing support ends with 3.4; server settings and administration remain maintained. |
 
-Two things the table cannot say. **The player runs on Windows x64 and, since
-3.3.4, on macOS Apple Silicon** - Windows on ARM and Linux have the server but
-no player, and the project does not ship what it has not seen work. The browser
-keeps the server settings and diagnostics, which remain maintained. Its existing
-viewer remains available for phones and TVs without active viewing development
-or support. Desktop apps and the server are the active priorities.
+The desktop downloads target Windows x64/ARM64, macOS Intel/Apple Silicon and
+Ubuntu 24.04 x64/ARM64. Linux needs X11 or XWayland and the platform packages
+listed below. Other Linux distributions are not verified for these binaries.
 
 ## After V3
 
-3.4 is the final planned V3 release, currently in preparation. No 3.4.1, 3.5 or
-3.6 is planned. [V4](docs/v4.md) moves toward watch parties, a startup profile
-chooser, comments and likes/dislikes on films. Direct messages and calls are
-outside the scope. Dedicated phone and TV apps are deferred without a date.
-The current published download remains 3.3.6 until the release gates pass.
+3.4 is the final planned V3 release. No 3.4.1, 3.5 or 3.6 is planned.
+[V4](docs/v4.md) moves toward watch parties, a startup local-profile chooser,
+comments and likes/dislikes on films. Direct messages and calls are outside
+the scope. Dedicated phone and TV apps are deferred without a date.
+
+Theia's server, library and ordinary viewing remain free and open source.
+Optional V4 social features are initially free; some are planned to become
+paid supporter extras when V5 work begins, without a monthly subscription.
+Exact features and payment terms will be announced separately. Late 2026 or
+early 2027 is an estimate, not a commitment.
 
 ## Project phase: field testing
 
@@ -152,24 +146,18 @@ you an installation you would later resent.
 
 ## Three-minute setup
 
-1. Download **[Theia 3.3.6 for Windows x64](https://github.com/Benitoow/theia-media/releases/download/v3.3.6/theia-setup-windows-amd64.exe)**
-   - or, on a Mac with Apple Silicon, **[Theia 3.3.6 for macOS](https://github.com/Benitoow/theia-media/releases/download/v3.3.6/theia-setup-darwin-arm64)**
-   - and run it. That one installer asks which
-   language Theia should speak, what this machine is for, where to keep its data,
-   the port it listens on, the name it answers to on the network, and which
-   folders hold your films - then shows the whole plan before writing anything.
-2. It fetches what this machine needs - the server, the native player, and the
-   media engine the player uses - checking the SHA-256 digest GitHub publishes for
-   each file and refusing anything that does not match. On Windows the programs
-   are copied into `%LOCALAPPDATA%\Programs\Theia`, that folder is added to your
-   `PATH`, entries appear in the Start Menu under **Theia** and on the Desktop,
-   and Theia is registered as an installed application: it can be launched by
-   name from the Start Menu or a launcher such as Flow Launcher, and removed from
-   **Settings → Apps** like anything else. On a Mac the same installer is per-user
-   too: the programs go to `~/.local/lib/theia`, `Theia.app` is linked into
-   `~/Applications` so Finder, Spotlight and Launchpad see it, and `theia` is
-   linked into `~/.local/bin` - with the one `PATH` line printed rather than
-   written into your shell profile.
+1. Download the setup for your computer from the table below. On macOS/Linux,
+   make it executable with `chmod +x <filename>`, then run it. The installer
+   asks for your language, the role of this machine, data location, port,
+   hostname and media folders, and shows its plan before writing.
+2. The setup already contains the complete product and installs without
+   fetching additional Theia components. Windows installs per user under
+   `%LOCALAPPDATA%\Programs\Theia`, adds Start Menu/Desktop entries and
+   registers **Settings → Apps** removal. macOS installs under
+   `~/.local/lib/theia`, links the app into `~/Applications` and the command
+   into `~/.local/bin`. Linux installs under `~/.local/lib/theia`; start the
+   `theia` command there. Services remain opt-in and no elevation is required.
+
 3. Start the server from that entry, or let the installer start it automatically:
    it offers an autostart entry - a launchd agent on macOS - and asks for no
    administrator rights to put one in place. From a terminal, `theia` starts the
@@ -188,33 +176,27 @@ From 3.4, on Windows, `theia-setup --repair-registration` restores a missing
 
 | Platform | The download |
 | --- | --- |
-| Windows x64 | [`theia-setup-windows-amd64.exe`](https://github.com/Benitoow/theia-media/releases/download/v3.3.6/theia-setup-windows-amd64.exe) (one file) |
-| macOS Apple Silicon | [`theia-setup-darwin-arm64`](https://github.com/Benitoow/theia-media/releases/download/v3.3.6/theia-setup-darwin-arm64) (one file) |
-| Windows on ARM, Intel Macs, Linux | not yet - see *what is verified* below |
+| Windows x64 | [Windows x64 setup](https://github.com/Benitoow/theia-media/releases/download/v3.4.0/theia-setup-windows-amd64.exe) |
+| Windows ARM64 | [Windows ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v3.4.0/theia-setup-windows-arm64.exe) |
+| macOS Apple Silicon | [Apple Silicon setup](https://github.com/Benitoow/theia-media/releases/download/v3.4.0/theia-setup-darwin-arm64) |
+| macOS Intel | [Intel Mac setup](https://github.com/Benitoow/theia-media/releases/download/v3.4.0/theia-setup-darwin-amd64) |
+| Ubuntu 24.04 x64 | [Linux x64 setup](https://github.com/Benitoow/theia-media/releases/download/v3.4.0/theia-setup-linux-amd64) |
+| Ubuntu 24.04 ARM64 | [Linux ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v3.4.0/theia-setup-linux-arm64) |
 
-If you would rather install with nothing downloaded, use the
-[`theia-3.3.6-windows-amd64.zip`](https://github.com/Benitoow/theia-media/releases/download/v3.3.6/theia-3.3.6-windows-amd64.zip)
-or the
-[`theia-3.3.6-darwin-arm64.zip`](https://github.com/Benitoow/theia-media/releases/download/v3.3.6/theia-3.3.6-darwin-arm64.zip)
-offline bundle. Each holds every file for its platform. Unpack it and run
-`theia-setup.exe`, or `theia-setup` on a Mac, from inside that folder: it finds
-the programs **beside itself**, copies them, and needs no network at all.
+Ubuntu desktop prerequisites:
 
-The individual pieces are published as separate assets too, for a script, a
-mirror, or the updater:
+```sh
+sudo apt install libmpv2 libwebkit2gtk-4.1-0 libayatana-appindicator3-1
+```
 
-| Asset | What it is |
-| --- | --- |
-| `theia-server-<os>-<arch>[.exe]` | The server alone. This is what the updater selects by name, and what the installer fetches. |
-| `theia-setup-windows-amd64.exe`, `theia-setup-darwin-arm64` | The installers, and the only executables a person downloads. Each fetches the programs above, or copies them from beside itself or from `--from <folder\|zip>`. |
-| `theia-player-<os>-<arch>.zip` | The player and its engine, with the engine's licence and notice. |
-| `theia-launcher-<os>-<arch>[.exe]` | The `theia` command - installed as `theia.exe` on Windows and as `theia` in `~/.local/bin` on macOS: it starts the server if it is not answering and then opens the player. |
-| `theia-<version>-<os>-<arch>.zip` | Everything, for an install with no network. |
+Theia ships a pinned libmpv library; Ubuntu supplies its desktop, codec, audio
+and driver dependencies. The Linux engine generation differs from Windows/Mac,
+so codec/HDR behaviour must be checked on the actual machine.
 
-The release page labels the installers and the offline bundles as the four human
-downloads - two per platform. Everything named `server`, `player` or `launcher`
-is installer/updater plumbing, published separately because an existing
-installation selects it by exact name.
+The six standalone `theia-server-<os>-<arch>[.exe]` files remain for existing
+server updaters. Player, launcher and engine files are carried inside the six
+public setups; the internal payload ZIPs are not additional downloads. Older
+installers expecting separate player ZIPs should be replaced by the 3.4 setup.
 
 Release binaries are unsigned and run in the foreground. Windows may show a
 reputation warning. The macOS build is ad-hoc signed - there is no Apple Developer
@@ -249,15 +231,15 @@ installed FFmpeg runtime is about **87.9 MB**. Hardware encoders and decoders
 are tested on the host before Theia chooses one. Software conversion still
 needs enough CPU to remain above real time.
 
-Windows x64 is the real-device validation platform today: it is the only place a
-player has played the maintainer's own library on hardware he owns. Release CI
-builds all six x64/ARM64 targets and executes the Linux x64 binary, but the ARM64
-server binaries have not yet had the same physical-device playback pass, and macOS
-Apple Silicon was verified on a GitHub-hosted `macos-14` runner rather than on a
-Mac somebody owns - the film was on screen there and photographed, and what that
-runner could not answer (hardware decoding, a real audio endpoint, Gatekeeper's
-first refusal, the interface over a moving film) is named in the release notes.
-That gap is stated here because an architecture badge is not a benchmark.
+Windows x64 is the maintainer's real-device validation platform: it is where the
+app has played his own library on hardware he owns. Release CI builds all six
+x64/ARM64 targets. Desktop promotion additionally requires an installed-product
+test and a captured moving test film with visible playback controls on a native
+runner. The preparation record is in
+[`docs/v3.4-release-readiness.md`](docs/v3.4-release-readiness.md).
+Hosted runners cannot establish hardware decoding performance, real audio
+endpoints, HDR output or a first Gatekeeper launch on your own computer. Those
+still need reports from real users.
 
 For perspective, Plex currently recommends at least a Core i3 and typically 4 GB
 RAM, while Jellyfin's current general recommendation is 8 GB and a modern media
@@ -274,7 +256,7 @@ would be advertising wearing a Markdown costume.
 | | **Theia** | **Plex** | **Jellyfin** | **Emby** |
 | --- | --- | --- | --- | --- |
 | Best fit | One household that wants the smallest possible film-and-series server | The broadest polished client ecosystem | A full open-source, multi-user media platform | A configurable commercial media platform |
-| Cost | Free, GPL-3.0 | Local personal video is free; remote video and hardware transcoding use paid passes | Free, GPL-2.0, no premium tier | Free tier; several server and app features use Premiere |
+| Cost | Free core, GPL-3.0; optional future social features follow the supporter plan | Local personal video is free; remote video and hardware transcoding use paid passes | Free, GPL-2.0, no premium tier | Free tier; several server and app features use Premiere |
 | Identity | No account; passwordless local profiles | Plex account model | Local users and permissions | Local users; optional Emby Connect |
 | Server setup | One native binary for the server, no Docker or external runtime; the V3.3 player is a second native application | Installers and NAS packages | Native packages, containers and NAS options | Installers, containers and many NAS options |
 | Clients | A native desktop player, and a responsive browser for administration and server settings | Browser plus wide TV, mobile, desktop and console coverage | Browser plus official and community apps | Browser plus TV and mobile apps |
@@ -303,8 +285,9 @@ There is no telemetry endpoint, analytics SDK, cloud account or frontend CDN.
 Remote access accepts encrypted WireGuard traffic but contacts no Theia-operated
 service.
 
-Image subtitle formats such as PGS and VobSub cannot be drawn without burning
-them into the video; Theia names them instead of pretending they work. The LAN
+The legacy web viewer cannot draw image subtitle formats such as PGS and
+VobSub without burning them into video. The native player uses libmpv to render
+them directly. The LAN
 site uses HTTP. Remote traffic is encrypted by WireGuard.
 
 ## Build and contribute

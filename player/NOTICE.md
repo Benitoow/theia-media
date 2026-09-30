@@ -7,6 +7,24 @@ later.
 
 ## What ships, and from where
 
+The table below describes the Windows x64 engine. Other desktop bundles use
+the architecture-specific pins in `player/libmpv.json` in Theia's source:
+
+- Windows ARM64: `zhongfly/mpv-winbuild`, release
+  `2026-09-14-0b7ed670f7`, archive
+  `mpv-dev-lgpl-aarch64-20260914-git-0b7ed670f7.7z`, LGPL-2.1-or-later.
+- Intel and Apple Silicon Macs: `178meorg/libmpv-macos-build`, release
+  `v0.41.4`, enhanced LGPL profile. The app's `Contents/Frameworks` directory
+  contains the engine and its dependent libraries; `Contents/Resources/licenses`
+  contains their upstream licence texts. Corresponding build/source information:
+  <https://github.com/178meorg/libmpv-macos-build/tree/v0.41.4>.
+- Ubuntu Linux uses a separate GPL-compatible engine and notice,
+  `NOTICE-linux.md`; the Windows/macOS LGPL pin does not describe that bundle.
+
+Each loaded engine's exact archive and library digests are printed by
+`theia-player --diagnostics`. These identify the shipped file; native playback
+validation is recorded separately in `docs/v3.4-release-readiness.md`.
+
 | | |
 |---|---|
 | Engine | mpv, built for libmpv by [`zhongfly/mpv-winbuild`](https://github.com/zhongfly/mpv-winbuild) |
@@ -51,6 +69,6 @@ rather than smoothed over. If a licence review ever finds a GPL-only component
 linked into this build, the answer is not a different download: it is building
 libmpv in CI with `-Dgpl=false`, which upstream documents.
 
-Only `windows/amd64` is pinned, because Windows is the only platform the player
-has been run and verified on. macOS and Linux will need their own pin, their own
-digests and a real run before they appear here.
+Pinned files alone do not establish playback support. Release jobs require the
+native app and its installed package to run on the target architecture, with
+an actual film-and-controls capture before publication.

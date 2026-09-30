@@ -24,18 +24,15 @@ Read decision 117 and `docs/spec-fondatrice.md` §14 before touching anything.
 release line is V4, documented in `docs/v4.md` (decision 160). Desktop apps and
 the server remain maintained. Phone and TV apps are deferred without a date.
 They record exactly which founding clauses were superseded and which still bind.
-Windows x64 and macOS Apple Silicon have complete release artifacts. The Windows
-player was run on the maintainer's machine. A post-release source audit found that
-the macOS application selects `vo=libmpv` but never creates a render context or
-draws a frame; the separate spike did, and the earlier runner checks measured
-playback progress rather than the application's picture (decision 149). Treat
-the Apple Silicon release playback as unverified until its packaged application
-renders film with the OSD. Other targets have server binaries only and must not
-be presented as complete products.
-An AppKit/OpenGL renderer candidate is in source. A packaged macOS Intel player
-has drawn generated film frames on a hosted runner, but its capture showed no
-visible OSD and the page measurement was null. Apple Silicon still needs a
-packaged film-and-OSD proof before a later release can be published.
+The published V3.3.6 has complete Windows x64 and Apple Silicon artifacts, but a
+post-release audit found no integrated Mac render context (decision 149): old
+playback-position checks did not establish a picture. The V3.4 branch adds the
+AppKit/OpenGL renderer and six complete package candidates. Native Windows ARM64
+and Intel Mac package/film/controls checks passed in run 36725147442. Apple
+Silicon's current capture is black; Linux installs and launches but its initial
+film fails to load. All remain subject to final-revision validation. Keep the
+current evidence and publication blockers in `docs/v3.4-release-readiness.md`;
+do not promote a platform because compilation or playback counters passed.
 
 **Publication is explicit.** `v3.3.6` is public; preparing a later release does
 not authorize publishing it. Never push, create or push a tag, create a release,
@@ -46,8 +43,8 @@ test path. When a task does not explicitly authorize publication, report what
 was verified locally instead. **A dispatch measures the pipeline without
 publishing** (decision 140): `gh workflow run release.yml --ref main` runs the
 gates and builds artifacts, and `publish` refuses anything that is not a pushed
-tag. The current source guard deliberately fails until the macOS player draws
-real frames; a failed dispatch is evidence of that gate, not a release.
+tag. Captured generated-film colour and visible-controls checks now gate native
+packages. A failed dispatch is evidence of that gate, not a release.
 
 ## Read these first, every session
 
@@ -304,11 +301,12 @@ it to the public setup executable so that one download installs the platform
 product without another network fetch. The ZIP is not a separate public asset.
 
 The currently published v3.3.6 still has the older fourteen-asset layout.
-Decision 150 changes the next release to two complete setups (Windows x64 and
-macOS Apple Silicon, once its picture is proven) and six exact server binary
-names for installed updaters. Windows ARM64, macOS Intel and Linux gain public
-setups only after native picture and installation proof. The eight-name
-`scripts/check-release-assets.ps1` enforces this pending surface.
+Decisions 150 and 162 change the next release to six complete setups and six
+exact server binary names for installed updaters. Each setup still requires
+native picture and installation proof before publication. The twelve-name
+`scripts/check-release-assets.ps1` enforces this candidate surface. Upgrading
+from V3.3 requires running the new setup to replace the desktop programs; a
+server-only automatic update does not update the previous player.
 
 ## Building the native player
 
@@ -349,11 +347,12 @@ What ships is the **bundle**, not the executable:
 It adds the engine (`libmpv-2.dll`), the LGPL text and the notice naming the
 pinned build. `scripts/fetch-libmpv` downloads the archive from
 `player/libmpv.json` and checks **two** digests - the archive before extracting,
-the library after - refusing anything that disagrees. Windows x64 and macOS
-Apple Silicon are pinned. The pipeline checks the Windows bundle's four files
-and loaded engine digest, and verifies the macOS app bundle and its engine on an
-Apple Silicon runner before publishing. A bundle missing its licence is a breach
-rather than an incomplete download.
+the library after - refusing anything that disagrees. All six targets have pins.
+Windows and macOS use LGPL engines with their licence notices; Ubuntu 24.04
+uses its unmodified GPL-compatible libmpv package and OS-managed dependencies
+(decision 162). The pipeline verifies engine digests, licence payloads and
+native installation/playback. A bundle missing its licence is a breach rather
+than an incomplete download.
 
 The OSD is a web page whose only external dependency is `window.__TAURI__`, so it
 can be looked at without launching the player or playing anything:

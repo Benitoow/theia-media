@@ -169,6 +169,17 @@ the player built from this tree at `player/target/release`, a generated
 
 ## What this file does not decide
 
+### 30 September: Ubuntu package diagnostics
+
+Run 36727905156 installed and launched the complete Ubuntu 24.04 product on
+both native CPU architectures, but neither film loaded. Engine logs identified
+`gpu-next` refusing every available GPU context. `/dev/dri` existed on the
+runner, so directory existence had incorrectly been treated as sufficient.
+The output preference is now `gpu-next,x11` when DRI exists, retaining the
+software fallback after a refused GPU initialisation. Machines without DRI
+still select X11 directly. Actual output remains visible in the diagnostic.
+This repair requires a fresh native film/controls capture before publication.
+
 Nothing about the OSD, the tracks menu, subtitles or the status telemetry: those
 are platform-independent. Nothing about Windows or macOS: their tables and their
 window handles are unchanged, and the macOS render bridge stays as

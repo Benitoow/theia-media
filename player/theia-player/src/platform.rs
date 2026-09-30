@@ -66,7 +66,10 @@ fn dri_present() -> bool {
 /// performance and a picture, and a picture is what the alternative does not have.
 pub(super) fn linux_video_output(dri_present: bool) -> &'static str {
     if dri_present {
-        "gpu-next"
+        // A DRI directory does not establish a usable device/context: native
+        // Ubuntu runners expose it while their X display uses llvmpipe. mpv
+        // tries the software output only when GPU initialisation refuses.
+        "gpu-next,x11"
     } else {
         "x11"
     }

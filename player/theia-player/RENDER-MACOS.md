@@ -249,3 +249,14 @@ telemetry: those are platform-independent and already work. Nothing about Window
 `wid` stays exactly as it is there, and the `gpu-api`/`gpu-context` values are
 unchanged. And nothing about what macOS may claim - the verification record does
 that, and it only changes when a film has played on the Mac.
+
+### 30 September: isolate the film framebuffer
+
+Run 36727905156 still captured black on Apple Silicon. The diagnostic reported
+Apple Software Renderer, no context replacement, progressing draws and black
+readback. A context-replacement explanation is therefore not established.
+The candidate now renders mpv into an explicitly allocated, complete RGBA8
+texture framebuffer and blits it into AppKit's destination. Diagnostics record
+the destination framebuffer, GL error and a film-texture sample. This separates
+mpv's target from the window compositor's drawable and remains subject to a
+fresh captured-picture check on both Mac architectures.
