@@ -7,6 +7,7 @@ import { CardGrid } from './CardGrid';
 import { EpisodeCard } from './EpisodeCard';
 import { MediaCard } from './MediaCard';
 const MovieDetail = lazy(() => import('./MovieDetail').then((module) => ({ default: module.MovieDetail })));
+const SeriesDetail = lazy(() => import('./SeriesDetail').then((module) => ({ default: module.SeriesDetail })));
 import { PlaybackHero } from './PlaybackHero';
 
 import { Button } from './ui/button';
@@ -28,7 +29,7 @@ type LibraryProps = {
 	onAddress: (value: string) => void; onSubmit: (event: FormEvent) => void; onFind: () => void;
 	onConnect: (url: string) => void; onSection: (value: Section) => void; onSettings: () => void; onProfiles: () => void;
 	onSearchQuery: (value: string) => void;
-	onMovie: (id: number) => void; onPlayMovie: (id: number) => void; onBackMovie: () => void; onSeries: (id: number) => void; onEpisode: (id: number) => void;
+	onMovie: (id: number) => void; onPlayMovie: (id: number, fileId?: number) => void; onBackMovie: () => void; onSeries: (id: number) => void; onEpisode: (id: number) => void;
 	onCancel: () => void; onHelp: () => void; historyBusy: boolean; onHistory: (id:number, watched:boolean) => void;
     onSeason: (number: number) => void; onBackSeries: () => void;
 };
@@ -85,7 +86,7 @@ export function Library(props: LibraryProps) {
 				{/* The search room is a centred stage with no eyebrow: the loop
 				   is the decoration and "Your library" said nothing there. */}
 				{section !== 'search' && <p className="library-eyebrow label">{server ? (selectedMovie ? t('filmSingular') : selectedSeries ? t('seriesLabel') : t('yourLibrary')) : t('desktopPlayer')}</p>}
-				<h1 className="library-title">{title || (server ? (section === 'series' ? t('series') : section === 'search' ? t('searchTitle') : t('allFilms')) : props.booting ? t('starting') : t('connectTitle'))}</h1>
+				{!selectedMovie && !selectedSeries && <h1 className="library-title">{title || (server ? (section === 'series' ? t('series') : section === 'search' ? t('searchTitle') : t('allFilms')) : props.booting ? t('starting') : t('connectTitle'))}</h1>}
 				{server && !selectedMovie && !selectedSeries && section !== 'search' && <p className="library-count label">{count} {t(section === 'series' ? (count === 1 ? 'seriesSingular' : 'seriesPlural') : (count === 1 ? 'filmSingular' : 'filmPlural'))}</p>}
 			</div>}
 
@@ -107,13 +108,12 @@ export function Library(props: LibraryProps) {
 						<p className={`hint ${props.errorKey ? 'hint--error' : ''}`}>{props.errorKey ? t(props.errorKey) : t('noServer')}</p>
 					</motion.div>
 				) : selectedMovie ? (
-					<Suspense fallback={<p className="hint">{t('loading')}</p>}><MovieDetail movie={selectedMovie} language={props.language} t={t} onPlay={() => props.onPlayMovie(selectedMovie.id)} /></Suspense>
+					<Suspense key={`movie-${selectedMovie.id}`} fallback={<p className="hint">{t('loading')}</p>}><MovieDetail movie={selectedMovie} language={props.language} t={t} onMovie={props.onMovie} onPlay={(fileId) => props.onPlayMovie(selectedMovie.id, fileId)} /></Suspense>
 				) : selectedSeries ? (
-					<motion.div key={`series-${selectedSeries.id}`} className="contents" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-						{heroEpisode && <PlaybackHero resuming={Boolean(resumedEpisode)} eyebrow={!resumedEpisode ? t('nextUnwatched') : undefined} media={{ kind: 'episode', item: heroEpisode, series: selectedSeries }} headingLevel={2} language={props.language} t={t} onPlay={props.onEpisode} />}
+					<Suspense key={`series-${selectedSeries.id}`} fallback={<p className="hint">{t('loading')}</p>}><SeriesDetail series={selectedSeries} episode={heroEpisode} language={props.language} t={t} onPlay={props.onEpisode}>
 						<div className="season-tabs">{selectedSeries.seasons?.map((season) => <button key={season.id} className={`season-tab label ${selectedSeason?.season_number === season.season_number ? 'season-tab--active' : ''}`} onClick={() => props.onSeason(season.season_number)}>{season.metadata?.name || `${t('season')} ${season.season_number}`}</button>)}</div>
 						{selectedSeason?.episodes?.length ? <CardGrid>{selectedSeason.episodes.map((episode) => <EpisodeCard key={episode.id} item={episode} seriesLabel={displayTitle(selectedSeries)} onPlay={props.onEpisode} onHistory={props.onHistory} busy={props.historyBusy} reducedMotion={props.reducedMotion} t={props.t} />)}</CardGrid> : <p className="hint">{t('emptySeason')}</p>}
-					</motion.div>
+					</SeriesDetail></Suspense>
 				) : section === 'home' ? (
 					<motion.div key="home" className="home-view" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}>
 						{props.homeError ? (

@@ -318,12 +318,16 @@ which is decision 25 applied to a second interface.
 |---|---|
 | `theia-player/src/mpv.rs` | The whole FFI surface, on one page. Nothing above it touches a raw pointer. |
 | `theia-player/src/main.rs` | Session, playback lifecycle, IPC commands, the audio watchdog. |
+| `theia-player/src/capabilities.rs` | Read-only Windows display mode and decoder preflight; unavailable on other platforms. |
 | `theia-player/src/platform.rs` | mpv options and window handle policy for Windows, macOS, and Linux. |
 | `theia-player/src/window.rs` | Native window sizing, rounded region, resize timing, and verification report. |
 | `theia-player/src/server.rs` | Discovery, HTTP client, stream URLs, and connection errors. |
 | `theia-player/src/server/models.rs` | JSON records returned by the server, plus artwork and track interpretation. |
 | `ui/src/App.tsx` | The OSD: transport, clock, notices, keyboard. |
 | `ui/src/lib/catalogues.js` | French and English sentences. The Rust side sends codes. |
+| `ui/src/components/MediaDetail.tsx` | Shared film/series TMDB record, credits and artwork. |
+| `ui/src/components/NativeCompatibility.tsx` | File measurements and honest device preflight. |
+| `ui/src/lib/useFileInspection.ts` | Async inspection with navigation isolation and retry. |
 | `ui/src/components/MediaCard.tsx` | One film as the card grid draws it, with section 6.1's artwork fallbacks. |
 | `ui/src/osd.css` | Only what a player adds to the design system. |
 | `ui/scripts/render-check.mjs` | Renders the OSD in a real browser and asserts its layout. |
@@ -332,3 +336,29 @@ which is decision 25 applied to a second interface.
 The OSD imports `web/src/lib/tokens.css` and
 `web/src/lib/fonts.css` directly, and draws its icons with lucide-react. Two palettes is how two
 identities start, and this product has one.
+
+## Inspecting a candidate without opening a window
+
+The packaged player's catalogue and driver probes print JSON before loading the
+engine or starting Tauri:
+
+```powershell
+.\theia-player.exe --server http://127.0.0.1:8395 --detail 2
+.\theia-player.exe --server http://127.0.0.1:8395 --show-detail 2
+.\theia-player.exe --server http://127.0.0.1:8395 --episode-detail 11
+.\theia-player.exe --capabilities --codec hevc --window 3840x2160
+```
+
+The CLI capability probe reads the primary monitor. The UI command reads the
+monitor containing its own window. An explicit `--inspect-file 7 --kind movie
+--id 2 --server URL` invokes the same measurement command as the detail button;
+it can download/prepare FFmpeg and persists the measured file in that server's
+library. Use a disposable server data directory for acceptance work.
+
+`build-player.ps1 -Release -Bundle -BundleName theia-player-v34-details-windows-amd64`
+creates a separate candidate bundle. Bundling refuses to remove a running player.
+
+To assemble that separate player into the complete Windows payload, pass
+`-SkipPlayer -PlayerBundleName theia-player-v34-details-windows-amd64` to
+`build-release.ps1`. Supply TMDB configuration through the existing environment
+contract. The normal release bundle name stays the default.

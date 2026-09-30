@@ -402,6 +402,37 @@ impl Client {
         collect_pages(|limit, offset| self.movies(limit, offset))
     }
 
+    /// First inspection can prepare FFmpeg; ordinary catalogue timeouts stay short.
+    pub fn inspect_file(
+        &self,
+        kind: &str,
+        id: i64,
+        file_id: i64,
+    ) -> Result<serde_json::Value, String> {
+        let resource = match kind {
+            "movie" => "movies",
+            "episode" => "episodes",
+            _ => return Err("invalid_media_kind".into()),
+        };
+        let mut client = Self::with_timeout(&self.base, Duration::from_secs(180));
+        client.set_profile(self.profile);
+        let value: serde_json::Value = client.post_json(&format!(
+            "/api/library/{resource}/{id}/files/{file_id}/inspect"
+        ))?;
+        if let Some(error) = value.get("error").and_then(|error| error.as_str()) {
+            return Err(error.to_string());
+        }
+        if value.get("id").and_then(|id| id.as_i64()) != Some(file_id)
+            || value
+                .pointer("/media/status")
+                .and_then(|status| status.as_str())
+                != Some("ok")
+        {
+            return Err("invalid_inspection_response".into());
+        }
+        Ok(value)
+    }
+
     pub fn movie(&self, id: i64) -> Result<Movie, String> {
         let mut movie: Movie = self.get_json(&format!("/api/library/movies/{id}"))?;
         crate::progress_queue::overlay(self, false, movie.id, &mut movie.progress);
@@ -979,6 +1010,42 @@ mod tests {
         assert!(card["metadata"].get("tmdb_title").is_none());
         assert_eq!(movie.backdrop_url, "http://host:8395/api/images/w780/b.jpg");
         assert_eq!(movie.poster_url, "http://host:8395/api/images/w500/p.jpg");
+    }
+
+    #[test]
+    fn native_detail_keeps_measured_files_credits_and_portrait_urls() {
+        let mut movie: Movie = serde_json::from_value(serde_json::json!({
+            "id": 1, "metadata": {
+                "cast": [{"name":"Actor", "character":"Lead", "profile_path":"/actor.jpg"}],
+                "crew": [{"name":"Writer", "role":"writing"}],
+                "collection": {"name":"Saga"}
+            },
+            "files":[{"id":11,"size_bytes":123,"media":{"status":"ok","video":{"codec":"hevc","width":3840,"height":1604,"color_transfer":"smpte2084"}}}],
+            "collection_parts":[{"id":2,"metadata":{"poster_path":"/part.jpg"}}]
+        })).unwrap();
+        movie.resolve_artwork("http://host:8395");
+        let detail = serde_json::to_value(movie).unwrap();
+        assert_eq!(detail["files"][0]["media"]["video"]["width"], 3840);
+        assert_eq!(
+            detail["metadata"]["cast"][0]["profile_url"],
+            "http://host:8395/api/images/w185/actor.jpg"
+        );
+        assert_eq!(detail["metadata"]["crew"][0]["role"], "writing");
+        assert_eq!(
+            detail["collection_parts"][0]["poster_url"],
+            "http://host:8395/api/images/w500/part.jpg"
+        );
+        let mut series: Series = serde_json::from_value(serde_json::json!({
+            "id":1,"metadata":{"original_name":"Original","last_air_date":"2025-01-01","air_status":"ended","genres":["Drama"],"vote_average":8.5,"creators":["Creator"],"networks":["Network"],"cast":[{"name":"Lead","profile_path":"/lead.jpg"}]}
+        })).unwrap();
+        series.resolve_artwork("http://host:8395");
+        let detail = serde_json::to_value(series).unwrap();
+        assert_eq!(detail["metadata"]["creators"][0], "Creator");
+        assert_eq!(
+            detail["metadata"]["cast"][0]["profile_url"],
+            "http://host:8395/api/images/w185/lead.jpg"
+        );
+        assert_eq!(detail["metadata"]["air_status"], "ended");
     }
 
     /// The frames that fill a window - the home's hero and the library's ambient

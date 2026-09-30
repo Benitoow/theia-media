@@ -47,6 +47,10 @@ param(
     # player, so there is nothing here for it to skip.
     [switch]$SkipPlayer,
 
+    # A separate local candidate can be assembled while the default bundle runs.
+    [ValidatePattern('^[a-z0-9][a-z0-9-]{3,80}$')]
+    [string]$PlayerBundleName,
+
     # CI assembles the internal payload from the exact published Go components.
     # Rebuilding them in another job changes Go's build ID on Windows even when
     # the program bytes and build settings are otherwise identical.
@@ -305,13 +309,17 @@ $binaryVersion = if ($Version -in @('dev', '0.0.0')) { $Version } else { "v$Vers
 # and failing there should not happen after the Go builds have run.
 if (-not $SkipPlayer) {
     Write-Host '==> Building the player and its engine' -ForegroundColor Cyan
-    & (Join-Path $root 'build-player.ps1') -Release -Bundle -Architecture $goarch -Version $binaryVersion
+    $taskPlayerOptions = @{}
+    if ($PlayerBundleName) { $taskPlayerOptions.BundleName = $PlayerBundleName }
+    & (Join-Path $root 'build-player.ps1') -Release -Bundle -Architecture $goarch -Version $binaryVersion @taskPlayerOptions
     if ($LASTEXITCODE -ne 0) { throw 'the player build failed' }
 }
 
 # A reused player bundle can be older than the requested archive. Check it
 # before rebuilding the other programs or replacing an existing archive.
-$playerExe = Join-Path $root "dist/theia-player-$Target/theia-player.exe"
+$taskPlayerBundleName = if ($PlayerBundleName) { $PlayerBundleName } else { "theia-player-$Target" }
+$playerBundle = Join-Path $root "dist/$taskPlayerBundleName"
+$playerExe = Join-Path $playerBundle 'theia-player.exe'
 if (-not (Test-Path $playerExe)) {
     throw "the player bundle is missing from $playerExe; build it with .\build-player.ps1 -Release -Bundle -Version $binaryVersion"
 }
@@ -378,7 +386,6 @@ if ($UseDistPrograms) {
 }
 
 # The player bundle, already assembled with its engine by build-player.ps1.
-$playerBundle = Join-Path $root "dist/theia-player-$Target"
 foreach ($file in 'theia-player.exe', 'libmpv-2.dll', 'LICENSE-libmpv.txt', 'NOTICE.md') {
     Copy-Item (Join-Path $playerBundle $file) $stage
 }

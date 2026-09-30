@@ -61,7 +61,21 @@ Write-Host "==> Building the binary (using $go)" -ForegroundColor Cyan
 Push-Location $root
 try {
     $env:CGO_ENABLED = '0'
-    & $go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=$Version" -o theia-server.exe ./cmd/theia-server
+    # Keep the official-release TMDB contract in local candidates too. Read
+    # only the key, never unrelated local config overrides, and never print it.
+    $taskTMDBKey = $env:TMDB_API_KEY
+    $taskLocalConfig = Join-Path $root 'config.local.json'
+    if (-not $taskTMDBKey -and (Test-Path -LiteralPath $taskLocalConfig)) {
+        $taskTMDBKey = (Get-Content -LiteralPath $taskLocalConfig -Raw | ConvertFrom-Json).tmdb_api_key
+    }
+    $taskLinkFlags = "-s -w -X main.version=$Version"
+    if ($taskTMDBKey) {
+        $taskLinkFlags += " -X main.tmdbAPIKey=$taskTMDBKey"
+        Write-Host '==> TMDB configured for this build'
+    } else {
+        Write-Warning 'No TMDB key: this local build can only use cached metadata and artwork.'
+    }
+    & $go build -buildvcs=false -trimpath -ldflags $taskLinkFlags -o theia-server.exe ./cmd/theia-server
     if ($LASTEXITCODE -ne 0) { throw 'go build failed' }
 }
 finally {

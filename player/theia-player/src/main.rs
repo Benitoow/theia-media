@@ -21,6 +21,7 @@
 //!                                 window's declared minimum (open risk 6 in
 //!                                 docs/v3.3.md); it changes nothing else.
 
+mod capabilities;
 mod connection;
 mod device_state;
 mod mpv;
@@ -433,7 +434,10 @@ fn client_snapshot() -> Result<server::Client, String> {
 
 #[derive(Clone, Copy)]
 enum Playing {
-    Movie(i64),
+    Movie {
+        id: i64,
+        file: i64,
+    },
     /// The episode playing, and the one the server says follows it.
     ///
     /// The next id travels with the id of what is playing rather than in a
@@ -1145,6 +1149,11 @@ fn player_status() -> String {
         "audioMode": session.audio.code(),
         "audioReason": session.audio_reason,
         "videoCodec": text("video-format"),
+        "videoWidth": integer("video-params/w"),
+        "videoHeight": integer("video-params/h"),
+        "sourceTransfer": text("video-params/gamma"),
+        "outputTransfer": text("video-target-params/gamma"),
+        "outputPrimaries": text("video-target-params/primaries"),
         "startAt": session.start_at,
         "aid": integer("aid"),
         "sid": integer("sid"),
@@ -1477,9 +1486,8 @@ fn player_tracks() -> Result<String, String> {
 /// Which file of which record mpv is holding.
 ///
 /// Both ids are needed to build a stream address, and both come from one
-/// request: the server decides which file is primary, so asking it again is what
-/// keeps a rung change on the file that is actually playing rather than on
-/// whichever one a list happened to put first.
+/// request for episodes. Films retain the viewer's selected file, so quality
+/// changes and converted-stream seeks cannot silently return to the primary.
 struct Playable {
     movie: Option<i64>,
     episode: Option<i64>,
@@ -1490,20 +1498,11 @@ fn current_playable() -> Result<Playable, String> {
     let media = *CURRENT_MEDIA.lock().unwrap();
     let client = client_snapshot()?;
     match media {
-        Some(Playing::Movie(id)) => {
-            let movie = client.movie(id)?;
-            let file = movie
-                .files
-                .iter()
-                .find(|f| f.is_primary)
-                .or_else(|| movie.files.first())
-                .ok_or("this film has no playable file")?;
-            Ok(Playable {
-                movie: Some(id),
-                episode: None,
-                file: file.id,
-            })
-        }
+        Some(Playing::Movie { id, file }) => Ok(Playable {
+            movie: Some(id),
+            episode: None,
+            file,
+        }),
         Some(Playing::Episode { id, .. }) => {
             let episode = client.episode(id)?;
             let file = episode
@@ -2000,21 +1999,34 @@ fn start_session_playback(
 /// range requests, buffering and seeking better than anything written here.
 fn play_movie(id: i64) -> Result<String, String> {
     let request = PLAYBACK_REQUEST.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
-    play_movie_request(id, request)
+    play_movie_request(id, None, request)
 }
-fn play_movie_request(id: i64, request: u64) -> Result<String, String> {
+fn play_movie_request(id: i64, file_id: Option<i64>, request: u64) -> Result<String, String> {
     save_progress();
-    let (url, movie_id, title, resume_at, sidecars, original_language, playback_client) = {
+    let (
+        url,
+        movie_id,
+        selected_file,
+        title,
+        resume_at,
+        sidecars,
+        original_language,
+        playback_client,
+    ) = {
         let client = client_snapshot()?;
         // The list does not carry files; the detail does. One extra request is
         // the price of not shipping every file of every film to draw a row.
         let movie = client.movie(id)?;
-        let file = movie
-            .files
-            .iter()
-            .find(|f| f.is_primary)
-            .or_else(|| movie.files.first())
-            .ok_or("this film has no playable file")?;
+        let file = if let Some(file_id) = file_id {
+            movie.files.iter().find(|file| file.id == file_id)
+        } else {
+            movie
+                .files
+                .iter()
+                .find(|file| file.is_primary)
+                .or_else(|| movie.files.first())
+        }
+        .ok_or("this film has no such playable file")?;
         // The same rule the web player applies, so a film started in one is
         // resumed by the other: anything part-watched and not finished.
         let resume_at = if movie.progress.finished {
@@ -2035,6 +2047,7 @@ fn play_movie_request(id: i64, request: u64) -> Result<String, String> {
         (
             client.stream_url(movie.id, file.id, None, resume_at),
             movie.id,
+            file.id,
             if movie.metadata.title.is_empty() {
                 movie.title.clone()
             } else {
@@ -2058,10 +2071,19 @@ fn play_movie_request(id: i64, request: u64) -> Result<String, String> {
         resume_at,
         sidecars,
         original_language,
-        Some((Playing::Movie(movie_id), playback_client)),
+        Some((
+            Playing::Movie {
+                id: movie_id,
+                file: selected_file,
+            },
+            playback_client,
+        )),
         request,
     )?;
-    *CURRENT_MEDIA.lock().unwrap() = Some(Playing::Movie(movie_id));
+    *CURRENT_MEDIA.lock().unwrap() = Some(Playing::Movie {
+        id: movie_id,
+        file: selected_file,
+    });
     Ok(url)
 }
 
@@ -2384,9 +2406,9 @@ async fn player_season(series_id: i64, season_number: i32) -> Result<String, Str
 }
 
 #[tauri::command]
-async fn player_play(id: i64) -> Result<String, String> {
+async fn player_play(id: i64, file_id: Option<i64>) -> Result<String, String> {
     let request = PLAYBACK_REQUEST.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
-    tauri::async_runtime::spawn_blocking(move || play_movie_request(id, request))
+    tauri::async_runtime::spawn_blocking(move || play_movie_request(id, file_id, request))
         .await
         .map_err(|e| e.to_string())?
 }
@@ -2397,6 +2419,47 @@ async fn player_play_episode(id: i64) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || play_episode_request(id, request))
         .await
         .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn player_episode_detail(id: i64) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        serde_json::to_string(&client_snapshot()?.episode(id)?).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn player_inspect_file(kind: String, id: i64, file_id: i64) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        serde_json::to_string(&client_snapshot()?.inspect_file(&kind, id, file_id)?)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn player_display_capabilities(
+    window: tauri::WebviewWindow,
+    codec: String,
+    width: u32,
+    height: u32,
+) -> Result<String, String> {
+    #[cfg(windows)]
+    let hwnd = window.hwnd().map_err(|e| e.to_string())?.0 as isize;
+    #[cfg(not(windows))]
+    let hwnd = {
+        let _ = window;
+        0
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        serde_json::to_string(&capabilities::probe(hwnd, &codec, width, height))
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// One line from the interface into the player's own output.
@@ -2450,6 +2513,11 @@ fn clean_diagnostic(status: &serde_json::Value) -> serde_json::Value {
         "hwdec",
         "audioMode",
         "videoCodec",
+        "videoWidth",
+        "videoHeight",
+        "sourceTransfer",
+        "outputTransfer",
+        "outputPrimaries",
         "volume",
         "mute",
         "quality",
@@ -2536,7 +2604,7 @@ fn save_progress() {
         return;
     }
     let (episode, id) = match media {
-        Playing::Movie(id) => (false, id),
+        Playing::Movie { id, .. } => (false, id),
         Playing::Episode { id, .. } => (true, id),
     };
     progress_queue::enqueue(&client, episode, id, position, duration);
@@ -2790,6 +2858,52 @@ fn main() {
     // just the first page - which means the panel's data path can be checked
     // without a click, and without a window appearing on somebody's screen.
     if let Some(url) = flag("--server") {
+        if let Some(file_id) = flag("--inspect-file") {
+            let result = (|| {
+                let kind = flag("--kind").ok_or("--kind is required")?;
+                let id = flag("--id")
+                    .ok_or("--id is required")?
+                    .parse::<i64>()
+                    .map_err(|_| "invalid --id")?;
+                let file_id = file_id
+                    .parse::<i64>()
+                    .map_err(|_| "invalid --inspect-file")?;
+                connect_to(&url).map_err(|e| e.to_string())?;
+                tauri::async_runtime::block_on(player_inspect_file(kind, id, file_id))
+            })();
+            match result {
+                Ok(json) => println!("{json}"),
+                Err(error) => {
+                    eprintln!("theia-player: {error}");
+                    std::process::exit(1);
+                }
+            }
+            return;
+        }
+        let detail = flag("--detail")
+            .map(|id| ("movie", id))
+            .or_else(|| flag("--show-detail").map(|id| ("series", id)))
+            .or_else(|| flag("--episode-detail").map(|id| ("episode", id)));
+        if let Some((kind, id)) = detail {
+            let result = id.parse::<i64>().map_err(|e| e.to_string()).and_then(|id| {
+                connect_to(&url).map_err(|e| e.to_string())?;
+                tauri::async_runtime::block_on(async {
+                    match kind {
+                        "movie" => player_movie_detail(id).await,
+                        "series" => player_series_detail(id).await,
+                        _ => player_episode_detail(id).await,
+                    }
+                })
+            });
+            match result {
+                Ok(json) => println!("{json}"),
+                Err(error) => {
+                    eprintln!("theia-player: {error}");
+                    std::process::exit(1);
+                }
+            }
+            return;
+        }
         if std::env::args().any(|a| a == "--list") {
             let limit = flag("--limit").and_then(|n| n.parse::<u32>().ok());
             match connect_to(&url)
@@ -2806,6 +2920,17 @@ fn main() {
         }
     }
 
+    if std::env::args().any(|arg| arg == "--capabilities") {
+        let codec = flag("--codec").unwrap_or_else(|| "hevc".to_string());
+        let (width, height) = flag("--window")
+            .and_then(|value| parse_window_size(&value))
+            .unwrap_or((3840, 2160));
+        println!(
+            "{}",
+            serde_json::to_string(&capabilities::probe(0, &codec, width, height)).unwrap()
+        );
+        return;
+    }
     let media = flag("--media").filter(|p| std::path::Path::new(p).is_file());
     // The verification path for the window's declared minimum: a size in real
     // pixels, applied through Tauri's own API, and the measurement written to a
@@ -2857,6 +2982,9 @@ fn main() {
             player_update_apply,
             player_library,
             player_movie_detail,
+            player_episode_detail,
+            player_inspect_file,
+            player_display_capabilities,
             player_series,
             player_home,
             player_series_home,

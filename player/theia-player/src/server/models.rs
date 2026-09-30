@@ -140,6 +140,8 @@ pub struct Movie {
     #[serde(default)]
     pub files: Vec<MovieFile>,
     #[serde(default)]
+    pub collection_parts: Vec<Movie>,
+    #[serde(default)]
     pub progress: Progress,
     /// The artwork, already resolved against the server this client is talking
     /// to. The OSD draws them; it does not build URLs, and it cannot know which
@@ -183,6 +185,26 @@ pub struct Series {
 
 #[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
 pub struct SeriesMetadata {
+    #[serde(default)]
+    pub original_name: String,
+    #[serde(default)]
+    pub last_air_date: String,
+    #[serde(default)]
+    pub air_status: String,
+    #[serde(default)]
+    pub genres: Vec<String>,
+    #[serde(default)]
+    pub cast: Vec<Credit>,
+    #[serde(default)]
+    pub creators: Vec<String>,
+    #[serde(default)]
+    pub networks: Vec<String>,
+    #[serde(default)]
+    pub vote_average: f64,
+    #[serde(default)]
+    pub certification: String,
+    #[serde(default)]
+    pub certification_country: String,
     #[serde(default)]
     pub original_language: String,
     #[serde(
@@ -350,12 +372,20 @@ pub struct EpisodeFile {
     pub file_name: String,
     #[serde(default)]
     pub is_primary: bool,
+    #[serde(default)]
+    pub media: serde_json::Value,
+    #[serde(default)]
+    pub size_bytes: u64,
 }
 
 /// The two TMDB paths a card can be drawn from, exactly as the server stores
 /// them - a leading slash and no host.
 #[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
 pub struct Metadata {
+    #[serde(default)]
+    pub crew: Vec<Credit>,
+    #[serde(default)]
+    pub collection: Option<serde_json::Value>,
     #[serde(
         default,
         rename(deserialize = "tmdb_title", serialize = "title"),
@@ -411,6 +441,12 @@ pub struct Credit {
     pub name: String,
     #[serde(default)]
     pub character: String,
+    #[serde(default)]
+    pub role: String,
+    #[serde(default)]
+    pub profile_path: String,
+    #[serde(default)]
+    pub profile_url: String,
 }
 
 /// What the server says about a card preview.
@@ -437,6 +473,10 @@ pub struct MovieFile {
     pub file_name: String,
     #[serde(default)]
     pub is_primary: bool,
+    #[serde(default)]
+    pub media: serde_json::Value,
+    #[serde(default)]
+    pub size_bytes: u64,
 }
 
 #[derive(Clone, Default, serde::Deserialize, serde::Serialize)]
@@ -471,6 +511,12 @@ impl Movie {
         self.backdrop_url = image_url(base, &self.metadata.backdrop_path, "w780");
         self.hero_url = image_url(base, &self.metadata.backdrop_path, "original");
         self.poster_url = image_url(base, &self.metadata.poster_path, "w500");
+        for credit in &mut self.metadata.cast {
+            credit.profile_url = image_url(base, &credit.profile_path, "w185");
+        }
+        for movie in &mut self.collection_parts {
+            movie.resolve_artwork(base);
+        }
     }
 }
 
@@ -481,6 +527,9 @@ impl Series {
         self.backdrop_url = image_url(base, &self.metadata.backdrop_path, "w780");
         self.hero_url = image_url(base, &self.metadata.backdrop_path, "original");
         self.poster_url = image_url(base, &self.metadata.poster_path, "w500");
+        for credit in &mut self.metadata.cast {
+            credit.profile_url = image_url(base, &credit.profile_path, "w185");
+        }
         if let Some(episode) = self.resume_episode.as_mut() {
             episode.resolve_artwork(base);
         }

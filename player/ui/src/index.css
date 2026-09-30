@@ -1,3 +1,4 @@
+@import "./media-detail.css";
 @import 'tailwindcss';
 @import '../../../web/src/lib/tokens.css';
 @import '../../../web/src/lib/fonts.css';

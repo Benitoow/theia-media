@@ -10,6 +10,21 @@ export type Progress = {
  * server's record: the player parses what a screen actually says, never the
  * whole API - a mirror of it would be a second copy to keep in step.
  */
+export type CastCredit = { name: string; character?: string; profile_path?: string; profile_url?: string; role?: string };
+export type FileMedia = {
+	status: string;
+	container?: string;
+	duration_seconds?: number;
+	video?: { codec: string; width?: number; height?: number; color_transfer?: string; dolby_vision?: boolean; frame_rate?: number };
+	audio_tracks?: Array<{ codec: string; channels?: string; profile?: string; is_default?: boolean; language?: string }>;
+};
+export type MediaFile = { id: number; file_name?: string; size_bytes?: number; is_primary?: boolean; media?: FileMedia };
+export type DisplayCapabilities = {
+	source: string; adapter?: string | null; displayWidth?: number | null; displayHeight?: number | null;
+	hdrEnabled?: boolean | null; hardwareDecode?: boolean | null;
+	decoderProfiles?: string[]; reason?: string | null;
+};
+
 export type MovieMetadata = {
 	title?: string;
 	tmdb_title?: string;
@@ -23,7 +38,9 @@ export type MovieMetadata = {
 	runtime_minutes?: number;
 	vote_average?: number;
 	director?: string;
-	cast?: { name: string; character?: string }[];
+	cast?: CastCredit[];
+	crew?: CastCredit[];
+	collection?: { name?: string };
 	certification?: string;
 	certification_country?: string;
 	backdrop_path?: string;
@@ -42,6 +59,8 @@ export type Movie = {
 	hero_url?: string;
 	poster_url?: string;
 	progress?: Progress;
+	files?: MediaFile[];
+	collection_parts?: Movie[];
 };
 
 export type Series = {
@@ -49,6 +68,16 @@ export type Series = {
 	title: string;
 	year?: number;
 	metadata?: {
+		original_name?: string;
+		last_air_date?: string;
+		air_status?: string;
+		genres?: string[];
+		cast?: CastCredit[];
+		creators?: string[];
+		networks?: string[];
+		vote_average?: number;
+		certification?: string;
+		certification_country?: string;
 		name?: string;
 		tmdb_title?: string;
 		tmdb_name?: string;
@@ -93,6 +122,7 @@ export type Episode = {
 	still_url?: string;
 	hero_url?: string;
 	progress?: Progress;
+	files?: MediaFile[];
 };
 
 /** One short row of the home screen; `kind` is the server's word for it. */

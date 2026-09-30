@@ -609,16 +609,16 @@ export default function App() {
             if (selectedSeries && selectedSeason) { const [detail, season] = await Promise.all([invoke<string>('player_series_detail', { id: selectedSeries.id }), invoke<string>('player_season', { seriesId: selectedSeries.id, seasonNumber: selectedSeason.season_number })]); if (generation === detailGeneration.current) { setSelectedSeries(JSON.parse(detail)); setSelectedSeason(JSON.parse(season)); } }
         } catch { setErrorKey('historyFailed'); } finally { setHistoryBusy(false); }
     };
-	const startPlayback = async (command: 'player_play' | 'player_play_episode', id: number, failure: string) => {
+	const startPlayback = async (command: 'player_play' | 'player_play_episode', id: number, failure: string, fileId?: number) => {
 		clearNotice();
 		try {
 			await invoke('player_set_playback', { prefs: JSON.stringify(preferences.playback) }).catch(() => {});
-			await invoke(command, { id });
+			await invoke(command, { id, ...(fileId !== undefined ? { fileId } : {}) });
 		} catch {
 			setErrorKey(failure);
 		}
 	};
-	const playMovie = (id: number) => startPlayback('player_play', id, 'playFailed');
+	const playMovie = (id: number, fileId?: number) => startPlayback('player_play', id, 'playFailed', fileId);
 	const playEpisode = (id: number) => startPlayback('player_play_episode', id, 'episodeFailed');
 	const openMovie = async (id: number) => {
         const generation = ++detailGeneration.current;

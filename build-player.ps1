@@ -18,6 +18,8 @@
 param(
     [switch]$Release,
     [switch]$Bundle,
+    [ValidatePattern('^[a-z0-9][a-z0-9-]{3,80}$')]
+    [string]$BundleName,
     [string]$Version,
     [ValidateSet('amd64', 'arm64')]
     [string]$Architecture = $(if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'amd64' })
@@ -133,12 +135,25 @@ if (-not $go) {
 }
 if (-not $go) { throw 'Go was not found, and the bundling step needs it to fetch and verify the engine.' }
 
-$bundleDir = Join-Path $root "dist\theia-player-windows-$Architecture"
+$taskBundleName = if ($BundleName) { $BundleName } else { "theia-player-windows-$Architecture" }
+$taskDistRoot = [IO.Path]::GetFullPath((Join-Path $root 'dist'))
+$bundleDir = [IO.Path]::GetFullPath((Join-Path $taskDistRoot $taskBundleName))
+if (-not $bundleDir.StartsWith($taskDistRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'The bundle directory must stay inside this workspace dist directory.'
+}
 # Not `$bundle`: PowerShell compares variable names case-insensitively, so
 # `$bundle` *is* the -Bundle switch, and assigning a path to it fails with a
 # message about converting a string into a switch. The first version of this did
 # exactly that.
-if (Test-Path $bundleDir) { Remove-Item -Recurse -Force $bundleDir }
+if (Test-Path -LiteralPath $bundleDir) {
+    # Refuse before removing ANY component of an active bundle. A release
+    # preview may still be open while another candidate is being compiled.
+    $taskRunningPlayers = Get-Process -Name theia-player -ErrorAction SilentlyContinue
+    if ($taskRunningPlayers | Where-Object { $_.Path -and $_.Path.StartsWith($bundleDir + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) }) {
+        throw 'This bundle is running. Close it or build to a different -BundleName.'
+    }
+    Remove-Item -LiteralPath $bundleDir -Recurse -Force
+}
 New-Item -ItemType Directory -Force -Path $bundleDir | Out-Null
 
 Push-Location $root
@@ -155,11 +170,11 @@ Copy-Item $exe (Join-Path $bundleDir 'theia-player.exe')
 Copy-Item (Join-Path $root 'player\LICENSE-libmpv.txt') $bundleDir
 Copy-Item (Join-Path $root 'player\NOTICE.md') $bundleDir
 
-$archive = Join-Path $root "dist\theia-player-windows-$Architecture.zip"
+$archive = Join-Path $taskDistRoot "$taskBundleName.zip"
 if (Test-Path $archive) { Remove-Item -Force $archive }
 Compress-Archive -Path (Join-Path $bundleDir '*') -DestinationPath $archive
 
 $total = [math]::Round(((Get-ChildItem $bundleDir -File | Measure-Object -Property Length -Sum).Sum) / 1MB, 1)
 $zipped = [math]::Round((Get-Item $archive).Length / 1MB, 1)
-Write-Host "==> theia-player-windows-$Architecture ready ($total MB, $zipped MB zipped)" -ForegroundColor Green
+Write-Host "==> $taskBundleName ready ($total MB, $zipped MB zipped)" -ForegroundColor Green
 Get-ChildItem $bundleDir | ForEach-Object { Write-Host ("    {0} ({1:N1} MB)" -f $_.Name, ($_.Length / 1MB)) }

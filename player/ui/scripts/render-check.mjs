@@ -152,9 +152,10 @@ const MOVIES = [
 		// The synopsis the preview shows, and the reason the second film has
 		// none: a preview that invents one is worse than a preview that says
 		// less, so both paths are exercised.
-		metadata: { backdrop_path: '/probe-backdrop.jpg', overview: 'A probe film about probes, long enough to be clamped by the frame it is drawn in.', original_title: 'Probe Original', director: 'A. Director', cast: [{ name: 'A. Actor', character: 'The Probe' }], certification: 'PG-13' },
+		metadata: { backdrop_path: '/probe-backdrop.jpg', overview: 'A probe film about probes, long enough to be clamped by the frame it is drawn in.', original_title: 'Probe Original', director: 'A. Director', cast: [{ name: 'A. Actor', character: 'The Probe', profile_url: '/api/images/w185/actor.jpg' }], crew: [{name:'Probe Writer',role:'writing'}], certification: 'PG-13' },
 		backdrop_url: '/api/images/w780/probe-backdrop.jpg',
 		poster_url: '/api/images/w500/probe-poster.jpg',
+		files: [{id:11,file_name:'Probe HD.mkv',is_primary:true,media:{status:'ok',video:{codec:'h264',width:1920,height:804},audio_tracks:[]}},{id:12,file_name:'Probe UHD.mkv',media:{status:'ok',video:{codec:'hevc',width:3840,height:1604,color_transfer:'smpte2084',dolby_vision:true},audio_tracks:[]}}],
 		progress: { position_seconds: 0, duration_seconds: 600, finished: false },
 	},
 	{
@@ -199,7 +200,7 @@ const SERIES = [
 		id: 9,
 		title: 'Shogun',
 		year: 2024,
-		metadata: { name: 'Shōgun', backdrop_path: '/shogun.jpg' },
+		metadata: { name: 'Shōgun', backdrop_path: '/shogun.jpg', overview: 'A series about a sailor.', original_name: 'Original Show', creators: ['Show Creator'], networks: ['Network'], cast: [{name: 'Series Actor', character: 'Navigator', profile_url: '/api/images/w185/series-actor.jpg'}], genres: ['Drama'], air_status: 'ended', first_air_date: '2024-01-01', last_air_date: '2025-01-01' },
 		backdrop_url: '/api/images/w780/shogun.jpg',
 		poster_url: '/api/images/w500/shogun-poster.jpg',
 	},
@@ -269,7 +270,8 @@ const SERIES_HOME = {
 	recent_series: [SERIES[0]],
 };
 
-const CLOSEOUT_ONLY = process.argv.includes('--closeout-only');
+const REAL_DETAILS_ONLY = process.argv.includes('--real-details-only');
+const CLOSEOUT_ONLY = process.argv.includes('--closeout-only') || REAL_DETAILS_ONLY;
 const browser = await chromium.launch();
 let failures = 0;
 
@@ -2144,7 +2146,11 @@ async function openPage(
 						if (cmd === 'player_series_home') return JSON.stringify(window.__seriesHome ?? seriesHome);
 						if (cmd === 'player_preview') return JSON.stringify(window.__previewAnswers?.shift() ?? preview);
 						if (cmd === 'player_series_detail') return JSON.stringify(window.__seriesDetail ?? seriesDetail);
-						if (cmd === 'player_movie_detail') return JSON.stringify(movies.find((movie) => movie.id === Number(args?.id)));
+						if (cmd === 'player_movie_detail') return JSON.stringify(window.__movieDetail ?? movies.find((movie) => movie.id === Number(args?.id)));
+						if (cmd === 'player_display_capabilities') return JSON.stringify(window.__capabilities ?? {source:'mock-windows-dxgi-d3d11',adapter:'Fixture GPU',displayWidth:2560,displayHeight:1600,hdrEnabled:false,hardwareDecode:true,decoderProfiles:['HEVC Main 10-bit']});
+						if (cmd === 'player_inspect_file') return JSON.stringify(window.__inspectionResult ?? {id:args.fileId,media:{status:'ok',video:{codec:'hevc',width:3840,height:2160,color_transfer:'smpte2084'},audio_tracks:[]}});
+						if (cmd === 'player_episode_detail' && window.__realEpisode) return JSON.stringify(window.__realEpisode);
+						if (cmd === 'player_episode_detail') return JSON.stringify({...season.episodes.find(episode=>episode.id===Number(args?.id)),files:[{id:51,is_primary:true,media:{status:'ok',video:{codec:'h264',width:1920,height:1080},audio_tracks:[]}}]});
 						if (cmd === 'player_season') return JSON.stringify(window.__season ?? season);
 						if (cmd === 'player_discover') return JSON.stringify(discovered);
 						if (cmd === 'player_set_profile') return null;
@@ -2348,7 +2354,7 @@ async function assertEpisodeResumeSurfaces() {
 	await page.locator('.film').first().click();
 	await page.locator('.season-tab--active').waitFor({ state: 'visible' });
 	const seasonCalls = await page.evaluate(() => (window.__invocations ?? []).filter((call) => call.cmd === 'player_season'));
-	if (seasonCalls.at(-1)?.args?.seasonNumber !== 2 || !(await page.locator('.home-hero').innerText()).includes('S02E01')) {
+	if (seasonCalls.at(-1)?.args?.seasonNumber !== 2 || !(await page.locator('.series-detail').innerText()).includes('S02E01')) {
 		console.error('opening a series did not select its interrupted episode and season');
 		failures++;
 	}
@@ -2368,7 +2374,7 @@ async function assertEpisodeResumeSurfaces() {
 	await page.locator('.control--back').waitFor({ state: 'visible' });
 	await page.locator('.control--back').click();
 	await page.waitForFunction(() => document.querySelector('.film-legend')?.textContent?.includes('20 min'));
-	hero = await page.locator('.home-hero').innerText();
+	hero = await page.locator('.series-detail').innerText();
 	if (!hero.toLowerCase().includes('20 min')) {
 		console.error(`returning from the episode kept the old hero progress: ${JSON.stringify(hero)}`);
 		failures++;
@@ -3742,6 +3748,65 @@ async function closeoutCase(name, run) {
  finally {await page.close();}
 }
 const connectCloseout = async(page)=> {await page.fill('#theia-address','http://127.0.0.1:8395');await page.click('button[type=submit]');await page.locator('.home-hero').waitFor();};
+// Mocked driver modes exercise the copy contract; native CLI measures the host separately.
+if (!REAL_DETAILS_ONLY) {
+for (const width of [390, 969, 1920]) {
+ await closeoutCase('film/show details at '+width+'px', async(page)=> {
+  await page.setViewportSize({width,height:780}); await connectCloseout(page);
+  await page.getByRole('button',{name:'Movies',exact:true}).click(); await page.getByRole('button',{name:/Open movie details.*Probe Film/}).click();
+  await page.locator('.movie-detail').waitFor(); await page.locator('.detail-files').waitFor();
+  if(await page.locator('h1').count()!==1)throw Error('duplicate detail heading');
+  if(!(await page.locator('.movie-detail').innerText()).includes('Probe Writer'))throw Error('crew missing');
+  if(await page.locator('.detail-portrait img').count()!==1)throw Error('cast portrait missing');
+  await page.getByRole('radio').nth(1).check();
+  await page.waitForFunction(()=>document.querySelector('.native-compatibility')?.textContent?.includes('3840 × 1604'));
+  const panel=await page.locator('.native-compatibility').innerText();
+  if(!panel.includes(catalogues.en.sdrOutput)||!panel.includes(catalogues.en.hdrToneMapDetail))throw Error('HDR source claimed native HDR on SDR output');
+  await assertFits(page,'film detail '+width); await page.locator('.library').evaluate(el=>el.scrollTop=0); await page.screenshot({path:join(OUT,'detail-film-'+width+'.png')});
+  await page.evaluate(()=>{window.__capabilities={source:'mock',displayWidth:3840,displayHeight:2160,hdrEnabled:true,hardwareDecode:true,decoderProfiles:['HEVC Main 10-bit']};});
+  await page.getByRole('button',{name:catalogues.en.refreshCapabilities,exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('.native-compatibility')?.textContent?.includes('HDR mode active'));
+  await page.getByRole('button',{name:catalogues.en.playMovie,exact:true}).click();
+  const played=await page.evaluate(()=>window.__invocations.filter(c=>c.cmd==='player_play').at(-1));
+  if(played?.args?.fileId!==12)throw Error('selected UHD file not passed to Rust');
+  await page.getByRole('button',{name:'Series',exact:true}).click();await page.getByRole('button',{name:/Open series.*Shōgun/}).click();
+  await page.locator('.series-detail').waitFor();
+  const show=await page.locator('.series-detail').innerText();
+  if(!show.includes('A series about a sailor.')||!show.includes('Series Actor')||!show.includes('Show Creator')||!show.includes('2024 – 2025'))throw Error('series TMDB record incomplete');
+  await assertFits(page,'series detail '+width);await page.locator('.library').evaluate(el=>el.scrollTop=0);await page.screenshot({path:join(OUT,'detail-series-'+width+'.png')});
+  await page.evaluate(()=>{window.__failCommands=['player_display_capabilities'];});
+  await page.getByRole('button',{name:'Movies',exact:true}).click();await page.getByRole('button',{name:/Open movie details.*Probe Film/}).click();
+  await page.getByRole('radio').nth(1).check();await page.waitForTimeout(250);
+  if((await page.locator('.native-compatibility').innerText()).includes(catalogues.en.hdrEnabled))throw Error('failed preflight inherited HDR verdict');
+ });
+}
+await closeoutCase('explicit inspection, retry and late response isolation', async(page)=> {
+ await page.evaluate((movie)=>{window.__movieDetail={...movie,files:[{id:11,is_primary:true,file_name:'Pending file',media:{status:'pending'}}]};},MOVIES[0]);
+ await connectCloseout(page);await page.getByRole('button',{name:'Movies',exact:true}).click();await page.getByRole('button',{name:/Open movie details.*Probe Film/}).click();
+ await page.getByRole('button',{name:catalogues.en.inspectFile,exact:true}).waitFor();
+ await page.evaluate(()=>{window.__failCommands=['player_inspect_file'];});
+ await page.getByRole('button',{name:catalogues.en.inspectFile,exact:true}).click();
+ await page.getByRole('alert').filter({hasText:catalogues.en.inspectionFailed}).waitFor();
+ if((await page.locator('.native-compatibility').innerText()).includes('3840 × 2160'))throw Error('failed inspection invented measured characteristics');
+ await page.evaluate(()=>{window.__failCommands=[];window.__delays={player_inspect_file:350};});
+ await page.getByRole('button',{name:catalogues.en.inspectFile,exact:true}).click();
+ if(!await page.getByRole('button',{name:catalogues.en.inspectingFile,exact:true}).isDisabled())throw Error('duplicate inspection possible');
+ await page.waitForFunction(()=>document.querySelector('.native-compatibility')?.textContent?.includes('3840 × 2160'));
+ const call=await page.evaluate(()=>window.__invocations.filter(call=>call.cmd==='player_inspect_file').at(-1));
+ if(call?.args?.kind!=='movie'||call.args.id!==MOVIES[0].id||call.args.fileId!==11)throw Error('inspection targeted wrong file');
+ await page.getByRole('button',{name:'Series',exact:true}).click();await page.getByRole('button',{name:/Open series.*Shōgun/}).click();
+ await page.evaluate(()=>{window.__delays={player_inspect_file:800};window.__realEpisode={id:11,files:[{id:51,is_primary:true,media:{status:'pending'}}]};});
+ await page.getByRole('button',{name:'Movies',exact:true}).click();await page.getByRole('button',{name:/Open movie details.*Probe Film/}).click();
+ await page.getByRole('button',{name:catalogues.en.inspectFile,exact:true}).click();
+ await page.getByRole('button',{name:'Series',exact:true}).click();await page.getByRole('button',{name:/Open series.*Shōgun/}).click();
+ await page.locator('.series-detail').waitFor();await page.getByRole('button',{name:catalogues.en.inspectFile,exact:true}).waitFor();await page.waitForTimeout(1000);
+ if(await page.locator('.movie-detail').count())throw Error('late inspection reopened movie');
+ if((await page.locator('.native-compatibility').innerText()).includes('3840 × 2160'))throw Error('film result contaminated episode');
+ await page.getByRole('button',{name:catalogues.en.inspectFile,exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('.native-compatibility')?.textContent?.includes('3840 × 2160'));
+ const episodeCall=await page.evaluate(()=>window.__invocations.filter(call=>call.cmd==='player_inspect_file').at(-1));
+ if(episodeCall?.args?.kind!=='episode'||episodeCall.args.fileId!==51)throw Error('episode inspection used film route');
+});
 await closeoutCase('cancel discards late connection', async(page)=> {
  await page.evaluate(()=>{window.__delays={player_connect:1200};});
  await page.fill('#theia-address','http://bad.test:8395');await page.click('button[type=submit]');
@@ -3839,6 +3904,35 @@ await closeoutCase('local fixture responsiveness and lazy settings',async(page)=
   await page.locator('.home-hero').waitFor({timeout:20000});
   console.log('closeout: initially offline saved server reconnects passed');
  }catch(error){console.error('closeout: saved reconnect: '+error.message);failures++;}finally{await page.close();}
+}
+
+}
+
+// Optional real-library payloads from the packaged native CLI. The bridge is
+// still mocked; artwork is fetched from the running server's actual cache.
+const realDetailsArg = process.argv.indexOf('--real-details');
+if (realDetailsArg >= 0) {
+ const data = JSON.parse(readFileSync(process.argv[realDetailsArg + 1], 'utf8').replace(/^\uFEFF/, ''));
+ const page = await openPage({width:969,height:780},{movies:[data.movie],series:[data.series],seriesDetail:data.series,season:data.season});
+ try {
+  await page.unroute('**/api/images/**');
+  await page.evaluate(({episode,capabilities})=>{window.__realEpisode=episode;window.__capabilities=capabilities;},data);
+  await connectCloseout(page);await page.getByRole('button',{name:'Movies',exact:true}).click();await page.locator('.contents .film').filter({hasText:data.movie.metadata.tmdb_title||data.movie.metadata.title||data.movie.title}).click();
+  await page.locator('.movie-detail').waitFor();
+  await page.waitForFunction(()=>Array.from(document.querySelectorAll('.detail-poster img,.detail-backdrop img')).length===2&&Array.from(document.querySelectorAll('.detail-poster img,.detail-backdrop img')).every(img=>img.complete&&img.naturalWidth>0));
+  if(!(await page.locator('.movie-detail').innerText()).includes(data.movie.metadata.overview))throw Error('real film synopsis lost');
+  await page.locator('.detail-portrait img').first().scrollIntoViewIfNeeded();await page.waitForFunction(()=>document.querySelector('.detail-portrait img')?.naturalWidth>0);
+  await page.locator('.library').evaluate(el=>el.scrollTop=0);await page.screenshot({path:join(OUT,'real-film-detail.png')});
+  const moviePanel=await page.locator('.native-compatibility').innerText();
+  if(!moviePanel.includes(String(data.movie.files[0].media.video.width)))throw Error('real measured file lost');
+  await page.getByRole('button',{name:'Series',exact:true}).click();await page.locator('.contents .film').filter({hasText:data.series.metadata.tmdb_name||data.series.metadata.name||data.series.title}).click();await page.locator('.series-detail').waitFor();
+  await page.waitForFunction(()=>Array.from(document.querySelectorAll('.detail-poster img,.detail-backdrop img')).length===2&&Array.from(document.querySelectorAll('.detail-poster img,.detail-backdrop img')).every(img=>img.complete&&img.naturalWidth>0));
+  if(!(await page.locator('.series-detail').innerText()).includes(data.series.metadata.overview))throw Error('real series synopsis lost');
+  await page.locator('.detail-portrait img').first().scrollIntoViewIfNeeded();await page.waitForFunction(()=>document.querySelector('.detail-portrait img')?.naturalWidth>0);
+  await page.locator('.library').evaluate(el=>el.scrollTop=0);await page.screenshot({path:join(OUT,'real-series-detail.png')});
+  writeFileSync(join(OUT,'real-detail-render.json'),JSON.stringify({scope:'Headless Chromium with mocked bridge; real native CLI metadata, measured files, primary-monitor driver data and live cached TMDB artwork',movieId:data.movie.id,seriesId:data.series.id,episodeId:data.episode.id,capabilities:data.capabilities,moviePanel},null,2));
+  console.log('real-library film/series details and cached artwork passed');
+ }catch(error){console.error('real-library details: '+error.message);failures++;}finally{await page.close();}
 }
 
 await browser.close();
