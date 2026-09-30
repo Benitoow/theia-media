@@ -188,6 +188,13 @@ the interface in a transparent native EventBox above it through GtkOverlay.
 The capture gate now checks the painted dark control band and light controls,
 as well as the fixture. A fresh package run must pass both checks.
 
+Run 36732462777's GTK overlay capture exposed a stale WebKit startup backing
+store while the DOM already reported playback controls. GPU availability now
+means an accessible `/dev/dri/renderD*` node, rather than directory existence.
+When none exists, the player selects X11 software video and disables WebKit
+GPU/DMABUF compositing, retaining explicit user environment overrides. Native
+software GTK paint and actual film/OSD capture must verify this repair.
+
 Nothing about the OSD, the tracks menu, subtitles or the status telemetry: those
 are platform-independent. Nothing about Windows or macOS: their tables and their
 window handles are unchanged, and the macOS render bridge stays as

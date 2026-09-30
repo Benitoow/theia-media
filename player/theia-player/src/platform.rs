@@ -42,8 +42,14 @@ pub(super) fn platform_options(
 
 /// Whether this machine exposes a DRI device, which is what EGL and Vulkan need
 /// on Linux. Always false elsewhere, where the question does not exist.
-fn dri_present() -> bool {
-    cfg!(not(any(windows, target_os = "macos"))) && std::path::Path::new("/dev/dri").exists()
+pub(super) fn dri_present() -> bool {
+    cfg!(not(any(windows, target_os = "macos"))) &&
+        std::fs::read_dir("/dev/dri").map(|entries| {
+            entries.flatten().any(|entry| {
+                entry.file_name().to_string_lossy().starts_with("renderD") &&
+                    std::fs::OpenOptions::new().read(true).write(true).open(entry.path()).is_ok()
+            })
+        }).unwrap_or(false)
 }
 
 /// The video output Linux is told to use, which is not always the same one.

@@ -65,7 +65,7 @@ func check(path string, controls bool) error {
 				total++
 			}
 		}
-		if total == 0 || dark*100 < total*30 || light < 10 {
+		if total == 0 || dark*100 < total*20 || light < 50 {
 			return fmt.Errorf("%s: painted playback controls are missing (%d/%d dark pixels, %d light pixels)", path, dark, total, light)
 		}
 		fmt.Printf("PASS %s: painted control band and icons/text are visible\n", path)

@@ -2978,6 +2978,18 @@ fn main() {
     if std::env::var_os("GDK_BACKEND").is_none() {
         std::env::set_var("GDK_BACKEND", "x11");
     }
+    #[cfg(not(any(windows, target_os = "macos")))]
+    if !platform::dri_present() {
+        // A stale accelerated WebKit backing store can show the startup page
+        // forever on a software-only X display, while DOM probes see the OSD.
+        // Let WebKit paint through GTK when no accessible render node exists.
+        for name in ["WEBKIT_DISABLE_COMPOSITING_MODE", "WEBKIT_DISABLE_DMABUF_RENDERER"] {
+            if std::env::var_os(name).is_none() {
+                std::env::set_var(name, "1");
+            }
+        }
+        eprintln!("theia-player: no accessible DRI render node; using software video and WebKit painting");
+    }
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             player_status,

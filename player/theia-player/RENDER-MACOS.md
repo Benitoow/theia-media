@@ -285,3 +285,11 @@ initialisation attempted a libmpv output before the host render context existed,
 and reported `No render context set`. Mac now leaves `force-window` off; the
 host canvas supplies the idle surface and the first file opens the VO only
 after renderer attachment. Windows/Linux retain their embedded idle surface.
+
+Run 36732462777's Apple Silicon capture finally shows the generated film and
+the actual title/transport controls together. It advanced 9 to 158 rendered
+frames with the CPU fallback. The initial painted-controls pixel gate rejected
+its more translucent band (27% dark samples, 439 light samples), so its band
+threshold was corrected against this inspected positive capture and the earlier
+Linux negative capture (zero dark/light samples). A new complete run is still
+required before publication; this does not establish hardware decoding/HDR.
