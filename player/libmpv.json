@@ -186,7 +186,11 @@
 				"libuchardet.0.dylib": "libuchardet.0.0.8.dylib",
 				"libz.1.dylib": "libz.1.3.1.dylib"
 			},
-			"rpath": ["@loader_path", "@loader_path/../lib", "@loader_path/../Frameworks"],
+			"rpath": [
+				"@loader_path",
+				"@loader_path/../lib",
+				"@loader_path/../Frameworks"
+			],
 			"install_name": "@rpath/libmpv.2.dylib",
 			"minimum_macos": "11.0",
 			"licence": "LGPL-2.1-or-later",
@@ -215,6 +219,42 @@
 				"the engine's own version string is `mpv v0.41.0-dev-gd97d68da9`, read from `mpv-version` on the runner - the release is *tagged* v0.41.4, and the tag is not the version. The same generation as the Windows pin (v0.41.0-1049), which is why the two platforms can be compared at all",
 				"what the runner could not answer: `hwdec=videotoolbox` was accepted and then refused by the machine - `[ffmpeg/video] h264: Failed setup for format videotoolbox_vld: hwaccel initialisation returned error`, which is what a virtualised runner without GPU-backed VideoToolbox does - and the film fell back to software decoding and played. Hardware decoding therefore needs a Mac, and the OSD over the film needs eyes"
 			]
+		},
+		"linux/amd64": {
+			"provider": "Ubuntu 24.04",
+			"release": "0.37.0-1ubuntu4",
+			"asset": "libmpv2_0.37.0-1ubuntu4_amd64.deb",
+			"url": "https://archive.ubuntu.com/ubuntu/pool/universe/m/mpv/libmpv2_0.37.0-1ubuntu4_amd64.deb",
+			"archive_bytes": 1016404,
+			"archive_sha256": "12ea9d67e291a90cea5b7497f3f9d196643bf2e85ad17cb683e9c7ad18981c00",
+			"archive_library": "usr/lib/x86_64-linux-gnu/libmpv.so.2.2.0",
+			"library": "libmpv.so.2",
+			"library_sha256": "f2aa472878adee5f44419b6cce90ccecc43bf81595ac16dbf223de190cdead0a",
+			"library_bytes": 3009104,
+			"licence": "GPL-3.0-or-later",
+			"licence_file": "LICENSE-libmpv.txt",
+			"source_offer": "https://archive.ubuntu.com/ubuntu/pool/universe/m/mpv/mpv_0.37.0-1ubuntu4.dsc",
+			"mpv_version": "0.37.0",
+			"ffmpeg_version": "6.1 (Ubuntu system libraries)",
+			"status": "candidate; Ubuntu 24.04 X11/XWayland; native installation and film/OSD proof required"
+		},
+		"linux/arm64": {
+			"provider": "Ubuntu 24.04",
+			"release": "0.37.0-1ubuntu4",
+			"asset": "libmpv2_0.37.0-1ubuntu4_arm64.deb",
+			"url": "https://ports.ubuntu.com/ubuntu-ports/pool/universe/m/mpv/libmpv2_0.37.0-1ubuntu4_arm64.deb",
+			"archive_bytes": 991714,
+			"archive_sha256": "e1ef60f012966ce5ecb5747181176a85e9c26fd5c8f4a715fe8384fe65f1ed05",
+			"archive_library": "usr/lib/aarch64-linux-gnu/libmpv.so.2.2.0",
+			"library": "libmpv.so.2",
+			"library_sha256": "f48f5239267447aa37789708c737f560152aa4f854b2d15859c99ea37d1c7fea",
+			"library_bytes": 2956016,
+			"licence": "GPL-3.0-or-later",
+			"licence_file": "LICENSE-libmpv.txt",
+			"source_offer": "https://archive.ubuntu.com/ubuntu/pool/universe/m/mpv/mpv_0.37.0-1ubuntu4.dsc",
+			"mpv_version": "0.37.0",
+			"ffmpeg_version": "6.1 (Ubuntu system libraries)",
+			"status": "candidate; Ubuntu 24.04 X11/XWayland; native installation and film/OSD proof required"
 		}
 	}
 }

@@ -44,18 +44,19 @@ type manifest struct {
 }
 
 type platformVersion struct {
-	Provider      string `json:"provider"`
-	Release       string `json:"release"`
-	Asset         string `json:"asset"`
-	URL           string `json:"url"`
-	ArchiveBytes  int64  `json:"archive_bytes"`
-	ArchiveSHA256 string `json:"archive_sha256"`
-	Library       string `json:"library"`
-	LibrarySHA256 string `json:"library_sha256"`
-	LibraryBytes  int64  `json:"library_bytes"`
-	Licence       string `json:"licence"`
-	LicenceFile   string `json:"licence_file"`
-	SourceOffer   string `json:"source_offer"`
+	Provider       string `json:"provider"`
+	Release        string `json:"release"`
+	Asset          string `json:"asset"`
+	URL            string `json:"url"`
+	ArchiveBytes   int64  `json:"archive_bytes"`
+	ArchiveSHA256  string `json:"archive_sha256"`
+	Library        string `json:"library"`
+	LibrarySHA256  string `json:"library_sha256"`
+	LibraryBytes   int64  `json:"library_bytes"`
+	Licence        string `json:"licence"`
+	LicenceFile    string `json:"licence_file"`
+	SourceOffer    string `json:"source_offer"`
+	ArchiveLibrary string `json:"archive_library"`
 
 	// A macOS engine is a set of dylibs rather than one file: mpv loads
 	// libavcodec, libplacebo, libass and their own dependencies from beside
@@ -153,8 +154,14 @@ func main() {
 	}
 
 	libraryPath := filepath.Join(*outDir, version.Library)
-	if err := extract(archivePath, version.Library, libraryPath); err != nil {
-		fail(err)
+	var extractErr error
+	if strings.HasSuffix(version.Asset, ".deb") {
+		extractErr = extractDeb(archivePath, version, *outDir)
+	} else {
+		extractErr = extract(archivePath, version.Library, libraryPath)
+	}
+	if extractErr != nil {
+		fail(extractErr)
 	}
 
 	// The second check, and the one that matters most: it is the file that will

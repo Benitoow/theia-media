@@ -4,64 +4,97 @@ name: Additional platform proof
 # alone cannot establish that the engine loads or the installer works.
 on:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      version: {type: string, required: true}
+      reuse_artifacts: {type: boolean, default: false}
+    secrets:
+      TMDB_API_KEY: {required: true}
+
+env:
+  THEIA_VERSION: ${{ inputs.version || '0.0.0' }}
+  THEIA_PROOF_COLOR_FIXTURE: '1'
 
 permissions:
   contents: read
 
 jobs:
   interface:
+    if: ${{ !inputs.reuse_artifacts }}
     uses: ./.github/workflows/interface.yml
 
-  linux-native-build:
-    name: Linux ${{ matrix.goarch }} native compilation and dependency audit
+  linux-package:
+    name: Linux ${{ matrix.goarch }} installed product and film/OSD
+    needs: interface
+    if: ${{ !cancelled() && (needs.interface.result == 'success' || needs.interface.result == 'skipped') }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { runner: ubuntu-24.04, goarch: amd64 }
-          - { runner: ubuntu-24.04-arm, goarch: arm64 }
+          - {runner: ubuntu-24.04, goarch: amd64}
+          - {runner: ubuntu-24.04-arm, goarch: arm64}
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with: {name: embedded-web, path: web-dist}
       - uses: actions/setup-go@v7
-        with:
-          go-version: '1.26.6'
+        with: {go-version: '1.26.6'}
       - uses: actions/setup-node@v6
-        with:
-          node-version: '24'
+        with: {node-version: '24'}
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
+        with: {components: clippy}
       - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: player
-      - name: Install Tauri Linux build dependencies
+        with: {workspaces: player}
+      - name: Install platform desktop and codec prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
-      - name: Compile the native player and audit linked dependencies
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libmpv2 xvfb xauth ffmpeg zip openbox xcompmgr
+      - name: Build, test and inspect the native player
         run: |
-          set -euo pipefail
-          npm ci --prefix player/ui
-          npm run build --prefix player/ui
-          THEIA_VERSION=0.0.0 cargo build --manifest-path player/Cargo.toml --release --locked
+          bash scripts/build-player-linux.sh "$THEIA_VERSION"
           cargo test --manifest-path player/Cargo.toml --locked
           cargo clippy --manifest-path player/Cargo.toml --all-targets --locked -- -D warnings
           mkdir -p out
-          file player/target/release/theia-player | tee out/player-file.txt
-          ldd player/target/release/theia-player | tee out/player-linked-libraries.txt
-          player/target/release/theia-player -version | tee out/player-version.txt
-          printf 'This is a compile diagnostic, not a playable Linux product. The pinned engine and renderer are still missing.\n' | tee out/status.txt
+          ldd dist/theia-player-linux-${{ matrix.goarch }}/TheiaPlayer/libmpv.so.2 | tee out/engine-libraries.txt
+          if grep -q 'not found' out/engine-libraries.txt; then exit 1; fi
+      - name: Build the installer and launcher
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          CGO_ENABLED: '0'
+        run: |
+          go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=$THEIA_VERSION -X main.tmdbAPIKey=$TMDB_API_KEY" -o dist/theia-server-linux-${{ matrix.goarch }} ./cmd/theia-server
+          go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=$THEIA_VERSION" -o dist/theia-setup-linux-${{ matrix.goarch }} ./cmd/theia-setup
+          go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=$THEIA_VERSION" -o dist/theia-launcher-linux-${{ matrix.goarch }} ./cmd/theia
+      - uses: actions/download-artifact@v8
+        if: inputs.reuse_artifacts
+        with:
+          name: theia-server-linux-${{ matrix.goarch }}
+          path: dist
+      - name: Package and run the exact installed product
+        run: |
+          bash scripts/package-linux.sh "$THEIA_VERSION" '${{ matrix.goarch }}'
+          xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' bash -c '
+            openbox >/dev/null 2>&1 &
+            xcompmgr >/dev/null 2>&1 &
+            bash scripts/verify-linux-package.sh dist/public/theia-setup-linux-${{ matrix.goarch }} out
+          ' | tee out/verify.log
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: linux-${{ matrix.goarch }}-diagnostics
+          name: linux-${{ matrix.goarch }}-proof
           path: out/
           retention-days: 14
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-setup-linux-${{ matrix.goarch }}
+          path: dist/public/theia-setup-linux-${{ matrix.goarch }}
+          retention-days: 1
 
   windows-arm64:
     needs: interface
+    if: ${{ !cancelled() && (needs.interface.result == 'success' || needs.interface.result == 'skipped') }}
     runs-on: windows-11-arm
     timeout-minutes: 90
     steps:
@@ -85,7 +118,7 @@ jobs:
       - name: Build and test the native player
         shell: pwsh
         run: |
-          .\build-player.ps1 -Release -Bundle -Architecture arm64 -Version 0.0.0
+          .\build-player.ps1 -Release -Bundle -Architecture arm64 -Version $env:THEIA_VERSION
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo test --manifest-path player/Cargo.toml --locked
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -145,6 +178,9 @@ jobs:
             Write-Host "playback advanced: $($positions[0].Groups[1].Value) -> $($positions[$positions.Count - 1].Groups[1].Value); inspect out/player-screen.png for the actual picture and OSD"
           }
           finally { Stop-Process -Id $player.Id -Force -ErrorAction SilentlyContinue }
+      - uses: actions/download-artifact@v8
+        if: inputs.reuse_artifacts
+        with: {name: theia-server-windows-arm64, path: release-components}
       - name: Install the complete set on Windows ARM64
         shell: pwsh
         env:
@@ -154,15 +190,18 @@ jobs:
           $env:GOOS = 'windows'
           $env:GOARCH = 'arm64'
           New-Item -ItemType Directory -Force -Path dist, "$env:RUNNER_TEMP\theia-library" | Out-Null
-          go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=0.0.0 -X main.tmdbAPIKey=$env:TMDB_API_KEY" -o dist/theia-server-windows-arm64.exe ./cmd/theia-server
+          go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=$env:THEIA_VERSION -X main.tmdbAPIKey=$env:TMDB_API_KEY" -o dist/theia-server-windows-arm64.exe ./cmd/theia-server
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          go build -buildvcs=false -trimpath -ldflags '-s -w -X main.version=0.0.0' -o dist/theia-setup-windows-arm64.exe ./cmd/theia-setup
+          go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=$env:THEIA_VERSION" -o dist/theia-setup-windows-arm64.exe ./cmd/theia-setup
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          go build -buildvcs=false -trimpath -ldflags '-s -w -H=windowsgui -X main.version=0.0.0' -o dist/theia-launcher-windows-arm64.exe ./cmd/theia
+          go build -buildvcs=false -trimpath -ldflags "-s -w -H=windowsgui -X main.version=$env:THEIA_VERSION" -o dist/theia-launcher-windows-arm64.exe ./cmd/theia
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          .\build-release.ps1 -Version 0.0.0 -Target windows-arm64 -SkipPlayer -UseDistPrograms
+          if ('${{ inputs.reuse_artifacts }}' -eq 'true') {
+            Copy-Item release-components/* dist/ -Force
+          }
+          .\build-release.ps1 -Version $env:THEIA_VERSION -Target windows-arm64 -SkipPlayer -UseDistPrograms
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          go run ./scripts/package-setup -setup dist/theia-setup-windows-arm64.exe -archive dist/theia-0.0.0-windows-arm64.zip -out dist/proof/theia-setup-windows-arm64.exe
+          go run ./scripts/package-setup -setup dist/theia-setup-windows-arm64.exe -archive dist/theia-$($env:THEIA_VERSION.TrimStart('v'))-windows-arm64.zip -out dist/proof/theia-setup-windows-arm64.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go run ./scripts/check-setup-payload -setup dist/proof/theia-setup-windows-arm64.exe -server dist/theia-server-windows-arm64.exe -target windows-arm64
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -256,7 +295,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: windows-arm64-candidate-setup
+          name: release-setup-windows-arm64
           path: dist/proof/theia-setup-windows-arm64.exe
           retention-days: 7
       - uses: actions/upload-artifact@v7
@@ -268,6 +307,7 @@ jobs:
 
   macos-intel:
     needs: interface
+    if: ${{ !cancelled() && (needs.interface.result == 'success' || needs.interface.result == 'skipped') }}
     runs-on: macos-15-intel
     timeout-minutes: 90
     steps:
@@ -291,22 +331,26 @@ jobs:
       - name: Build and test the native player
         run: |
           set -euo pipefail
-          ./scripts/build-player-macos.sh -Release -Bundle -Version 0.0.0
+          ./scripts/build-player-macos.sh -Release -Bundle -Version "$THEIA_VERSION"
           cargo test --manifest-path player/Cargo.toml --locked
           cargo clippy --manifest-path player/Cargo.toml --all-targets --locked -- -D warnings
           dist/theia-player-darwin-amd64/Theia.app/Contents/MacOS/theia-player -version
           codesign --verify --strict dist/theia-player-darwin-amd64/Theia.app
+      - uses: actions/download-artifact@v8
+        if: inputs.reuse_artifacts
+        with: {name: theia-server-darwin-amd64, path: release-components}
       - name: Run the installer and playback verifier on Intel
         env:
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: |
           set -euo pipefail
           export GOOS=darwin GOARCH=amd64 CGO_ENABLED=0
-          go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=0.0.0 -X main.tmdbAPIKey=${TMDB_API_KEY}" -o dist/theia-server-darwin-amd64 ./cmd/theia-server
-          go build -buildvcs=false -trimpath -ldflags '-s -w -X main.version=0.0.0' -o dist/theia-setup-darwin-amd64 ./cmd/theia-setup
-          go build -buildvcs=false -trimpath -ldflags '-s -w -X main.version=0.0.0' -o dist/theia-launcher-darwin-amd64 ./cmd/theia
-          pwsh ./build-release.ps1 -Version 0.0.0 -Target darwin-amd64
-          go run ./scripts/package-setup -setup dist/theia-setup-darwin-amd64 -archive dist/theia-0.0.0-darwin-amd64.zip -out dist/proof/theia-setup-darwin-amd64
+          go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=$THEIA_VERSION -X main.tmdbAPIKey=${TMDB_API_KEY}" -o dist/theia-server-darwin-amd64 ./cmd/theia-server
+          go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=$THEIA_VERSION" -o dist/theia-setup-darwin-amd64 ./cmd/theia-setup
+          go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=$THEIA_VERSION" -o dist/theia-launcher-darwin-amd64 ./cmd/theia
+          if [ '${{ inputs.reuse_artifacts }}' = true ]; then cp release-components/* dist/; chmod +x dist/theia*; fi
+          pwsh ./build-release.ps1 -Version "$THEIA_VERSION" -Target darwin-amd64
+          go run ./scripts/package-setup -setup dist/theia-setup-darwin-amd64 -archive dist/theia-${THEIA_VERSION#v}-darwin-amd64.zip -out dist/proof/theia-setup-darwin-amd64
           go run ./scripts/check-setup-payload -setup dist/proof/theia-setup-darwin-amd64 -server dist/theia-server-darwin-amd64 -target darwin-amd64
           mkdir -p out
           go run ./scripts/create-proof-media -out out/fixture.mp4 -seconds 20
@@ -319,3 +363,8 @@ jobs:
             out/
             dist/proof/theia-setup-darwin-amd64
           retention-days: 14
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-setup-darwin-amd64
+          path: dist/proof/theia-setup-darwin-amd64
+          retention-days: 1

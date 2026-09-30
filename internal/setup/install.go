@@ -220,7 +220,9 @@ func programsFor(role Role, goos, goarch string) []program {
 // for a platform. Windows and macOS have one; the other targets have neither a
 // player nor a launcher, which is a fact about the release surface rather than
 // about the platforms (internal/release owns every published name).
-func publishesLauncher(goos string) bool { return goos == "windows" || goos == "darwin" }
+func publishesLauncher(goos string) bool {
+	return goos == "windows" || goos == "darwin" || goos == "linux"
+}
 
 // playerProgram describes the native player, which is a different shape on macOS.
 func playerProgram(goos, goarch string) program {
@@ -262,6 +264,8 @@ func bundleFiles(goos string) []string {
 	switch goos {
 	case "windows":
 		return []string{"theia-player.exe", "libmpv-2.dll", "LICENSE-libmpv.txt", "NOTICE.md"}
+	case "linux":
+		return []string{"theia-player", "libmpv.so.2", "LICENSE-libmpv.txt", "COPYRIGHT-libmpv.txt", "NOTICE.md", "LICENSE-GPL-2.txt", "LICENSE-LGPL-2.1.txt"}
 	case "darwin":
 		return []string{
 			darwinPlayerTree,

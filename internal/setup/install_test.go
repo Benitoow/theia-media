@@ -512,14 +512,14 @@ func TestTheLauncherIsInstalledWhereItIsPublished(t *testing.T) {
 	// like the player: a platform the release publishes neither for gets neither,
 	// and asking for an asset that is not there is a failed installation rather
 	// than a missing feature.
-	for _, platform := range []string{"linux"} {
+	for _, platform := range []string{"freebsd"} {
 		for _, entry := range programsFor(RoleAllInOne, platform, "amd64") {
 			if entry.base == launcherBase {
 				t.Errorf("the %s installation asks for a launcher", platform)
 			}
 		}
 	}
-	for _, platform := range []string{"windows", "darwin"} {
+	for _, platform := range []string{"windows", "darwin", "linux"} {
 		found := false
 		for _, entry := range programsFor(RoleAllInOne, platform, "amd64") {
 			if entry.base == launcherBase {

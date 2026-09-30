@@ -112,7 +112,10 @@ preferences:
   the OSD in WebView2 on Windows, WKWebView on macOS and WebKitGTK on Linux;
   Theia neither ships nor pins it. On Windows it is a Microsoft-serviced
   runtime; on Linux it is a package the user must already have, and the
-  installer says so instead of failing obscurely.
+  installer says so instead of failing obscurely. Decision 162 extends the
+  Linux exception to Ubuntu's codec, audio and driver libraries: `libmpv2`,
+  WebKitGTK and the desktop libraries are declared OS prerequisites, never
+  silently installed or redistributed by Theia.
 - **The player declares nothing it cannot observe.** Codec support in a file is
   never presented as proof that the current display, HDMI chain or receiver can
   reproduce it.

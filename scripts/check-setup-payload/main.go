@@ -36,6 +36,8 @@ func check(setup, server, target string) error {
 		want = append(want, member, "theia-setup.exe", "theia.exe", "theia-player.exe", "libmpv-2.dll", "LICENSE-libmpv.txt", "NOTICE.md")
 	case "darwin-arm64", "darwin-amd64":
 		want = append(want, member, "theia-setup", "theia", "Theia.app/Contents/MacOS/theia-player", "Theia.app/Contents/Resources/LICENSE-libmpv.txt", "Theia.app/Contents/Resources/NOTICE.md", "Theia.app/Contents/Frameworks/libmpv.2.dylib")
+	case "linux-amd64", "linux-arm64":
+		want = append(want, member, "theia-setup", "theia", "theia-player", "libmpv.so.2", "LICENSE-libmpv.txt", "COPYRIGHT-libmpv.txt", "NOTICE.md", "LICENSE-GPL-2.txt", "LICENSE-LGPL-2.1.txt")
 	default:
 		return fmt.Errorf("unsupported target %s", target)
 	}

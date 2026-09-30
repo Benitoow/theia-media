@@ -2947,6 +2947,12 @@ fn main() {
     // gets the whole project turned off.
     let silent = std::env::args().any(|a| a == "--mute");
 
+    // mpv embeds through an X11 window id. XWayland supplies that id on a
+    // Wayland desktop; a native Wayland surface would open a second window.
+    #[cfg(target_os = "linux")]
+    if std::env::var_os("GDK_BACKEND").is_none() {
+        std::env::set_var("GDK_BACKEND", "x11");
+    }
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             player_status,
