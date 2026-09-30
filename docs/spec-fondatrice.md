@@ -12,6 +12,14 @@ Theia est un serveur média personnel, open source, 100% gratuit, pensé comme
 l'anti-Plex : zéro configuration, zéro compte, zéro paywall. On branche la
 machine, on scanne le réseau, ça marche.
 
+> **Amendé le 30 septembre 2026 (décision 161)** : le serveur, la bibliothèque
+> et la lecture ordinaire restent gratuits, et Theia reste open source sous sa
+> licence actuelle. Certaines fonctions sociales/de visionnage partagé de V4
+> seront d'abord gratuites, puis pourront devenir payantes en soutien au projet
+> au démarrage de V5, sans abonnement mensuel. Périmètre, prix et modalités ne
+> sont pas encore fixés ; ils seront annoncés avant la transition. Les estimations
+> fin 2026/début 2027 ne constituent pas une date promise.
+
 > **Amendé en V3.3 (§14)** : « un seul binaire » devient **trois exécutables**
 > (`theia-server`, `theia-player`, `theia-setup`) et la commande `theia` qui les
 > lance (21 septembre 2026, décision 139). Le zéro-configuration, lui, ne bouge

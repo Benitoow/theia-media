@@ -1,7 +1,9 @@
 # Working on Theia
 
-Theia is a personal media server: no configuration, no account, no paywall. One
-user, their own films, their own machine.
+Theia is a personal media server: no configuration, no cloud account, no paywall
+for the server, library or ordinary viewing. Optional future social/supporter
+features follow decision 161; the existing GPL licence is unchanged. One user,
+their own films, their own machine.
 
 **V3.3 is the current release line.** `v3.2.0` is the last single-binary
 release; `v3.3.0` introduced the native generation and `v3.3.6` is the current
