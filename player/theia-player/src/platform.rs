@@ -266,8 +266,17 @@ pub(super) fn x11_window_id(window: &tauri::WebviewWindow) -> isize {
     let osd = gtk::EventBox::new();
     osd.set_visible_window(true);
     osd.set_app_paintable(true);
-    if let Some(visual) = gtk::prelude::WidgetExt::screen(&gtk_window).and_then(|screen| screen.rgba_visual()) {
-        osd.set_visual(Some(&visual));
+    if let Some(screen) = gtk::prelude::WidgetExt::screen(&gtk_window) {
+        // X11's software video output writes RGB pixels, not a premultiplied
+        // alpha channel. Inheriting the transparent parent's RGBA visual makes
+        // those pixels transparent to the compositor. Only the OSD uses RGBA.
+        if let Some(video_visual) = screen.system_visual() {
+            video.set_visual(Some(&video_visual));
+            eprintln!("theia-player: GTK video visual depth {}", video_visual.depth());
+        }
+        if let Some(visual) = screen.rgba_visual() {
+            osd.set_visual(Some(&visual));
+        }
     }
     let css = gtk::CssProvider::new();
     if let Err(error) = css.load_from_data(b".theia-osd-plane { background-color: transparent; }") {

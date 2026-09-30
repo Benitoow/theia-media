@@ -195,6 +195,13 @@ When none exists, the player selects X11 software video and disables WebKit
 GPU/DMABUF compositing, retaining explicit user environment overrides. Native
 software GTK paint and actual film/OSD capture must verify this repair.
 
+Run 36734068031 then painted the real OSD at roughly 60 frame callbacks per
+second, but its film region showed the gray desktop behind it. The video
+DrawingArea had inherited the transparent parent's RGBA visual while the X11
+software output writes RGB. Video now requests the screen's opaque system
+visual, while the OSD retains RGBA. The native visual depth is logged and a
+new captured film/controls check is required.
+
 Nothing about the OSD, the tracks menu, subtitles or the status telemetry: those
 are platform-independent. Nothing about Windows or macOS: their tables and their
 window handles are unchanged, and the macOS render bridge stays as
