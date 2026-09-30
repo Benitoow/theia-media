@@ -775,7 +775,7 @@ jobs:
             --install-dir "$proof_home/.local/lib/theia" \
             --data-dir "$proof_home/data" --library "$proof_home/library" \
             --port 8399 --yes
-          THEIA_PROOF_COLOR_FIXTURE=1 THEIA_APP="$proof_home/.local/lib/theia/Theia.app" \
+          THEIA_RENDER_DEBUG=1 THEIA_PROOF_COLOR_FIXTURE=1 THEIA_APP="$proof_home/.local/lib/theia/Theia.app" \
             THEIA_PROOF_DIR=out THEIA_SETUP="$setup" \
             ./scripts/verify-macos.sh -Media out/fixture.mp4 | tee out/verify.log
 

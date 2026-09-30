@@ -14,6 +14,7 @@ on:
 env:
   THEIA_VERSION: ${{ inputs.version || '0.0.0' }}
   THEIA_PROOF_COLOR_FIXTURE: '1'
+  THEIA_RENDER_DEBUG: '1'
 
 permissions:
   contents: read
@@ -53,6 +54,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libmpv2 xvfb xauth ffmpeg zip openbox xcompmgr
       - name: Build, test and inspect the native player
         run: |
+          set -euo pipefail
           bash scripts/build-player-linux.sh "$THEIA_VERSION"
           cargo test --manifest-path player/Cargo.toml --locked
           cargo clippy --manifest-path player/Cargo.toml --all-targets --locked -- -D warnings
@@ -74,6 +76,7 @@ jobs:
           path: dist
       - name: Package and run the exact installed product
         run: |
+          set -euo pipefail
           bash scripts/package-linux.sh "$THEIA_VERSION" '${{ matrix.goarch }}'
           xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' bash -c '
             openbox >/dev/null 2>&1 &
@@ -201,7 +204,7 @@ jobs:
           if ('${{ inputs.reuse_artifacts }}' -eq 'true') {
             Copy-Item release-components/* dist/ -Force
           }
-          .\build-release.ps1 -Version $env:THEIA_VERSION -Target windows-arm64 -SkipPlayer -UseDistPrograms
+          .\build-release.ps1 -Version ($env:THEIA_VERSION.TrimStart('v')) -Target windows-arm64 -SkipPlayer -UseDistPrograms
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go run ./scripts/package-setup -setup dist/theia-setup-windows-arm64.exe -archive dist/theia-$($env:THEIA_VERSION.TrimStart('v'))-windows-arm64.zip -out dist/proof/theia-setup-windows-arm64.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -351,7 +354,7 @@ jobs:
           go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=$THEIA_VERSION" -o dist/theia-setup-darwin-amd64 ./cmd/theia-setup
           go build -buildvcs=false -trimpath -ldflags "-s -w -X main.version=$THEIA_VERSION" -o dist/theia-launcher-darwin-amd64 ./cmd/theia
           if [ '${{ inputs.reuse_artifacts }}' = true ]; then cp release-components/* dist/; chmod +x dist/theia*; fi
-          pwsh ./build-release.ps1 -Version "$THEIA_VERSION" -Target darwin-amd64
+          pwsh ./build-release.ps1 -Version "${THEIA_VERSION#v}" -Target darwin-amd64
           go run ./scripts/package-setup -setup dist/theia-setup-darwin-amd64 -archive dist/theia-${THEIA_VERSION#v}-darwin-amd64.zip -out dist/proof/theia-setup-darwin-amd64
           go run ./scripts/check-setup-payload -setup dist/proof/theia-setup-darwin-amd64 -server dist/theia-server-darwin-amd64 -target darwin-amd64
           mkdir -p out

@@ -24,6 +24,7 @@
 mod capabilities;
 mod connection;
 mod device_state;
+mod engine_compat;
 mod mpv;
 mod platform;
 mod progress_queue;
@@ -212,10 +213,8 @@ impl Session {
     /// is both what a viewer means and what the engine does anyway.
     fn load(&mut self, url: &str, pause: Option<bool>) -> Result<(), String> {
         let options = self.load_options();
-        let mut args: Vec<&str> = vec!["loadfile", url, "replace", "0"];
-        if let Some(ref options) = options {
-            args.push(options);
-        }
+        let version = self.engine.version().unwrap_or_default();
+        let args = engine_compat::loadfile_arguments(&version, url, options.as_deref());
         self.engine.command(&args)?;
         // The pause state is a property, set after the load rather than passed
         // with it. `loadfile`'s option list is for options that belong to a
@@ -741,7 +740,30 @@ fn apply_playback_to(
     original_language: Option<&str>,
 ) -> Result<(), String> {
     let mut refused: Vec<String> = Vec::new();
-    for (name, value) in playback_properties(prefs, original_language) {
+    let mut properties = playback_properties(prefs, original_language);
+    // Older mpv uses ASS style overrides for the subtitle box. Preserve the
+    // requested outline/shadow/band without sending it a nonexistent option.
+    if engine.property("sub-border-style").is_none() {
+        properties.retain(|(name, _)| *name != "sub-border-style");
+        let border = if prefs.subtitle_style.background == "none" {
+            1
+        } else {
+            3
+        };
+        for (name, value) in &mut properties {
+            if *name == "sub-ass-force-style" {
+                *value = format!("MarginV=0,BorderStyle={border}");
+            }
+        }
+        if prefs.subtitle_style.background == "none" && prefs.subtitle_style.outline == Outline::Off
+        {
+            properties.extend([
+                ("sub-border-size", "0".into()),
+                ("sub-shadow-offset", "0".into()),
+            ]);
+        }
+    }
+    for (name, value) in properties {
         if let Err(e) = engine.set_property(name, &value) {
             refused.push(e);
         }

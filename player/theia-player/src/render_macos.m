@@ -10,6 +10,7 @@
 #import <stdint.h>
 #import <stdbool.h>
 #import <stdio.h>
+#import <stdlib.h>
 
 typedef int (*RenderCreate)(mpv_render_context **, mpv_handle *, mpv_render_param *);
 typedef void (*RenderCallback)(mpv_render_context *, mpv_render_update_fn, void *);
@@ -58,6 +59,10 @@ static atomic_uint_fast64_t gLastRenderMs;
 // renderer, and the proof runner is a virtual machine with no GPU at all.
 // Written once, at attach, from the context that is current then.
 static char gRenderer[128];
+static NSOpenGLContext *gBoundContext;
+static atomic_uint_fast64_t gContextChanges;
+static atomic_uint_fast64_t gPixel;
+static bool gDebugPixels;
 
 static uint64_t now_ms(void)
 {
@@ -91,6 +96,9 @@ static void on_render_update(void *context)
     atomic_fetch_add_explicit(&gDraws, 1, memory_order_relaxed);
     atomic_store_explicit(&gLastDrawMs, now_ms() - gAttachedAtMs, memory_order_relaxed);
     if (!gRender) return;
+    if ([self openGLContext] != gBoundContext) {
+        atomic_fetch_add_explicit(&gContextChanges, 1, memory_order_relaxed);
+    }
     [[self openGLContext] makeCurrentContext];
     [[self openGLContext] update];
     NSRect backing = [self convertRectToBacking:self.bounds];
@@ -126,6 +134,21 @@ static void on_render_update(void *context)
         return;
     }
     atomic_fetch_sub_explicit(&gInRender, 1, memory_order_relaxed);
+    // Proof-only readback separates a missing GL picture from a compositor
+    // covering a correctly rendered picture. Ordinary playback never stalls
+    // the GPU to read pixels back.
+    if (gDebugPixels) {
+        GLint previousRead = 0;
+        glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &previousRead);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo.fbo);
+        glReadBuffer(fbo.fbo == 0 ? GL_BACK : GL_COLOR_ATTACHMENT0);
+        unsigned char pixel[4] = {0};
+        glReadPixels(fbo.w / 2, fbo.h / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+        atomic_store_explicit(&gPixel,
+            ((uint64_t)pixel[0] << 24) | ((uint64_t)pixel[1] << 16) |
+            ((uint64_t)pixel[2] << 8) | pixel[3], memory_order_relaxed);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, previousRead);
+    }
     [[self openGLContext] flushBuffer];
     gSwap(gRender);
     atomic_fetch_add_explicit(&gFrames, 1, memory_order_relaxed);
@@ -179,6 +202,16 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
         }
     }
     if (!parent || !webview || !mpv_pointer) return fail(error, capacity, "the window has no WKWebView or engine");
+    // WKWebView's under-page colour is separate from the HTML background.
+    // Keep both native background switches clear under the transparent OSD.
+    @try {
+        [webview setValue:@NO forKey:@"drawsBackground"];
+        if ([webview respondsToSelector:NSSelectorFromString(@"setUnderPageBackgroundColor:")]) {
+            [webview setValue:[NSColor clearColor] forKey:@"underPageBackgroundColor"];
+        }
+    } @catch (NSException *exception) {
+        fprintf(stderr, "theia-player: WKWebView transparency: %s\n", exception.reason.UTF8String);
+    }
 
     gLibrary = dlopen(library_path, RTLD_NOW | RTLD_GLOBAL);
     if (!gLibrary) return fail(error, capacity, dlerror());
@@ -214,6 +247,10 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
     [parent layoutSubtreeIfNeeded];
     [gView displayIfNeeded];
     [[gView openGLContext] makeCurrentContext];
+    gBoundContext = [gView openGLContext];
+    gDebugPixels = getenv("THEIA_RENDER_DEBUG") != NULL;
+    atomic_store_explicit(&gContextChanges, 0, memory_order_relaxed);
+    atomic_store_explicit(&gPixel, 0, memory_order_relaxed);
     const GLubyte *renderer = glGetString(GL_RENDERER);
     snprintf(gRenderer, sizeof(gRenderer), "%s", renderer ? (const char *)renderer : "unknown");
 
@@ -334,7 +371,7 @@ void theia_render_diagnostics(char *out, size_t capacity)
     snprintf(out, capacity,
              "attached=%d elapsed-ms=%llu ticks=%llu last-tick-ms=%llu ready=%llu draws=%llu "
              "last-draw-ms=%llu in-render=%llu last-render-ms=%llu errors=%llu frames=%llu "
-             "notifications=%llu on-screen=%llu surface=%ux%u gl-renderer=\"%s\"",
+             "notifications=%llu on-screen=%llu surface=%ux%u gl-renderer=\"%s\" context-changes=%llu pixel-rgba=%08llx",
              atomic_load_explicit(&gAttached, memory_order_relaxed) ? 1 : 0,
              (unsigned long long)(now_ms() - gAttachedAtMs),
              (unsigned long long)atomic_load_explicit(&gTicks, memory_order_relaxed),
@@ -349,5 +386,7 @@ void theia_render_diagnostics(char *out, size_t capacity)
              (unsigned long long)atomic_load_explicit(&gNotifications, memory_order_relaxed),
              (unsigned long long)atomic_load_explicit(&gOnScreen, memory_order_relaxed),
              (unsigned)(surface >> 32), (unsigned)(surface & 0xffffffffu),
-             gRenderer);
+             gRenderer,
+             (unsigned long long)atomic_load_explicit(&gContextChanges, memory_order_relaxed),
+             (unsigned long long)atomic_load_explicit(&gPixel, memory_order_relaxed));
 }
