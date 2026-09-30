@@ -28,11 +28,12 @@ The published V3.3.6 has complete Windows x64 and Apple Silicon artifacts, but a
 post-release audit found no integrated Mac render context (decision 149): old
 playback-position checks did not establish a picture. The V3.4 branch adds the
 AppKit/OpenGL renderer with a CPU fallback and six complete package candidates.
-Native Windows ARM64 and both Mac package/film/painted-controls checks passed
-in run 36736248025. Linux's X11 child composition failed that run; its replacement
-uses a GTK-owned software render canvas. Linux initially has software decoding,
-SDR rendering and PCM audio, with no hardware acceleration or HDR output.
-All platforms remain subject to final-revision validation. Keep the
+All six native package targets passed the complete dry run 36745363813 at
+8475fa6, including installed launchers, captured generated films and painted
+controls. Linux uses a GTK-owned software render canvas; its initial output is
+SDR and PCM, with no hardware acceleration or HDR. The final revision adds a
+native Ubuntu pause/resize/fullscreen/resume regression and requires fresh CI.
+Keep the
 current evidence and publication blockers in `docs/v3.4-release-readiness.md`;
 do not promote a platform because compilation or playback counters passed.
 

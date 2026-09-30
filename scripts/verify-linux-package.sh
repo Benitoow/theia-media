@@ -72,6 +72,10 @@ ffmpeg -hide_banner -loglevel error -y -f x11grab -video_size 1280x720 \
 [ "$ready" = 1 ] || { cat "$out/player.log"; exit 1; }
 go run ./scripts/check-playback-picture -image "$out/player-window.png" -controls
 echo 'PASS advancing film, real window, responsive and visible controls'
+python3 scripts/verify-linux-window.py "$out"
+for picture in paused-resize paused-fullscreen paused-restored resumed-window; do
+    go run ./scripts/check-playback-picture -image "$out/$picture.png" -controls
+done
 stop_product
 sleep 1
 "$setup" --check --lang en >"$out/check.log" 2>&1

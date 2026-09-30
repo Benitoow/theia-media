@@ -51,7 +51,7 @@ jobs:
       - name: Install platform desktop and codec prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libmpv2 xvfb xauth ffmpeg zip openbox xcompmgr
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libmpv2 libxtst6 xvfb xauth ffmpeg zip openbox xcompmgr
       - name: Build, test and inspect the native player
         run: |
           set -euo pipefail

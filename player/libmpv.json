@@ -10,12 +10,12 @@
 		"Each candidate has its own archive and library digests. A platform joins",
 		"the public release only after its player and installer run on that CPU.",
 		"Windows x64 has been run since V3.3.0; macOS Apple Silicon was run on a",
-		"GitHub-hosted Mac on 22 September 2026. Windows ARM64 and macOS Intel",
-		"are candidates whose archive contents were checked, pending native runs.",
+		"GitHub-hosted Mac on 22 September 2026. All six native packages passed",
+		"installation and captured film/controls checks in run 36745363813.",
 		"",
 		"Which engine, and why these providers. Both provide LGPL builds of a",
 		"current mpv with libplacebo; published rendering is verified on Windows",
-		"x64, while the candidate architectures still need their own runtime proof.",
+		"x64; both Macs and both Linux CPUs now have captured picture/OSD proof.",
 		"The codec",
 		"generation matches: the macOS pin carries FFmpeg 8.1.2, the same version the",
 		"server downloads for conversion, and the Windows pin carries an FFmpeg of",
@@ -46,7 +46,7 @@
 			},
 			"configuration": "-Dgpl=false -Dlibmpv=true -Dcplayer=false -Dvulkan=enabled -Dlibass -Dlibplacebo -Dsubrandr=enabled",
 			"verified": [
-				"archive and extracted library SHA-256 measured on Windows x64; ARM64 playback pending"
+				"archive/library digests verified; native ARM64 installed playback and painted controls passed in run 36745363813"
 			]
 		},
 		"darwin/amd64": {
@@ -112,7 +112,7 @@
 				"libplacebo": "7.360.1"
 			},
 			"verified": [
-				"archive SHA-256, 19 library digests, 11 symlink targets and licences measured from release archive; Intel playback pending"
+				"archive SHA-256, 19 library digests, 11 symlink targets and licences verified; native Intel package/film/painted controls passed in run 36745363813"
 			]
 		},
 		"windows/amd64": {
@@ -215,9 +215,9 @@
 				"the archive holds 19 dylibs and 11 symlinks, and every load command resolves to a sibling (@rpath/lib*.dylib) or to a system framework",
 				"the rpaths are @loader_path, @loader_path/../lib and @loader_path/../Frameworks - no build-machine path survives, which is what lets the libraries live in Theia.app/Contents/Frameworks",
 				"**on an Apple Silicon runner, 22 September 2026**: the fetch verified the archive and all 19 libraries by digest, and `mpv_render_context_create` succeeded with MPV_RENDER_API_TYPE_OPENGL and advanced control - the render path this pin was chosen for works",
-				"**and the film played**: 36 frames rendered by the host into its own NSOpenGLView, position advancing 0.00 to 9.29 s, `vo=libmpv`, `ao=coreaudio`, on a runner whose window session reported itself visible",
+				"Historical September 22 spike: 36 render calls and an advancing playhead established engine activity, not a visible picture. Native packaged film and painted controls were captured and checked in run 36745363813, using the CPU fallback on hosted software GL",
 				"the engine's own version string is `mpv v0.41.0-dev-gd97d68da9`, read from `mpv-version` on the runner - the release is *tagged* v0.41.4, and the tag is not the version. The same generation as the Windows pin (v0.41.0-1049), which is why the two platforms can be compared at all",
-				"what the runner could not answer: `hwdec=videotoolbox` was accepted and then refused by the machine - `[ffmpeg/video] h264: Failed setup for format videotoolbox_vld: hwaccel initialisation returned error`, which is what a virtualised runner without GPU-backed VideoToolbox does - and the film fell back to software decoding and played. Hardware decoding therefore needs a Mac, and the OSD over the film needs eyes"
+				"what the runner could not answer: `hwdec=videotoolbox` was accepted and then refused by the machine - `[ffmpeg/video] h264: Failed setup for format videotoolbox_vld: hwaccel initialisation returned error`, which is what a virtualised runner without GPU-backed VideoToolbox does - and decoding fell back to software. Captured film/OSD proof now passes; hardware decoding and HDR still require physical Mac reports"
 			]
 		},
 		"linux/amd64": {
@@ -236,7 +236,7 @@
 			"source_offer": "https://archive.ubuntu.com/ubuntu/pool/universe/m/mpv/mpv_0.37.0-1ubuntu4.dsc",
 			"mpv_version": "0.37.0",
 			"ffmpeg_version": "6.1 (Ubuntu system libraries)",
-			"status": "candidate; Ubuntu 24.04 X11/XWayland; native installation and film/OSD proof required"
+			"status": "Ubuntu 24.04 X11/XWayland; native complete setup, film/painted controls and uninstall passed in run 36745363813; software SDR/PCM"
 		},
 		"linux/arm64": {
 			"provider": "Ubuntu 24.04",
@@ -254,7 +254,7 @@
 			"source_offer": "https://archive.ubuntu.com/ubuntu/pool/universe/m/mpv/mpv_0.37.0-1ubuntu4.dsc",
 			"mpv_version": "0.37.0",
 			"ffmpeg_version": "6.1 (Ubuntu system libraries)",
-			"status": "candidate; Ubuntu 24.04 X11/XWayland; native installation and film/OSD proof required"
+			"status": "Ubuntu 24.04 X11/XWayland; native complete setup, film/painted controls and uninstall passed in run 36745363813; software SDR/PCM"
 		}
 	}
 }

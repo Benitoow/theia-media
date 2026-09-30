@@ -12,8 +12,8 @@ its render context before the engine is dropped, including failed startup.
 
 Run 36736248025 confirmed that an opaque 24-bit X11 child still did not paint
 the film beneath the controls. The host-owned canvas replaces that failed
-embedding path. Native packaged film/OSD capture is still required on both
-architectures. The initial Linux path is SDR, with software decoding/rendering;
+embedding path. Native packaged film/OSD capture passed on both architectures in
+run 36745363813 at 8475fa6, and both captures were inspected. The initial Linux path is SDR, with software decoding/rendering;
 hardware acceleration and HDR output are unavailable.
 
 X11/XWayland remains the tested session contract. The outer X window id is
@@ -29,7 +29,10 @@ An isolated Ubuntu 26.04 Xvfb test with the system mpv 0.41 passed the actual
 film/controls capture and the DOM probe on 30 September. Its fixture clock and
 playhead both advanced to nine seconds. This is debugging evidence, not proof
 for the Ubuntu 24.04 package with pinned mpv 0.37; both native package checks
-remain mandatory.
+remain mandatory on every release revision. Both passed run 36745363813.
+A subsequent isolated pause/resize/fullscreen/resume probe passed without
+the WSL host audio endpoint. CI now repeats that interaction against both
+Ubuntu 24.04 packages, with translated window coordinates.
 
 ## Historical investigation
 
