@@ -7,7 +7,8 @@ user, their own films, their own machine.
 release; `v3.3.0` introduced the native generation and `v3.3.6` is the current
 published maintenance release. V3.3 splits the product into three artifacts:
 `theia-server` (Go, headless, still serving the Svelte administration and settings
-interface; browser playback support ended with decision 154), `theia-player` (Tauri 2 + Rust + libmpv - the native player,
+interface; the legacy web viewer remains available without active viewing support,
+while administration and settings remain maintained under decision 159), `theia-player` (Tauri 2 + Rust + libmpv - the native player,
 and where films are now meant to be watched) and `theia-setup` (Go + Charm, the
 installer and maintenance tool). A fourth program travels with them: `theia`,
 the command somebody types - the installer puts it and its siblings on the
@@ -17,6 +18,9 @@ cannot pass TrueHD/Atmos or DTS-HD MA to an amplifier, does not carry Dolby
 Vision profile 7, and does not read Matroska natively.
 
 Read decision 117 and `docs/spec-fondatrice.md` §14 before touching anything.
+3.4 is the final planned V3 release; no 3.4.1, 3.5 or 3.6 is planned. The next
+release line is V4, documented in `docs/v4.md` (decision 160). Desktop apps and
+the server remain maintained. Phone and TV apps are deferred without a date.
 They record exactly which founding clauses were superseded and which still bind.
 Windows x64 and macOS Apple Silicon have complete release artifacts. The Windows
 player was run on the maintainer's machine. A post-release source audit found that

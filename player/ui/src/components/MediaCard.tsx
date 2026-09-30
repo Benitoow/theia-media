@@ -33,13 +33,13 @@ type CommonProps = {
 	/**
 	 * The series an episode belongs to, drawn in the card's legend.
 	 *
-	 * An episode card has to say which show it is part of wherever it is drawn -
-	 * the maintainer's word on 20 September 2026: "chaque épisode doit avoir sa
-	 * série". The home rows use `heading` for that, because there the card *is*
-	 * the series; on a season page the card is the episode, so the series goes
-	 * in the legend beside its code instead.
+	 * Home and search keep the series visible. A named series record can use
+	 * compactLegend to avoid repeating its title, while each accessible card
+	 * name still contains the full series identity.
 	 */
 	seriesLabel?: string;
+	/** The surrounding series record already names the show; retain it in the accessible name. */
+	compactLegend?: boolean;
 	/**
 	 * The catalogue, for the one thing this card counts rather than repeats: a
 	 * series legend states how many seasons and episodes it has, and the words
@@ -53,7 +53,7 @@ type Props =
 	| (CommonProps & { kind: 'series'; item: Series })
 	| (CommonProps & { kind: 'episode'; item: Episode });
 
-export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLabel, reducedMotion, heading, seriesLabel, t, footer, gridIndex, gridTotal }: Props) {
+export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLabel, reducedMotion, heading, seriesLabel, compactLegend, t, footer, gridIndex, gridTotal }: Props) {
 	const [failed, setFailed] = useState<string[]>([]);
 	const [clip, setClip] = useState('');
 	const [hovered, setHovered] = useState(false);
@@ -151,7 +151,7 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 	};
 
 	return (
-		<li className="media-card" data-grid-index={gridIndex} aria-posinset={gridIndex !== undefined ? gridIndex + 1 : undefined} aria-setsize={gridTotal}>
+		<li className={cn('media-card', kind === 'episode' && 'episode-card')} data-grid-index={gridIndex} aria-posinset={gridIndex !== undefined ? gridIndex + 1 : undefined} aria-setsize={gridTotal}>
 			<button
 				className="film"
 				onClick={activate}
@@ -210,7 +210,7 @@ export function MediaCard({ kind, item, onOpen, resumeLabel, actionLabel, kindLa
 				</span>
 				<span className="film-name">{view.title}</span>
 				<span className="film-legend label">
-					{view.legend}
+					{compactLegend ? view.compactLegend : view.legend}
 					{view.position >= 30 && !view.finished ? ` · ${resumeLabel} ${Math.max(1, Math.floor(view.position / 60))} min` : ''}
 				</span>
 			</button>
@@ -231,6 +231,7 @@ function describe(kind: Props['kind'], item: Movie | Series | Episode, actionLab
 			// The series first when the card's own title is the episode: "Shogun
 			// · S01E02 · 54 min" answers what this is, where a lone code does not.
 			legend: [seriesLabel, code, runtime ? `${runtime} min` : ''].filter(Boolean).join(' · '),
+			compactLegend: [code, runtime ? `${runtime} min` : ''].filter(Boolean).join(' · '),
 			kind: kindLabel,
 			art: [episode.still_url, imageURL(record?.metadata?.still_path, 'w780')].filter((url): url is string => Boolean(url)),
 			poster: undefined as string | undefined,
@@ -256,6 +257,7 @@ function describe(kind: Props['kind'], item: Movie | Series | Episode, actionLab
 		return {
 			title,
 			legend: `${kindLabel}${year ? ` · ${year}` : ''}${counts}`,
+			compactLegend: '',
 			kind: kindLabel,
 			art: artworkCandidates(series),
 			poster: series.poster_url ?? imageURL(series.metadata?.poster_path, 'w342') ?? undefined,
@@ -272,6 +274,7 @@ function describe(kind: Props['kind'], item: Movie | Series | Episode, actionLab
 	return {
 		title,
 		legend: year ? String(year) : '',
+		compactLegend: '',
 		kind: kindLabel,
 		art: artworkCandidates(movie),
 		poster: movie.poster_url ?? imageURL(movie.metadata?.poster_path, 'w342') ?? undefined,

@@ -1,0 +1,27 @@
+.help-overlay { z-index: 62; }
+.settings-dialog.help-sheet { z-index: 63; display: block; max-height: calc(100dvh - 2rem); padding: clamp(1rem, 3vw, 2rem); overflow-y: auto; background: var(--color-surface); }
+.help-header { display: flex; align-items: start; gap: 1rem; }
+.help-header > div { flex: 1; min-width: 0; }
+.help-header .settings-title { font-size: clamp(1.4rem, 3vw, 1.85rem); line-height: 1.2; }
+.help-header .settings-description { margin-top: 0.65rem; line-height: 1.5; }
+.help-icon { flex: 0 0 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--color-line); background: var(--color-surface); border-radius: var(--radius-card); color: var(--color-parchment); }
+.shortcut-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1.5rem; margin: 1.75rem 0; }
+.shortcut-list > div { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; min-height: 64px; min-width: 0; padding: 0.85rem 0; border-bottom: 1px solid var(--color-line); }
+.shortcut-list dt { min-width: 0; color: var(--color-parchment); font-size: 0.8125rem; line-height: 1.5; }
+.shortcut-list dd { display: flex; align-items: center; flex-shrink: 0; margin: 0; }
+.shortcut-list dd > span { display: inline-flex; align-items: center; }
+.shortcut-list kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; min-height: 30px; padding: 0.3rem 0.5rem; border: 1px solid var(--color-line); border-bottom-width: 2px; border-radius: 0.4rem; background: var(--color-raised); color: var(--color-bone); font-family: var(--font-ui); font-size: 0.75rem; white-space: nowrap; }
+.key-separator { color: var(--color-muted); padding-inline: 0.35rem; }
+.help-diagnostic { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; padding: 1.25rem; border: 1px solid var(--color-line); border-radius: var(--radius-card); background: var(--color-surface); }
+.help-diagnostic > div { flex: 1 1 12rem; }
+.help-diagnostic h3 { margin: 0; font-size: 0.9375rem; font-weight: 500; color: var(--color-bone); }
+.help-diagnostic p { margin: 0.5rem 0 0; color: var(--color-muted); font-size: 0.8125rem; line-height: 1.5; }
+.help-diagnostic button { white-space: normal; }
+@media (max-width: 38rem) {
+    .help-icon { display: none; }
+    .help-header { gap: 0.65rem; }
+    .shortcut-list { grid-template-columns: minmax(0, 1fr); margin-block: 1.25rem; }
+    .shortcut-list > div { min-height: 52px; padding-block: 0.6rem; }
+    .help-diagnostic { padding: 1rem; }
+    .help-diagnostic button { width: 100%; }
+}

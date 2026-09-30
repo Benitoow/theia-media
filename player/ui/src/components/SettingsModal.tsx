@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Clock, Cog, Copy, Download, Film, Languages, ListVideo, type LucideIcon, Minus, MonitorPlay, Palette, Percent, PenLine, Plus, Server as ServerIcon, Square, BarChart3, Bold, Captions, Tv, Type, UnfoldVertical, X } from 'lucide-react';
+import { Clock, Cog, Copy, Download, Film, Keyboard, Languages, ListVideo, type LucideIcon, Minus, MonitorPlay, Palette, Percent, PenLine, Plus, Server as ServerIcon, Square, BarChart3, Bold, Captions, Tv, Type, UnfoldVertical, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { Button } from './ui/button';
@@ -237,7 +237,7 @@ function SubtitlePane({ subtitles, t, onStyle, onReset }: {
 	);
 }
 
-export default function SettingsModal({ open, language, preferences, server, updateStatus, updateBusy, t, onClose, onChangeServer, onSave, onCheckUpdate, onApplyUpdate }: { open: boolean; language: string; preferences: Preferences; server: Server | null; updateStatus: UpdateStatus | null; updateBusy: boolean; t: (key: string) => string; onClose: () => void; onChangeServer: () => void; onSave: (language: string, preferences: Preferences) => void; onCheckUpdate: () => void; onApplyUpdate: () => void }) {
+export default function SettingsModal({ open, language, preferences, server, updateStatus, updateBusy, t, onClose, onHelp, onChangeServer, onSave, onCheckUpdate, onApplyUpdate }: { open: boolean; language: string; preferences: Preferences; server: Server | null; updateStatus: UpdateStatus | null; updateBusy: boolean; t: (key: string) => string; onClose: () => void; onHelp: () => void; onChangeServer: () => void; onSave: (language: string, preferences: Preferences) => void; onCheckUpdate: () => void; onApplyUpdate: () => void }) {
 	const [draftLanguage, setDraftLanguage] = useState(language);
 	const [draft, setDraft] = useState(preferences);
 	// What the copy button said last, and when it goes quiet again. The address
@@ -519,7 +519,7 @@ export default function SettingsModal({ open, language, preferences, server, upd
 				    quiet Cancel beside a filled Save, both rounded rectangles
 				    rather than the pills the player's controls use - a dialog's
 				    footer is not a control on the picture. */}
-				<footer className="settings-footer"><DialogClose asChild><Button variant="outline">{t('cancel')}</Button></DialogClose><Button onClick={() => onSave(draftLanguage, draft)}>{t('save')}</Button></footer>
+				<footer className="settings-footer"><Button className="settings-help-entry" variant="ghost" aria-label={t('keyboardHelp')} onClick={onHelp}><Keyboard size={17} aria-hidden="true" /><span>{t('help')}</span></Button><DialogClose asChild><Button variant="outline">{t('cancel')}</Button></DialogClose><Button onClick={() => onSave(draftLanguage, draft)}>{t('save')}</Button></footer>
 			</DialogContent>
 		</Dialog>
 	);

@@ -304,6 +304,149 @@ async function assertBandRounded(page) {
 	};
 }
 
+// Compare painted pixels with the same bright image uncovered. The supplied
+// reference calls for a progressive ink veil, clearing to sharp art on the right.
+async function assertPreviewVeil(page, card = page.locator('.film-art').first()) {
+	await card.waitFor({ state: 'visible' });
+	await page.mouse.move(1, 1);
+	await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
+	const original = await card.evaluate(async (el) => {
+		const image = el.querySelector('img');
+		if (!image) throw Error('preview luminance probe has no artwork');
+		const saved = {
+			src: image.getAttribute('src'), srcset: image.getAttribute('srcset'),
+			sizes: image.getAttribute('sizes'), probe: el.getAttribute('data-luminance-probe'),
+		};
+		const canvas = document.createElement('canvas');
+		canvas.width = 960; canvas.height = 540;
+		const context = canvas.getContext('2d');
+		context.fillStyle = '#f0f0f0'; context.fillRect(0, 0, canvas.width, canvas.height);
+		el.setAttribute('data-luminance-probe', '');
+		image.removeAttribute('srcset'); image.removeAttribute('sizes');
+		image.src = canvas.toDataURL('image/png');
+		return saved;
+	});
+	let probeStyle; let uncoveredStyle;
+	try {
+		probeStyle = await page.addStyleTag({ content: `
+			.film-art[data-luminance-probe] video,
+			.film-art[data-luminance-probe] .film-mark,
+			.film-art[data-luminance-probe] .film-watched { visibility: hidden !important; }
+		` });
+		await card.locator('img').evaluate((image) => image.decode());
+		const covered = await card.screenshot();
+		uncoveredStyle = await page.addStyleTag({ content: '.film-art[data-luminance-probe]::after { visibility: hidden !important; }' });
+		const uncovered = await card.screenshot();
+		const readLuminance = async (bytes) => page.evaluate(async (encoded) => {
+			const image = new Image();
+			image.src = 'data:image/png;base64,' + encoded;
+			await image.decode();
+			const canvas = document.createElement('canvas');
+			canvas.width = image.width; canvas.height = image.height;
+			const context = canvas.getContext('2d'); context.drawImage(image, 0, 0);
+			const sample = (fraction) => {
+				const pixels = context.getImageData(Math.round(image.width * fraction) - 2, Math.round(image.height / 2) - 2, 5, 5).data;
+				let total = 0;
+				for (let i = 0; i < pixels.length; i += 4) total += 0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2];
+				return total / 25;
+			};
+			return { left: sample(0.2), middle: sample(0.5), tail: sample(0.75), right: sample(0.94) };
+		}, bytes.toString('base64'));
+		const painted = await readLuminance(covered); const reference = await readLuminance(uncovered);
+		if (Object.values(reference).some(value => value < 225 || Math.abs(value - reference.left) > 3)) {
+			throw Error('preview luminance probe did not paint a uniform bright image: ' + JSON.stringify(reference));
+		}
+		if (painted.left > reference.left * 0.55 || painted.middle > reference.middle * 0.8) {
+			throw Error('preview veil stays pale over bright artwork: ' + JSON.stringify({ painted, reference }));
+		}
+		if (!(painted.left + 20 < painted.middle && painted.middle + 20 < painted.tail && painted.tail + 5 < painted.right)) {
+			throw Error('preview veil has no progressive transition: ' + JSON.stringify({ painted, reference }));
+		}
+		if (Math.abs(painted.right - reference.right) > 3) {
+			throw Error('preview veil darkened the clear right side: ' + JSON.stringify({ painted, reference }));
+		}
+		writeFileSync(join(OUT, 'preview-veil-pixels.json'), JSON.stringify({ scope: 'Painted Chromium pixels over uniform bright artwork', painted, reference }, null, 2));
+	} finally {
+		if (uncoveredStyle) await uncoveredStyle.evaluate((el) => el.remove());
+		if (probeStyle) await probeStyle.evaluate((el) => el.remove());
+		await card.evaluate((el, saved) => {
+			const image = el.querySelector('img');
+			for (const name of ['src', 'srcset', 'sizes']) {
+				if (saved[name] === null) image.removeAttribute(name); else image.setAttribute(name, saved[name]);
+			}
+			if (saved.probe === null) el.removeAttribute('data-luminance-probe'); else el.setAttribute('data-luminance-probe', saved.probe);
+		}, original);
+	}
+}
+
+// The backdrop must dissolve into the actual page at both ends. Hide its
+// colour overlay so only the alpha mask can prevent bright image pixels leaking
+// through the edge; compare with the same page underneath, not a guessed ink.
+async function assertBackdropContinuity(page) {
+	const backdrop = page.locator('.movie-detail .detail-backdrop');
+	const image = backdrop.locator('img');
+	const scroller = page.locator('.library');
+	const scrollTop = await scroller.evaluate((el) => el.scrollTop);
+	const original = await image.evaluate((el) => ({ src: el.getAttribute('src'), visibility: el.style.visibility }));
+	let probeStyle;
+	try {
+		probeStyle = await page.addStyleTag({ content: `
+			.movie-detail .detail-backdrop::after,
+			.movie-detail .detail-record,
+			.library-heading, .library-nav { visibility: hidden !important; }
+		` });
+		await image.evaluate(async (el) => {
+			const canvas = document.createElement('canvas'); canvas.width = 960; canvas.height = 540;
+			const context = canvas.getContext('2d'); context.fillStyle = '#f0f0f0';
+			context.fillRect(0, 0, canvas.width, canvas.height); el.src = canvas.toDataURL('image/png');
+			await el.decode();
+		});
+		const beforeScroll = await backdrop.boundingBox();
+		await scroller.evaluate((el, bottom) => { el.scrollTop += Math.max(0, bottom - (window.innerHeight - 12)); }, beforeScroll.y + beforeScroll.height);
+		const frame = await backdrop.boundingBox(); const viewport = page.viewportSize();
+		const scrollerBox = await scroller.boundingBox();
+		if (!frame || frame.y < scrollerBox.y + 1 || frame.y + frame.height > viewport.height - 2) {
+			throw Error('backdrop continuity probe cannot see both image edges');
+		}
+		const x = Math.round(Math.min(viewport.width - 6, Math.max(1, frame.x + frame.width * 0.8)));
+		const rows = { top: Math.ceil(frame.y), middle: Math.round(frame.y + frame.height * 0.4), bottom: Math.floor(frame.y + frame.height) - 1 };
+		const sample = async () => {
+			const result = {};
+			for (const [edge, y] of Object.entries(rows)) {
+				const bytes = await page.screenshot({ clip: { x, y, width: 5, height: 1 } });
+				result[edge] = await page.evaluate(async (encoded) => {
+					const image = new Image(); image.src = 'data:image/png;base64,' + encoded; await image.decode();
+					const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+					const context = canvas.getContext('2d'); context.drawImage(image, 0, 0);
+					const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+					let total = 0;
+					for (let i = 0; i < pixels.length; i += 4) total += 0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2];
+					return total / (pixels.length / 4);
+				}, bytes.toString('base64'));
+			}
+			return result;
+		};
+		const painted = await sample();
+		await image.evaluate((el) => { el.style.visibility = 'hidden'; });
+		const reference = await sample();
+		for (const edge of ['top', 'bottom']) {
+			if (Math.abs(painted[edge] - reference[edge]) > 8) {
+				throw Error('backdrop image leaks through its ' + edge + ' edge: ' + JSON.stringify({ painted, reference }));
+			}
+		}
+		if (painted.middle - reference.middle < 40) {
+			throw Error('backdrop continuity probe never painted the bright image: ' + JSON.stringify({ painted, reference }));
+		}
+	} finally {
+		await image.evaluate((el, saved) => {
+			if (saved.src === null) el.removeAttribute('src'); else el.setAttribute('src', saved.src);
+			el.style.visibility = saved.visibility;
+		}, original);
+		if (probeStyle) await probeStyle.evaluate((el) => el.remove());
+		await scroller.evaluate((el, position) => { el.scrollTop = position; }, scrollTop);
+	}
+}
+
 async function assertFits(page, state) {
 	const measured = await page.evaluate(() => {
 		const culprits = [];
@@ -2292,13 +2435,12 @@ async function assertSeriesJourney(page) {
 		);
 		failures++;
 	}
-	// Every episode names the series it belongs to. The maintainer's word: "chaque
-	// épisode doit avoir sa série". On a season page the card's title is the
-	// episode, so the series belongs in the legend beside its code.
+	// The series record supplies visible context once; each card retains the
+	// full series identity in its accessible name without a clipped repetition.
 	const legends = await page.locator('.film').evaluateAll((els) =>
-		els.map((el) => el.querySelector('.film-legend')?.textContent ?? '')
+		els.map((el) => el.getAttribute('aria-label') ?? '')
 	);
-	if (!legends.length || legends.some((text) => !text.includes('Shōgun'))) {
+	if (!legends.length || legends.some((text) => !text.includes('Shōgun')) || !(await page.locator('h1').innerText()).includes('Shōgun')) {
 		console.error(`an episode card does not name its series: ${JSON.stringify(legends)}`);
 		failures++;
 	}
@@ -2579,12 +2721,10 @@ if (!CLOSEOUT_ONLY) {
 		console.error(`the card has no blurred fill behind its artwork: ${JSON.stringify(layers)}`);
 		failures++;
 	}
-	// The bandeau is a *blur*, which is the correction the maintainer made: not a
-	// fade over the picture but the picture itself, blurred and darkened from the
-	// left. A gradient background alone would have passed the first version of
-	// this check and be the wrong effect.
-	if (!layers.blurBand.includes('blur(') || !layers.mask.includes('gradient')) {
-		console.error(`the card has no blur band: ${JSON.stringify({ band: layers.blurBand, mask: layers.mask })}`);
+	// The latest banner reference keeps the artwork sharp beneath a broad ink
+	// gradient. Its actual darkness and transition are measured in pixels below.
+	if (!layers.fade.includes('linear-gradient') || layers.blurBand !== 'none') {
+		console.error(`the card lacks a sharp ink veil: ${JSON.stringify({ fade: layers.fade, filter: layers.blurBand })}`);
 		failures++;
 	}
 	// The band must not paint outside the card's rounded corner, and this is
@@ -3750,20 +3890,64 @@ async function closeoutCase(name, run) {
 const connectCloseout = async(page)=> {await page.fill('#theia-address','http://127.0.0.1:8395');await page.click('button[type=submit]');await page.locator('.home-hero').waitFor();};
 // Mocked driver modes exercise the copy contract; native CLI measures the host separately.
 if (!REAL_DETAILS_ONLY) {
+await closeoutCase('preview ink veil over bright artwork', async (page) => {
+ await connectCloseout(page);
+ await page.getByRole('button', { name: 'Movies', exact: true }).click();
+ // The outgoing Home row carries the same film; wait for the actual grid.
+ await page.locator('.home-view').waitFor({ state: 'detached' });
+ const grid = page.locator('.library > .contents');
+ await grid.getByRole('button', { name: /Open movie details.*Probe Film/ }).waitFor({ state: 'visible' });
+ await page.waitForFunction(() => {
+  const view = document.querySelector('.library > .contents');
+  return view?.querySelector('.film-art')?.isConnected && Number(getComputedStyle(view).opacity) >= 0.999;
+ });
+ await assertPreviewVeil(page, grid.locator('.film-art').first());
+});
+await closeoutCase('backdrop dissolves into page at both edges', async (page) => {
+ await connectCloseout(page);
+ await page.getByRole('button', { name: 'Movies', exact: true }).click();
+ await page.locator('.home-view').waitFor({ state: 'detached' });
+ const grid = page.locator('.library > .contents');
+ await grid.getByRole('button', { name: /Open movie details.*Probe Film/ }).click();
+ await page.locator('.movie-detail').waitFor({ state: 'visible' });
+ await page.waitForFunction(() => {
+  const detail = document.querySelector('.movie-detail');
+  return detail?.querySelector('.detail-backdrop img')?.isConnected && Number(getComputedStyle(detail).opacity) >= 0.999;
+ });
+ await assertBackdropContinuity(page);
+});
 for (const width of [390, 969, 1920]) {
  await closeoutCase('film/show details at '+width+'px', async(page)=> {
   await page.setViewportSize({width,height:780}); await connectCloseout(page);
   await page.getByRole('button',{name:'Movies',exact:true}).click(); await page.getByRole('button',{name:/Open movie details.*Probe Film/}).click();
   await page.locator('.movie-detail').waitFor(); await page.locator('.detail-files').waitFor();
   if(await page.locator('h1').count()!==1)throw Error('duplicate detail heading');
+  const backVisible=await page.locator('.library-back').evaluate(el=>{
+   const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===el;
+  });
+  if(!backVisible)throw Error('backdrop paints over return navigation');
   if(!(await page.locator('.movie-detail').innerText()).includes('Probe Writer'))throw Error('crew missing');
   if(await page.locator('.detail-portrait img').count()!==1)throw Error('cast portrait missing');
+  if(width===969) {
+   await page.setViewportSize({width,height:609});
+   const action=await page.locator('.detail-actions button').first().boundingBox();
+   if(!action || action.y<0 || action.y+action.height>609)throw Error('play pushed outside initial native viewport');
+   await page.setViewportSize({width,height:780});
+  }
+  if(await page.locator('.detail-playback').evaluate(el=>el.open))throw Error('verbose compatibility opened by default');
   await page.getByRole('radio').nth(1).check();
+  if(!(await page.locator('.detail-formats').innerText()).includes('4K'))throw Error('format labels did not follow selected file');
+  await page.locator('.detail-playback summary').focus();
+  const toggles=await page.evaluate(()=>window.__invocations.filter(c=>c.cmd==='player_toggle_pause').length);
+  await page.keyboard.press('Space');
+  if(!await page.locator('.detail-playback').evaluate(el=>el.open))throw Error('Space did not open playback disclosure');
+  if(await page.evaluate(()=>window.__invocations.filter(c=>c.cmd==='player_toggle_pause').length)!==toggles)throw Error('disclosure Space also toggled playback');
   await page.waitForFunction(()=>document.querySelector('.native-compatibility')?.textContent?.includes('3840 × 1604'));
   const panel=await page.locator('.native-compatibility').innerText();
   if(!panel.includes(catalogues.en.sdrOutput)||!panel.includes(catalogues.en.hdrToneMapDetail))throw Error('HDR source claimed native HDR on SDR output');
-  await assertFits(page,'film detail '+width); await page.locator('.library').evaluate(el=>el.scrollTop=0); await page.screenshot({path:join(OUT,'detail-film-'+width+'.png')});
+  await assertFits(page,'film detail '+width); await page.locator('.detail-playback summary').click(); await page.locator('.library').evaluate(el=>el.scrollTop=0); await page.screenshot({path:join(OUT,'detail-film-'+width+'.png')});
   await page.evaluate(()=>{window.__capabilities={source:'mock',displayWidth:3840,displayHeight:2160,hdrEnabled:true,hardwareDecode:true,decoderProfiles:['HEVC Main 10-bit']};});
+  await page.locator('.detail-playback summary').click();
   await page.getByRole('button',{name:catalogues.en.refreshCapabilities,exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('.native-compatibility')?.textContent?.includes('HDR mode active'));
   await page.getByRole('button',{name:catalogues.en.playMovie,exact:true}).click();
@@ -3773,16 +3957,25 @@ for (const width of [390, 969, 1920]) {
   await page.locator('.series-detail').waitFor();
   const show=await page.locator('.series-detail').innerText();
   if(!show.includes('A series about a sailor.')||!show.includes('Series Actor')||!show.includes('Show Creator')||!show.includes('2024 – 2025'))throw Error('series TMDB record incomplete');
+  const order=await page.evaluate(()=>{
+   const episodes=document.querySelector('.series-episodes'),cast=document.querySelector('.detail-cast');
+   return Boolean(episodes&&cast&&(episodes.compareDocumentPosition(cast)&Node.DOCUMENT_POSITION_FOLLOWING));
+  });
+  if(!order)throw Error('distribution precedes episode selection');
+  const controls=await page.locator('.episode-actions button').evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect();return {width:r.width,height:r.height,right:r.right,parentRight:el.closest('.media-card').getBoundingClientRect().right};}));
+  if(controls.some(r=>r.width<43.5||r.height<43.5||r.right>r.parentRight+1))throw Error('episode history control too small or overflows');
   await assertFits(page,'series detail '+width);await page.locator('.library').evaluate(el=>el.scrollTop=0);await page.screenshot({path:join(OUT,'detail-series-'+width+'.png')});
   await page.evaluate(()=>{window.__failCommands=['player_display_capabilities'];});
   await page.getByRole('button',{name:'Movies',exact:true}).click();await page.getByRole('button',{name:/Open movie details.*Probe Film/}).click();
   await page.getByRole('radio').nth(1).check();await page.waitForTimeout(250);
+  await page.locator('.detail-playback summary').click();
   if((await page.locator('.native-compatibility').innerText()).includes(catalogues.en.hdrEnabled))throw Error('failed preflight inherited HDR verdict');
  });
 }
 await closeoutCase('explicit inspection, retry and late response isolation', async(page)=> {
  await page.evaluate((movie)=>{window.__movieDetail={...movie,files:[{id:11,is_primary:true,file_name:'Pending file',media:{status:'pending'}}]};},MOVIES[0]);
  await connectCloseout(page);await page.getByRole('button',{name:'Movies',exact:true}).click();await page.getByRole('button',{name:/Open movie details.*Probe Film/}).click();
+ await page.locator('.detail-playback summary').click();
  await page.getByRole('button',{name:catalogues.en.inspectFile,exact:true}).waitFor();
  await page.evaluate(()=>{window.__failCommands=['player_inspect_file'];});
  await page.getByRole('button',{name:catalogues.en.inspectFile,exact:true}).click();
@@ -3797,9 +3990,10 @@ await closeoutCase('explicit inspection, retry and late response isolation', asy
  await page.getByRole('button',{name:'Series',exact:true}).click();await page.getByRole('button',{name:/Open series.*Shōgun/}).click();
  await page.evaluate(()=>{window.__delays={player_inspect_file:800};window.__realEpisode={id:11,files:[{id:51,is_primary:true,media:{status:'pending'}}]};});
  await page.getByRole('button',{name:'Movies',exact:true}).click();await page.getByRole('button',{name:/Open movie details.*Probe Film/}).click();
+ await page.locator('.detail-playback summary').click();
  await page.getByRole('button',{name:catalogues.en.inspectFile,exact:true}).click();
  await page.getByRole('button',{name:'Series',exact:true}).click();await page.getByRole('button',{name:/Open series.*Shōgun/}).click();
- await page.locator('.series-detail').waitFor();await page.getByRole('button',{name:catalogues.en.inspectFile,exact:true}).waitFor();await page.waitForTimeout(1000);
+ await page.locator('.series-detail').waitFor();await page.locator('.detail-playback summary').click();await page.getByRole('button',{name:catalogues.en.inspectFile,exact:true}).waitFor();await page.waitForTimeout(1000);
  if(await page.locator('.movie-detail').count())throw Error('late inspection reopened movie');
  if((await page.locator('.native-compatibility').innerText()).includes('3840 × 2160'))throw Error('film result contaminated episode');
  await page.getByRole('button',{name:catalogues.en.inspectFile,exact:true}).click();
@@ -3848,12 +4042,81 @@ await closeoutCase('episode end offers next and pending save',async(page)=> {
  if(!(await page.locator('.save-status').count()))throw Error('pending save was hidden');
  const call=await page.evaluate(()=>window.__invocations.filter(c=>c.cmd==='player_play_episode').at(-1));if(call?.args?.id!==902)throw Error('wrong next episode');
 });
+for (const width of [390, 969, 1920]) {
+ await closeoutCase('cast rail navigation at '+width+'px', async(page)=> {
+  await page.setViewportSize({width,height:780}); await page.emulateMedia({reducedMotion:'reduce'}); await connectCloseout(page);
+  await page.evaluate(movie=>{window.__movieDetail={...movie,metadata:{...movie.metadata,cast:Array.from({length:12},(_,index)=>({name:'Actor '+index,character:'A character with a longer name '+index,profile_url:index===11?undefined:'/api/images/w185/actor.jpg'}))}};},MOVIES[0]);
+  await page.getByRole('button',{name:'Movies',exact:true}).click();await page.getByRole('button',{name:/Open movie details.*Probe Film/}).click();
+  const rail=page.locator('.cast-rail');await rail.scrollIntoViewIfNeeded();
+  const next=page.getByRole('button',{name:catalogues.en.nextCast,exact:true});await next.waitFor();
+  const previous=page.getByRole('button',{name:catalogues.en.previousCast,exact:true});
+  const readable=await rail.evaluate(el=>Array.from(el.children).every(person=>{
+   const portrait=person.querySelector('.detail-portrait').getBoundingClientRect(),name=person.querySelector('.cast-name').getBoundingClientRect(),role=person.querySelector('.cast-role').getBoundingClientRect();
+   return portrait.width>=112&&Math.abs(portrait.width/portrait.height-0.75)<0.02&&name.y>=portrait.bottom&&role.y>=name.bottom;
+  }));
+  if(!readable)throw Error('names and roles are not below readable portraits');
+  for(const button of [previous,next]){const box=await button.boundingBox();if(!box||box.width<44||box.height<44)throw Error('cast scroll target too small');}
+  if(!await previous.isDisabled())throw Error('previous active at rail start');
+  await next.click();await page.waitForFunction(()=>document.querySelector('.cast-rail').scrollLeft>0);
+  await rail.focus();await page.keyboard.press('End');
+  await page.waitForFunction(()=>{const el=document.querySelector('.cast-rail');return el.scrollLeft+el.clientWidth>=el.scrollWidth-1;});
+  await page.waitForFunction(label=>Array.from(document.querySelectorAll('.cast-controls button')).find(button=>button.getAttribute('aria-label')===label)?.disabled,catalogues.en.nextCast,{timeout:2500});
+  if(!await next.isDisabled())throw Error('next active at rail end');
+  if(await rail.locator('.detail-portrait svg').count()!==1)throw Error('missing portrait has no fallback');
+  await page.keyboard.press('ArrowLeft');await page.waitForFunction(()=>{const el=document.querySelector('.cast-rail');return el.scrollLeft+el.clientWidth<el.scrollWidth-1;});
+  await page.keyboard.press('Home');await page.waitForFunction(()=>document.querySelector('.cast-rail').scrollLeft===0);
+  await page.keyboard.press('ArrowRight');await page.waitForFunction(()=>document.querySelector('.cast-rail').scrollLeft>0);
+  await previous.click();await page.waitForFunction(()=>document.querySelector('.cast-rail').scrollLeft===0);
+  await assertFits(page,'cast rail '+width+'px');
+ });
+}
 await closeoutCase('keyboard help copies diagnostic and search focuses',async(page)=> {
  await connectCloseout(page);await page.keyboard.press('?');await page.getByRole('dialog').waitFor();
  await assertFits(page,'keyboard help 969x609');await page.getByRole('button',{name:catalogues.en.copyDiagnostic,exact:true}).click();
  const diagnostic=await page.evaluate(()=>navigator.clipboard.readText());if(JSON.parse(diagnostic).version!=='3.4.0')throw Error('clipboard diagnostic missing');
  await page.keyboard.press('Escape');await page.keyboard.press('Control+f');await page.locator('.search-field input').waitFor();
  if(!await page.locator('.search-field input').evaluate(e=>e===document.activeElement))throw Error('search shortcut did not focus input');
+});
+for(const language of ['en','fr']) {
+ await closeoutCase('settings help preserves draft and focus in '+language,async(page)=> {
+  await connectCloseout(page);
+  if(language==='fr')await page.locator('.title-bar .control--language').click();
+  const labels=catalogues[language];await page.getByRole('button',{name:new RegExp('^'+labels.settings)}).click();
+  const settings=page.locator('.settings-dialog:not(.help-sheet)');await settings.waitFor();
+  const chosen=settings.getByRole('button',{name:language==='en'?'Français':'English',exact:true});await chosen.click();
+  for(const width of [320,390,969]) {
+   await page.setViewportSize({width,height:780});await assertFits(page,'settings help entry '+language+' '+width);
+   if(await settings.locator('.settings-footer').evaluate(el=>el.scrollWidth>el.clientWidth+1))throw Error('settings actions overflow their footer');
+   const entry=settings.getByRole('button',{name:labels.keyboardHelp,exact:true});const entryBox=await entry.boundingBox();
+   if(!entryBox||entryBox.width<44||entryBox.height<44)throw Error('help entry too small');
+   await entry.click();const help=page.locator('.help-sheet');await help.waitFor();
+   await assertFits(page,'help '+language+' '+width);
+   if(await help.evaluate(el=>el.scrollWidth>el.clientWidth+1))throw Error('help content scrolls horizontally');
+   await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');
+   if(!await help.evaluate(el=>el.contains(document.activeElement)))throw Error('help focus escaped into settings');
+   if(!await help.getByRole('heading',{name:labels.keyboardHelp,exact:true}).count()||await help.locator('kbd').count()!==11)throw Error('localized shortcut keys missing');
+   const close=help.getByRole('button',{name:labels.closeHelp,exact:true});const closeBox=await close.boundingBox();
+   if(!closeBox||closeBox.width<44||closeBox.height<44)throw Error('help close too small');
+   await help.screenshot({path:join(OUT,'help-'+language+'-'+width+'.png')});
+   if(width===390)await close.click();else await page.keyboard.press('Escape');
+   await help.waitFor({state:'detached'});
+   if(!await settings.isVisible()||await chosen.getAttribute('aria-pressed')!=='true')throw Error('closing help lost the settings draft');
+   await page.waitForFunction(()=>document.activeElement?.classList.contains('settings-help-entry'));
+  }
+  if(await page.locator('.help-trigger').count())throw Error('floating help trigger survived');
+  await settings.getByRole('button',{name:labels.cancel,exact:true}).click();
+ });
+}
+await closeoutCase('diagnostic copy failure can be retried',async(page)=> {
+ await connectCloseout(page);await page.keyboard.press('?');const help=page.locator('.help-sheet');await help.waitFor();
+ await page.evaluate(()=>{window.__failCommands=['player_clean_diagnostic'];});
+ await help.getByRole('button',{name:catalogues.en.copyDiagnostic,exact:true}).click();await help.getByRole('alert').waitFor();
+ await page.evaluate(()=>{window.__failCommands=[];window.__delays={player_clean_diagnostic:150};});
+ const copy=help.getByRole('button',{name:catalogues.en.copyDiagnostic,exact:true});await copy.click();
+ if(!await copy.isDisabled())throw Error('diagnostic copy stays active while busy');
+ await help.getByRole('button',{name:catalogues.en.diagnosticCopied,exact:true}).waitFor();
+ if(await help.getByRole('alert').count())throw Error('diagnostic retry kept the error');
+ if(JSON.parse(await page.evaluate(()=>navigator.clipboard.readText())).engine!=='mpv')throw Error('retry did not copy diagnostic');
 });
 {
  const movies=Array.from({length:1000},(_,index)=>({...MOVIES[0],id:index+1000,title:'Film '+index,metadata:{...MOVIES[0].metadata,title:'Film '+index},progress:{position_seconds:0,finished:false}}));
@@ -3913,23 +4176,52 @@ await closeoutCase('local fixture responsiveness and lazy settings',async(page)=
 const realDetailsArg = process.argv.indexOf('--real-details');
 if (realDetailsArg >= 0) {
  const data = JSON.parse(readFileSync(process.argv[realDetailsArg + 1], 'utf8').replace(/^\uFEFF/, ''));
- const page = await openPage({width:969,height:780},{movies:[data.movie],series:[data.series],seriesDetail:data.series,season:data.season});
+ // The CLI fixture carries raw season records. Mirror the native bridge's
+ // cached-image enrichment rather than asking the preview server for TMDB art.
+ const artworkOrigin=new globalThis.URL(data.movie.poster_url).origin;
+ const season={...data.season,episodes:data.season.episodes.map(episode=>{
+  const still=episode.episode_metadata?.[0]?.metadata?.still_path;
+  return {...episode,still_url:episode.still_url||(still?artworkOrigin+'/api/images/w780/'+still.replace(/^\//,''):undefined)};
+ })};
+ const page = await openPage({width:969,height:609},{movies:[data.movie],series:[data.series],seriesDetail:data.series,season});
  try {
   await page.unroute('**/api/images/**');
   await page.evaluate(({episode,capabilities})=>{window.__realEpisode=episode;window.__capabilities=capabilities;},data);
-  await connectCloseout(page);await page.getByRole('button',{name:'Movies',exact:true}).click();await page.locator('.contents .film').filter({hasText:data.movie.metadata.tmdb_title||data.movie.metadata.title||data.movie.title}).click();
+  await connectCloseout(page);await page.getByRole('button',{name:'Movies',exact:true}).click();
+  const filmCard=page.locator('.contents .film').filter({hasText:data.movie.metadata.tmdb_title||data.movie.metadata.title||data.movie.title});await filmCard.waitFor();
+  await filmCard.locator('.film-art img').evaluate(image=>image.decode());
+  await page.waitForFunction(()=>Number(getComputedStyle(document.querySelector('.library > .contents')).opacity)>=0.999);
+  await filmCard.locator('.film-art').screenshot({path:join(OUT,'real-film-preview.png')});await filmCard.click();
   await page.locator('.movie-detail').waitFor();
   await page.waitForFunction(()=>Array.from(document.querySelectorAll('.detail-poster img,.detail-backdrop img')).length===2&&Array.from(document.querySelectorAll('.detail-poster img,.detail-backdrop img')).every(img=>img.complete&&img.naturalWidth>0));
   if(!(await page.locator('.movie-detail').innerText()).includes(data.movie.metadata.overview))throw Error('real film synopsis lost');
-  await page.locator('.detail-portrait img').first().scrollIntoViewIfNeeded();await page.waitForFunction(()=>document.querySelector('.detail-portrait img')?.naturalWidth>0);
+  const play=await page.locator('.detail-actions button').first().boundingBox();
+  if(!play||play.y<0||play.y+play.height>609)throw Error('real long film title pushes play below viewport');
+  const cast=page.locator('.movie-detail .detail-cast'),rail=cast.locator('.cast-rail');
+  await cast.scrollIntoViewIfNeeded();await rail.focus();await page.keyboard.press('End');
+  await page.waitForFunction(()=>{const el=document.querySelector('.cast-rail');return el.scrollLeft+el.clientWidth>=el.scrollWidth-1;});
+  await page.waitForFunction(()=>Array.from(document.querySelectorAll('.detail-cast img')).every(img=>img.complete&&img.naturalWidth>0));
+  await page.keyboard.press('Home');await page.waitForFunction(()=>document.querySelector('.cast-rail').scrollLeft===0);
+  await rail.evaluate(el=>el.blur());
+  for(const width of [390,969,1920]) {
+   await page.setViewportSize({width,height:width===1920?1080:780});await cast.scrollIntoViewIfNeeded();
+   await assertFits(page,'real cast '+width);await cast.screenshot({path:join(OUT,'real-film-cast-'+width+'.png')});
+  }
+  await page.setViewportSize({width:969,height:609});
   await page.locator('.library').evaluate(el=>el.scrollTop=0);await page.screenshot({path:join(OUT,'real-film-detail.png')});
+  await page.locator('.detail-playback summary').click();
   const moviePanel=await page.locator('.native-compatibility').innerText();
   if(!moviePanel.includes(String(data.movie.files[0].media.video.width)))throw Error('real measured file lost');
   await page.getByRole('button',{name:'Series',exact:true}).click();await page.locator('.contents .film').filter({hasText:data.series.metadata.tmdb_name||data.series.metadata.name||data.series.title}).click();await page.locator('.series-detail').waitFor();
   await page.waitForFunction(()=>Array.from(document.querySelectorAll('.detail-poster img,.detail-backdrop img')).length===2&&Array.from(document.querySelectorAll('.detail-poster img,.detail-backdrop img')).every(img=>img.complete&&img.naturalWidth>0));
   if(!(await page.locator('.series-detail').innerText()).includes(data.series.metadata.overview))throw Error('real series synopsis lost');
+  const episodePlay=await page.locator('.detail-actions button').first().boundingBox();
+  if(!episodePlay||episodePlay.y<0||episodePlay.y+episodePlay.height>609)throw Error('real long series title pushes play below viewport');
   await page.locator('.detail-portrait img').first().scrollIntoViewIfNeeded();await page.waitForFunction(()=>document.querySelector('.detail-portrait img')?.naturalWidth>0);
   await page.locator('.library').evaluate(el=>el.scrollTop=0);await page.screenshot({path:join(OUT,'real-series-detail.png')});
+  await page.locator('.series-episodes .film').first().scrollIntoViewIfNeeded();
+  await page.waitForFunction(()=>Array.from(document.querySelectorAll('.series-episodes .film-art img')).slice(0,3).every(img=>img.complete&&img.naturalWidth>0&&!img.src.includes('media-not-found')));
+  await page.screenshot({path:join(OUT,'real-series-episodes.png')});
   writeFileSync(join(OUT,'real-detail-render.json'),JSON.stringify({scope:'Headless Chromium with mocked bridge; real native CLI metadata, measured files, primary-monitor driver data and live cached TMDB artwork',movieId:data.movie.id,seriesId:data.series.id,episodeId:data.episode.id,capabilities:data.capabilities,moviePanel},null,2));
   console.log('real-library film/series details and cached artwork passed');
  }catch(error){console.error('real-library details: '+error.message);failures++;}finally{await page.close();}

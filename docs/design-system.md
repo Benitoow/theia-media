@@ -491,8 +491,8 @@ grew a box over the grid; both are gone.
 - **Nothing about the card changes size, moves, or opens over anything.** The
   grid's geometry before, during and after the pointer is identical - asserted as
   a list of rectangles in `check:render`, because "no change of size" is a
-  measurement and not an impression. The one thing a hover changes is the
-  hairline, and now the six seconds playing inside the frame.
+  measurement and not an impression. Hover changes only the
+  hairline, the veil's strength, and the six seconds playing inside the frame.
 - **The bytes arrive through the player.** The clip is fetched by the Rust side
   and handed to the page as a `data:` URL, because a `<video src>` pointing at
   the local server is refused by WebView2 outright - it reports `Format error`
@@ -505,13 +505,12 @@ grew a box over the grid; both are gone.
   bands become the artwork's light instead of a hole. The maintainer's word on
   20 September 2026 was "retire les, c'est moche"; cropping the poster is the
   thing section 6.1 refuses, and this removes the bands without it.
-- **The bandeau is a blur, not a veil.** A dark blur along the left of the
-  picture, gone before the middle, very light: the maintainer's correction on
-  20 September 2026 - "je ne voulais pas dire fade, mais un blur, un flou sombre
-  de la gauche vers la droite, très léger". The blur is done with
-  `backdrop-filter` on a masked layer, so the picture itself is what softens
-  rather than being covered; the same gradient at low strength darkens it,
-  because a blur alone is invisible on a dark frame and a smudge on a bright one.
+- **The bandeau follows the supplied reference.** Decision 158 adopts the
+  maintainer's 30 September 2026 banner reference: a broad ink gradient over
+  sharp artwork, darkest at the left and clearing progressively to the right.
+  It replaces decision 135's masked preview blur. Hover/focus can deepen the
+  same veil quietly; geometry stays fixed. Painted pixels over bright artwork
+  must show the progressive transition and the clear right edge.
   **Every composited layer rounds itself, with `border-radius`.** An ancestor's
   `overflow: hidden` and `border-radius` do not clip one, and `clip-path` is not
   a substitute on WebView2: a layer carrying a `backdrop-filter` keeps a square
@@ -1442,3 +1441,42 @@ Large catalogue grids preserve list semantics and announce an item's position
 and total while windowing complete rows. Arrow/Home/End access and Tab across
 an unmounted boundary must remain usable. Returning from a detail restores the
 previous grid scroll only after its row spacers exist.
+
+### Native film and series records: September 2026 visual correction
+
+The maintainer's four native screenshots require a compact reading order:
+identity, file facts and play, synopsis, season/episodes, then distribution and
+credits. The decorative backdrop is an absolute layer behind the identity; it
+starts and ends in ink, with a left reading veil. It reserves no empty image
+block and has no exposed horizontal edge. A single kind label sits by the title.
+The native detail title keeps Cinzel, with a scoped 1.8-3.4rem responsive range
+so long titles leave the play action visible in the 969x609 window. The full
+synopsis and tagline follow the primary action. Measured format labels describe
+the selected file, never promise the display or receiver can reproduce it.
+
+Multiple file choices remain directly below play (decision 39). Verbose driver
+and display checks live in a keyboard-operable native details disclosure. Cast
+uses a horizontal portrait rail with names and roles below; credits stay readable
+below. This replaces the small adaptive cells rejected in the native review.
+Within a named series record only, the episode legend shows code/runtime instead
+of repeating the same clipped show title on every card. The visible series h1
+and each card's full accessible name retain the series identity; home/search
+episode cards continue naming their series visibly. History controls form one
+compact row below each card, with 44px targets and the existing confirmation.
+
+The subsequent maintainer-supplied 21st reference replaces the preview blur with
+a broad ink gradient: opaque at the left, progressively transparent over the
+picture, clear at the right. It uses existing film artwork/preview bytes. Card
+geometry and each composited layer's own radius remain mandatory for WebView2
+(decision 135). Painted pixels check the left-to-right transition and clear edge.
+
+The distribution rail uses 3:4 portraits with consistent name/role space, local
+cached images and a neutral icon fallback. It scrolls horizontally without
+overflowing the page. Previous/next controls have 44px targets; the rail supports
+arrows and Home/End, with instant movement under reduced motion.
+
+Help belongs in the settings footer and remains reachable through `?`. It uses
+the shared accessible dialog with an explicit close control, paired shortcut
+rows with keycaps, and a separate playback diagnostic area. The floating question
+mark is retired. Opening help preserves the settings draft and closing it returns
+focus to the invoking control. One vertical scroll area handles small windows.

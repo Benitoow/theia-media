@@ -160,6 +160,11 @@ export default function App() {
     const detailGeneration = useRef(0);
     const startupCancelled = useRef(false);
     const [helpOpen, setHelpOpen] = useState(false);
+    const helpTrigger = useRef<HTMLElement | null>(null);
+    const openHelp = useCallback(() => {
+        helpTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        setHelpOpen(true);
+    }, []);
     const [historyBusy, setHistoryBusy] = useState(false);
     const cancelConnect = () => { startupCancelled.current = true; connectionGeneration.current++; detailGeneration.current++; invalidateCatalogue(); setBusy(false); setBooting(false); void invoke('player_cancel_connect'); };
 	const refreshUpdateStatus = useCallback(async () => {
@@ -791,6 +796,7 @@ export default function App() {
 
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
+			if (event.defaultPrevented) return;
 			if (event.key === 'Escape' && helpOpen) { setHelpOpen(false); return; }
             if (settingsOpen || profilesOpen || helpOpen) return;
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') { event.preventDefault(); navigate('/search'); setTimeout(() => document.querySelector<HTMLInputElement>('.search-field input')?.focus(), 0); return; }
@@ -799,7 +805,7 @@ export default function App() {
 				if (event.key === 'Escape') (event.target as HTMLElement).blur();
 				return;
 			}
-			if (event.key === '?') { event.preventDefault(); setHelpOpen(true); return; }
+			if (event.key === '?') { event.preventDefault(); openHelp(); return; }
             if ((event.target as HTMLElement | null)?.closest('.scrub')) return;
 			if (trackMenuOpen && event.key.startsWith('Arrow')) {
 				event.preventDefault();
@@ -812,7 +818,7 @@ export default function App() {
 				return;
 			}
 			if (event.key === ' ' || event.key === 'k') {
-				if (event.key === ' ' && (event.target as HTMLElement | null)?.closest('button, [role="slider"]')) return;
+				if (event.key === ' ' && (event.target as HTMLElement | null)?.closest('button, summary, [role="slider"]')) return;
 				event.preventDefault();
 				toggle();
 			} else if (status.media && event.key === 'ArrowLeft') seek(-10);
@@ -846,7 +852,7 @@ export default function App() {
 		};
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
-	}, [helpOpen, navigate, fullscreen, profilesOpen, returnToLibrary, seek, selectedMovie, selectedSeries, setFullscreenState, setVolumeTo, settingsOpen, status.media, switchLanguage, toggle, toggleFullscreen, trackMenuOpen, volume, wake]);
+	}, [helpOpen, openHelp, navigate, fullscreen, profilesOpen, returnToLibrary, seek, selectedMovie, selectedSeries, setFullscreenState, setVolumeTo, settingsOpen, status.media, switchLanguage, toggle, toggleFullscreen, trackMenuOpen, volume, wake]);
 
 	const seconds = Number(status.pos) || 0;
 	const duration = Number(status.duration) || 0;
@@ -960,7 +966,7 @@ export default function App() {
 						profilesOpen={profilesOpen} updateStatus={updateStatus} searchQuery={searchQuery}
 						home={home} seriesHome={seriesHome} homeError={homeError} language={language}
 						errorKey={errorKey} reducedMotion={preferences.reducedMotion} t={t}
-						onCancel={cancelConnect} historyBusy={historyBusy} onHistory={editEpisodeHistory} onHelp={() => setHelpOpen(true)} onAddress={(value) => { startupCancelled.current = true; setAddress(value); }} onSubmit={submit} onFind={() => void findServers()} onConnect={(url) => void connect(url)}
+						onCancel={cancelConnect} historyBusy={historyBusy} onHistory={editEpisodeHistory} onAddress={(value) => { startupCancelled.current = true; setAddress(value); }} onSubmit={submit} onFind={() => void findServers()} onConnect={(url) => void connect(url)}
 						onSection={moveToSection} onSettings={openSettings} onProfiles={openProfiles} onSearchQuery={setSearchQuery} onMovie={openMovie} onPlayMovie={playMovie} onBackMovie={() => { detailGeneration.current++; setSelectedMovie(null); }} onSeries={openSeries}
 						onEpisode={playEpisode} onSeason={openSeason}
 						onBackSeries={() => { detailGeneration.current++; setSelectedSeries(null); setSelectedSeason(null); }}
@@ -970,15 +976,18 @@ export default function App() {
 				<Suspense fallback={null}>
                 {settingsOpen && <SettingsModal
 					open={settingsOpen && !status.media} language={language} preferences={preferences} server={server} updateStatus={updateStatus} updateBusy={updateBusy} t={t}
-					onClose={closeOverlay} onChangeServer={() => void changeServer()} onCheckUpdate={() => void checkUpdate()} onApplyUpdate={() => void applyUpdate()}
+					onClose={closeOverlay} onHelp={openHelp} onChangeServer={() => void changeServer()} onCheckUpdate={() => void checkUpdate()} onApplyUpdate={() => void applyUpdate()}
 					onSave={(nextLanguage, nextPreferences) => {
 						persistLanguage(nextLanguage);
 						persistPreferences(nextPreferences);
 						closeOverlay();
 					}}
 				/>}
-
-				{helpOpen && <PlayerHelp open={helpOpen} t={t} onClose={() => setHelpOpen(false)} />}
+                </Suspense>
+                <Suspense fallback={null}>
+				{helpOpen && <PlayerHelp open={helpOpen} t={t} returnFocus={helpTrigger.current} onClose={() => setHelpOpen(false)} />}
+                </Suspense>
+                <Suspense fallback={null}>
                 {profilesOpen && <ProfileDialog
 					open={profilesOpen && !status.media}
 					profiles={server?.profiles ?? []}

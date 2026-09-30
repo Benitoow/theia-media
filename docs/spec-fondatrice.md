@@ -92,7 +92,7 @@ Mobile natif : **hors scope v1**, prévu plus tard (PWA suffira pour l'instant e
 - Applications natives (TV, mobile, desktop) - le web/PWA suffit pour l'instant.
   > **Amendé en V3.3 (§14)** : les applications natives **de bureau** sont
   > désormais dans le périmètre (`theia-player`). Les applications TV et mobiles
-  > restent hors périmètre et sont renvoyées à une V3.4/V5.
+  > restent hors périmètre, sans version ni date promise (décision 159).
 - Gestion multi-utilisateurs avec permissions.
 - Assistant IA / recherche sémantique (ex: modèle type Gemma local) - idée valable, réservée à un module optionnel téléchargeable séparément, jamais dans le binaire de base.
 - Live TV / DVR.
@@ -309,8 +309,8 @@ plateforme, pas des défauts de Theia.
 |---|---|
 | §1, §3 et §3 (pitch Navidrome) : « un seul binaire » | **trois exécutables** : `theia-server` (Go, headless), `theia-player` (Tauri 2 + Rust + libmpv), `theia-setup` (Go + Charm), **plus la commande `theia`** (Go) qui démarre le serveur s'il ne répond pas puis ouvre le lecteur - décision 139, 21 septembre 2026. Les assets serveur publiés s'appellent `theia-server-<os>-<arch>` depuis la V3.3 ; les anciens noms `theia-<os>-<arch>` ont été conservés pour la transition V3.3.0 uniquement (décisions 119 et 138). |
 | §3 : « pas de dépendance runtime au-delà de ffmpeg » | reste vrai **pour `theia-server`**. `theia-player` ajoute **libmpv** : source épinglée, SHA-256 vérifié, licence contrôlée, **livrée dans le bundle du lecteur** (décision 118). Il utilise en plus le moteur web de la plateforme (WebView2, WKWebView, WebKitGTK), qui n'est ni téléchargé ni épinglé par Theia - exception nommée, pas oubli. |
-| §5 : « applications natives hors périmètre » | les applications **de bureau** entrent dans le périmètre. Les applications TV et mobiles restent dehors (V3.4/V5). |
-| §2 étape 4 et §10 : « depuis un navigateur, sur la TV, en moins de 3 clics » | le critère de succès V3.3 passe par `theia-player` pour la restitution ; depuis la décision 154, le navigateur reste la voie d'administration et de réglages du serveur, mais sa lecture n'est plus prise en charge. Le critère lui-même est réécrit dans [`v3.3.md`](v3.3.md). |
+| §5 : « applications natives hors périmètre » | les applications **de bureau** entrent dans le périmètre. Les applications TV et mobiles restent dehors, sans date ni version promise (décision 159). |
+| §2 étape 4 et §10 : « depuis un navigateur, sur la TV, en moins de 3 clics » | le critère de succès V3.3 passe par `theia-player` pour la restitution. La décision 159 conserve le lecteur web existant pour les téléphones et TV, sans développement ni support actif de lecture/catalogue. Administration et réglages serveur restent maintenus. Le critère lui-même est réécrit dans [`v3.3.md`](v3.3.md). |
 | §11.7 : « binaire lancé manuellement » *(reformulé, pas supprimé)* | `theia-setup` installe un service `systemd`, une tâche planifiée Windows ou un agent `launchd`, **sur demande explicite** uniquement. Aucune élévation imposée. |
 
 Les trois premières lignes **supersèdent** ; la quatrième **reformule** ; tout ce

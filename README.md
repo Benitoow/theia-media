@@ -81,12 +81,22 @@ house, not on taste.
 | One computer that holds the films and is plugged into the screen | **All-in-one** - the default answer in the installer | It serves and it plays. Nothing travels over the network, so nothing is limited by it. |
 | A small machine in a cupboard or a NAS, and a television, a laptop or a desktop you watch on | **Server only** on that machine, then **player only** on each device you watch on | The server indexes, stores and streams; the player uses the sound and picture hardware of the machine in front of you, which is where the difference is heard. |
 | A computer that only watches, with the films held elsewhere | **Player only** | No library is scanned or stored locally. It asks the server for the catalogue and the files. |
-| Anything else - a phone, a tablet, a television browser, a machine you have not decided about | **Nothing** for server administration; open the address the server prints in a browser | The web interface keeps server settings and administration. Browser playback is no longer supported from 3.4. |
+| A phone, tablet or television browser | **Nothing**; open the address the server prints in a browser | The existing web viewer remains available. Active web viewing support ends with 3.4; server settings and administration remain maintained. |
 
 Two things the table cannot say. **The player runs on Windows x64 and, since
 3.3.4, on macOS Apple Silicon** - Windows on ARM and Linux have the server but
 no player, and the project does not ship what it has not seen work. The browser
-keeps the server settings and diagnostics. Watching moves to the native player.
+keeps the server settings and diagnostics, which remain maintained. Its existing
+viewer remains available for phones and TVs without active viewing development
+or support. Desktop apps and the server are the active priorities.
+
+## After V3
+
+3.4 is the final planned V3 release, currently in preparation. No 3.4.1, 3.5 or
+3.6 is planned. [V4](docs/v4.md) moves toward watch parties, a startup profile
+chooser, comments and likes/dislikes on films. Direct messages and calls are
+outside the scope. Dedicated phone and TV apps are deferred without a date.
+The current published download remains 3.3.6 until the release gates pass.
 
 ## Project phase: field testing
 

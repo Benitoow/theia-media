@@ -99,7 +99,8 @@ jobs:
           $log = Join-Path (Resolve-Path out).Path 'player.log'
           $errors = Join-Path (Resolve-Path out).Path 'player.err'
           $media = (Resolve-Path out/fixture.mp4).Path
-          $player = Start-Process -FilePath (Resolve-Path .\dist\theia-player-windows-arm64\theia-player.exe) -ArgumentList '--media', $media, '--diagnostics', '--mute', '--window', '960x540' -RedirectStandardOutput $log -RedirectStandardError $errors -PassThru
+          $windowReport = Join-Path (Resolve-Path out).Path 'player-window.json'
+          $player = Start-Process -FilePath (Resolve-Path .\dist\theia-player-windows-arm64\theia-player.exe) -ArgumentList '--media', $media, '--diagnostics', '--mute', '--window', '960x540', '--window-report', $windowReport, '--proof-osd' -RedirectStandardOutput $log -RedirectStandardError $errors -PassThru
           try {
             $pin = $null
             for ($second = 0; $second -lt 90 -and -not $pin; $second++) {
@@ -116,7 +117,18 @@ jobs:
               throw "the Windows ARM64 player loaded an unexpected engine: $($pin.Line)"
             }
             Write-Host "native ARM64 engine loaded: $($engine.loaded)"
-            Start-Sleep -Seconds 6
+            $osdReady = $false
+            for ($second = 0; $second -lt 30 -and -not $osdReady; $second++) {
+              Start-Sleep -Seconds 1
+              if ($player.HasExited) { break }
+              if (Test-Path $windowReport) {
+                try {
+                  $bar = (Get-Content $windowReport -Raw | ConvertFrom-Json).page.bar
+                  $osdReady = $null -ne $bar -and $bar.hidden -eq $false -and $bar.display -ne 'none' -and [double]$bar.opacity -gt 0 -and $bar.controlsVisible -gt 0
+                } catch { }
+              }
+            }
+            if (-not $osdReady) { throw 'the ARM64 page never reported visible playback controls; inspect player-window.json and player.log' }
             if ($player.HasExited) { throw 'the Windows ARM64 player exited before its frame could be captured' }
             # The window's own pixels, not the screen. On this machine the
             # desktop belongs to the runner rather than to us: a whole-screen

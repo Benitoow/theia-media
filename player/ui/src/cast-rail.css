@@ -1,0 +1,13 @@
+.cast-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 44px; }
+.cast-heading h2 { margin: 0; }
+.cast-controls { display: flex; gap: 0.5rem; }
+.cast-rail { display: flex; gap: clamp(0.85rem, 1.5vw, 1.25rem); list-style: none; margin: 1rem 0 0; padding: 0.25rem 0 0.75rem; overflow-x: auto; overscroll-behavior-x: contain; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: var(--color-line) transparent; }
+.cast-rail:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 4px; border-radius: var(--radius-card); }
+.cast-rail > li { flex: 0 0 clamp(7rem, 12vw, 9rem); min-width: 0; }
+.detail-portrait { width: 100%; aspect-ratio: 3 / 4; border-radius: var(--radius-card); background: linear-gradient(145deg, var(--color-raised), var(--color-surface)); border: 1px solid var(--color-line); overflow: hidden; display: grid; place-items: center; color: var(--color-muted); }
+.detail-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: center 25%; border-radius: inherit; }
+.cast-name, .cast-role { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.cast-name { min-height: 2.7em; margin-top: 0.75rem; color: var(--color-bone); font-size: 0.875rem; font-weight: 500; line-height: 1.35; }
+.cast-role { min-height: 2.9em; margin-top: 0.2rem; color: var(--color-muted); font-size: 0.75rem; line-height: 1.45; }
+[data-reduced-motion="true"] .cast-rail { scroll-behavior: auto; }
+@media (prefers-reduced-motion: reduce) { .cast-rail { scroll-behavior: auto; } }

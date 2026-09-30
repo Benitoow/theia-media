@@ -1,0 +1,168 @@
+{
+  "verifiedAt": "2026-09-30T10:10:26.804199+00:00",
+  "scope": "Windows x64 local reference candidate. Native version, catalogue and read-only primary-monitor probes; headless Chromium production UI with real TMDB data and live cached artwork. Native visual acceptance of the new preview, cast and help remains pending.",
+  "baseCommit": "599600c",
+  "version": "v3.4.0",
+  "candidate": "dist/theia-setup-v34-reference-windows-amd64.exe",
+  "candidateSha256": "c5b42a0ef6b0be9cdb12b695ae281bb2de2ef8d624cfb7d3aa7162a2b191e86d",
+  "payloadMembers": {
+    "theia-server.exe": "e36357b93ba3fe21464d46507a18a6ffd66e480becaad17daee058d87c7ccded",
+    "theia-setup.exe": "413b86ed5f2dbc0870952a5877be59e879910ed384bb0d66c2134e72080f53f3",
+    "theia.exe": "206558b19fcd4f8129ae5d68087ab9c7889d668087549cae12d5362c9ff7f8d6",
+    "theia-player.exe": "16b9c1566b054853145dcee2ae46317df2106df8cc05959e8a550fe2b0f1ea9f",
+    "libmpv-2.dll": "6f059354c5c45b41192cc52d867d94c0044edb48207c4efd2ea1244208c55359",
+    "LICENSE-libmpv.txt": "20e50fe7aae3e56378ebf0417d9de904f55a0e61e4df315333e632a4d3555d95",
+    "NOTICE.md": "c4b026ece2894736dde7f6667cd78e7152c9efd899afe099169995c733d13c24",
+    "START-HERE.txt": "83b32d342e1e61d203b00809beca450dfee88891308948f318de9eaa8a7c8221"
+  },
+  "allEightPayloadMembersMatched": true,
+  "embeddedUiAssets": [
+    {
+      "name": "index-CSidPuiE.js",
+      "sha256": "c3a7acbde2ed2d5a17ae47cc7294f33959d1ea6fa08141e1de3f90496fcc3c84"
+    },
+    {
+      "name": "index-CUrUSExA.css",
+      "sha256": "e7c328db8b0275cc4d72657b4a831623583ce37805c1e972ea9962b3eb42b98c"
+    },
+    {
+      "name": "keyboard-BQtNZYYp.js",
+      "sha256": "ce01726d31bdc6a187ac9e05b91b8272e7dc974f4a6b842d21c3c713150a2bc4"
+    },
+    {
+      "name": "MovieDetail-DzO8yoaQ.js",
+      "sha256": "205c803428b33832c5cf5f9d8991218304fb65b60fa197bb07d6957a44f64712"
+    },
+    {
+      "name": "NativeCompatibility-BSmq8yJO.js",
+      "sha256": "0cc7ae77d83fd5de8013b04a2bf892dbc5baaa8861a656b8e32a8c70d6403892"
+    },
+    {
+      "name": "NativeCompatibility-C7HZUlGl.css",
+      "sha256": "47454738a5de08df9750805eafaedb388d2d1e8e3fd5cd8c8c549af10e3aeefb"
+    },
+    {
+      "name": "PlayerHelp-CTqffbB5.css",
+      "sha256": "1fec58b391f540ba93754b27d06392f5f8928ba311e35f6ff44cfadabb0bf357"
+    },
+    {
+      "name": "PlayerHelp-Zl6RMR01.js",
+      "sha256": "db51d5660b32460ca0b5ccc1224c23b4de7fdb843ac6c2095a6ca7ce8239deac"
+    },
+    {
+      "name": "ProfileDialog-BvHFgZNG.js",
+      "sha256": "6a63adf51c550e717a370352e3dcca4c37f8e5dac6bc32f723b65379056e8bd1"
+    },
+    {
+      "name": "SeriesDetail-C4s_qMkY.js",
+      "sha256": "c1a29b2af9ecba71359fb099f12f581e2d58cefe5c8037d8934f70c44b6beb5b"
+    },
+    {
+      "name": "SettingsModal-N8J0oq8B.js",
+      "sha256": "c1597ef203ee398b44d35aa6838e582c6c767e38c62457a8cefe4737993907fb"
+    }
+  ],
+  "sourceSha256": {
+    "player/ui/src/App.tsx": "12eecaf22edc1ea673944f1ab09299cef3aa91d3e35bec71b0b2991210dfb456",
+    "player/ui/src/media-detail.css": "e62feaa20d10e9e7b6231d593ad603f78864549cfc1a5ca30ccf6a911630123e",
+    "player/ui/src/osd.css": "412bd357baaf0e6d3374ac89c9986d5bfc04c743c6f3aa12518006a0a2bd9711",
+    "player/ui/src/cast-rail.css": "92101c18afceadbd48a4f16761dd1f9b2ddac6d730b1db32d8e99d04414f63bc",
+    "player/ui/src/player-help.css": "55f07d1eb92ae9e92408294c396eda2142127507fed6aeaafc827ecac6258ac0",
+    "player/ui/src/lib/catalogues.js": "5265fdc78f9a33d591ff53ecd339c956266a12b8ef1ea2d38f221f058f72a4c7",
+    "player/ui/src/components/MediaDetail.tsx": "379eb6f47c267b491573ddb4579a094a4d6f9705a4b96c6b4557c48e67b04e35",
+    "player/ui/src/components/MovieDetail.tsx": "8e82167d6ce958289b8fa91dd5486968587c7bc0c858e9bc9e7dd12f4028ca1c",
+    "player/ui/src/components/SeriesDetail.tsx": "826ec330bae4bc0868e56ea221ad7b87dc7b256d2e4b3eeb54ee3e3cde1e4a38",
+    "player/ui/src/components/CastRail.tsx": "247735c982b3bc708e624041996b8febc3410911a5be9d9bf33b444b2e1a5c16",
+    "player/ui/src/components/PlayerHelp.tsx": "8dce33104e123456da663ff8e385552f819b24af50a34d08bb642f28cb4872fa",
+    "player/ui/src/components/SettingsModal.tsx": "c4801399e8718331da46fd3cc69ad964f1a743bca9c4587fe34a310176326c55",
+    "player/ui/src/components/ui/dialog.tsx": "b8d40d3b34044090f91299e91a3eaa698d196de9f9b79e8d8a7a0290bfdab58f",
+    "player/ui/src/components/Library.tsx": "20a28d08d0729f3bb53ca738d3949c553af25f98fdce707e94838132b36c22c6",
+    "player/ui/src/components/MediaCard.tsx": "de4d48f1bbee329bb5fd51b50397b0604ec4078bc4ca98f4bc34a35ebc9076a2",
+    "player/ui/src/components/EpisodeCard.tsx": "1afcdfd0f1ea79734edba2937b13ce8abbc33f7c03b18da078df28be47e5d4c9",
+    "player/ui/scripts/render-check.mjs": "71027e18b0050172c66b9274a7fefc64dcd7ec0a48fc67c7125e03fe62e42f2f"
+  },
+  "nativeCatalogue": {
+    "movieId": 2,
+    "movieCast": 10,
+    "seriesId": 2,
+    "seriesCast": 1
+  },
+  "nativeDisplayPreflight": {
+    "source": "windows-dxgi-d3d11",
+    "adapter": "AMD Radeon(TM) 890M Graphics",
+    "displayWidth": 2880,
+    "displayHeight": 1800,
+    "hdrEnabled": false,
+    "hardwareDecode": true,
+    "decoderProfiles": [
+      "HEVC Main 8-bit",
+      "HEVC Main 10-bit"
+    ]
+  },
+  "headless": {
+    "fullRenderSuitePassed": true,
+    "detailWidths": [
+      390,
+      969,
+      1920
+    ],
+    "longRealTitlesPlayVisibleAt": {
+      "width": 969,
+      "height": 609
+    },
+    "previewVeilPaintedPixelRegressionPassed": true,
+    "previewVeilPixels": {
+      "scope": "Painted Chromium pixels over uniform bright artwork",
+      "painted": {
+        "left": 60.229432,
+        "middle": 152.48455999999996,
+        "tail": 224.34824,
+        "right": 240
+      },
+      "reference": {
+        "left": 240,
+        "middle": 240,
+        "tail": 240,
+        "right": 240
+      }
+    },
+    "backdropBothEdgesPaintedPixelRegressionPassed": true,
+    "episodeHistoryAndKeyboardDisclosurePassed": true,
+    "realCachedPostersBackdropsCastAndEpisodeStillsPassed": true,
+    "castNavigationWidths": [
+      390,
+      969,
+      1920
+    ],
+    "castVisualWidths": [
+      390,
+      969,
+      1920
+    ],
+    "helpWidths": [
+      320,
+      390,
+      969
+    ],
+    "helpLocales": [
+      "fr",
+      "en"
+    ],
+    "helpMinimumViewport": {
+      "width": 320,
+      "height": 180
+    },
+    "nestedHelpDraftFocusAndCopyRetryPassed": true,
+    "evidenceDirectory": "player/target/v34-proof/reference-full-render"
+  },
+  "publication": "Not requested; no push, tag, release or upload.",
+  "maintainerVisualAcceptance": {
+    "date": "2026-09-30",
+    "scope": "Final native Windows styling: preview, film/series detail, cast and help",
+    "evidence": "Maintainer accepted the final result without further changes in this conversation",
+    "excludes": [
+      "Other-platform playback and installation",
+      "HDR picture and audio hardware verification"
+    ]
+  }
+}
