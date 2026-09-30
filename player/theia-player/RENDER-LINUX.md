@@ -180,6 +180,14 @@ software fallback after a refused GPU initialisation. Machines without DRI
 still select X11 directly. Actual output remains visible in the diagnostic.
 This repair requires a fresh native film/controls capture before publication.
 
+The fallback then drew the colour fixture on both architectures, but inspection
+of run 36729392709's ARM capture found no painted OSD despite visible DOM
+geometry. mpv's child occupied the application's parent X window and covered
+the web plane. The candidate now embeds video in a GTK DrawingArea and places
+the interface in a transparent native EventBox above it through GtkOverlay.
+The capture gate now checks the painted dark control band and light controls,
+as well as the fixture. A fresh package run must pass both checks.
+
 Nothing about the OSD, the tracks menu, subtitles or the status telemetry: those
 are platform-independent. Nothing about Windows or macOS: their tables and their
 window handles are unchanged, and the macOS render bridge stays as

@@ -209,7 +209,10 @@ pub(super) fn base_options(wid: isize, silent: bool) -> Vec<(&'static str, Strin
         // library was being painted over whatever was on the desktop behind it.
         // mpv paints this surface black instead, from startup, and it stays at
         // the bottom of the child z-order where the picture already goes.
-        ("force-window", "yes".into()),
+        // On Mac the host owns the film surface. Creating mpv's VO during
+        // initialize(), before the render context exists, is invalid and
+        // produces "No render context set". It must start with the first file.
+        ("force-window", if current_platform() == Platform::Macos { "no".into() } else { "yes".into() }),
     ]);
     options
 }
@@ -241,7 +244,39 @@ pub(super) fn x11_window_id(window: &tauri::WebviewWindow) -> isize {
             return 0;
         }
     };
-    let gdk_window = match gtk_window.window() {
+    // mpv creates a native child inside its `wid`. Pointing it at the whole
+    // GTK window covers a windowless WebKit widget, even though its DOM says
+    // the controls are visible. Keep video and the transparent web plane in
+    // sibling native windows; GTK Overlay then owns their stacking order.
+    let content = match gtk_window.child() {
+        Some(content) => content,
+        None => {
+            eprintln!("theia-player: the GTK window has no interface child");
+            return 0;
+        }
+    };
+    gtk_window.remove(&content);
+    let video = gtk::DrawingArea::new();
+    let osd = gtk::EventBox::new();
+    osd.set_visible_window(true);
+    osd.set_app_paintable(true);
+    if let Some(visual) = gtk::prelude::WidgetExt::screen(&gtk_window).and_then(|screen| screen.rgba_visual()) {
+        osd.set_visual(Some(&visual));
+    }
+    let css = gtk::CssProvider::new();
+    if let Err(error) = css.load_from_data(b".theia-osd-plane { background-color: transparent; }") {
+        eprintln!("theia-player: transparent GTK plane: {error}");
+    }
+    osd.style_context().add_class("theia-osd-plane");
+    osd.style_context().add_provider(&css, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+    osd.add(&content);
+    let planes = gtk::Overlay::new();
+    planes.add(&video);
+    planes.add_overlay(&osd);
+    planes.set_overlay_pass_through(&osd, false);
+    gtk_window.add(&planes);
+    planes.show_all();
+    let gdk_window = match video.window() {
         Some(window) => window,
         None => {
             // GTK creates the GdkWindow when the widget is realised, and this
@@ -250,7 +285,8 @@ pub(super) fn x11_window_id(window: &tauri::WebviewWindow) -> isize {
             // Realising creates the GdkWindow without mapping it: the id exists,
             // and the window stays hidden until `show`.
             gtk_window.realize();
-            match gtk_window.window() {
+            video.realize();
+            match video.window() {
                 Some(window) => window,
                 None => {
                     eprintln!(

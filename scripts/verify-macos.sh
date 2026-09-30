@@ -236,7 +236,7 @@ PY
 				fi
 				human "the application's own window, captured by its window number ($window_number): $window_shot"
 				if [ "${THEIA_PROOF_COLOR_FIXTURE:-0}" = 1 ]; then
-					if (cd "$root" && go run ./scripts/check-playback-picture -image "$window_shot"); then
+					if (cd "$root" && go run ./scripts/check-playback-picture -image "$window_shot" -controls); then
 						ok "the generated film is visible under the controls"
 					else
 						bad "the colour fixture is missing from the captured window"

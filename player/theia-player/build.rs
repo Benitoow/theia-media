@@ -30,6 +30,7 @@ fn main() {
             .compile("theia_render_macos");
         println!("cargo:rustc-link-lib=framework=AppKit");
         println!("cargo:rustc-link-lib=framework=OpenGL");
+        println!("cargo:rustc-link-lib=framework=QuartzCore");
     }
     tauri_build::build()
 }

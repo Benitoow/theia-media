@@ -271,3 +271,17 @@ CGL context lock; the worker renders, swaps and handles updates independently.
 Advanced control is enabled under that separation. Teardown cancels the worker
 timer and frees its resources on the same serial queue before engine destruction.
 Native film/controls capture remains the acceptance test.
+
+The dedicated worker still produced black through Apple Software Renderer in
+run 36730621017. Software-only Macs now select mpv's software render API and
+present copied RGB images in a native layer below the WKWebView. This is based
+on the actual renderer string, not on a CI flag. Hardware-backed contexts keep
+the OpenGL path. The CPU fallback promises neither GPU performance nor HDR;
+both require a real hardware test. A single queued image bounds presentation
+memory while the main thread is busy. Both paths still require native captures.
+
+The engine log also exposed an earlier VO creation: `force-window=yes` during
+initialisation attempted a libmpv output before the host render context existed,
+and reported `No render context set`. Mac now leaves `force-window` off; the
+host canvas supplies the idle surface and the first file opens the VO only
+after renderer attachment. Windows/Linux retain their embedded idle surface.

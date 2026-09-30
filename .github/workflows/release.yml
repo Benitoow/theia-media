@@ -840,7 +840,7 @@ jobs:
         shell: bash
         run: |
           for picture in playback-proof/macos-arm64-proof/player-window.png playback-proof/macos-intel-proof/out/player-window.png playback-proof/linux-amd64-proof/player-window.png playback-proof/linux-arm64-proof/player-window.png; do
-            go run ./scripts/check-playback-picture -image "$picture"
+            go run ./scripts/check-playback-picture -image "$picture" -controls
           done
 
   publish:

@@ -174,7 +174,7 @@ jobs:
             # the window itself. -PrintWindow asks the window for its content, so
             # being in front is not part of the question.
             .\scripts\capture-window.ps1 -ProcessId $player.Id -NoResize -PrintWindow -Wake -Out (Join-Path (Resolve-Path out).Path 'player-screen.png')
-            go run ./scripts/check-playback-picture -image out/player-screen.png
+            go run ./scripts/check-playback-picture -image out/player-screen.png -controls
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             $positions = [regex]::Matches((Get-Content $log -Raw), '"pos":([0-9.]+)')
             if ($positions.Count -lt 2 -or [double]$positions[$positions.Count - 1].Groups[1].Value -le [double]$positions[0].Groups[1].Value) {

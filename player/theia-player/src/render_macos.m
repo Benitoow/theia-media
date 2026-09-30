@@ -12,6 +12,8 @@
 #import <stdio.h>
 #import <stdlib.h>
 #import <dispatch/dispatch.h>
+#import <QuartzCore/QuartzCore.h>
+#import <string.h>
 
 typedef int (*RenderCreate)(mpv_render_context **, mpv_handle *, mpv_render_param *);
 typedef void (*RenderCallback)(mpv_render_context *, mpv_render_update_fn, void *);
@@ -69,6 +71,12 @@ static GLuint gFilmTexture;
 static int gFilmWidth, gFilmHeight;
 static atomic_uint_fast64_t gTargetFramebuffer;
 static atomic_uint_fast64_t gGlError;
+static bool gSoftwareRenderer;
+static NSView *gSoftwareView;
+static void *gSoftwarePixels;
+static size_t gSoftwareBytes;
+static atomic_bool gSoftwarePresentationPending;
+static atomic_uint_fast64_t gGeneration;
 
 static uint64_t now_ms(void)
 {
@@ -94,6 +102,66 @@ static void on_render_update(void *context)
 {
     (void)context;
     atomic_fetch_add_explicit(&gNotifications, 1, memory_order_relaxed);
+}
+
+// A virtual/software-only Mac has no usable GPU. Render through mpv's software
+// API into a CPU buffer and let AppKit composite the image below the web plane.
+// This fallback is selected by the actual GL renderer, never by a proof flag.
+static void render_software_frame(void)
+{
+    uint64_t surface = atomic_load_explicit(&gSurface, memory_order_relaxed);
+    int size[] = {(int)(surface >> 32), (int)(surface & 0xffffffffu)};
+    if (size[0] <= 0 || size[1] <= 0) return;
+    size_t stride = ((size_t)size[0] * 4 + 63) & ~(size_t)63;
+    size_t bytes = stride * size[1];
+    if (bytes != gSoftwareBytes) {
+        free(gSoftwarePixels);
+        gSoftwarePixels = NULL;
+        gSoftwareBytes = 0;
+        if (posix_memalign(&gSoftwarePixels, 64, bytes) != 0) {
+            atomic_fetch_add_explicit(&gErrors, 1, memory_order_relaxed);
+            return;
+        }
+        gSoftwareBytes = bytes;
+    }
+    mpv_render_param params[] = {
+        {MPV_RENDER_PARAM_SW_SIZE, size},
+        {MPV_RENDER_PARAM_SW_FORMAT, "rgb0"},
+        {MPV_RENDER_PARAM_SW_STRIDE, &stride},
+        {MPV_RENDER_PARAM_SW_POINTER, gSoftwarePixels},
+        {0},
+    };
+    atomic_fetch_add_explicit(&gDraws, 1, memory_order_relaxed);
+    atomic_store_explicit(&gLastDrawMs, now_ms() - gAttachedAtMs, memory_order_relaxed);
+    atomic_store_explicit(&gLastRenderMs, now_ms() - gAttachedAtMs, memory_order_relaxed);
+    atomic_store_explicit(&gInRender, 1, memory_order_relaxed);
+    int result = gFrame(gRender, params);
+    atomic_store_explicit(&gInRender, 0, memory_order_relaxed);
+    if (result < 0) {
+        atomic_fetch_add_explicit(&gErrors, 1, memory_order_relaxed);
+        fprintf(stderr, "theia-player: macOS software frame render failed (%d)\n", result);
+        return;
+    }
+    gSwap(gRender);
+    atomic_fetch_add_explicit(&gFrames, 1, memory_order_relaxed);
+    // Bound queued presentation to one image if the main thread is busy.
+    if (atomic_exchange_explicit(&gSoftwarePresentationPending, true, memory_order_relaxed)) return;
+    CFDataRef data = CFDataCreate(NULL, gSoftwarePixels, bytes);
+    CGDataProviderRef provider = CGDataProviderCreateWithCFData(data);
+    CGColorSpaceRef colour = CGColorSpaceCreateDeviceRGB();
+    CGImageRef image = CGImageCreate(size[0], size[1], 8, 32, stride, colour,
+        kCGImageAlphaNoneSkipLast, provider, NULL, false, kCGRenderingIntentDefault);
+    CGColorSpaceRelease(colour);
+    CGDataProviderRelease(provider);
+    CFRelease(data);
+    uint64_t generation = atomic_load_explicit(&gGeneration, memory_order_relaxed);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (generation == atomic_load_explicit(&gGeneration, memory_order_relaxed)) {
+            gSoftwareView.layer.contents = (__bridge id)image;
+            atomic_store_explicit(&gSoftwarePresentationPending, false, memory_order_relaxed);
+        }
+        if (image) CGImageRelease(image);
+    });
 }
 
 // The worker owns every render API call after creation. It never asks AppKit
@@ -218,6 +286,7 @@ static void render_frame(void)
 
 void theia_render_detach(void)
 {
+    atomic_fetch_add_explicit(&gGeneration, 1, memory_order_relaxed);
     atomic_store_explicit(&gAttached, false, memory_order_relaxed);
     if (gTimer) {
         [gTimer invalidate];
@@ -236,6 +305,9 @@ void theia_render_detach(void)
         }
         if (gFilmFramebuffer) glDeleteFramebuffers(1, &gFilmFramebuffer);
         if (gFilmTexture) glDeleteTextures(1, &gFilmTexture);
+        free(gSoftwarePixels);
+        gSoftwarePixels = NULL;
+        gSoftwareBytes = 0;
         [NSOpenGLContext clearCurrentContext];
     };
     if (gRenderQueue) dispatch_sync(gRenderQueue, free_render);
@@ -244,6 +316,9 @@ void theia_render_detach(void)
     gFilmFramebuffer = gFilmTexture = 0;
     gFilmWidth = gFilmHeight = 0;
     gBoundContext = nil;
+    [gSoftwareView removeFromSuperview];
+    gSoftwareView = nil;
+    gSoftwareRenderer = false;
     [gView removeFromSuperview];
     gView = nil;
     if (gLibrary) {
@@ -330,6 +405,17 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
     atomic_store_explicit(&gGlError, 0, memory_order_relaxed);
     const GLubyte *renderer = glGetString(GL_RENDERER);
     snprintf(gRenderer, sizeof(gRenderer), "%s", renderer ? (const char *)renderer : "unknown");
+    gSoftwareRenderer = strstr(gRenderer, "Software") != NULL;
+    if (gSoftwareRenderer) {
+        gSoftwareView = [[NSView alloc] initWithFrame:webview.frame];
+        gSoftwareView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+        gSoftwareView.wantsLayer = YES;
+        gSoftwareView.layer.backgroundColor = [NSColor blackColor].CGColor;
+        gSoftwareView.layer.contentsGravity = kCAGravityResize;
+        [parent addSubview:gSoftwareView positioned:NSWindowBelow relativeTo:webview];
+        gView.hidden = YES;
+        fprintf(stderr, "theia-player: macOS software render fallback (%s)\n", gRenderer);
+    }
 
     mpv_opengl_init_params gl = {
         .get_proc_address = get_proc_address,
@@ -360,11 +446,16 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
     // is what this API recommends and what this file still owes. */
     int advanced = 1;
     mpv_render_param params[] = {
-        {MPV_RENDER_PARAM_API_TYPE, (void *)MPV_RENDER_API_TYPE_OPENGL},
-        {MPV_RENDER_PARAM_OPENGL_INIT_PARAMS, &gl},
+        {MPV_RENDER_PARAM_API_TYPE, (void *)(gSoftwareRenderer ? MPV_RENDER_API_TYPE_SW : MPV_RENDER_API_TYPE_OPENGL)},
+        {gSoftwareRenderer ? MPV_RENDER_PARAM_INVALID : MPV_RENDER_PARAM_OPENGL_INIT_PARAMS, &gl},
         {MPV_RENDER_PARAM_ADVANCED_CONTROL, &advanced},
         {0},
     };
+    // A terminator in the middle would hide advanced control for SW.
+    if (gSoftwareRenderer) {
+        params[1] = (mpv_render_param){MPV_RENDER_PARAM_ADVANCED_CONTROL, &advanced};
+        params[2] = (mpv_render_param){0};
+    }
     int result = gCreate(&gRender, (mpv_handle *)mpv_pointer, params);
     if (result < 0) {
         char detail[120];
@@ -384,6 +475,7 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
     atomic_store_explicit(&gLastDrawMs, 0, memory_order_relaxed);
     atomic_store_explicit(&gLastRenderMs, 0, memory_order_relaxed);
     gAttachedAtMs = now_ms();
+    atomic_store_explicit(&gSoftwarePresentationPending, false, memory_order_relaxed);
     gCallback(gRender, on_render_update, NULL);
 
     // `update()` is what asks mpv whether there is a frame to draw, and it is
@@ -405,12 +497,26 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
         bool onScreen = window != nil && window.isVisible &&
             (window.occlusionState & NSWindowOcclusionStateVisible) != 0;
         atomic_store_explicit(&gOnScreen, onScreen ? 1 : 0, memory_order_relaxed);
-        [gView setNeedsDisplay:YES];
+        if (gSoftwareRenderer) {
+            NSRect backing = [gSoftwareView convertRectToBacking:gSoftwareView.bounds];
+            atomic_store_explicit(&gSurface,
+                ((uint64_t)(uint32_t)backing.size.width << 32) | (uint32_t)backing.size.height,
+                memory_order_relaxed);
+        } else {
+            [gView setNeedsDisplay:YES];
+        }
     }];
     [[NSRunLoop mainRunLoop] addTimer:gTimer forMode:NSRunLoopCommonModes];
     // Have a valid drawable size before the worker consumes its first frame.
-    [gView setNeedsDisplay:YES];
-    [gView displayIfNeeded];
+    if (gSoftwareRenderer) {
+        NSRect backing = [gSoftwareView convertRectToBacking:gSoftwareView.bounds];
+        atomic_store_explicit(&gSurface,
+            ((uint64_t)(uint32_t)backing.size.width << 32) | (uint32_t)backing.size.height,
+            memory_order_relaxed);
+    } else {
+        [gView setNeedsDisplay:YES];
+        [gView displayIfNeeded];
+    }
     [NSOpenGLContext clearCurrentContext];
     gRenderQueue = dispatch_queue_create("media.theia.render", DISPATCH_QUEUE_SERIAL);
     gRenderTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, gRenderQueue);
@@ -419,6 +525,13 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
     dispatch_source_set_event_handler(gRenderTimer, ^{
         @autoreleasepool {
             if (!gRender) return;
+            if (gSoftwareRenderer) {
+                if (gUpdate(gRender) & MPV_RENDER_UPDATE_FRAME) {
+                    atomic_fetch_add_explicit(&gReady, 1, memory_order_relaxed);
+                    render_software_frame();
+                }
+                return;
+            }
             CGLContextObj cgl = [gBoundContext CGLContextObj];
             CGLLockContext(cgl);
             [gBoundContext makeCurrentContext];
