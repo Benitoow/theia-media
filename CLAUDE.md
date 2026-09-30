@@ -28,11 +28,14 @@ The published V3.3.6 has complete Windows x64 and Apple Silicon artifacts, but a
 post-release audit found no integrated Mac render context (decision 149): old
 playback-position checks did not establish a picture. The V3.4 branch adds the
 AppKit/OpenGL renderer with a CPU fallback and six complete package candidates.
-All six native package targets passed the complete dry run 36745363813 at
-8475fa6, including installed launchers, captured generated films and painted
-controls. Linux uses a GTK-owned software render canvas; its initial output is
-SDR and PCM, with no hardware acceleration or HDR. The final revision adds a
-native Ubuntu pause/resize/fullscreen/resume regression and requires fresh CI.
+V3.4.0 was published on 30 September 2026 from 82da1af, after complete
+six-platform dry run 36759560332 and successful tag run 36760923851.
+All installed native products passed captured generated-film and painted-control
+checks. Both Ubuntu packages also passed pause, resize, fullscreen, restoration
+and resumed playback. All twelve public assets were downloaded and matched
+GitHub SHA-256 digests; all six setup payloads matched their updater servers.
+Linux uses a GTK-owned software render canvas: SDR and PCM, without hardware
+acceleration or HDR. Physical Mac hardware decoding/HDR remains unverified.
 Keep the
 current evidence and publication blockers in `docs/v3.4-release-readiness.md`;
 do not promote a platform because compilation or playback counters passed.
