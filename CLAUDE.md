@@ -5,9 +5,9 @@ for the server, library or ordinary viewing. Optional future social/supporter
 features follow decision 161; the existing GPL licence is unchanged. One user,
 their own films, their own machine.
 
-**V3.3 is the current release line.** `v3.2.0` is the last single-binary
-release; `v3.3.0` introduced the native generation and `v3.3.6` is the current
-published maintenance release. V3.3 splits the product into three artifacts:
+**V3.4 completes the native generation introduced in V3.3.** `v3.2.0` was
+the last single-binary release; `v3.3.1` through `v3.3.6` refined the native
+installation and playback paths. The product has three principal artifacts:
 `theia-server` (Go, headless, still serving the Svelte administration and settings
 interface; the legacy web viewer remains available without active viewing support,
 while administration and settings remain maintained under decision 159), `theia-player` (Tauri 2 + Rust + libmpv - the native player,
@@ -27,15 +27,17 @@ They record exactly which founding clauses were superseded and which still bind.
 The published V3.3.6 has complete Windows x64 and Apple Silicon artifacts, but a
 post-release audit found no integrated Mac render context (decision 149): old
 playback-position checks did not establish a picture. The V3.4 branch adds the
-AppKit/OpenGL renderer and six complete package candidates. Native Windows ARM64
-and Intel Mac package/film/controls checks passed in run 36725147442. Apple
-Silicon's current capture is black; Linux installs and launches but its initial
-film fails to load. All remain subject to final-revision validation. Keep the
+AppKit/OpenGL renderer with a CPU fallback and six complete package candidates.
+Native Windows ARM64 and both Mac package/film/painted-controls checks passed
+in run 36736248025. Linux's X11 child composition failed that run; its replacement
+uses a GTK-owned software render canvas. Linux initially has software decoding,
+SDR rendering and PCM audio, with no hardware acceleration or HDR output.
+All platforms remain subject to final-revision validation. Keep the
 current evidence and publication blockers in `docs/v3.4-release-readiness.md`;
 do not promote a platform because compilation or playback counters passed.
 
-**Publication is explicit.** `v3.3.6` is public; preparing a later release does
-not authorize publishing it. Never push, create or push a tag, create a release,
+**Publication is explicit.** Preparing a release does not authorize publishing
+it. Never push, create or push a tag, create a release,
 or upload an asset without the maintainer's explicit instruction for that exact
 action. `release.yml` fires on a pushed `v*` tag, so a tag pushed "just to see
 CI" publishes binaries. `scripts/stub-release` remains the local release-shaped
@@ -62,7 +64,7 @@ anything; they answer most questions that would otherwise be asked again.
 [`docs/releases/v3.2.0.md`](docs/releases/v3.2.0.md) and the detailed campaigns
 are indexed in [`docs/archive/v3.2/`](docs/archive/v3.2/README.md).
 
-**V3.3 is the current generation.** Its scope, its validation boundary and its
+**V3.3 introduced the native generation.** Its scope, validation boundary and
 verification record live in [`docs/v3.3.md`](docs/v3.3.md) - update that record
 in the same commit as the work, and state what was measured rather than what
 was intended. Field testing still follows decision 97 for library-facing

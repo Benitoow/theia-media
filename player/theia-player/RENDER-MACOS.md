@@ -284,7 +284,8 @@ The engine log also exposed an earlier VO creation: `force-window=yes` during
 initialisation attempted a libmpv output before the host render context existed,
 and reported `No render context set`. Mac now leaves `force-window` off; the
 host canvas supplies the idle surface and the first file opens the VO only
-after renderer attachment. Windows/Linux retain their embedded idle surface.
+after renderer attachment. Windows retains its embedded idle surface; Linux
+now also uses a host-owned canvas and leaves `force-window` off.
 
 Run 36732462777's Apple Silicon capture finally shows the generated film and
 the actual title/transport controls together. It advanced 9 to 158 rendered
@@ -293,3 +294,10 @@ its more translucent band (27% dark samples, 439 light samples), so its band
 threshold was corrected against this inspected positive capture and the earlier
 Linux negative capture (zero dark/light samples). A new complete run is still
 required before publication; this does not establish hardware decoding/HDR.
+
+Run 36736248025 passed the complete installed-package check on both Intel
+and Apple Silicon Macs. Both captured windows were inspected: the generated
+colour fixture, title and transport controls are painted together. Position
+advances and the colour/controls gate passes. This establishes the native
+software-rendered runner path, without establishing hardware decoding or HDR
+on a physical Mac. The final release revision must pass the same checks.

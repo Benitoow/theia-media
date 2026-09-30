@@ -99,10 +99,25 @@ pub fn prepare(window: &tauri::WebviewWindow) -> Result<(), String> {
     });
     let planes = gtk::Overlay::new();
     planes.add(&canvas);
-    content.set_halign(gtk::Align::Fill);
-    content.set_valign(gtk::Align::Fill);
-    planes.add_overlay(&content);
-    planes.set_overlay_pass_through(&content, false);
+    // WebKit needs its own transparent native window. Sharing the canvas's
+    // parent drawing window prevented navigation/IPC on the native runner.
+    let osd = gtk::EventBox::new();
+    osd.set_visible_window(true);
+    osd.set_app_paintable(true);
+    if let Some(screen) = gtk::prelude::WidgetExt::screen(&host) {
+        if let Some(visual) = screen.rgba_visual() {
+            osd.set_visual(Some(&visual));
+        }
+    }
+    let css = gtk::CssProvider::new();
+    css.load_from_data(b".theia-osd-plane { background-color: transparent; }")
+        .map_err(|error| error.to_string())?;
+    osd.style_context().add_class("theia-osd-plane");
+    osd.style_context()
+        .add_provider(&css, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+    osd.add(&content);
+    planes.add_overlay(&osd);
+    planes.set_overlay_pass_through(&osd, false);
     host.add(&planes);
     planes.show_all();
     let weak_canvas = canvas.downgrade();
@@ -183,10 +198,15 @@ pub fn attach(engine: &Engine, library: &Path) -> Result<(), String> {
         }
         let _ = ready.send(Ok(()));
         let mut storage = Vec::<u8>::new();
+        let mut rendered_size = None;
         while !stopped.load(Ordering::Relaxed) {
             let tick = Instant::now();
-            if unsafe { update(context) } & 1 != 0 {
-                let (width, height, scale) = *surface.size.lock().unwrap();
+            let dimensions = *surface.size.lock().unwrap();
+            let resized = rendered_size.is_some_and(|previous| previous != dimensions);
+            // A paused film must still fill a resized window. Rendering the
+            // existing frame does not require a fresh decoder notification.
+            if unsafe { update(context) } & 1 != 0 || resized {
+                let (width, height, scale) = dimensions;
                 let mut size = [width, height];
                 let mut stride = (width as usize * 4 + 63) & !63;
                 let bytes = stride * height as usize;
@@ -227,6 +247,7 @@ pub fn attach(engine: &Engine, library: &Path) -> Result<(), String> {
                         swap(context);
                     }
                     FRAMES.fetch_add(1, Ordering::Relaxed);
+                    rendered_size = Some(dimensions);
                 } else {
                     eprintln!("theia-player: software frame refused ({result})");
                 }
@@ -238,7 +259,9 @@ pub fn attach(engine: &Engine, library: &Path) -> Result<(), String> {
             free(context);
         }
     });
-    let result = receiver.recv().map_err(|e| e.to_string())?;
+    let result = receiver
+        .recv()
+        .unwrap_or_else(|error| Err(error.to_string()));
     if result.is_err() {
         let _ = join.join();
         return result;

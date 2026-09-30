@@ -150,18 +150,8 @@ fn current_platform() -> Platform {
 /// program has no business producing sound on somebody's machine.
 pub(super) fn base_options(wid: isize, silent: bool) -> Vec<(&'static str, String)> {
     let mut options: Vec<(&'static str, String)> = Vec::new();
-    // `wid` is the handle the platform gave us: an `HWND` on Windows, an X11
-    // window id on Linux, and nothing on macOS any more. Its NSView goes to
-    // render_macos after mpv starts.
-    // mpv 0.41 stopped reading `wid` on macOS: the paragraph
-    // documenting an `NSView*` left the manual after 0.36 and no macOS file in
-    // 0.41.0 reads the option.
-    //
-    // A zero is left out rather than sent. `wid=0` is not "no embedding" to mpv,
-    // it is a request for a window of the engine's own - so a Wayland session,
-    // which has no id to hand over, would put the film in a second window beside
-    // the OSD instead of under it, and say nothing about why. macOS takes no id
-    // at all, whatever it is given: see [`takes_window_id`].
+    // Only Windows embeds mpv's native output. A zero is omitted because
+    // `wid=0` requests the engine's own window rather than disabling embedding.
     if takes_window_id(current_platform()) && wid != 0 {
         options.push(("wid", wid.to_string()));
     }
@@ -183,7 +173,7 @@ pub(super) fn base_options(wid: isize, silent: bool) -> Vec<(&'static str, Strin
         // library was being painted over whatever was on the desktop behind it.
         // mpv paints this surface black instead, from startup, and it stays at
         // the bottom of the child z-order where the picture already goes.
-        // On Mac the host owns the film surface. Creating mpv's VO during
+        // On Mac/Linux the host owns the film surface. Creating mpv's VO during
         // initialize(), before the render context exists, is invalid and
         // produces "No render context set". It must start with the first file.
         (

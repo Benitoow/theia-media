@@ -66,10 +66,10 @@ PY
     then ready=1; break; fi
     sleep 1
 done
-[ "$ready" = 1 ] || { cat "$out/player.log"; exit 1; }
 # Capture while the installed player is alive, in the test's own X display.
 ffmpeg -hide_banner -loglevel error -y -f x11grab -video_size 1280x720 \
     -i "$DISPLAY" -frames:v 1 "$out/player-window.png"
+[ "$ready" = 1 ] || { cat "$out/player.log"; exit 1; }
 go run ./scripts/check-playback-picture -image "$out/player-window.png" -controls
 echo 'PASS advancing film, real window, responsive and visible controls'
 stop_product

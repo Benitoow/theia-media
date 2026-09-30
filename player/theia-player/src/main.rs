@@ -2784,15 +2784,14 @@ fn start_engine(wid: isize, media: Option<&str>, silent: bool) -> Result<(), Str
     render_linux::attach(&engine, &dll)?;
 
     if let Some(path) = media {
-        if let Err(error) = engine.command(&["loadfile", path]) {
+        engine.command(&["loadfile", path]).inspect_err(|_| {
             // Render workers borrow this handle. Stop them before a failed
             // startup drops the local engine.
             #[cfg(target_os = "macos")]
             render_macos::detach();
             #[cfg(not(any(windows, target_os = "macos")))]
             render_linux::detach();
-            return Err(error);
-        }
+        })?;
     }
 
     let mut session = Session {
