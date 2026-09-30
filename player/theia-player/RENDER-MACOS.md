@@ -260,3 +260,14 @@ texture framebuffer and blits it into AppKit's destination. Diagnostics record
 the destination framebuffer, GL error and a film-texture sample. This separates
 mpv's target from the window compositor's drawable and remains subject to a
 fresh captured-picture check on both Mac architectures.
+
+The explicit film framebuffer still read black in run 36729392709, with GL
+error zero and destination framebuffer zero. Layer composition alone therefore
+does not explain the failure. The render API was still running on the command
+thread, violating mpv's documented threading contract. The candidate now uses
+a dedicated serial render worker, with no command/property calls or AppKit
+requests. Main-thread draw callbacks only publish drawable geometry under the
+CGL context lock; the worker renders, swaps and handles updates independently.
+Advanced control is enabled under that separation. Teardown cancels the worker
+timer and frees its resources on the same serial queue before engine destruction.
+Native film/controls capture remains the acceptance test.

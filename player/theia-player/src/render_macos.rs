@@ -1,5 +1,6 @@
 //! The small Rust boundary to the AppKit/OpenGL film surface.
-//! All view and render-context work stays on the main thread in render_macos.m.
+//! AppKit view work stays on the main thread; render API calls use a dedicated
+//! serial worker in render_macos.m, separate from normal engine commands.
 //! Tauri gives us the window content view; the bridge finds Wry's WKWebView
 //! child and places the film surface below it.
 

@@ -11,6 +11,7 @@
 #import <stdbool.h>
 #import <stdio.h>
 #import <stdlib.h>
+#import <dispatch/dispatch.h>
 
 typedef int (*RenderCreate)(mpv_render_context **, mpv_handle *, mpv_render_param *);
 typedef void (*RenderCallback)(mpv_render_context *, mpv_render_update_fn, void *);
@@ -79,6 +80,8 @@ static uint64_t now_ms(void)
 
 static TheiaFilmView *gView;
 static NSTimer *gTimer;
+static dispatch_queue_t gRenderQueue;
+static dispatch_source_t gRenderTimer;
 
 static void *get_proc_address(void *context, const char *name)
 {
@@ -93,36 +96,24 @@ static void on_render_update(void *context)
     atomic_fetch_add_explicit(&gNotifications, 1, memory_order_relaxed);
 }
 
-@implementation TheiaFilmView
-
-- (void)drawRect:(NSRect)dirty
+// The worker owns every render API call after creation. It never asks AppKit
+// or waits for a thread executing ordinary mpv commands/properties.
+static void render_frame(void)
 {
-    (void)dirty;
     atomic_fetch_add_explicit(&gDraws, 1, memory_order_relaxed);
     atomic_store_explicit(&gLastDrawMs, now_ms() - gAttachedAtMs, memory_order_relaxed);
     if (!gRender) return;
-    if ([self openGLContext] != gBoundContext) {
-        atomic_fetch_add_explicit(&gContextChanges, 1, memory_order_relaxed);
-    }
-    [[self openGLContext] makeCurrentContext];
-    [[self openGLContext] update];
-    NSRect backing = [self convertRectToBacking:self.bounds];
-    atomic_store_explicit(
-        &gSurface,
-        ((uint64_t)(uint32_t)backing.size.width << 32) | (uint32_t)backing.size.height,
-        memory_order_relaxed);
+    uint64_t surface = atomic_load_explicit(&gSurface, memory_order_relaxed);
     mpv_opengl_fbo fbo = {
         .fbo = 0,
-        .w = (int)backing.size.width,
-        .h = (int)backing.size.height,
+        .w = (int)(surface >> 32),
+        .h = (int)(surface & 0xffffffffu),
         .internal_format = 0,
     };
     // Keep mpv's render target separate from AppKit's drawable. AppKit owns
     // the destination (including any layer-backed framebuffer); mpv gets a
     // complete colour texture with dimensions controlled by this bridge.
-    GLint framebuffer = 0;
-    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &framebuffer);
-    atomic_store_explicit(&gTargetFramebuffer, framebuffer, memory_order_relaxed);
+    GLint framebuffer = (GLint)atomic_load_explicit(&gTargetFramebuffer, memory_order_relaxed);
     if (fbo.w <= 0 || fbo.h <= 0) return;
     if (!gFilmFramebuffer) {
         glGenFramebuffers(1, &gFilmFramebuffer);
@@ -164,6 +155,7 @@ static void on_render_update(void *context)
         atomic_fetch_sub_explicit(&gInRender, 1, memory_order_relaxed);
         atomic_fetch_add_explicit(&gErrors, 1, memory_order_relaxed);
         fprintf(stderr, "theia-player: macOS frame render failed (%d)\n", result);
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         return;
     }
     atomic_fetch_sub_explicit(&gInRender, 1, memory_order_relaxed);
@@ -191,9 +183,35 @@ static void on_render_update(void *context)
                       GL_COLOR_BUFFER_BIT, GL_NEAREST);
     atomic_store_explicit(&gGlError, glGetError(), memory_order_relaxed);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-    [[self openGLContext] flushBuffer];
+    [gBoundContext flushBuffer];
     gSwap(gRender);
     atomic_fetch_add_explicit(&gFrames, 1, memory_order_relaxed);
+}
+
+@implementation TheiaFilmView
+
+- (void)drawRect:(NSRect)dirty
+{
+    (void)dirty;
+    NSOpenGLContext *context = [self openGLContext];
+    if (gBoundContext && context != gBoundContext) {
+        atomic_fetch_add_explicit(&gContextChanges, 1, memory_order_relaxed);
+        return;
+    }
+    // This short graphics-only section shares the context with the worker.
+    // No ordinary libmpv calls occur while the main thread holds this lock.
+    CGLContextObj cgl = [context CGLContextObj];
+    CGLLockContext(cgl);
+    [context makeCurrentContext];
+    [context update];
+    NSRect backing = [self convertRectToBacking:self.bounds];
+    atomic_store_explicit(&gSurface,
+        ((uint64_t)(uint32_t)backing.size.width << 32) | (uint32_t)backing.size.height,
+        memory_order_relaxed);
+    GLint framebuffer = 0;
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &framebuffer);
+    atomic_store_explicit(&gTargetFramebuffer, framebuffer, memory_order_relaxed);
+    CGLUnlockContext(cgl);
 }
 
 @end
@@ -205,14 +223,24 @@ void theia_render_detach(void)
         [gTimer invalidate];
         gTimer = nil;
     }
-    if (gRender) {
-        [[gView openGLContext] makeCurrentContext];
-        gCallback(gRender, NULL, NULL);
-        gFree(gRender);
-        gRender = NULL;
+    if (gRenderTimer) {
+        dispatch_source_cancel(gRenderTimer);
+        gRenderTimer = nil;
     }
-    if (gFilmFramebuffer) glDeleteFramebuffers(1, &gFilmFramebuffer);
-    if (gFilmTexture) glDeleteTextures(1, &gFilmTexture);
+    void (^free_render)(void) = ^{
+        if (gBoundContext) [gBoundContext makeCurrentContext];
+        if (gRender) {
+            gCallback(gRender, NULL, NULL);
+            gFree(gRender);
+            gRender = NULL;
+        }
+        if (gFilmFramebuffer) glDeleteFramebuffers(1, &gFilmFramebuffer);
+        if (gFilmTexture) glDeleteTextures(1, &gFilmTexture);
+        [NSOpenGLContext clearCurrentContext];
+    };
+    if (gRenderQueue) dispatch_sync(gRenderQueue, free_render);
+    else free_render();
+    gRenderQueue = nil;
     gFilmFramebuffer = gFilmTexture = 0;
     gFilmWidth = gFilmHeight = 0;
     gBoundContext = nil;
@@ -307,7 +335,11 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
         .get_proc_address = get_proc_address,
         .get_proc_address_ctx = NULL,
     };
-    // No `MPV_RENDER_PARAM_ADVANCED_CONTROL`, and that is a correction rather
+    // The previous main-thread renderer could not enable advanced control:
+    // synchronous commands and draws on that same thread deadlocked. Rendering
+    // now has its own serial worker, with no command/property calls or AppKit
+    // waits, so the documented advanced-control contract can be honoured.
+    /* No `MPV_RENDER_PARAM_ADVANCED_CONTROL`, and that is a correction rather
     // than a preference. The header's Threading section says the thread calling
     // `mpv_render_*` "does not call libmpv API functions other than the
     // mpv_render_* functions", that "there must be no lock or wait dependency
@@ -325,8 +357,8 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
     // the documented failure degrades to a timeout instead of a freeze; the
     // header notes the cost as "playback quality will be degraded", and that
     // cost is accepted here only until rendering moves to its own thread, which
-    // is what this API recommends and what this file still owes.
-    int advanced = 0;
+    // is what this API recommends and what this file still owes. */
+    int advanced = 1;
     mpv_render_param params[] = {
         {MPV_RENDER_PARAM_API_TYPE, (void *)MPV_RENDER_API_TYPE_OPENGL},
         {MPV_RENDER_PARAM_OPENGL_INIT_PARAMS, &gl},
@@ -373,13 +405,32 @@ bool theia_render_attach(void *content_view_pointer, void *mpv_pointer,
         bool onScreen = window != nil && window.isVisible &&
             (window.occlusionState & NSWindowOcclusionStateVisible) != 0;
         atomic_store_explicit(&gOnScreen, onScreen ? 1 : 0, memory_order_relaxed);
-        [[gView openGLContext] makeCurrentContext];
-        if (gUpdate(gRender) & MPV_RENDER_UPDATE_FRAME) {
-            atomic_fetch_add_explicit(&gReady, 1, memory_order_relaxed);
-            [gView setNeedsDisplay:YES];
-        }
+        [gView setNeedsDisplay:YES];
     }];
     [[NSRunLoop mainRunLoop] addTimer:gTimer forMode:NSRunLoopCommonModes];
+    // Have a valid drawable size before the worker consumes its first frame.
+    [gView setNeedsDisplay:YES];
+    [gView displayIfNeeded];
+    [NSOpenGLContext clearCurrentContext];
+    gRenderQueue = dispatch_queue_create("media.theia.render", DISPATCH_QUEUE_SERIAL);
+    gRenderTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, gRenderQueue);
+    dispatch_source_set_timer(gRenderTimer, DISPATCH_TIME_NOW,
+                              NSEC_PER_SEC / 60, NSEC_PER_MSEC);
+    dispatch_source_set_event_handler(gRenderTimer, ^{
+        @autoreleasepool {
+            if (!gRender) return;
+            CGLContextObj cgl = [gBoundContext CGLContextObj];
+            CGLLockContext(cgl);
+            [gBoundContext makeCurrentContext];
+            if (gUpdate(gRender) & MPV_RENDER_UPDATE_FRAME) {
+                atomic_fetch_add_explicit(&gReady, 1, memory_order_relaxed);
+                render_frame();
+            }
+            [NSOpenGLContext clearCurrentContext];
+            CGLUnlockContext(cgl);
+        }
+    });
+    dispatch_resume(gRenderTimer);
     atomic_store_explicit(&gAttached, true, memory_order_relaxed);
     return true;
 }
