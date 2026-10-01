@@ -1,4 +1,5 @@
 version: 2
+# The maintainer keeps a single main branch. Review dependency updates manually.
 updates:
   - package-ecosystem: gomod
     directory: /
@@ -7,7 +8,7 @@ updates:
     groups:
       go-dependencies:
         patterns: ['*']
-    open-pull-requests-limit: 1
+    open-pull-requests-limit: 0
 
   - package-ecosystem: npm
     directory: /web
@@ -16,7 +17,7 @@ updates:
     groups:
       web-dependencies:
         patterns: ['*']
-    open-pull-requests-limit: 1
+    open-pull-requests-limit: 0
 
   - package-ecosystem: github-actions
     directory: /
@@ -25,4 +26,4 @@ updates:
     groups:
       ci-actions:
         patterns: ['*']
-    open-pull-requests-limit: 1
+    open-pull-requests-limit: 0

@@ -123,6 +123,15 @@ preferences:
   never presented as proof that the current display, HDMI chain or receiver can
   reproduce it.
 
+## Git workflow
+
+The maintainer requires one branch: `main`, locally and on GitHub. Work directly
+on `main`; do not create development branches or branch-backed worktrees.
+Dependabot version-update pull requests are disabled to prevent automatic
+branches. Dependency updates must still be reviewed and verified manually.
+This policy does not authorize publishing, pushing or changing security alerts;
+the explicit publication rule above still applies.
+
 ## Language
 
 Code, comments, commit messages and internal error strings are **English**, for
