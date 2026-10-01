@@ -42,7 +42,7 @@ jobs:
         with: {name: embedded-web, path: web-dist}
       - uses: actions/setup-go@v7
         with: {go-version: '1.26.6'}
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with: {node-version: '24'}
       - uses: dtolnay/rust-toolchain@stable
         with: {components: clippy}
@@ -109,7 +109,7 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: '1.26.6'
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - uses: dtolnay/rust-toolchain@stable
@@ -324,7 +324,7 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: '1.26.6'
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - uses: dtolnay/rust-toolchain@stable

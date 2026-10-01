@@ -199,7 +199,7 @@ jobs:
         with:
           go-version: '1.26.6'
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
 
@@ -493,7 +493,7 @@ jobs:
         with:
           go-version: '1.26.6'
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
 

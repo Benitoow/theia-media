@@ -80,7 +80,7 @@ jobs:
       # Playwright does, which the lockfile pins. A miss costs what this step
       # always cost; a hit skips the download, and still installs the system
       # dependencies and still runs every suite.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: ms-playwright-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
