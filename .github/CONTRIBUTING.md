@@ -28,26 +28,35 @@ grammar, supersession reciprocity - and `--write` regenerates its index
 touches the record, which matters because a commit carrying `[skip ci]` never
 reaches CI.
 
-## Current phase: V3.3, playback leaves the browser
+## Current release: V3.4; next development line: V4
 
-`v3.2.0` is the last release of the single-binary line. V3.3 splits the product
-into `theia-server`, `theia-player` and `theia-setup`; the reasoning, the
-superseded clauses and the validation boundary are in decision 117 and
-`docs/spec-fondatrice.md` §14, and the live record is
-[`docs/v3.3.md`](../docs/v3.3.md). Windows is the only platform the work can be
-verified on today.
+`v3.4.0` completes the native generation: server, launcher, installer and
+player ship for Windows x64/ARM64, macOS Intel/Apple Silicon and Ubuntu 24.04
+x64/ARM64. Native installed-product and captured film/controls checks passed
+for all six targets. See the [publication record](../docs/v3.4-release-readiness.md)
+for evidence and platform limits. Desktop apps, the server and web administration
+remain maintained; active development/support of the legacy web viewer has ended.
 
-Library-facing features stay paused while Theia is exercised by its first ten
-real households (decision 97). During this phase, changes are prioritised when
-they fix a security problem, a data-loss risk, blocked playback, a regression or
-concrete platform and codec compatibility. Documentation and test coverage that
-make a report reproducible are also welcome.
+V3.4 is the final planned V3 release; no 3.4.1, 3.5 or 3.6 is planned
+(decision 160). The next work follows the [V4 direction](../docs/v4.md): watch
+parties, a startup local-profile chooser, comments and film reactions. Data
+models, access boundaries and acceptance criteria must be specified before
+implementation. Library-facing additions still need real-household evidence
+under decision 97. Reproducible security, data-loss, playback and compatibility
+reports remain welcome.
 
-Feature requests remain open and are valuable evidence, but feature pull
-requests may be deferred until the field test has produced enough repeated
-problems to set the next roadmap. If you are using Theia on a real library, the
+Feature requests remain open and help refine V4; an accepted direction does
+not make every proposed feature part of its implementation contract. If you are using Theia on a real library, the
 [field-testing guide](../docs/field-testing.md) and dedicated issue form are the
 most useful place to start.
+
+## Repository workflow
+
+The maintained repository keeps a single branch, `main`. The maintainer and
+agents work there directly; do not create development branches in this repository.
+External contributors can submit pull requests from their own forks. Automatic
+Dependabot version-update PRs are disabled; dependency updates require manual
+review and verification.
 
 ## Constraints that are not preferences
 
@@ -59,7 +68,8 @@ From §3 of the founding spec, as amended by §14 for V3.3:
   itself, pinned and checksum-verified. The native player adds **libmpv** under
   the same discipline - pinned source, SHA-256, checked licence - and uses the
   platform webview (WebView2, WKWebView, WebKitGTK), which Theia neither ships
-  nor pins. Nothing else gets in without a decision entry.
+  nor pins. Ubuntu 24.04 desktop, codec and audio libraries are declared OS
+  prerequisites under decision 162. Nothing else gets in without a decision entry.
 - **Docker is never required.**
 - **No telemetry, no cloud account.** The only outbound calls are to TMDB and
   GitHub Releases. Remote access passively accepts WireGuard UDP from configured
@@ -138,7 +148,7 @@ marker while explaining the hook, and ran no workflow at all.
 
 Open an issue with the template. The three things that make a media-server bug
 solvable are the **exact file** involved (container, video codec, audio codec -
-`ffmpeg -i` output is ideal), the **browser and device**, and whether it happens
+`ffmpeg -i` output is ideal), the **player/browser, OS, CPU architecture and device**, and whether it happens
 in direct play, remux or re-encode. Without those, most playback reports cannot
 be reproduced.
 

@@ -15,7 +15,8 @@ Les campagnes de la 3.3 sont ici : [`v3.3/`](v3.3/) tient la phase 0 et ses
 preuves (dont la bibliothèque réelle et les mesures de l'interface), et
 [`v3.3-min-window/`](v3.3-min-window/) la fenêtre du lecteur à sa taille
 minimale - les photographies, et les rapports JSON que le lecteur a écrits
-lui-même. Terminées elles aussi : l'état courant est [`../v3.3.md`](../v3.3.md).
+lui-même. Terminées elles aussi : leur historique est [`../v3.3.md`](../v3.3.md), et
+la publication actuelle est vérifiée dans [`../v3.4-release-readiness.md`](../v3.4-release-readiness.md).
 
 ## Cycle V2
 

@@ -1,8 +1,9 @@
 # theia-player
 
 Theia's native player: a Tauri 2 window with an OSD over libmpv. On Windows,
-libmpv draws into a child surface; on macOS, the host renders its frames into
-an OpenGL view below the OSD.
+libmpv draws into a child surface; on macOS, the host uses an OpenGL view or
+a CPU-rendered image below the OSD. Linux paints software-rendered frames behind
+WebKit in the same GTK drawing surface.
 
 It exists because a browser cannot hand an untouched Dolby TrueHD, DTS-HD MA or
 Atmos stream to an amplifier, renders only the HDR10 base layer of a Dolby
@@ -29,7 +30,9 @@ and `player/theia-player/gen` are generated and never committed.
 ./build-player.ps1 -Release -Bundle
 ```
 
-A player without an engine plays nothing, so the bundle is what gets distributed:
+The public 3.4 downloads are complete one-file setups for six desktop platforms.
+The installer embeds the player bundle, engine and licence files; internal ZIPs
+are build artifacts, not extra public downloads. On Windows, the bundle contains:
 `theia-player.exe`, `libmpv-2.dll`, `LICENSE-libmpv.txt` and `NOTICE.md`, zipped
 into `dist/theia-player-windows-amd64.zip` (about 47 MiB). The engine is fetched by
 `scripts/fetch-libmpv`, which reads `player/libmpv.json` and **checks two
@@ -41,22 +44,25 @@ go run ./scripts/fetch-libmpv -print-pin      # what is pinned, and where from
 go run ./scripts/fetch-libmpv -out player/vendor
 ```
 
-The upstream project keeps thirty days of builds, so `THEIA_LIBMPV_MIRROR` points
-the fetch at a mirror first; the digest is what decides, not the URL. Both
-`windows/amd64` and `darwin/arm64` are pinned. The Windows player was run on
-the maintainer's machine; the macOS player and engine were run on a GitHub-hosted
-Apple Silicon Mac (see [On macOS](#on-macos)).
+The Windows upstream keeps thirty days of builds, so `THEIA_LIBMPV_MIRROR` points
+the fetch at a mirror first; the digest is what decides, not the URL.
+Windows architectures, both Mac architectures and both Ubuntu 24.04 targets
+have pins. The Windows x64 player was run on the maintainer's machine; the other
+complete products passed native installation and film/painted-controls checks
+in release CI (see the [publication record](../docs/v3.4-release-readiness.md)).
 
 ### How an installed player is updated
 
 Not by itself, and not by this crate: `theia-setup --update-player` replaces the
-four files of this bundle from the release GitHub publishes, after verifying the
-digest GitHub reports, extracting all four members and **running the new player
+platform bundle from the release GitHub publishes, after verifying the
+digest GitHub reports, extracting the required members and **running the new player
 to hear it name the version the release announces**. It refuses while the player
 is open rather than fighting a running program for its own engine, and a failure
 puts back what it had already moved. Decision 143 has the measurements.
 `theia-player -version` exists for that check, and for anybody else who needs to
-ask a build what it is.
+ask a build what it is. V3.4 falls back to the complete setup asset when no
+separate player ZIP is published; older installers should be replaced by the
+3.4 setup before upgrading.
 
 ### The licence, which is not optional
 
@@ -65,8 +71,9 @@ engine, and `NOTICE.md` records how each one is kept: the licence text travels i
 the bundle, the library stays a separate replaceable file, the exact source and
 digests are named by `theia-player --diagnostics`, and Theia's own source is
 public. A bundle missing any of those is a licence breach rather than an
-incomplete download, which is why the release pipeline checks for all four files
-before publishing anything.
+incomplete download, which is why the release pipeline checks the platform
+licence payload before publishing. Ubuntu uses its unmodified GPL-compatible
+libmpv package with additional licence texts and a source offer in `NOTICE-linux.md`.
 
 ## On macOS
 
@@ -88,12 +95,12 @@ and a name:
 
 **The bundle is ad-hoc signed and not notarised** - there is no Apple certificate
 behind it. Gatekeeper's first response to a downloaded copy still needs an
-interactive Mac check. CI extracts the published ZIP with `ditto -x -k` and
-verifies the player, server, setup and launcher are executable and the engine's
-symlinks survive. The offline archive needs no `chmod` step.
+interactive Mac check. CI extracts the setup's internal app payload and verifies
+the player, server, setup and launcher are executable and the engine's symlinks
+survive. The public setup itself needs `chmod +x` after download.
 
 The engine and the audio differ from Windows in three places, and each is in
-`src/main.rs` beside the value it belongs to: the platform table asks for
+`src/platform.rs` beside the value it belongs to: the platform table asks for
 `hwdec=videotoolbox` and `ao=coreaudio` and names no `gpu-api`/`gpu-context`,
 the audio mode starts at PCM because CoreAudio has no passthrough for the formats
 the Windows path asks for, and the window handle is the NSView Tauri hands over.
@@ -107,12 +114,13 @@ mpv's video outputs can draw a frame on macOS with this engine.** mpv 0.41 has n
 the pin is built with `vulkan=disabled`, so the one macOS context in that table,
 `macvk`, is not compiled in, and mpv 0.41 no longer reads `wid` on macOS at all:
 the `NSView*` embedding mpv 0.36 documented went with `video/out/cocoa_common.m`.
-The engine's one video path is the libmpv render API over OpenGL
-(`plain-gl=enabled` in the pin), where the *host* owns the GL context and draws
-each frame - an architecture change for this player, not a port.
+The host therefore creates a libmpv render context. On hardware GL it draws
+into its own OpenGL surface; on hosted software GL it uses mpv's software API
+and a bounded copied image below the transparent WKWebView. Both Mac packages
+passed the actual film/painted-controls gate through this CPU fallback.
 
-The Mac run proved `mpv_render_context_create` works, frames reach the host's
-`NSOpenGLView`, and a transparent WebView composites over it. The verifier and
+The current native package checks proved visible generated-film pixels and
+painted controls on both Intel and Apple Silicon runners. The verifier and
 player diagnostics can repeat those checks:
 
 ```bash
@@ -124,8 +132,36 @@ dist/theia-player-darwin-arm64/Theia.app/Contents/MacOS/theia-player \
 `--diagnostics` prints the session state once a second. `vo`, `hwdec` and `ao`
 are mpv's own properties (`current-vo`, `hwdec-current`, `current-ao`); on macOS
 the host owns video output, so `current-vo` can be empty even while frames are
-drawn. Position advancing and the verifier's frame count establish playback.
-The OSD's appearance over a moving film still needs a person's look.
+drawn. Neither position nor render counts alone prove a picture. The native
+package gate also requires a captured coloured fixture and painted controls;
+both final Mac captures were inspected before publication.
+
+## On Linux
+
+V3.4 supports Ubuntu 24.04 x64/ARM64 with X11 or XWayland. Install the declared
+OS prerequisites before running the downloaded setup:
+
+```sh
+sudo apt install libmpv2 libwebkit2gtk-4.1-0 libayatana-appindicator3-1
+```
+
+The setup carries a pinned Ubuntu libmpv library; Ubuntu provides the desktop,
+codec and audio dependencies. Initial playback is software-decoded SDR with PCM
+audio. Hardware acceleration, HDR and other Linux distributions are unverified.
+
+For a native source build, install the development packages listed in
+`.github/workflows/platform-proof.yml`, then use:
+
+```sh
+./scripts/build-player-linux.sh v3.4.0
+# -> dist/theia-player-linux-<arch>/TheiaPlayer
+```
+
+The renderer runs on a dedicated worker and keeps only the latest frame. GTK
+paints it behind the existing WebKit controls, without moving the widget tree.
+See [`RENDER-LINUX.md`](theia-player/RENDER-LINUX.md) for the implementation and
+failed approaches. Both shipped packages passed pause, resize, fullscreen,
+restoration and resumed playback with actual film/controls captures.
 
 ## Looking at the OSD without playing anything
 
@@ -243,11 +279,27 @@ The engine is looked for in this order:
 A missing engine is a sentence in the interface, not a crash: the process starts,
 the window appears and says what is wrong.
 
-The engine is not in this repository yet. Decision 118 pins the LGPL build and
-its SHA-256; vendoring it is a packaging step with a licence file and a source
-pointer, and it belongs to the release work rather than to the source tree.
+The engine binaries are not tracked in the source tree. Decisions 118 and 162
+pin their source, SHA-256 and licensing obligations; fetching and bundling them
+is a packaging step.
 
 ## What is verified, and where
+
+The current stable player ships in `v3.4.0`. Its [publication record](../docs/v3.4-release-readiness.md)
+links the exact revision and successful six-platform dry run and tag run.
+
+| Target | Current evidence |
+| --- | --- |
+| Windows x64 | Real-library playback and native styling accepted by the maintainer; complete package and player tests passed |
+| Windows ARM64 | Native installed launcher/server, Windows registration, actual generated film and painted controls passed |
+| macOS Intel / Apple Silicon | Complete installed app, actual film and painted controls passed; both captures inspected |
+| Ubuntu 24.04 x64 / ARM64 | Complete installation/launcher, actual film/controls, pause/resize/fullscreen/resume and uninstall with data kept passed |
+
+All twelve public setup/server downloads matched GitHub digests. The six setup
+payloads contain the exact matching updater server; downloaded Windows server,
+setup and native player report `v3.4.0`.
+
+### Historical Windows measurements
 
 Windows 11, AMD Radeon 890M, mpv `v0.41.0-1049-g0b7ed670f`:
 
@@ -294,10 +346,11 @@ the menu's detail line, where the file on disk is a `.srt`; and serving the
 sidecar untouched would need a server route the API does not have. That belongs
 to the server's own phase.
 
-Still unverified: Linux and television browsers as complete products, bitstream
-passthrough reaching an actual amplifier, and the OSD's appearance over moving
-picture on the maintainer's screen. The macOS runner verified playback and
-composition, but not interactive audio, VideoToolbox or Gatekeeper behaviour.
+Still unverified across real devices: bitstream passthrough reaching an actual
+amplifier, physical Mac VideoToolbox/HDR and first-launch Gatekeeper behaviour,
+and phone/TV browser compatibility. Native Ubuntu package proof does not extend
+to other distributions, hardware decoding or HDR. Hosted muted fixture checks
+do not establish real audio endpoints.
 
 ## The audio path, and the failure it recovers from
 

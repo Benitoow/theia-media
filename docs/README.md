@@ -13,11 +13,19 @@ passer pour la documentation courante.
 | [`DECISIONS.md`](DECISIONS.md) | Les décisions techniques et produit, avec leur raisonnement. Chaque entrée porte son statut et ses sujets ; l'index en tête dit ce qui gouverne encore |
 | [`design-system.md`](design-system.md) | Les règles visuelles et d'interaction |
 | [`v3.md`](v3.md) | Le périmètre livré et vérifié de la génération V3 |
-| [`v3.3.md`](v3.3.md) | Le périmètre **en cours** et le registre de vérification de la V3.3 (architecture native) |
+| [`v3.3.md`](v3.3.md) | L'historique de la génération native introduite en V3.3 |
+| [`v3.4-release-readiness.md`](v3.4-release-readiness.md) | La publication 3.4, les six plateformes et les vérifications des téléchargements publics |
+| [`v4.md`](v4.md) | La direction acceptée pour V4 et les points à spécifier |
 | [`field-testing.md`](field-testing.md) | Le protocole de validation dans de vrais foyers |
 
 ## Notes de version
 
+- [`Theia 3.4`](releases/v3.4.0.md) — dernière version V3 : six applications
+  desktop, fiches films/séries natives, progression des épisodes et nouvelle
+  politique de support. Les fonctions V4 sont des projets, pas des fonctions livrées.
+- [`Theia 3.3.6`](releases/v3.3.6.md) — fin de la maintenance 3.3, installation
+  et identification du dossier de données ; la vérification des images Mac
+  a ensuite été renforcée en 3.4.
 - [`Theia 3.3.5`](releases/v3.3.5.md) - les réglages du lecteur portent enfin sur
   le film - Lecture et Sous-titres, mesurés sur le moteur lui-même - et le lecteur
   cesse d'envoyer des trames que personne ne lit.
@@ -46,6 +54,9 @@ passer pour la documentation courante.
 - [`V3.3`](archive/v3.3/README.md) - journaux, mesures et preuves de la campagne
   qui a construit la génération native (phases 0 à 7).
 - [`V2`](archive/README.md) - roadmap et documents de coordination du cycle V2.
+
+Les dossiers `archive/v3.4/` conservent les mesures et références visuelles du
+cycle 3.4. Le bilan public courant reste le registre de publication ci-dessus.
 
 Les images utilisées par la documentation publique vivent dans
 [`screenshots/`](screenshots/). Elles ne définissent pas à elles seules le

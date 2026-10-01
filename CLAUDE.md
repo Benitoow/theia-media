@@ -24,10 +24,9 @@ Read decision 117 and `docs/spec-fondatrice.md` §14 before touching anything.
 release line is V4, documented in `docs/v4.md` (decision 160). Desktop apps and
 the server remain maintained. Phone and TV apps are deferred without a date.
 They record exactly which founding clauses were superseded and which still bind.
-The published V3.3.6 has complete Windows x64 and Apple Silicon artifacts, but a
-post-release audit found no integrated Mac render context (decision 149): old
-playback-position checks did not establish a picture. The V3.4 branch adds the
-AppKit/OpenGL renderer with a CPU fallback and six complete package candidates.
+The V3.3.6 audit found no integrated Mac render context (decision 149): old
+playback-position checks did not establish a picture. V3.4 delivers the
+AppKit/OpenGL renderer with a CPU fallback and six complete desktop packages.
 V3.4.0 was published on 30 September 2026 from 82da1af, after complete
 six-platform dry run 36759560332 and successful tag run 36760923851.
 All installed native products passed captured generated-film and painted-control
@@ -36,8 +35,7 @@ and resumed playback. All twelve public assets were downloaded and matched
 GitHub SHA-256 digests; all six setup payloads matched their updater servers.
 Linux uses a GTK-owned software render canvas: SDR and PCM, without hardware
 acceleration or HDR. Physical Mac hardware decoding/HDR remains unverified.
-Keep the
-current evidence and publication blockers in `docs/v3.4-release-readiness.md`;
+Keep the current evidence and any future publication blockers in `docs/v3.4-release-readiness.md`;
 do not promote a platform because compilation or playback counters passed.
 
 **Publication is explicit.** Preparing a release does not authorize publishing
@@ -307,7 +305,7 @@ with EPERM while cleaning up.
 ## Building the release archive
 
 ```bash
-./build-release.ps1 -Version 3.3.6     # -> dist/theia-3.3.6-windows-amd64.zip
+./build-release.ps1 -Version 3.4.0     # -> dist/theia-3.4.0-windows-amd64.zip
 ```
 
 The ZIP built here is now an **internal setup payload**: it contains the setup,
@@ -315,11 +313,10 @@ server, player, engine, LGPL licence and `START-HERE.txt`. The release job appen
 it to the public setup executable so that one download installs the platform
 product without another network fetch. The ZIP is not a separate public asset.
 
-The currently published v3.3.6 still has the older fourteen-asset layout.
-Decisions 150 and 162 change the next release to six complete setups and six
-exact server binary names for installed updaters. Each setup still requires
-native picture and installation proof before publication. The twelve-name
-`scripts/check-release-assets.ps1` enforces this candidate surface. Upgrading
+The published v3.4.0 has six complete setups and six exact server binary names
+for installed updaters (decisions 150 and 162). Native picture and installation
+proof passed for every promoted platform. The twelve-name
+`scripts/check-release-assets.ps1` enforces this public surface. Upgrading
 from V3.3 requires running the new setup to replace the desktop programs; a
 server-only automatic update does not update the previous player.
 
@@ -353,7 +350,7 @@ maintainer's screen and cost an afternoon. `player/theia-player/build.rs` declar
 unless the executable carries the hashed asset names from the dist it just built.
 See [`player/README.md`](player/README.md) and decision 118.
 
-What ships is the **bundle**, not the executable:
+Build the **bundle**, not just the executable; the public setup embeds it:
 
 ```bash
 ./build-player.ps1 -Release -Bundle     # -> dist/theia-player-windows-amd64.zip
