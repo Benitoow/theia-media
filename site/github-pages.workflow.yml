@@ -1,0 +1,57 @@
+# INERT ON PURPOSE. GitHub only runs files under .github/workflows/, and this one
+# lives in site/. Nothing deploys until the maintainer asks for it (decision 164;
+# the publication rule in CLAUDE.md applies to a web page as it does to a release).
+#
+# To switch it on, in this order:
+#   1. Push the licence change of decision 163 first: the page tells visitors what
+#      the repository's licence is, and on origin/main that is still the GPL.
+#   2. Decide the address. A project page is https://benitoow.github.io/theia-media
+#      (site/site.config.json already says so). For a domain of your own, create the
+#      repository variable SITE_URL (Settings > Secrets and variables > Actions >
+#      Variables) and set the domain under Settings > Pages.
+#   3. git mv site/github-pages.workflow.yml .github/workflows/pages.yml
+#   4. Settings > Pages > Build and deployment > Source: GitHub Actions.
+#   5. Run the workflow by hand (Actions > Pages > Run workflow).
+#
+# It builds and checks the page, then publishes site/dist. It is manual on
+# purpose; to deploy on every change under site/, uncomment the push trigger.
+
+name: Pages
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches: [main]
+  #   paths: ['site/**']
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      # An empty SITE_URL falls back to site/site.config.json.
+      - name: Build and check the page
+        run: node site/build.mjs --check
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site/dist
+      - id: deployment
+        uses: actions/deploy-pages@v5

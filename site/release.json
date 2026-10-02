@@ -1,0 +1,32 @@
+{
+	"tag": "v3.4.0",
+	"name": "Theia v3.4.0",
+	"publishedAt": "2026-09-30T19:04:17Z",
+	"url": "https://github.com/Benitoow/theia-media/releases/tag/v3.4.0",
+	"assets": {
+		"theia-setup-windows-amd64.exe": {
+			"size": 72216613,
+			"sha256": "c81fdd23fc0f7a9885a68103ce89530177b5d38c64df10ddbb0d043de805767d"
+		},
+		"theia-setup-windows-arm64.exe": {
+			"size": 64344592,
+			"sha256": "4314985b6d9f319b12270daf7693dfff7629603c987543c4ed519120dded6fbe"
+		},
+		"theia-setup-darwin-arm64": {
+			"size": 42494458,
+			"sha256": "a8ac3a70f693272ce0736fd0f3e5de64b951729451c60232a828884485189b8a"
+		},
+		"theia-setup-darwin-amd64": {
+			"size": 46034687,
+			"sha256": "e826b1b939a5e23cb102e0538b7905ee8afc7141890686ed69ddfb3e124e5c22"
+		},
+		"theia-setup-linux-amd64": {
+			"size": 30285530,
+			"sha256": "fdd56a1675ec27d7d6fa1e2aa3d48d9828e8db6003cb611345f33cfb1c00c8eb"
+		},
+		"theia-setup-linux-arm64": {
+			"size": 28702520,
+			"sha256": "b7b7fa4268d4483f2f9322819ea70808429495170ca9572f81a2459a12406a99"
+		}
+	}
+}

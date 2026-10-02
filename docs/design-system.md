@@ -1334,14 +1334,15 @@ has a different first job: prove what Theia is, make the cost and limits legible
 then let somebody try it. It keeps the identity above and changes the
 composition, not the brand.
 
-The site is built with Astro, React and Tailwind CSS (rebuilt 11 September
-2026, decision 108): most of the page is static build-time HTML, and the two
-interactive parts - the download station and the demonstration player chrome -
-are React islands hydrated only when they approach the viewport. The page
-performs no runtime API call, ships no analytics and loads no remote
-subresource; the publishing contract below is what the stack exists to serve.
-The page is English only: the audience now arrives cold, mostly through
-Reddit, and one language keeps the copy sharp and the checks simple.
+The site is one static HTML page (decision 164, which amends decision 116's
+removal of the Astro, React and Tailwind site of decision 108): HTML, CSS and a
+few lines of vanilla JavaScript, no framework, nothing to install to run it. The
+only interactive part is the download station, an enhancement of markup that
+already works without it. The page performs no runtime API call, ships no
+analytics and loads no remote subresource; the publishing contract below is what
+this shape exists to serve. The page is English only: the audience arrives cold,
+mostly through Reddit, and one language keeps the copy sharp and the checks
+simple.
 
 ### 12.1 The first screens contain proof, then the file
 
@@ -1363,6 +1364,12 @@ repository-authored demo media, with demonstration controls around it. A
 mockup must never be worded or framed as a capture. Replacing the media later
 changes the asset and provenance record, not this rule.
 
+Since decision 164 the proof is form 1 alone: a recording of the shipped
+application with native controls, dated by the version it shows and described
+scene by scene in text, including what it does not show. The reconstruction of
+the player's chrome is no longer used. The recording's provenance, and what is
+visible in it, is recorded beside the asset in `site/assets/PROVENANCE.md`.
+
 ### 12.2 Three moments are the ceiling
 
 The public site shows at most three visual product moments: discover the local
@@ -1377,6 +1384,13 @@ beyond the three moments in exactly one subordinate form: a still strip - a
 single quiet row of real captures, no motion, placed after the moments. Facts
 that describe a capture may sit as an overlay card on it; a moment without
 capture keeps the structured fact panel, not a stock photograph.
+
+One exception, decision 164: the maintainer's four illustrations (GPT Image,
+supplied on 2 October 2026) may give the page its atmosphere. Each is labelled
+*Illustration*, none sits in a frame that suggests a screen, none is worded as a
+capture and none replaces a capture where one exists. There is still no
+page-wide grade, and the recording remains the one thing on the page that is the
+product.
 
 ### 12.3 Download station
 
@@ -1418,6 +1432,10 @@ audience arrives cold and wants the file, not the roadmap. The story lives in
 the repository (`docs/field-testing.md` and the field-test issue template),
 where it belongs. The public page carries instead the three steps and the
 honest ledger of §12.4.
+
+Decision 164 brings one part back: a single secondary invitation after the
+ledger - the field-test issue and the Discord - without the narrative. The
+« ten households » story stays in the repository.
 
 The site reflows at 1100px, 700px and the 390px floor. Controls remain at least
 44px, the range hit area remains 44px even though its painted rule is 4px, and

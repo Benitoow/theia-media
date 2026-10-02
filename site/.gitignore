@@ -1,0 +1,2 @@
+# The build output. `node site/build.mjs` regenerates it.
+dist/
