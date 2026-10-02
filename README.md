@@ -18,6 +18,7 @@
 </p>
 
 <p align="center">
+  <a href="https://benitoow.github.io/theia-media/">Website</a> ·
   <a href="#downloads">Desktop downloads</a> ·
   <a href="https://github.com/Benitoow/theia-media/releases/tag/v3.4.0">3.4 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·

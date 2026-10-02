@@ -14,7 +14,7 @@ machine, on scanne le réseau, ça marche.
 
 > **Amendé le 30 septembre 2026 (décision 161)** : le serveur, la bibliothèque
 > et la lecture ordinaire restent gratuits, et Theia reste open source sous sa
-> licence actuelle. Certaines fonctions sociales/de visionnage partagé de V4
+> licence actuelle (remplacé le 2 octobre par la décision 163, ci-dessous). Certaines fonctions sociales/de visionnage partagé de V4
 > seront d'abord gratuites, puis pourront devenir payantes en soutien au projet
 > au démarrage de V5, sans abonnement mensuel. Périmètre, prix et modalités ne
 > sont pas encore fixés ; ils seront annoncés avant la transition. Les estimations
