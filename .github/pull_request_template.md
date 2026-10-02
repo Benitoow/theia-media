@@ -28,6 +28,8 @@ An optimistic summary is not.
 
 ## Checks
 
+- [ ] I agree to the contributor agreement in `.github/CONTRIBUTING.md`
+      ("Licence and contributor agreement"). Without this box, nothing is merged.
 - [ ] No CGO. No new runtime dependency for `theia-server` beyond FFmpeg; the
       player's libmpv exception (decision 117) is the only one, and it is pinned.
 - [ ] Docker still not required.

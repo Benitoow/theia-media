@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/Benitoow/theia-media/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Benitoow/theia-media?style=flat-square&color=C8A24A"></a>
   <a href="https://github.com/Benitoow/theia-media/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Benitoow/theia-media/ci.yml?branch=main&style=flat-square&label=CI"></a>
-  <a href="LICENSE"><img alt="GPL-3.0" src="https://img.shields.io/github/license/Benitoow/theia-media?style=flat-square"></a>
+  <a href="LICENSE"><img alt="Source-available: PolyForm Noncommercial from 4.0, GPL-3.0 up to 3.4" src="https://img.shields.io/badge/licence-PolyForm%20NC%20(4.0%2B)%20%C2%B7%20GPL--3.0%20(%E2%89%A43.4)-555?style=flat-square"></a>
   <img alt="Windows x64 and ARM64" src="https://img.shields.io/badge/Windows-x64%20%2F%20ARM64-555?style=flat-square">
   <img alt="macOS Intel and Apple Silicon" src="https://img.shields.io/badge/macOS-Intel%20%2F%20Apple%20Silicon-555?style=flat-square">
   <img alt="Ubuntu 24.04 x64 and ARM64" src="https://img.shields.io/badge/Ubuntu%2024.04-x64%20%2F%20ARM64-555?style=flat-square">
@@ -89,11 +89,12 @@ listed below. Other Linux distributions are not verified for these binaries.
 comments and likes/dislikes on films. Direct messages and calls are outside
 the scope. Dedicated phone and TV apps are deferred without a date.
 
-Theia's server, library and ordinary viewing remain free and open source.
-Optional V4 social features are initially free; some are planned to become
-paid supporter extras when V5 work begins, without a monthly subscription.
-Exact features and payment terms will be announced separately. Late 2026 or
-early 2027 is an estimate, not a commitment.
+Theia's server, library and ordinary viewing remain free. From 4.0 the source
+stays public but is *source-available*, not open source: free for personal and
+noncommercial use, with no commercial use (see [Licence](#licence-and-attribution)).
+Optional shared-viewing extras may one day be paid, without a monthly
+subscription; nothing paid exists and nothing is decided. Late 2026 or early
+2027 is an estimate, not a commitment.
 
 ## Help test 3.4 and shape V4
 
@@ -263,7 +264,7 @@ would be advertising wearing a Markdown costume.
 | | **Theia** | **Plex** | **Jellyfin** | **Emby** |
 | --- | --- | --- | --- | --- |
 | Best fit | One household that wants the smallest possible film-and-series server | The broadest polished client ecosystem | A full open-source, multi-user media platform | A configurable commercial media platform |
-| Cost | Free core, GPL-3.0; optional future social features follow the supporter plan | Local personal video is free; remote video and hardware transcoding use paid passes | Free, GPL-2.0, no premium tier | Free tier; several server and app features use Premiere |
+| Cost | Free core, source-available (noncommercial licence from 4.0; GPL-3.0 up to 3.4); optional future extras are not decided | Local personal video is free; remote video and hardware transcoding use paid passes | Free, GPL-2.0, no premium tier | Free tier; several server and app features use Premiere |
 | Identity | No account; passwordless local profiles | Plex account model | Local users and permissions | Local users; optional Emby Connect |
 | Server setup | One native binary for the server, no Docker or external runtime; the desktop player is a separate native application | Installers and NAS packages | Native packages, containers and NAS options | Installers, containers and many NAS options |
 | Clients | A native desktop player, and a responsive browser for administration and server settings | Browser plus wide TV, mobile, desktop and console coverage | Browser plus official and community apps | Browser plus TV and mobile apps |
@@ -323,7 +324,11 @@ running product.
 
 ## Licence and attribution
 
-Theia is free software under the [GNU General Public License v3.0](LICENSE).
+Theia 3.4.0 and earlier are free software under the [GNU General Public License v3.0](LICENSE-GPL-3.0).
+Everything after 3.4.0, including 4.0, is source-available under the
+[PolyForm Noncommercial License 1.0.0](LICENSE): you may use, modify and share it
+for noncommercial purposes, and commercial use needs a separate licence. It is not
+an Open Source Initiative licence (decision 163).
 
 This product uses the [TMDB API](https://www.themoviedb.org/) but is not endorsed
 or certified by TMDB. FFmpeg is downloaded from its pinned upstream release and

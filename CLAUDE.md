@@ -1,8 +1,9 @@
 # Working on Theia
 
 Theia is a personal media server: no configuration, no cloud account, no paywall
-for the server, library or ordinary viewing. Optional future social/supporter
-features follow decision 161; the existing GPL licence is unchanged. One user,
+for the server, library or ordinary viewing. Optional future paid
+additions follow decisions 161 and 163; from 4.0 the source is
+source-available (PolyForm Noncommercial), and 3.4.0 and earlier stay GPL-3.0. One user,
 their own films, their own machine.
 
 **V3.4 completes the native generation introduced in V3.3.** `v3.2.0` was
@@ -105,7 +106,7 @@ preferences:
   encrypted WireGuard UDP from explicitly configured peers; it never contacts a
   control plane, relay, STUN service or endpoint-discovery service.
 - **No unverified image and no unverified binary.** This repository is public
-  and GPL-3.0. Never fetch decorative imagery from the web; the maintainer
+  and source-available (decision 163). Never fetch decorative imagery from the web; the maintainer
   supplies licence-checked assets. A screen that needs filling gets CSS texture
   and a note. The same rule governs libmpv and FFmpeg builds, including the
   licences of what they link.

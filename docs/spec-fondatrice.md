@@ -20,6 +20,14 @@ machine, on scanne le réseau, ça marche.
 > sont pas encore fixés ; ils seront annoncés avant la transition. Les estimations
 > fin 2026/début 2027 ne constituent pas une date promise.
 
+> **Amendé le 2 octobre 2026 (décision 163)** : à partir de la 4.0, le cœur de
+> Theia n'est plus « open source » mais *source-available*, sous PolyForm
+> Noncommercial 1.0.0 ; la 3.4.0 et les versions antérieures restent sous GPL-3.0
+> pour toujours. La phrase « Theia reste open source sous sa licence actuelle » de
+> la décision 161 est remplacée. Les fonctions payantes éventuelles vivent dans
+> un module fermé hors de ce dépôt ; le serveur, la bibliothèque et la lecture
+> ordinaire restent gratuits.
+
 > **Amendé en V3.3 (§14)** : « un seul binaire » devient **trois exécutables**
 > (`theia-server`, `theia-player`, `theia-setup`) et la commande `theia` qui les
 > lance (21 septembre 2026, décision 139). Le zéro-configuration, lui, ne bouge

@@ -75,7 +75,7 @@ From §3 of the founding spec, as amended by §14 for V3.3:
   GitHub Releases. Remote access passively accepts WireGuard UDP from configured
   peers; it never contacts a control plane, relay or STUN service.
 - **No unverified image and no unverified binary.** This repository is public and
-  GPL-3.0. Do not add decorative imagery from the web; every shipped asset needs
+  source-available (decision 163). Do not add decorative imagery from the web; every shipped asset needs
   its licence checked first. A screen that needs filling gets CSS texture and a
   note. The same rule governs libmpv and FFmpeg builds.
 - **The player declares nothing it cannot observe.** A codec present in a file is
@@ -160,3 +160,23 @@ when nothing broke.
 
 Do not open a public issue for a security problem. See
 [SECURITY.md](SECURITY.md).
+
+## Licence and contributor agreement
+
+Theia up to and including v3.4.0 is GPL-3.0 (`LICENSE-GPL-3.0`). Everything
+after it is under the PolyForm Noncommercial License 1.0.0 (`LICENSE`): you may
+read, run, modify and share it for noncommercial purposes, and nothing more. It
+is source-available, not open source (decision 163).
+
+Code, documentation or assets are merged only if the contributor agrees to this,
+by ticking the box in the pull request template:
+
+> I wrote this contribution or have the right to submit it. I keep my copyright.
+> I grant the maintainer, Benjamin Leleu, and his successors a perpetual,
+> worldwide, non-exclusive, royalty-free, irrevocable licence to use, copy,
+> modify, distribute, sublicense and relicense it under any terms, including
+> proprietary and paid ones. I understand it is also published under the
+> repository's licence.
+
+This agreement has not been reviewed by a lawyer. Issues, ideas and field-test
+reports need no agreement.
