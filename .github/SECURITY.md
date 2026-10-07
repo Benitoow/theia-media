@@ -7,9 +7,8 @@ gap.** Anyone who can reach TCP `8383` on your network can browse and stream the
 library, change settings, start a scan and install an update.
 
 Theia is a single-household media server for a trusted home network. Adding
-accounts, passwords and permissions would change what the project is; the
-reasoning is written down in [decision 6](../docs/DECISIONS.md) and in
-[the founding spec](../docs/spec-fondatrice.md).
+accounts, passwords and permissions would change what the project is, and it
+was decided that way from the first release.
 
 **Do not forward TCP `8383` on your router.** If you need access from outside the
 house, use the built-in remote access, which is a different door entirely:
@@ -50,7 +49,7 @@ concept against a local instance is worth more than a description.
 
 This is a single-maintainer hobby project with no bug bounty and no guaranteed
 response time. What is guaranteed: a genuine report gets an honest answer, and a
-fix ships as a release with the reasoning recorded in the decision log.
+fix ships as a release, explained in its release notes.
 
 ## Scope
 

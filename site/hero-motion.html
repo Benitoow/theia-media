@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Theia — hero motion</title>
+<style>
+/* THEIA hero motion
+   ---------------------------------------------------------------------------
+   Theia, Titaness of sight and heavenly light, mother of Helios. The word sits
+   black on black; the horizon of the mark (design system 7.1) draws itself; a
+   light rises behind the word and is seen only through the letters; a passage
+   of light turns them from shadow to bone, left to right; then the light
+   breathes. Once on arrival, then only the breath.
+
+   Layers, bottom to top, all in one grid cell so they share one layout:
+     .th-word    the real <h1>, in bone. Never animated, never hidden, so the
+                 heading is painted at first paint and screen readers, find,
+                 selection and forced colours all meet ordinary text.
+     .th-shades  one span per letter. ::before is the shadow that covers the
+                 bone glyph and fades out; ::after is the gold flare of the
+                 passage. Kerning is off on every layer so split and unsplit
+                 text land on the same pixels.
+     .th-glow    the risen light, clipped to the glyphs (background-clip:
+                 text). It rises through a soft mask window: the window moves
+                 up while the glyphs move down by the same amount, so the
+                 light climbs the letters and the letters never move.
+     .th-rule    the horizon, the lockup's gold rule fading to the right.
+
+   Only transform and opacity are animated; in Chromium all fifteen animations
+   run on the compositor and the masks and gradients are painted once. Gold is
+   spent on the rule and the light, nothing else.
+
+   Timeline, from section 8 tokens (--ease-cine everywhere in the entrance):
+       0   darkness, the word is --surface on --ink
+     320   the rule draws                      --duration-base
+     700   the light rises                     --duration-slow
+    1400   the passage, 90ms per letter        2 x slow, 90ms is the 8 step
+    1760   the light settles to its rest
+    2460   the breath, 10s, for as long as the hero is seen
+
+   Integration: the :root block mirrors web/src/lib/tokens.css under the same
+   names; drop it where the page already has the tokens. Keep the script right
+   after the markup so the dark state is set before first paint. */
+
+@font-face {
+  font-family: 'Cinzel Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 900;
+  src: url('fonts/cinzel-latin-wght-normal.woff2') format('woff2-variations'),
+       url('fonts/cinzel-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122,
+    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Section 3, 4 and 8 tokens, as tokens.css names them. */
+:root {
+  --color-ink: #0b0a09;
+  --color-surface: #131211;
+  --color-bone: #ede7dc;
+  --color-accent: #c8a24a;
+  --color-accent-bright: #e3c173;
+  --channel-ink: 11 10 9;
+  --channel-accent: 200 162 74;
+  --font-display: 'Cinzel Variable', 'Trajan Pro', Georgia, 'Times New Roman', serif;
+  --text-hero: clamp(3.5rem, 12vw, 9rem);
+  --text-hero--line-height: 0.9;
+  --text-label--letter-spacing: 0.18em;
+  --ease-cine: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-base: 320ms;
+  --duration-slow: 700ms;
+}
+
+/* Preview frame only: the page this file stands in for. */
+html { color-scheme: dark; background: var(--color-ink); }
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------------- the hero */
+
+.th-hero {
+  /* The entrance, composed from section 8. */
+  --th-stagger: 90ms;
+  --th-rule-at: var(--duration-base);
+  --th-rise-at: var(--duration-slow);
+  --th-pass-at: calc(var(--duration-slow) * 2);
+  --th-settle-at: calc(var(--th-pass-at) + var(--th-stagger) * 4);
+  --th-breath-at: calc(var(--th-settle-at) + var(--duration-slow));
+
+  /* The breath. Section 8 has no loop token yet, so it is named here: one
+     10s cycle, quantised rather than eased (see th-breath). */
+  --th-breath: 10s;
+  --th-glow-rest: 0.42;
+
+  --th-play: paused;
+  display: grid;
+  justify-items: center;
+}
+
+.th-hero.is-live { --th-play: running; }
+
+.th-stage {
+  display: grid;
+  font-size: var(--text-hero);
+}
+
+.th-stage > * {
+  grid-area: 1 / 1;
+  position: relative;
+}
+
+/* One set of type properties for every layer: identical layout is what lets
+   the shadow, the flare and the light sit exactly on the h1's glyphs. */
+.th-type {
+  margin: 0;
+  /* Letter-spacing also follows the last letter; without this the word sits
+     right of its own rule, as in the nav wordmark. */
+  margin-inline-end: calc(var(--text-label--letter-spacing) * -1);
+  font-family: var(--font-display);
+  font-size: 1em;
+  font-style: normal;
+  font-weight: 400;
+  font-kerning: none;
+  font-synthesis: none;
+  line-height: var(--text-hero--line-height);
+  letter-spacing: var(--text-label--letter-spacing);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.th-word {
+  z-index: 0;
+  color: var(--color-bone);
+}
+
+.th-shades,
+.th-glow,
+.th-rule {
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.th-shades { z-index: 1; }
+
+.th-l {
+  --i: 0;
+  display: inline-block;
+  position: relative;
+}
+.th-l:nth-child(2) { --i: 1; }
+.th-l:nth-child(3) { --i: 2; }
+.th-l:nth-child(4) { --i: 3; }
+.th-l:nth-child(5) { --i: 4; }
+
+.th-l::before,
+.th-l::after {
+  content: attr(data-l);
+  opacity: 0;
+}
+
+/* The shadow. The stroke reaches 1.5 device pixels past the glyph, so the bone
+   h1 underneath leaves no anti-aliased fringe while it is covered (2px left
+   six pixels of bone at serif tips, measured at 1x). */
+.th-l::before {
+  color: var(--color-surface);
+  -webkit-text-stroke: 3px var(--color-surface);
+}
+
+@media (min-resolution: 2dppx) {
+  .th-l::before { -webkit-text-stroke-width: 1.5px; }
+}
+
+/* The passage: each letter catches the light before it settles to bone. */
+.th-l::after {
+  position: absolute;
+  inset: 0;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background: linear-gradient(to top, var(--color-accent-bright), var(--color-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* The light. The window is the mask: opaque from just above the capitals
+   down, feathered over 0.35em above them. */
+.th-glow {
+  z-index: 2;
+  padding: 0.4em 0.1em 0;
+  margin: -0.4em calc(var(--text-label--letter-spacing) * -1 - 0.1em) 0 -0.1em;
+  opacity: var(--th-glow-rest);
+  -webkit-mask-image: linear-gradient(to bottom, rgb(var(--channel-ink) / 0) 0.05em, var(--color-ink) 0.4em);
+  mask-image: linear-gradient(to bottom, rgb(var(--channel-ink) / 0) 0.05em, var(--color-ink) 0.4em);
+}
+
+.th-glow-in { display: block; }
+
+/* A low sun behind the left of the word, where the rule is brightest. */
+.th-glow-in::before {
+  content: attr(data-w);
+  display: block;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background: radial-gradient(ellipse 2.6em 1.05em at 1.15em 0.86em,
+    var(--color-accent-bright), var(--color-accent) 38%, rgb(var(--channel-accent) / 0));
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* The horizon: the lockup's rule, as thick as Cinzel's hairline crossbar,
+   0.2em under the baseline (the line box ends 0.148em under it). */
+.th-rule {
+  grid-area: 2 / 1;
+  height: max(1px, 0.02em);
+  margin-top: 0.052em;
+  background: linear-gradient(to right, var(--color-accent), rgb(var(--channel-accent) / 0));
+  transform-origin: left center;
+}
+
+/* ------------------------------------------------------------- the motion */
+/* Armed by the script only. Without it, or under reduced motion, every
+   element simply stays at its final state, which is its own style. */
+
+.th-hero.is-armed .th-rule {
+  animation: th-rule var(--duration-slow) var(--ease-cine) var(--th-rule-at) both;
+  animation-play-state: var(--th-play);
+}
+
+.th-hero.is-armed .th-glow {
+  animation:
+    th-rise var(--duration-slow) var(--ease-cine) var(--th-rise-at) both,
+    th-settle var(--duration-slow) var(--ease-cine) var(--th-settle-at) both;
+  animation-play-state: var(--th-play);
+}
+
+.th-hero.is-armed .th-glow-in {
+  animation:
+    th-rise-under var(--duration-slow) var(--ease-cine) var(--th-rise-at) both,
+    th-breath var(--th-breath) steps(10, jump-none) var(--th-breath-at) infinite;
+  animation-play-state: var(--th-play);
+}
+
+.th-hero.is-armed .th-l::before {
+  animation: th-shade var(--duration-slow) var(--ease-cine)
+    calc(var(--th-pass-at) + var(--th-stagger) * var(--i)) both;
+  animation-play-state: var(--th-play);
+}
+
+.th-hero.is-armed .th-l::after {
+  animation: th-flare var(--duration-slow) var(--ease-cine)
+    calc(var(--th-pass-at) + var(--th-stagger) * var(--i)) both;
+  animation-play-state: var(--th-play);
+}
+
+@keyframes th-rule {
+  from { opacity: 0; transform: scaleX(0); }
+}
+
+/* The window rises 1.2em while its glyphs sink 1.2em: same curve, same
+   clock, so the sum is zero on every frame. 1.2em puts the whole mask box
+   under the baseline at the start; at 1.1em its feather met the serifs'
+   anti-aliasing and lit a few pixels 4 levels above black. */
+@keyframes th-rise {
+  from { transform: translateY(1.2em); }
+}
+
+@keyframes th-rise-under {
+  from { transform: translateY(-1.2em); }
+}
+
+@keyframes th-settle {
+  from { opacity: 1; }
+}
+
+@keyframes th-shade {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes th-flare {
+  0% { opacity: 0; }
+  25% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* +-6% around 94%, in steps. The light rests at 42%, so one step moves the
+   most lit pixel by less than one 8-bit level: a smooth curve would redraw the
+   same pixels sixty times a second, and did - 360 frames per 6s against 11
+   for this, in a Chromium trace. jump-none holds each end for a whole step,
+   which is where a breath pauses anyway. */
+@keyframes th-breath {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.88; }
+}
+
+/* Section 8: a loop is stopped with animation: none, not collapsed. The
+   final state needs no animation to exist. */
+@media (prefers-reduced-motion: reduce) {
+  .th-hero *,
+  .th-hero *::before,
+  .th-hero *::after {
+    animation: none !important;
+  }
+}
+
+/* High contrast: the system colours the h1; the decoration steps aside. */
+@media (forced-colors: active) {
+  .th-shades,
+  .th-glow,
+  .th-rule {
+    display: none;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="th-hero" id="theia-hero">
+  <div class="th-stage">
+    <h1 class="th-type th-word">Theia</h1>
+    <span class="th-type th-shades" aria-hidden="true"><span class="th-l" data-l="T"></span><span class="th-l" data-l="H"></span><span class="th-l" data-l="E"></span><span class="th-l" data-l="I"></span><span class="th-l" data-l="A"></span></span>
+    <span class="th-type th-glow" aria-hidden="true"><span class="th-glow-in" data-w="Theia"></span></span>
+    <span class="th-rule" aria-hidden="true"></span>
+  </div>
+</div>
+
+<script>
+/* Plays the entrance once, only while the hero can be seen: in view, tab
+   visible, font ready (or given up on after 3s). Anything missing or failing
+   leaves the final state, which is the markup's own. */
+(function () {
+  var root = document.getElementById('theia-hero');
+  if (!root || !window.matchMedia) return;
+  var calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (calm.matches) return;
+
+  var inView = false;
+  var fontReady = false;
+  var observer = null;
+
+  function sync() {
+    root.classList.toggle('is-live',
+      inView && fontReady && document.visibilityState === 'visible');
+  }
+
+  function ready() {
+    if (fontReady) return;
+    fontReady = true;
+    sync();
+  }
+
+  function stop() {
+    root.classList.remove('is-armed', 'is-live');
+    document.removeEventListener('visibilitychange', sync);
+    if (observer) observer.disconnect();
+  }
+
+  try {
+    root.classList.add('is-armed');
+
+    if ('IntersectionObserver' in window) {
+      observer = new IntersectionObserver(function (entries) {
+        inView = entries[entries.length - 1].isIntersecting;
+        sync();
+      });
+      observer.observe(root);
+    } else {
+      inView = true;
+    }
+
+    document.addEventListener('visibilitychange', sync);
+
+    if (document.fonts && document.fonts.load) {
+      document.fonts.load('400 1em "Cinzel Variable"', 'THEIA').then(ready, ready);
+      setTimeout(ready, 3000);
+    } else {
+      ready();
+    }
+
+    var onCalm = function () { if (calm.matches) stop(); };
+    if (calm.addEventListener) calm.addEventListener('change', onCalm);
+    else if (calm.addListener) calm.addListener(onCalm);
+  } catch (e) {
+    stop();
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1126 @@
+/* Theia public page.
+
+   One stylesheet, inlined into the page by build.mjs. The tokens are the design
+   system's (docs/design-system.md section 3 for colour, section 4 for type), by
+   the same names; nothing here is a new colour. The accent budget is five uses
+   a screen: the rule of the mark, the second line of the title, focus, and the
+   playback progress of the browser's own controls. The main action is bone,
+   not gold (section 12.4). Motion is a reveal on scroll and nothing else, and
+   it disappears under prefers-reduced-motion. */
+
+@font-face {
+  font-family: "Cinzel Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 900;
+  src: url(../fonts/cinzel-latin-wght-normal.woff2) format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Jost Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(../fonts/jost-latin-wght-normal.woff2) format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: dark;
+
+  --ink: #0b0a09;
+  --surface: #131211;
+  --raised: #1c1a18;
+  --line: #2a2724;
+  --bone: #ede7dc;
+  --parchment: #d6cfc2;
+  --muted: #8c857a;
+  --accent: #c8a24a;
+  --accent-bright: #e3c173;
+
+  --font-display: "Cinzel Variable", "Trajan Pro", Georgia, "Times New Roman", serif;
+  --font-label: "Jost Variable", Futura, "Century Gothic", "Segoe UI", Roboto, sans-serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --wrap: 75rem;
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+  --radius: 14px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: var(--ink);
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--parchment);
+  font: 400 1rem/1.6 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (min-width: 75rem) {
+  body {
+    font-size: 1.0625rem;
+  }
+}
+
+@media (min-width: 100rem) {
+  body {
+    font-size: 1.1875rem;
+  }
+}
+
+img,
+video,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: var(--bone);
+  text-underline-offset: 0.25em;
+  text-decoration-thickness: 1px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+p {
+  margin: 0;
+}
+
+code,
+pre {
+  font-family: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.875em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 100;
+  padding: 0.75rem 1.25rem;
+  border-radius: 999px;
+  background: var(--bone);
+  color: var(--ink);
+  font: 500 0.8125rem/1 var(--font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.skip:focus {
+  top: 1rem;
+}
+
+.sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.icon {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ------------------------------------------------------------------- type */
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  color: var(--bone);
+  font-family: var(--font-display);
+  font-weight: 400;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: clamp(2.25rem, 6vw, 4rem);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: clamp(1.75rem, 4.2vw, 2.75rem);
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+}
+
+h3 {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+h4 {
+  font-size: 1.25rem;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+}
+
+/* The one gilded phrase: the second line of the title (section 12.4). */
+.gilded {
+  background: linear-gradient(90deg, var(--bone) 0%, var(--accent) 62%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+h1 span {
+  display: block;
+}
+
+.eyebrow,
+.step-label {
+  font: 500 0.75rem/1.3 var(--font-label);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ----------------------------------------------------------------- layout */
+
+.wrap {
+  width: min(100% - 2 * var(--gutter), var(--wrap));
+  margin-inline: auto;
+}
+
+.section {
+  padding-block: clamp(4rem, 9vw, 7.5rem);
+}
+
+.section-head {
+  display: grid;
+  gap: 1rem;
+  max-width: 46rem;
+  margin-bottom: clamp(1.75rem, 4vw, 3rem);
+}
+
+.section-lead {
+  max-width: 40rem;
+  color: var(--parchment);
+}
+
+/* ----------------------------------------------------------------- header */
+
+.site-header {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 10;
+  padding-block: 0.75rem;
+}
+
+.nav ul {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0 calc(var(--gutter) - 0.5rem);
+  list-style: none;
+}
+
+.nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border-radius: 999px;
+  color: var(--parchment);
+  font: 500 0.75rem/1 var(--font-label);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.nav a:hover {
+  background: var(--raised);
+  color: var(--bone);
+}
+
+.nav .icon {
+  width: 0.95em;
+  height: 0.95em;
+}
+
+@media (max-width: 40rem) {
+  .nav-wide {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------- hero */
+
+.hero {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  align-items: center;
+  min-height: min(100svh, 56rem);
+  padding-block: clamp(6.5rem, 12vw, 8.5rem) clamp(3.5rem, 7vw, 5rem);
+  overflow: clip;
+}
+
+.hero-art {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+.hero-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 70% 40%;
+}
+
+/* A reading veil on the left, where the title sits, and a floor into the page. */
+.hero-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, var(--ink) 2%, rgb(11 10 9 / 0.9) 30%, rgb(11 10 9 / 0.5) 52%, rgb(11 10 9 / 0) 76%),
+    linear-gradient(0deg, var(--ink) 0, rgb(11 10 9 / 0) 22%),
+    linear-gradient(180deg, rgb(11 10 9 / 0.7) 0, rgb(11 10 9 / 0) 18%);
+}
+
+.hero-copy {
+  display: grid;
+  gap: 1.5rem;
+  justify-items: start;
+  max-width: 38rem;
+}
+
+/* The prestige mark: its black is the page's black, so it is screened in. */
+.hero-mark {
+  width: clamp(10.5rem, 20vw, 15rem);
+  height: auto;
+  mix-blend-mode: screen;
+}
+
+.lead {
+  max-width: 34rem;
+  color: var(--parchment);
+  font-size: clamp(1.0625rem, 1.5vw, 1.25rem);
+}
+
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 54px;
+  padding: 0 1.75rem;
+  border-radius: 999px;
+  background: var(--bone);
+  color: var(--ink);
+  font: 500 0.8125rem/1 var(--font-label);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.btn:hover {
+  background: var(--parchment);
+  color: var(--ink);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.hero-note {
+  max-width: 32rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.hero-note a {
+  color: var(--parchment);
+}
+
+.art-label {
+  position: absolute;
+  right: var(--gutter);
+  bottom: 1rem;
+  z-index: 1;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgb(11 10 9 / 0.78);
+  color: var(--parchment);
+  font: 500 0.75rem/1.2 var(--font-label);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 43.75rem) {
+  .hero {
+    display: block;
+    min-height: 0;
+    padding: 0 0 2.5rem;
+  }
+
+  .hero-art {
+    position: relative;
+    inset: auto;
+    z-index: 0;
+    aspect-ratio: 800 / 826;
+    max-height: 82svh;
+  }
+
+  .hero-art::after {
+    background:
+      linear-gradient(0deg, var(--ink) 0, rgb(11 10 9 / 0) 38%),
+      linear-gradient(180deg, rgb(11 10 9 / 0.7) 0, rgb(11 10 9 / 0) 20%);
+  }
+
+  .hero .wrap {
+    position: relative;
+    margin-top: -7rem;
+  }
+
+  /* Under the navigation, on the dark side of the picture, clear of the title. */
+  .art-label {
+    top: 4rem;
+    right: auto;
+    bottom: auto;
+    left: var(--gutter);
+  }
+
+  .art-more {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------- demo */
+
+.tour {
+  margin: 0;
+}
+
+.tour-frame {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  aspect-ratio: 16 / 9;
+}
+
+.tour video {
+  width: 100%;
+  height: 100%;
+  background: var(--surface);
+  accent-color: var(--accent);
+}
+
+/* A large play button on the poster, only where JavaScript can remove it again.
+   The browser's own controls are always there underneath. */
+.tour-play {
+  display: none;
+  position: absolute;
+  inset: 0;
+  place-items: center;
+  width: 5.5rem;
+  height: 5.5rem;
+  margin: auto;
+  padding: 0;
+  border: 1px solid rgb(237 231 220 / 0.55);
+  border-radius: 50%;
+  background: rgb(11 10 9 / 0.72);
+  color: var(--bone);
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.js .tour-play {
+  display: grid;
+}
+
+.js .tour-play[hidden] {
+  display: none;
+}
+
+.tour-play:hover {
+  background: rgb(28 26 24 / 0.9);
+  transform: scale(1.04);
+}
+
+.tour-play .icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-left: 0.25rem;
+  fill: currentColor;
+  stroke: none;
+}
+
+.tour figcaption,
+.fineprint {
+  max-width: 52rem;
+  margin-top: 0.875rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.scenes {
+  display: grid;
+  gap: 0;
+  margin: 2.25rem 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.scene {
+  display: grid;
+  grid-template-columns: 4rem 1fr;
+  grid-template-areas: "time title" "time text";
+  gap: 0.25rem 1rem;
+  padding: 1rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  transition: background-color 0.3s;
+}
+
+.scene[aria-current="step"] {
+  background: var(--raised);
+}
+
+.scene-time {
+  grid-area: time;
+  align-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: -0.5rem;
+  color: var(--bone);
+  font-variant-numeric: tabular-nums;
+}
+
+.scene-title {
+  grid-area: title;
+  color: var(--bone);
+  font: 500 0.8125rem/1.3 var(--font-label);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.scene p {
+  grid-area: text;
+  max-width: 44rem;
+}
+
+.fineprint {
+  margin-top: 1.25rem;
+}
+
+@media (min-width: 68.75rem) {
+  .scenes {
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 0;
+    gap: 0.75rem;
+  }
+
+  .scene {
+    grid-template-columns: 1fr;
+    grid-template-areas: "time" "title" "text";
+    align-content: start;
+    padding: 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+
+  .scene-time {
+    margin-top: 0;
+    min-height: 32px;
+  }
+}
+
+/* ---------------------------------------------------------------- station */
+
+.station {
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+}
+
+.step-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.step-label span {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--parchment);
+  letter-spacing: 0;
+}
+
+.os-step,
+.os-switch,
+.mobile-note {
+  display: none;
+}
+
+.js .os-step {
+  display: flex;
+}
+
+.js .os-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.os-pill {
+  min-height: 54px;
+  padding: 0 1.75rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--parchment);
+  font: 500 0.8125rem/1 var(--font-label);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+@media (max-width: 30rem) {
+  .js .os-switch {
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+  }
+
+  .os-pill {
+    flex: 1 1 0;
+    padding: 0 0.5rem;
+    letter-spacing: 0.1em;
+  }
+}
+
+.os-pill:hover {
+  background: var(--raised);
+  color: var(--bone);
+}
+
+/* A selected option is raised and bone, never another gold badge (12.4). */
+.os-pill[aria-pressed="true"] {
+  border-color: var(--muted);
+  background: var(--raised);
+  color: var(--bone);
+}
+
+.js[data-mobile] .mobile-note {
+  display: block;
+  margin-top: 1rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--parchment);
+  font-size: 0.9375rem;
+}
+
+.panel {
+  margin-top: 2rem;
+}
+
+.panel + .panel {
+  margin-top: 2.5rem;
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.js .panel {
+  display: none;
+}
+
+.js[data-os="windows"] #panel-windows,
+.js[data-os="macos"] #panel-macos,
+.js[data-os="linux"] #panel-linux {
+  display: block;
+}
+
+.js .panel + .panel {
+  margin-top: 2rem;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.js .panel-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.panel-title {
+  margin-bottom: 1rem;
+}
+
+.panel-note {
+  max-width: 46rem;
+  margin-bottom: 1.5rem;
+  color: var(--parchment);
+}
+
+.panel-note code {
+  padding: 0.1em 0.4em;
+  border-radius: 6px;
+  background: var(--raised);
+  color: var(--bone);
+}
+
+.command {
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--bone);
+}
+
+.arches {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.arch {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--ink);
+}
+
+.arch-link {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "name icon" "file icon";
+  align-items: center;
+  gap: 0.25rem 1rem;
+  min-height: 62px;
+  padding: 1rem 1.25rem;
+  color: var(--bone);
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.arch-link:hover {
+  background: var(--raised);
+}
+
+.arch-name {
+  grid-area: name;
+  font: 500 1.0625rem/1.3 var(--font-label);
+  letter-spacing: 0.02em;
+}
+
+.arch-sub {
+  margin-left: 0.5rem;
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.875rem;
+}
+
+.arch-file {
+  grid-area: file;
+  color: var(--parchment);
+  font: 400 0.8125rem/1.4 ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+.arch-link .icon {
+  grid-area: icon;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.arch-state {
+  padding: 0 1.25rem 0.5rem;
+  color: var(--parchment);
+  font-size: 0.9375rem;
+}
+
+.digest {
+  padding: 0 1.25rem 1.125rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.digest span {
+  margin-right: 0.5rem;
+  font: 500 0.75rem/1 var(--font-label);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.digest code {
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.station-foot {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 52rem;
+  margin-top: 1.75rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.station-foot strong {
+  color: var(--parchment);
+  font-weight: 500;
+}
+
+.station-foot a {
+  color: var(--parchment);
+}
+
+.station-foot code {
+  color: var(--parchment);
+}
+
+/* ----------------------------------------------------------------- ledger */
+
+.ledger-side {
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.875rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.moments {
+  display: grid;
+  gap: 2.75rem;
+  margin: 0 0 clamp(3.5rem, 7vw, 5.5rem);
+  padding: 0;
+  list-style: none;
+}
+
+.moment {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+}
+
+.moment figure {
+  position: relative;
+  margin: 0 0 0.5rem;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--surface);
+  aspect-ratio: 4 / 3;
+}
+
+.moment img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chip {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgb(11 10 9 / 0.78);
+  color: var(--parchment);
+  font: 500 0.75rem/1.2 var(--font-label);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.moment p:last-child {
+  max-width: 34rem;
+}
+
+@media (min-width: 45rem) and (max-width: 68.74rem) {
+  .moment {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-areas: "figure eyebrow" "figure title" "figure text";
+    grid-template-rows: auto auto 1fr;
+    column-gap: 2rem;
+    align-items: start;
+  }
+
+  .moment figure {
+    grid-area: figure;
+    margin: 0;
+  }
+
+  .moment .eyebrow {
+    grid-area: eyebrow;
+    align-self: end;
+  }
+
+  .moment h4 {
+    grid-area: title;
+  }
+
+  .moment p:last-child {
+    grid-area: text;
+  }
+}
+
+@media (min-width: 68.75rem) {
+  .moments {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(1.5rem, 3vw, 2.5rem);
+  }
+}
+
+.limits {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.limit {
+  display: grid;
+  gap: 0.5rem 3rem;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.limit p {
+  max-width: 44rem;
+}
+
+@media (min-width: 56.25rem) {
+  .limit {
+    grid-template-columns: minmax(12rem, 18rem) 1fr;
+    align-items: baseline;
+  }
+}
+
+/* ---------------------------------------------------------- licence, help */
+
+.prose {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.statement {
+  color: var(--bone);
+  font-size: clamp(1.125rem, 2vw, 1.375rem);
+  line-height: 1.5;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.75rem;
+}
+
+.links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+}
+
+.help {
+  border-top: 1px solid var(--line);
+}
+
+.help .prose {
+  gap: 1.75rem;
+}
+
+/* Heading on the left, words on the right, on the same grid as everything else. */
+.split {
+  display: grid;
+  gap: 1.5rem 4rem;
+  align-items: start;
+}
+
+.split .section-head {
+  margin-bottom: 0;
+}
+
+.split .prose {
+  max-width: 44rem;
+}
+
+@media (min-width: 56.25rem) {
+  .split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------------- footer */
+
+.site-footer {
+  padding-block: 3rem 3.5rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.footer-grid {
+  display: grid;
+  gap: 2rem;
+}
+
+.footer-grid p + p {
+  margin-top: 0.75rem;
+}
+
+.lockup {
+  display: inline-block;
+  margin-bottom: 0.875rem !important;
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid var(--accent);
+  color: var(--bone);
+  font: 400 1.25rem/1 var(--font-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.site-footer ul {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-footer li a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--parchment);
+}
+
+.credits a {
+  color: var(--parchment);
+}
+
+@media (min-width: 56.25rem) {
+  .footer-grid {
+    grid-template-columns: 1.4fr 1.3fr 1fr;
+    gap: 3rem;
+  }
+
+  .site-footer ul {
+    grid-template-columns: repeat(2, max-content);
+    column-gap: 2.5rem;
+  }
+}
+
+/* ----------------------------------------------------------------- motion */
+
+/* A reveal on scroll, in CSS only, where the browser can drive an animation
+   from scroll position. Elsewhere the content is simply there. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 32%;
+    }
+
+    @keyframes reveal {
+      from {
+        opacity: 0;
+        transform: translateY(1.25rem);
+      }
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* High contrast: the system colours the title; the gradient steps aside. */
+@media (forced-colors: active) {
+  .gilded {
+    background: none;
+    color: CanvasText;
+  }
+
+  .hero-art::after {
+    display: none;
+  }
+}

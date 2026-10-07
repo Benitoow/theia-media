@@ -1,0 +1,44 @@
+WEBVTT
+Kind: captions
+Language: en
+
+NOTE
+Scene captions for a silent screen recording of Theia 3.4.0 on Windows.
+Written from the recording itself, scene by scene; the times were checked
+against the frames. The player is shown in French in the recording.
+
+1
+00:00:00.000 --> 00:00:19.400
+Download the setup for your system from the latest release page on GitHub.
+
+2
+00:00:19.500 --> 00:00:38.000
+Run it in a terminal. A short form asks for the language, what this machine is for, where to keep data, the port, the network name and the folders that hold your films.
+
+3
+00:00:38.100 --> 00:00:40.200
+It shows its plan; nothing is written before you confirm. Then it installs.
+
+4
+00:00:40.300 --> 00:00:55.900
+Start Theia Player from the entries the installer added.
+
+5
+00:00:56.000 --> 00:01:02.900
+Home: where you stopped, and what was added recently.
+
+6
+00:01:03.000 --> 00:01:10.900
+A film page, with its synopsis and its cast.
+
+7
+00:01:11.000 --> 00:01:17.400
+The film and series lists, a series with its episodes, then search.
+
+8
+00:01:17.500 --> 00:01:36.400
+Settings: interface language, playback, subtitles, viewing statistics, server address and updates.
+
+9
+00:01:36.500 --> 00:01:44.000
+The profile editor, where a profile's name and photo are changed (PNG, JPEG or WebP). The recording opens it and changes nothing.

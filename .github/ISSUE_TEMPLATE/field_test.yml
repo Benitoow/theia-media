@@ -5,9 +5,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        The v3.2 single-binary line is in the field while V3.3 is in progress, and
-        features resume. Use it for about a week if you can. A calm report where
-        everything worked is evidence too.
+        Theia 3.4 is the current stable release, with six native desktop packages.
+        Use it for about a week if you can. Reports from real libraries and devices
+        help shape V4; a calm report where everything worked is evidence too.
 
         Do not attach copyrighted media, private paths, tokens, keys or personal
         metadata. For a security problem, use
@@ -18,7 +18,7 @@ body:
     attributes:
       label: Theia version
       description: From Settings, or `theia-server -version`.
-      placeholder: v3.2.0
+      placeholder: v4.0.0
     validations:
       required: true
 
@@ -35,9 +35,9 @@ body:
     id: clients
     attributes:
       label: Screens used
-      description: Every browser and device on which you actually watched or browsed.
+      description: Every native app or browser used, with OS, CPU architecture and device.
       placeholder: |
-        Chrome 141 on Windows desktop
+        Theia 3.4 on Windows 11 x64
         Samsung TV browser
         Safari on iPhone
     validations:
