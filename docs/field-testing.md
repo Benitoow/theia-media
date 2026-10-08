@@ -1,16 +1,17 @@
 # Theia field test
 
-The current release is `v4.0.0`, the first of the V4 line (see
-[the release notes](releases/v4.0.0.md)); 3.4 was the last V3 release. 4.0 is free.
+The current release is `v4.1.0`, which brings watch parties (see
+[the release notes](releases/v4.1.0.md)); 3.4 was the last V3 release. 4.1 is free.
 Real household reports still matter: native CI checks cover installation and a
 generated film on every platform, while actual libraries, display/audio chains,
-unusual files and two real households need real devices. Next in V4 is 4.1, which
-brings watch parties.
+unusual files and two real households need real devices. A watch party between
+two households on macOS or Ubuntu is the report most wanted.
 
 Try the desktop apps on Windows x64/ARM64, macOS Intel/Apple Silicon or Ubuntu
 24.04 x64/ARM64. The existing web viewer stays available for phones and TVs,
 without active viewing support; web settings and administration remain maintained.
 The tested platform limits are at the end of the
+[4.1 release notes](releases/v4.1.0.md) and the
 [4.0 release notes](releases/v4.0.0.md).
 
 ## Who this is for

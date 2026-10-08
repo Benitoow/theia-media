@@ -19,7 +19,7 @@
 <p align="center">
   <a href="https://benitoow.github.io/theia-media/">Website</a> ·
   <a href="#downloads">Downloads</a> ·
-  <a href="docs/releases/v4.0.0.md">4.0 release notes</a> ·
+  <a href="docs/releases/v4.1.0.md">4.1 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
@@ -47,18 +47,29 @@ stack and no external database to install.
 | --- | --- | --- |
 | One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud library. Metadata comes from TMDB; updates come from GitHub Releases. |
 
-## Theia 4.0
+## Theia 4.1
 
 > [!IMPORTANT]
-> **4.0 is free.** The server, the library, ordinary viewing and everything new
+> **4.1 is free, like 4.0.** The server, the library, ordinary viewing and everything new
 > in this release cost nothing. Theia has reached its core: the installer, the
 > player, the server, file recognition, the Linux package and the licence are
 > clean, and every change from here will reach everyone for free for a duration
 > that is not decided. Which later features might become paid, if any, has not
 > been decided either; it will be settled in the open and announced well before
-> it happens. Nothing is paid today. [Read the release notes](docs/releases/v4.0.0.md).
+> it happens. Nothing is paid today. [Read the 4.1 release notes](docs/releases/v4.1.0.md).
 
-**What is new**
+**New in 4.1**
+
+- **Watch parties.** Open a room from the film you are watching; your friends
+  join in one press, on the same library or in another household, and everyone
+  stays on the same second. A friend without the film can watch the host's copy.
+- **The island,** a pill under the title bar that shows when the film ends,
+  who is in the room, who arrives and who is being waited for.
+- **Remote access in one press,** asking the router from every interface and
+  carrying IPv6 in friend codes; how many friends are online, on the Friends entry.
+- **Closing the player closes the server** that was started for it.
+
+**Since 4.0** ([4.0 release notes](docs/releases/v4.0.0.md))
 
 - **Who's watching?** The player asks at startup which profile is watching, and
   remembers the answer.
@@ -74,8 +85,7 @@ stack and no external database to install.
 - **Grouped settings, corner resizing,** and a player that falls back to its own
   server when the chosen one does not answer.
 
-**What comes next.** 4.1 brings **watch parties**, watching together with
-coordinated playback. Comments and likes or dislikes on films remain on the
+**What comes next.** Comments and likes or dislikes on films remain on the
 direction without a date. Direct messages and calls are out of scope.
 
 The native player reads Matroska and renders subtitles through libmpv. Sound
