@@ -19,7 +19,7 @@
 <p align="center">
   <a href="https://benitoow.github.io/theia-media/">Website</a> ·
   <a href="#downloads">Downloads</a> ·
-  <a href="docs/releases/v4.1.0.md">4.1 release notes</a> ·
+  <a href="docs/releases/v4.2.0.md">4.2 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
@@ -47,18 +47,29 @@ stack and no external database to install.
 | --- | --- | --- |
 | One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud library. Metadata comes from TMDB; updates come from GitHub Releases. |
 
-## Theia 4.1
+## Theia 4.2
 
 > [!IMPORTANT]
-> **4.1 is free, like 4.0.** The server, the library, ordinary viewing and everything new
+> **4.2 is free, like 4.0.** The server, the library, ordinary viewing and everything new
 > in this release cost nothing. Theia has reached its core: the installer, the
 > player, the server, file recognition, the Linux package and the licence are
 > clean, and every change from here will reach everyone for free for a duration
 > that is not decided. Which later features might become paid, if any, has not
 > been decided either; it will be settled in the open and announced well before
-> it happens. Nothing is paid today. [Read the 4.1 release notes](docs/releases/v4.1.0.md).
+> it happens. Nothing is paid today. [Read the 4.2 release notes](docs/releases/v4.2.0.md).
 
-**New in 4.1**
+**New in 4.2**
+
+- **An island with faces and film artwork,** smooth shape changes, playback controls,
+  personal resync and an offset reset in the room itself.
+- **Reliable fullscreen controls:** Escape and F work with the timeline focused;
+  the title bar double-click has one owner and restored windows show their real state.
+- **Room lifecycle fixes:** revoking sharing closes active transfers, joining twice
+  keeps your place, and loading waits for every stalled member within the same cap.
+- **Complete upgrades and durable progress:** mixed component versions and missing
+  player bundle files are repaired; a deleted title cannot block other resume points.
+
+**Since 4.1** ([4.1 release notes](docs/releases/v4.1.0.md))
 
 - **Watch parties.** Open a room from the film you are watching; your friends
   join in one press, on the same library or in another household, and everyone
