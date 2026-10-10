@@ -69,10 +69,16 @@ const megabytes = (bytes) => `${(bytes / 1048576).toFixed(1)} MB`;
 
 const resolve = (match, name) => {
 	const [key, argument] = name.split(':');
-	if (key === 'size' || key === 'sha') {
+	if (key === 'size' || key === 'sha' || key === 'url' || key === 'from') {
 		const asset = release.assets[argument];
 		if (!asset) fail(`release.json has no asset "${argument}" (used by {{${name}}})`);
-		return key === 'size' ? megabytes(asset.size) : asset.sha256;
+		if (key === 'size') return megabytes(asset.size);
+		if (key === 'sha') return asset.sha256;
+		// The file's own release: the latest one, or an earlier one for a
+		// platform the latest left out (fetch-release.mjs).
+		const tag = asset.tag ?? release.tag;
+		if (key === 'url') return asset.url ?? `https://github.com/Benitoow/theia-media/releases/download/${tag}/${argument}`;
+		return tag === release.tag ? '' : ` · ${tag}`;
 	}
 	if (!(key in tokens) || argument !== undefined) fail(`unknown token {{${name}}}`);
 	return tokens[key];

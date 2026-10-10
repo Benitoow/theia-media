@@ -42,18 +42,42 @@ if (!response.ok) {
 
 const release = await response.json();
 const published = new Map(release.assets.map((asset) => [asset.name, asset]));
+// A release may leave a platform out (4.2.2 shipped no macOS or ARM setup while
+// GitHub's runners were out of minutes, decision 182). That platform's setup is
+// then the newest published release's that has one, named with its own tag, so
+// the page never links a file that does not exist.
+let older = null;
+const fallback = async (name) => {
+	if (!older) {
+		const list = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=30`, {
+			headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'theia-site-release-snapshot', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+		});
+		if (!list.ok) return null;
+		older = (await list.json()).filter((one) => !one.draft && !one.prerelease);
+	}
+	for (const one of older) {
+		const asset = one.assets.find((candidate) => candidate.name === name);
+		if (asset) return { asset, tag: one.tag_name };
+	}
+	return null;
+};
 const assets = {};
 for (const name of SETUPS) {
-	const asset = published.get(name);
+	let asset = published.get(name);
+	let tag = release.tag_name;
 	if (!asset) {
-		console.error(`${release.tag_name} has no asset named ${name}; release.json is unchanged.`);
+		const found = await fallback(name);
+		if (found) ({ asset, tag } = found);
+	}
+	if (!asset) {
+		console.error(`no published release has an asset named ${name}; release.json is unchanged.`);
 		process.exit(1);
 	}
 	if (typeof asset.digest !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(asset.digest)) {
 		console.error(`${name} carries no SHA-256 digest on GitHub; release.json is unchanged.`);
 		process.exit(1);
 	}
-	assets[name] = { size: asset.size, sha256: asset.digest.slice('sha256:'.length) };
+	assets[name] = { size: asset.size, sha256: asset.digest.slice('sha256:'.length), tag, url: asset.browser_download_url };
 }
 
 const snapshot = {

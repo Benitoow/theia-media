@@ -19,7 +19,7 @@
 <p align="center">
   <a href="https://benitoow.github.io/theia-media/">Website</a> ·
   <a href="#downloads">Downloads</a> ·
-  <a href="docs/releases/v4.2.1.md">4.2.1 release notes</a> ·
+  <a href="docs/releases/v4.2.2.md">4.2.2 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
@@ -56,9 +56,15 @@ stack and no external database to install.
 > clean, and every change from here will reach everyone for free for a duration
 > that is not decided. Which later features might become paid, if any, has not
 > been decided either; it will be settled in the open and announced well before
-> it happens. Nothing is paid today. [Read the 4.2.1 release notes](docs/releases/v4.2.1.md).
+> it happens. Nothing is paid today. [Read the 4.2.2 release notes](docs/releases/v4.2.2.md).
 
-**New in 4.2.1**
+**New in 4.2.2**
+
+- **Every quality in the menu,** even for a film started without inspection.
+- **Rooms without stray pauses:** a click on the film only shows the controls,
+  and the room button turns gold while a room is on.
+
+**New in 4.2.1** ([4.2.1 release notes](docs/releases/v4.2.1.md))
 
 - **Films no longer silence your calls:** the Windows player shares the audio
   output; untouched sound to an amplifier is now a setting.
@@ -222,15 +228,17 @@ the most real-world reports. See [Help test](#help-test-and-shape-theia).
 
 All six downloads are complete setups from the
 [latest release](https://github.com/Benitoow/theia-media/releases/latest).
+4.2.2 ships for Windows x64 and Linux x64 only: macOS and the ARM setups stay
+on 4.2.1, which carries everything but 4.2.2's fixes.
 
 | Platform | The download |
 | --- | --- |
 | Windows x64 | [Windows x64 setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-windows-amd64.exe) |
-| Windows ARM64 | [Windows ARM64 setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-windows-arm64.exe) |
-| macOS Apple Silicon | [Apple Silicon setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-darwin-arm64) |
-| macOS Intel | [Intel Mac setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-darwin-amd64) |
+| Windows ARM64 | [Windows ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-windows-arm64.exe) (4.2.1) |
+| macOS Apple Silicon | [Apple Silicon setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-darwin-arm64) (4.2.1) |
+| macOS Intel | [Intel Mac setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-darwin-amd64) (4.2.1) |
 | Ubuntu 24.04 x64 | [Linux x64 setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-linux-amd64) |
-| Ubuntu 24.04 ARM64 | [Linux ARM64 setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-linux-arm64) |
+| Ubuntu 24.04 ARM64 | [Linux ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-linux-arm64) (4.2.1) |
 
 **Upgrading from 3.x:** run the new setup. It reads the installation, updates it
 in place, closes running programs and restarts the server; your data stays. An
