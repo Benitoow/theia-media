@@ -19,7 +19,7 @@
 <p align="center">
   <a href="https://benitoow.github.io/theia-media/">Website</a> ·
   <a href="#downloads">Downloads</a> ·
-  <a href="docs/releases/v4.2.0.md">4.2 release notes</a> ·
+  <a href="docs/releases/v4.2.1.md">4.2.1 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
@@ -56,12 +56,22 @@ stack and no external database to install.
 > clean, and every change from here will reach everyone for free for a duration
 > that is not decided. Which later features might become paid, if any, has not
 > been decided either; it will be settled in the open and announced well before
-> it happens. Nothing is paid today. [Read the 4.2 release notes](docs/releases/v4.2.0.md).
+> it happens. Nothing is paid today. [Read the 4.2.1 release notes](docs/releases/v4.2.1.md).
 
-**New in 4.2**
+**New in 4.2.1**
 
-- **An island with faces and film artwork,** smooth shape changes, playback controls,
-  personal resync and an offset reset in the room itself.
+- **Films no longer silence your calls:** the Windows player shares the audio
+  output; untouched sound to an amplifier is now a setting.
+- **True fullscreen from a maximized window,** over the taskbar.
+- **A lighter island:** alone it is a clock, in a room it opens the room, and the
+  control bar keeps its room button.
+- **Complete updates:** the player's update button opens the new setup on
+  Windows, and a server installed alone updates itself.
+
+**New in 4.2** ([4.2 release notes](docs/releases/v4.2.0.md))
+
+- **An island with faces and film artwork,** smooth shape changes, personal
+  resync and an offset reset in the room itself.
 - **Reliable fullscreen controls:** Escape and F work with the timeline focused;
   the title bar double-click has one owner and restored windows show their real state.
 - **Room lifecycle fixes:** revoking sharing closes active transfers, joining twice
