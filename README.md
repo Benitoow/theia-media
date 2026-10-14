@@ -11,15 +11,15 @@
 <p align="center">
   <a href="https://github.com/Benitoow/theia-media/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Benitoow/theia-media?style=flat-square&color=C8A24A"></a>
   <a href="LICENSE"><img alt="Free for noncommercial use: PolyForm Noncommercial from 4.0, GPL-3.0 up to 3.4" src="https://img.shields.io/badge/licence-PolyForm%20NC%20(4.0%2B)%20%C2%B7%20GPL--3.0%20(%E2%89%A43.4)-555?style=flat-square"></a>
-  <img alt="Windows x64 and ARM64" src="https://img.shields.io/badge/Windows-x64%20%2F%20ARM64-555?style=flat-square">
-  <img alt="macOS Intel and Apple Silicon" src="https://img.shields.io/badge/macOS-Intel%20%2F%20Apple%20Silicon-555?style=flat-square">
-  <img alt="Ubuntu 24.04 x64 and ARM64" src="https://img.shields.io/badge/Ubuntu%2024.04-x64%20%2F%20ARM64-555?style=flat-square">
+  <img alt="Windows x64" src="https://img.shields.io/badge/Windows-x64-555?style=flat-square">
+  <img alt="Ubuntu 24.04 x64" src="https://img.shields.io/badge/Ubuntu%2024.04-x64-555?style=flat-square">
+  <img alt="macOS: Apple Silicon and Intel" src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-555?style=flat-square">
 </p>
 
 <p align="center">
   <a href="https://benitoow.github.io/theia-media/">Website</a> ·
   <a href="#downloads">Downloads</a> ·
-  <a href="docs/releases/v4.2.2.md">4.2.2 release notes</a> ·
+  <a href="docs/releases/v4.3.0.md">4.3 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
@@ -47,18 +47,32 @@ stack and no external database to install.
 | --- | --- | --- |
 | One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud library. Metadata comes from TMDB; updates come from GitHub Releases. |
 
-## Theia 4.2
+## Theia 4.3
 
 > [!IMPORTANT]
-> **4.2 is free, like 4.0.** The server, the library, ordinary viewing and everything new
+> **4.3 is free, like 4.0.** The server, the library, ordinary viewing and everything new
 > in this release cost nothing. Theia has reached its core: the installer, the
 > player, the server, file recognition, the Linux package and the licence are
 > clean, and every change from here will reach everyone for free for a duration
 > that is not decided. Which later features might become paid, if any, has not
 > been decided either; it will be settled in the open and announced well before
-> it happens. Nothing is paid today. [Read the 4.2.2 release notes](docs/releases/v4.2.2.md).
+> it happens. Nothing is paid today. [Read the 4.3 release notes](docs/releases/v4.3.0.md).
 
-**New in 4.2.2**
+**New in 4.3**
+
+- **Between friends:** a thumb and a short review on a film or a series, seen by
+  friends who added each other, with their profile photos; each opinion stays on
+  its author's server.
+- **Title pages with tabs,** the poster beside the title, and a playback check
+  that measures the file and says whether it plays here, and why.
+- **Lighter and faster:** a player of 11.5 MB instead of 15.1 MB, title pages in
+  a quarter of a second, half the processor on the search page.
+- **macOS is back,** Apple Silicon and Intel; the ARM64 setups follow in early
+  November.
+- **An installer that is never out of date:** it looks for a newer setup before
+  it installs, and on macOS and Linux the update button now updates everything.
+
+**New in 4.2.2** ([4.2.2 release notes](docs/releases/v4.2.2.md))
 
 - **Every quality in the menu,** even for a film started without inspection.
 - **Rooms without stray pauses:** a click on the film only shows the controls,
@@ -133,9 +147,12 @@ house, not on taste.
 | A computer that only watches, with the films held elsewhere | **Player only** | No library is scanned or stored locally. It asks the server for the catalogue and the files. |
 | A phone, tablet or television browser | **Nothing**; open the address the server prints in a browser | The web viewer remains available. Its viewing features are complete and no longer developed; server settings and administration are still maintained. |
 
-The desktop downloads target Windows x64/ARM64, macOS Intel/Apple Silicon and
-Ubuntu 24.04 x64/ARM64. Linux needs X11 or XWayland and the two packages listed
-under [Downloads](#downloads). Other Linux distributions are not verified.
+The desktop downloads are **Windows x64**, **macOS** (Apple Silicon and Intel)
+and **Ubuntu 24.04 x64**. The **ARM64** setups, Windows and Ubuntu, return in
+early November 2026, once their native checks can run; until then those
+computers keep 4.2.1, which stays downloadable and keeps working. Linux needs
+X11 or XWayland and the two packages listed under [Downloads](#downloads).
+Other Linux distributions are not verified.
 
 ## What you get
 
@@ -226,19 +243,23 @@ the most real-world reports. See [Help test](#help-test-and-shape-theia).
 
 ## Downloads
 
-All six downloads are complete setups from the
-[latest release](https://github.com/Benitoow/theia-media/releases/latest).
-4.2.2 ships for Windows x64 and Linux x64 only: macOS and the ARM setups stay
-on 4.2.1, which carries everything but 4.2.2's fixes.
+Every download below is a complete setup: the server, the launcher, the native
+player and its media engine, for all-in-one, server-only or player-only. **The
+setup looks for a newer setup before it installs**, so the file you downloaded,
+kept or sent to a friend always installs the newest Theia; offline, it installs
+what it carries.
 
-| Platform | The download |
-| --- | --- |
-| Windows x64 | [Windows x64 setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-windows-amd64.exe) |
-| Windows ARM64 | [Windows ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-windows-arm64.exe) (4.2.1) |
-| macOS Apple Silicon | [Apple Silicon setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-darwin-arm64) (4.2.1) |
-| macOS Intel | [Intel Mac setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-darwin-amd64) (4.2.1) |
-| Ubuntu 24.04 x64 | [Linux x64 setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-linux-amd64) |
-| Ubuntu 24.04 ARM64 | [Linux ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-linux-arm64) (4.2.1) |
+| Platform | The download | |
+| --- | --- | --- |
+| Windows x64 | [Windows x64 setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-windows-amd64.exe) | **supported** |
+| macOS Apple Silicon | [Apple Silicon setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-darwin-arm64) | **supported** |
+| macOS Intel | [Intel Mac setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-darwin-amd64) | **supported** |
+| Ubuntu 24.04 x64 | [Linux x64 setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-linux-amd64) | **supported** |
+| Windows ARM64 | [Windows ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-windows-arm64.exe) (4.2.1) | 4.3 in early November |
+| Ubuntu 24.04 ARM64 | [Linux ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-linux-arm64) (4.2.1) | 4.3 in early November |
+
+Mac apps are ad-hoc signed and not notarised: open the app the first time with
+Control-click → Open.
 
 **Upgrading from 3.x:** run the new setup. It reads the installation, updates it
 in place, closes running programs and restarts the server; your data stays. An
@@ -279,7 +300,7 @@ decode is an excellent way to purchase an idle CPU.
 
 | | Minimum for direct play | Recommended when conversion is likely |
 | --- | --- | --- |
-| CPU | Any supported 64-bit `amd64` or `arm64` processor | 4 recent CPU cores, or a supported hardware H.264 encoder |
+| CPU | Any 64-bit `x86_64` processor or Apple chip; the ARM64 Windows and Ubuntu setups return in early November, see [Downloads](#downloads) | 4 recent CPU cores, or a supported hardware H.264 encoder |
 | Free RAM | 512 MB | 2 GB |
 | App disk, excluding media | 250 MB | 1 GB for a larger artwork cache and working room |
 | Network | Faster than the media file's bitrate | Gigabit Ethernet for high-bitrate 4K remuxes |
@@ -300,7 +321,8 @@ test and a captured moving test film with visible playback controls on a native
 runner, which Linux x64 and ARM64 now pass with the bundled engine. Hosted
 runners cannot establish hardware decoding performance, real audio endpoints,
 HDR output or a first Gatekeeper launch on your own computer. Those still need
-reports from real users.
+reports from real users, and the two supported platforms are where a report has
+a release to land in.
 
 For perspective, Plex currently recommends at least a Core i3 and typically 4 GB
 RAM, while Jellyfin's current general recommendation is 8 GB and a modern media
@@ -355,9 +377,10 @@ directly through libmpv.
 
 All six desktop packages pass native installation and generated-film checks.
 Those tests cannot cover every screen, audio device or household library, so
-real reports matter. Intel Macs, Apple Silicon Macs, Windows ARM64 and Ubuntu
-machines are especially useful, and so is a try of **friends between two
-households**. Tell us what worked as well as what failed.
+real reports matter — on **Windows x64**, **macOS** and **Ubuntu 24.04 x64**,
+and on ARM64 once its setups return in early November.
+A try of **friends between two households** is worth as much on any of them.
+Tell us what worked as well as what failed.
 
 - [Join the field test](https://github.com/Benitoow/theia-media/issues/new?template=field_test.yml)
   and read the short [testing guide](docs/field-testing.md).
