@@ -19,7 +19,7 @@
 <p align="center">
   <a href="https://benitoow.github.io/theia-media/">Website</a> ·
   <a href="#downloads">Downloads</a> ·
-  <a href="docs/releases/v4.4.0.md">4.4 release notes</a> ·
+  <a href="docs/releases/v4.4.1.md">4.4.1 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
@@ -46,6 +46,18 @@ stack and no external database to install.
 | One download | Built for choosing | Private by default |
 | --- | --- | --- |
 | One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud library. Metadata comes from TMDB; updates come from GitHub Releases. |
+
+## Theia 4.4.1
+
+4.4.1 is the first fix after 4.4.0 was tried by two households. A published
+opinion now appears as your own review, with Edit and Delete, and there is one
+opinion per title. Friends' opinions travel through Theia's Firebase database
+like requests and presence, so two households whose routers do not let each
+other in can read each other. Friends are shown as online, inactive or offline.
+It is a product release: the native player does not change, and **both friends
+need 4.4.1** for opinions. The thumb and text of an opinion are stored in that
+database, in the inbox of each friend who can read it, until it is deleted.
+[Read the 4.4.1 release notes](docs/releases/v4.4.1.md).
 
 ## Theia 4.4
 
@@ -76,7 +88,8 @@ setup, **4.2.1**. All six standalone servers are 4.4.0.
 **New in 4.3**
 
 - **Between friends:** a thumb and a short review on a film or a series, seen by
-  friends who added each other, with their profile photos; each opinion stays on
+  friends who added each other, with their profile photos. Since 4.4.1 each
+  opinion is shared through Theia's Firebase database instead of staying only on
   its author's server.
 - **Title pages with tabs,** the poster beside the title, and a playback check
   that measures the file and says whether it plays here, and why.
@@ -252,9 +265,11 @@ account and nothing to type, and no port has to be open. A request waits there
 while your friend is offline, and what you are watching reaches them within a
 second or two. Codes now read `THEIA2-XXXXX-XXXXX`; an older code still works,
 and friendships made before 4.3.1 carry over once both of you have updated.
-Watch parties still travel through Theia's built-in WireGuard tunnel, so
-hosting or joining a room needs remote access, which the friends sheet can turn
-on.
+Since 4.4.1 a friend is shown as online, inactive (nobody has touched their
+player for five minutes) or offline, and the opinions you and your friends write
+travel through the same database. Watch parties still travel through Theia's
+built-in WireGuard tunnel, so hosting or joining a room needs remote access,
+which the friends sheet can turn on.
 
 ## Downloads
 
@@ -382,8 +397,10 @@ The outbound services are TMDB for metadata, GitHub Releases for updates and,
 for friends in other households, Theia's Firebase Realtime Database. Firebase
 receives, under an anonymous server identity, directory entries for all local
 profiles (their names, pictures, server public key, profile number and port),
-even before a friend is added. Requests and current viewing presence are
-exchanged between linked friends; your library catalogue and viewing history
+even before a friend is added. Requests, current viewing presence and, since 4.4.1, the thumb and text of
+the opinions you write are exchanged between linked friends: an opinion is
+stored in the inbox of each friend who can read it until you delete it, end the
+friendship, or they delete it. Your library catalogue and viewing history
 are not uploaded. There is no
 telemetry endpoint, analytics SDK, cloud account or frontend CDN. Remote access
 and watch parties use encrypted WireGuard traffic between your servers. Discord Rich Presence, when you switch it on, speaks

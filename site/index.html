@@ -200,7 +200,7 @@
       </li>
       <li class="limit reveal">
         <h3>Friends</h3>
-        <p>Every profile has a code. Enter a friend’s code, they accept, and you each see what the other is watching right now: a poster and a title, without their history, library or progress. A friend can be on another server in another house. Requests wait while they are offline and presence travels through Firebase; watching together uses the direct encrypted tunnel. No sign-up is required.</p>
+        <p>Every profile has a code. Enter a friend’s code, they accept, and you each see what the other is watching right now: a poster and a title, without their history, library or progress. A friend can be on another server in another house. Requests wait while they are offline, and presence - online, inactive or offline - and opinions travel through Firebase; watching together uses the direct encrypted tunnel. No sign-up is required.</p>
       </li>
       <li class="limit reveal">
         <h3>Discord presence</h3>
@@ -220,7 +220,7 @@
       </li>
     </ul>
 
-    <p class="fineprint">4.4 keeps the native player installed while future compatible releases update its signed interface and server. Run the 4.4 setup once to install the new loader. Friend requests now wait while a recipient is offline, with shorter profile codes and live presence through Firebase. Playback progress, resume and migration of existing preferences have been corrected. Windows x64, Linux x64 and both Macs have 4.4 setups; Windows and Linux ARM64 keep the explicitly labelled 4.2.1 downloads until their native checks can run. See the <a href="https://github.com/Benitoow/theia-media/blob/main/docs/releases/v4.4.0.md">4.4 release notes</a>.</p>
+    <p class="fineprint">4.4.1 shows your own published opinion with Edit and Delete, carries opinions between households through Firebase, and shows friends as online, inactive or offline; it is a product release, with no new native player (see the <a href="https://github.com/Benitoow/theia-media/blob/main/docs/releases/v4.4.1.md">4.4.1 release notes</a>). 4.4 keeps the native player installed while future compatible releases update its signed interface and server. Run the 4.4 setup once to install the new loader. Friend requests now wait while a recipient is offline, with shorter profile codes and live presence through Firebase. Playback progress, resume and migration of existing preferences have been corrected. Windows x64, Linux x64 and both Macs have 4.4 setups; Windows and Linux ARM64 keep the explicitly labelled 4.2.1 downloads until their native checks can run. See the <a href="https://github.com/Benitoow/theia-media/blob/main/docs/releases/v4.4.0.md">4.4 release notes</a>.</p>
   </div>
 </section>
 
@@ -366,7 +366,7 @@
         </figure>
         <p class="eyebrow">Away from home</p>
         <h4>Direct film streams</h4>
-        <p>Remote access is built in: a device you authorise connects over WireGuard with its own key. Films, rooms and opinions travel directly, without a media relay. Friend requests and presence use the Firebase directory described below.</p>
+        <p>Remote access is built in: a device you authorise connects over WireGuard with its own key. Films and rooms travel directly, without a media relay. Friend requests, presence and opinions use the Firebase directory described below.</p>
       </li>
     </ul>
 
@@ -379,7 +379,7 @@
       <li class="limit reveal">
         <h4>Friends are new</h4>
         <p>Offline requests and presence pass simulated two-server tests. A successful session between real households over the internet remains unverified.</p>
-        <p>Theia’s Firebase database receives directory entries for all local profiles, including names and pictures, even before a friend is added. Linked friends exchange requests and current presence through it. No library catalogue or viewing history is sent, and no sign-up is required.</p>
+        <p>Theia’s Firebase database receives directory entries for all local profiles, including names and pictures, even before a friend is added. Linked friends exchange requests, current presence and, since 4.4.1, the thumb and text of the opinions they write: an opinion is stored in the inbox of each friend who can read it until it is deleted. No library catalogue or viewing history is sent, and no sign-up is required.</p>
       </li>
       <li class="limit reveal">
         <h4>Linux is the narrowest</h4>
