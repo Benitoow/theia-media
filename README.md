@@ -241,14 +241,15 @@ your code to somebody, and enter theirs.
    a card, for ninety seconds after it stops.
 
 A friend can be another profile in your own house or somebody in another
-household with their own server. Between servers it travels through Theia's
-built-in WireGuard tunnel, with no relay and no account. Sending a request does
-not need you to open a port; if a router refuses to open one by itself, the
-friends sheet lets you type its public address. What a friend learns is held in
-memory only and is never written to disk.
-
-Friends between two households over the internet are the part of 4.0 that needs
-the most real-world reports. See [Help test](#help-test-and-shape-theia).
+household with their own server. Since 4.3.1, households meet through a small
+Firebase database run for Theia: your server signs in anonymously, with no
+account and nothing to type, and no port has to be open. A request waits there
+while your friend is offline, and what you are watching reaches them within a
+second or two. Codes now read `THEIA2-XXXXX-XXXXX`; an older code still works,
+and friendships made before 4.3.1 carry over once both of you have updated.
+Watch parties still travel through Theia's built-in WireGuard tunnel, so
+hosting or joining a room needs remote access, which the friends sheet can turn
+on.
 
 ## Downloads
 
@@ -372,10 +373,13 @@ Theia stores configuration, SQLite data and cached artwork under `%APPDATA%\Thei
 on Windows, `~/Library/Application Support/Theia` on macOS and `~/.config/theia`
 on Linux. Media stays in the folders you selected.
 
-The only outbound services are TMDB for metadata and GitHub Releases for updates.
-There is no telemetry endpoint, analytics SDK, cloud account or frontend CDN.
-Remote access and friends use encrypted WireGuard traffic and contact no
-Theia-operated service. Discord Rich Presence, when you switch it on, speaks
+The outbound services are TMDB for metadata, GitHub Releases for updates and,
+for friends in other households, Theia's Firebase Realtime Database. Firebase
+receives, under an anonymous identity, the names and pictures of the profiles
+that have friends elsewhere, the requests between them and what each friend is
+watching right now - nothing about your library or your history. There is no
+telemetry endpoint, analytics SDK, cloud account or frontend CDN. Remote access
+and watch parties use encrypted WireGuard traffic between your servers. Discord Rich Presence, when you switch it on, speaks
 only to the Discord client on your own computer.
 
 The LAN site uses HTTP. The web viewer cannot draw image subtitle formats such as
