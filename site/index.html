@@ -365,8 +365,8 @@
           <figcaption class="chip">Illustration</figcaption>
         </figure>
         <p class="eyebrow">Away from home</p>
-        <h4>No middleman</h4>
-        <p>Remote access is built in: a device you authorise connects over WireGuard with its own key. There is no relay, no rendezvous server and no control plane, and Theia never contacts a service of its own to find you.</p>
+        <h4>Direct film streams</h4>
+        <p>Remote access is built in: a device you authorise connects over WireGuard with its own key. Films, rooms and opinions travel directly, without a media relay. Friend requests and presence use the Firebase directory described below.</p>
       </li>
     </ul>
 
@@ -374,11 +374,12 @@
     <ul class="limits">
       <li class="limit reveal">
         <h4>Thin real-world testing</h4>
-        <p>Windows x64 is the only platform validated on real hardware, the maintainer’s own, with the maintainer’s own library. macOS, Linux and Windows ARM64 passed automated install and test-film checks. That says nothing about your screen, your audio chain or your library.</p>
+        <p>Windows x64 has been used with the maintainer’s own library; 4.4 was checked with generated films on Windows, Linux x64 and both Macs, with Intel under Rosetta. The ARM64 fallback setups were checked for 4.2.1. That says nothing about your screen, your audio chain or your library.</p>
       </li>
       <li class="limit reveal">
         <h4>Friends are new</h4>
-        <p>Friends were checked with two real servers on one machine and in the native player. Two tests between real households found faults that are now fixed, but a clean run between two households over the internet is still what the project needs from its users.</p>
+        <p>Offline requests and presence pass simulated two-server tests. A successful session between real households over the internet remains unverified.</p>
+        <p>Theia’s Firebase database receives directory entries for all local profiles, including names and pictures, even before a friend is added. Linked friends exchange requests and current presence through it. No library catalogue or viewing history is sent, and no sign-up is required.</p>
       </li>
       <li class="limit reveal">
         <h4>Linux is the narrowest</h4>
