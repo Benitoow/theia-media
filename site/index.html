@@ -220,7 +220,7 @@
       </li>
     </ul>
 
-    <p class="fineprint">4.1 added watch parties and 4.2 gave the island faces and film artwork. 4.2.1 keeps voice calls audible during a film, makes fullscreen cover the taskbar, updates the player from its own button and lets a server installed alone update itself. 4.2.2 offered every quality in the player. 4.3 lets friends share a thumb and a short review of a film, gives title pages tabs and a playback check that concludes, makes the player lighter and faster, brings macOS back on Apple Silicon and Intel, and ships an installer that looks for a newer one before it installs; the ARM64 setups follow in early November. See the <a href="https://github.com/Benitoow/theia-media/blob/main/docs/releases/v4.3.0.md">4.3 release notes</a>.</p>
+    <p class="fineprint">4.4 keeps the native player installed while future compatible releases update its signed interface and server. Run the 4.4 setup once to install the new loader. Friend requests now wait while a recipient is offline, with shorter profile codes and live presence through Firebase. Playback progress, resume and migration of existing preferences have been corrected. Windows x64, Linux x64 and both Macs have 4.4 setups; Windows and Linux ARM64 keep the explicitly labelled 4.2.1 downloads until their native checks can run. See the <a href="https://github.com/Benitoow/theia-media/blob/main/docs/releases/v4.4.0.md">4.4 release notes</a>.</p>
   </div>
 </section>
 
@@ -254,7 +254,7 @@
               <span class="arch-file">theia-setup-windows-amd64.exe · {{size:theia-setup-windows-amd64.exe}}{{from:theia-setup-windows-amd64.exe}}</span>
               <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
             </a>
-            <p class="arch-state">Has played the maintainer’s own library on real hardware.</p>
+            <p class="arch-state">4.4 passed the generated-film and visible-controls checks on the maintainer’s Windows computer.</p>
             <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-windows-amd64.exe}}</code></p>
           </li>
           <li class="arch">
@@ -263,7 +263,7 @@
               <span class="arch-file">theia-setup-windows-arm64.exe · {{size:theia-setup-windows-arm64.exe}}{{from:theia-setup-windows-arm64.exe}}</span>
               <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
             </a>
-            <p class="arch-state">Passed the automated install and test-film checks on a native runner for 4.2.1. The 4.3 setup follows in early November, once its native checks can run.</p>
+            <p class="arch-state">This download is 4.2.1, which passed its native install and test-film checks. The 4.4 setup is deferred: GitHub refused its native job for billing.</p>
             <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-windows-arm64.exe}}</code></p>
           </li>
         </ul>
@@ -280,7 +280,7 @@
               <span class="arch-file">theia-setup-darwin-arm64 · {{size:theia-setup-darwin-arm64}}{{from:theia-setup-darwin-arm64}}</span>
               <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
             </a>
-            <p class="arch-state">Passed the automated install, test-film and update checks on a hosted Mac, with CPU rendering. Hardware decoding and HDR are unverified on a physical Mac.</p>
+            <p class="arch-state">4.4 passed install, test-film and visible-controls checks on a hosted Apple Silicon Mac. Hardware decoding and HDR remain unverified on a physical display.</p>
             <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-darwin-arm64}}</code></p>
           </li>
           <li class="arch">
@@ -289,7 +289,7 @@
               <span class="arch-file">theia-setup-darwin-amd64 · {{size:theia-setup-darwin-amd64}}{{from:theia-setup-darwin-amd64}}</span>
               <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
             </a>
-            <p class="arch-state">Passed the automated install, test-film and update checks on a hosted Mac, with CPU rendering. Hardware decoding and HDR are unverified on a physical Mac.</p>
+            <p class="arch-state">4.4 passed install, test-film and visible-controls checks under Rosetta on a hosted Apple Silicon Mac. A physical Intel Mac, hardware decoding and HDR remain unverified.</p>
             <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-darwin-amd64}}</code></p>
           </li>
         </ul>
@@ -317,7 +317,7 @@
               <span class="arch-file">theia-setup-linux-arm64 · {{size:theia-setup-linux-arm64}}{{from:theia-setup-linux-arm64}}</span>
               <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
             </a>
-            <p class="arch-state">Passed the automated install, test-film and removal checks on a native runner for 4.2.1. The 4.3 setup follows in early November, once its native checks can run.</p>
+            <p class="arch-state">This download is 4.2.1, which passed its native install, test-film and removal checks. The 4.4 setup is deferred: GitHub refused its native job for billing.</p>
             <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-linux-arm64}}</code></p>
           </li>
         </ul>
