@@ -19,7 +19,7 @@
 <p align="center">
   <a href="https://benitoow.github.io/theia-media/">Website</a> ·
   <a href="#downloads">Downloads</a> ·
-  <a href="docs/releases/v4.3.0.md">4.3 release notes</a> ·
+  <a href="docs/releases/v4.4.0.md">4.4 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
@@ -46,6 +46,15 @@ stack and no external database to install.
 | One download | Built for choosing | Private by default |
 | --- | --- | --- |
 | One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud library. Metadata comes from TMDB; updates come from GitHub Releases. |
+
+## Theia 4.4 — release preparation
+
+4.4 separates the native player from its interface: compatible updates can
+replace the server and a verified, signed interface pack while keeping the
+installed player and media engine. Run the 4.4 setup once when its assets are
+published; a server-only update does not install the new loader. The native
+platform builds are being verified; the download links below still point to
+the latest published release. [Read the 4.4 release notes](docs/releases/v4.4.0.md).
 
 ## Theia 4.3
 
