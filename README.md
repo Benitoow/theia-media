@@ -375,9 +375,11 @@ on Linux. Media stays in the folders you selected.
 
 The outbound services are TMDB for metadata, GitHub Releases for updates and,
 for friends in other households, Theia's Firebase Realtime Database. Firebase
-receives, under an anonymous identity, the names and pictures of the profiles
-that have friends elsewhere, the requests between them and what each friend is
-watching right now - nothing about your library or your history. There is no
+receives, under an anonymous server identity, directory entries for all local
+profiles (their names, pictures, server public key, profile number and port),
+even before a friend is added. Requests and current viewing presence are
+exchanged between linked friends; your library catalogue and viewing history
+are not uploaded. There is no
 telemetry endpoint, analytics SDK, cloud account or frontend CDN. Remote access
 and watch parties use encrypted WireGuard traffic between your servers. Discord Rich Presence, when you switch it on, speaks
 only to the Discord client on your own computer.
