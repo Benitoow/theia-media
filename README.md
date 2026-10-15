@@ -47,14 +47,20 @@ stack and no external database to install.
 | --- | --- | --- |
 | One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud library. Metadata comes from TMDB; updates come from GitHub Releases. |
 
-## Theia 4.4 — release preparation
+## Theia 4.4
 
 4.4 separates the native player from its interface: compatible updates can
 replace the server and a verified, signed interface pack while keeping the
-installed player and media engine. Run the 4.4 setup once when its assets are
-published; a server-only update does not install the new loader. The native
-platform builds are being verified; the download links below still point to
-the latest published release. [Read the 4.4 release notes](docs/releases/v4.4.0.md).
+installed player and media engine. **Run the 4.4 setup once**; a server-only
+update does not install the new loader. Friend requests now wait in Firebase
+while the recipient is offline, with shorter profile codes and live presence.
+Progress, resume and migration of existing preferences have also been corrected.
+
+4.4.0 provides complete setups for Windows x64, Linux x64 and both Macs.
+Windows ARM64 and Linux ARM64 setups are deferred because GitHub refused their
+native jobs for billing; the website explicitly offers their last verified
+setup, **4.2.1**. All six standalone servers are 4.4.0.
+[Read the 4.4 release notes](docs/releases/v4.4.0.md).
 
 ## Theia 4.3
 
@@ -76,8 +82,7 @@ the latest published release. [Read the 4.4 release notes](docs/releases/v4.4.0.
   that measures the file and says whether it plays here, and why.
 - **Lighter and faster:** a player of 11.5 MB instead of 15.1 MB, title pages in
   a quarter of a second, half the processor on the search page.
-- **macOS is back,** Apple Silicon and Intel; the ARM64 setups follow in early
-  November.
+- **macOS is back,** Apple Silicon and Intel.
 - **An installer that is never out of date:** it looks for a newer setup before
   it installs, and on macOS and Linux the update button now updates everything.
 
@@ -157,8 +162,8 @@ house, not on taste.
 | A phone, tablet or television browser | **Nothing**; open the address the server prints in a browser | The web viewer remains available. Its viewing features are complete and no longer developed; server settings and administration are still maintained. |
 
 The desktop downloads are **Windows x64**, **macOS** (Apple Silicon and Intel)
-and **Ubuntu 24.04 x64**. The **ARM64** setups, Windows and Ubuntu, return in
-early November 2026, once their native checks can run; until then those
+and **Ubuntu 24.04 x64**. The **ARM64** setups, Windows and Ubuntu, are deferred
+until their native checks can run; until then those
 computers keep 4.2.1, which stays downloadable and keeps working. Linux needs
 X11 or XWayland and the two packages listed under [Downloads](#downloads).
 Other Linux distributions are not verified.
@@ -265,8 +270,8 @@ what it carries.
 | macOS Apple Silicon | [Apple Silicon setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-darwin-arm64) | **supported** |
 | macOS Intel | [Intel Mac setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-darwin-amd64) | **supported** |
 | Ubuntu 24.04 x64 | [Linux x64 setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-linux-amd64) | **supported** |
-| Windows ARM64 | [Windows ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-windows-arm64.exe) (4.2.1) | 4.3 in early November |
-| Ubuntu 24.04 ARM64 | [Linux ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-linux-arm64) (4.2.1) | 4.3 in early November |
+| Windows ARM64 | [Windows ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-windows-arm64.exe) (4.2.1) | 4.4 deferred; native checks pending |
+| Ubuntu 24.04 ARM64 | [Linux ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-linux-arm64) (4.2.1) | 4.4 deferred; native checks pending |
 
 Mac apps are ad-hoc signed and not notarised: open the app the first time with
 Control-click → Open.
