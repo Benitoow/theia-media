@@ -5,12 +5,13 @@ right to use it, to be recorded beside it. This is that record, written on
 2 October 2026 from the files themselves. It is documentation: the build does
 not ship it.
 
-Two kinds of image live on the page and are never confused. **The recording is a
-real capture** of the shipped application. **The illustrations are generated**,
+Three kinds of image live on the page and are never confused. **The recording is a
+real capture** of the shipped application. **The screenshots are real captures** of the shipped player on a sample library,
+labelled *Screenshot*. **The illustrations are generated**,
 are labelled *Illustration* wherever they appear, and are never framed as a
 screenshot.
 
-## The four illustrations
+## The three illustrations
 
 Generated with GPT Image (OpenAI) and supplied by the maintainer, who asked on
 2 October 2026 for them to be used as illustrations on the page. The originals
@@ -23,13 +24,36 @@ The prompts were not kept.
 | Published file | Original | Original SHA-256 | Where it is used |
 | --- | --- | --- | --- |
 | `img/hero-statue.webp`, `img/hero-statue-narrow.webp` | `Statue de marbre face à l’aube.png`, 1672 × 941. The narrow file is the right-hand 912 px, scaled to 800 × 826 | `53674c7c836f9d24a2080aac69f19d845626a0adb6bcb27fbd5c91a7eb061424` | The hero, and the share card |
-| `img/moment-library.webp` | `Galerie sombre aux cadres dorés lumineux.png`, 1448 × 1086 | `ad4cc6a33c61b4bde5509899eed2fe0111e91294e687a9a09ef621632b3fdfcb` | "Your library" |
 | `img/moment-player.webp` | `Main de marbre tenant un astre doré.png`, 1730 × 909, cropped to 1212 × 909 (x 420 to 1632) | `87a9150e3f28eae53d5569b4ada4fbe64923658c46e82c60313dc05ff3606dfe` | "The player" |
 | `img/moment-remote.webp` | `Villas reliées par un fil doré.png`, 1448 × 1086 | `dd1acd615a13f7f37f880c0bff20bd46b87314c551286603514a2e65632ac793` | "Away from home" |
 
 Copyright in AI-generated images is unsettled in several jurisdictions, as it is
 for AI-assisted code (decision 163). Nothing here was scraped or fetched from the
 web (CLAUDE.md, "No unverified image").
+
+## The two screenshots
+
+Added on 20 October 2026, replacing the illustration `moment-library.webp` (removed),
+which showed a dark gallery with empty frames where the library now shows itself.
+
+| Published file | What it is | Where it is used |
+| --- | --- | --- |
+| `img/shot-library.webp` | The *All movies* screen of the Windows player built from the 4.4.2 source, cropped to 4:3 below the navigation and scaled to 1200 x 900 | "Your library", labelled *Screenshot* |
+| `img/shot-player.webp` | The same player during a sample film, the pointer on the playback bar at 2:02:17 with the timeline preview open, scaled to 1600 x 943 | The 4.4.2 section |
+
+Both come from the sample library described in `docs/screenshots/README.md` of the
+public repository: 132 recent films and 40 series, every file a two-second clip
+except one stand-in film, with posters, backdrops, synopses and ratings from TMDB, in
+a throwaway server with no connection but TMDB. The artwork belongs to its studios and
+is shown as the product shows it; the TMDB sentence is in the footer. The stand-in
+film is a 2 h 46 min video made from the title's own TMDB backdrop, panned and zoomed:
+the picture in the player and in the preview is not the film. Nothing here was
+fetched from anywhere else, and no image of a real household or library is shown.
+
+```sh
+ffmpeg -i n-movies.png -vf "crop=1680:1260:60:392,scale=1200:900:flags=lanczos"   -c:v libwebp -quality 84 -compression_level 6 shot-library.webp
+ffmpeg -i n-timeline.png -vf "scale=1600:943:flags=lanczos"   -c:v libwebp -quality 84 -compression_level 6 shot-player.webp
+```
 
 ## The recording
 
@@ -59,7 +83,7 @@ in every case):
 ```sh
 ffmpeg -i "Statue de marbre face à l’aube.png" -c:v libwebp -quality 90 hero-statue.webp
 ffmpeg -i "Statue de marbre face à l’aube.png" -vf "crop=912:941:760:0,scale=800:-2:flags=lanczos" -c:v libwebp -quality 86 hero-statue-narrow.webp
-ffmpeg -i "Galerie sombre aux cadres dorés lumineux.png" -c:v libwebp -quality 90 moment-library.webp
+ffmpeg -i "Galerie sombre aux cadres dorés lumineux.png" -c:v libwebp -quality 90 moment-library.webp   # file removed on 20 October 2026
 ffmpeg -i "Main de marbre tenant un astre doré.png" -vf "crop=1212:909:420:0" -c:v libwebp -quality 90 moment-player.webp
 ffmpeg -i "Villas reliées par un fil doré.png" -c:v libwebp -quality 90 moment-remote.webp
 ffmpeg -i assets/theia-logo.png -vf "crop=1170:330:190:350,scale=600:-2:flags=lanczos" -c:v libwebp -quality 88 theia-wordmark.webp

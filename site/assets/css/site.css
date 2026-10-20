@@ -514,6 +514,26 @@ h1 span {
   font-size: 0.9375rem;
 }
 
+.shot {
+  max-width: 64rem;
+  margin: 2.75rem auto 0;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.shot figcaption {
+  max-width: 52rem;
+  margin-top: 0.875rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
 .scenes {
   display: grid;
   gap: 0;
@@ -957,6 +977,11 @@ h1 span {
   .limit {
     grid-template-columns: minmax(12rem, 18rem) 1fr;
     align-items: baseline;
+  }
+
+  /* A second paragraph reads under the first, not under the heading. */
+  .limit p ~ p {
+    grid-column: 2;
   }
 }
 

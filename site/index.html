@@ -92,7 +92,7 @@
   <nav class="nav" aria-label="Primary">
     <ul>
       <li><a href="#demo">Demo</a></li>
-      <li class="nav-wide"><a href="#new">New in 4.0</a></li>
+      <li class="nav-wide"><a href="#new">New in 4.4.2</a></li>
       <li><a href="#download">Download</a></li>
       <li class="nav-wide"><a href="#limits">Limits</a></li>
       <li class="nav-wide"><a href="#licence">Licence</a></li>
@@ -180,7 +180,7 @@
       </li>
     </ol>
 
-    <p class="fineprint">What the recording does not show: a film playing, so it says nothing about picture or sound; any system other than Windows; a profile photo actually being changed; anything new in 4.0.</p>
+    <p class="fineprint">What the recording does not show: a film playing, so it says nothing about picture or sound; any system other than Windows; a profile photo actually being changed; anything new since 3.4.0.</p>
   </div>
 </section>
 
@@ -188,39 +188,44 @@
 <section id="new" class="section" aria-labelledby="new-title">
   <div class="wrap">
     <header class="section-head reveal">
-      <p class="eyebrow">Theia 4.0</p>
-      <h2 id="new-title">The core is done. The cinema becomes shared.</h2>
-      <p class="section-lead">4.0 is free: the server, the library, ordinary viewing and everything new in this release cost nothing. Which later features might become paid, if any, is not decided, and it will be announced well before it happens.</p>
+      <p class="eyebrow">Theia 4.4.2</p>
+      <h2 id="new-title">The last V4 update.</h2>
+      <p class="section-lead">4.4.2 closes V4: a timeline you can read, episodes that follow on, settings you can trust, and friends you can see. The server, the library, ordinary viewing and everything in this release cost nothing. The next step is Theia 5.0; there will be no account and no telemetry, and for now every V4 feature stays free. Which later features might become paid, if any, is not decided, and it will be announced well before it happens.</p>
     </header>
 
     <ul class="limits">
       <li class="limit reveal">
-        <h3>Who’s watching?</h3>
-        <p>When a server has two or more profiles, the player asks at startup which one is watching and remembers the answer. A setting turns the question off.</p>
+        <h3>A timeline you can read</h3>
+        <p>Move the pointer along the playback bar: a still of the exact scene follows it, with its time. Nothing seeks until you click.</p>
       </li>
       <li class="limit reveal">
-        <h3>Friends</h3>
-        <p>Every profile has a code. Enter a friend’s code, they accept, and you each see what the other is watching right now: a poster and a title, without their history, library or progress. A friend can be on another server in another house. Requests wait while they are offline, and presence - online, inactive or offline - and opinions travel through Firebase; watching together uses the direct encrypted tunnel. No sign-up is required.</p>
+        <h3>Episodes that follow on</h3>
+        <p>Skip the opening with a click, get a quiet 30-second countdown to the next episode that you can cancel, and stop at the end of a season. The markers are the chapters named in the file; Theia does not guess.</p>
       </li>
       <li class="limit reveal">
-        <h3>Discord presence</h3>
-        <p>Off by default and local to your own Discord client. Showing a title is a second, separate switch.</p>
+        <h3>Settings you can trust</h3>
+        <p>Eight categories, audio and subtitle choices remembered per series, ordered languages, an audio output, interface scale, cache sizes and shortcuts you can change. The player updates only when you ask, unless you switch automatic updates on.</p>
       </li>
       <li class="limit reveal">
-        <h3>A rebuilt installer</h3>
-        <p>One full screen that reads the machine before it asks: your language, film folders suggested from your drives, an existing installation updated in place.</p>
+        <h3>Presence you can read</h3>
+        <p>Friends are online, inactive, watching or offline. You can be up for a film, do not disturb or invisible, hide the title you are watching, and ask for a quiet notice when a friend returns. Ending a friendship ends it on both sides.</p>
       </li>
       <li class="limit reveal">
-        <h3>Better recognition</h3>
-        <p>More title spellings, editions, sequel numbers and episode patterns are understood, and a bare file takes the name of its folder.</p>
+        <h3>Private rooms</h3>
+        <p>A watch-party room admits only the friends its host invites. Each invitation is for one profile and lasts until the room ends; others may ask to join, and the host answers.</p>
       </li>
       <li class="limit reveal">
-        <h3>A clean Linux engine</h3>
-        <p>An LGPL media engine now ships with the Linux player, so the system’s own engine is no longer a prerequisite.</p>
+        <h3>Spoiler protection</h3>
+        <p>On a series page, one switch blurs the pictures of the episodes you have not finished and turns off their previews.</p>
       </li>
     </ul>
 
-    <p class="fineprint">4.4.1 shows your own published opinion with Edit and Delete, carries opinions between households through Firebase, and shows friends as online, inactive or offline; it is a product release, with no new native player (see the <a href="https://github.com/Benitoow/theia-media/blob/main/docs/releases/v4.4.1.md">4.4.1 release notes</a>). 4.4 keeps the native player installed while future compatible releases update its signed interface and server. Run the 4.4 setup once to install the new loader. Friend requests now wait while a recipient is offline, with shorter profile codes and live presence through Firebase. Playback progress, resume and migration of existing preferences have been corrected. Windows x64, Linux x64 and both Macs have 4.4 setups; Windows and Linux ARM64 keep the explicitly labelled 4.2.1 downloads until their native checks can run. See the <a href="https://github.com/Benitoow/theia-media/blob/main/docs/releases/v4.4.0.md">4.4 release notes</a>.</p>
+    <figure class="shot reveal">
+      <img src="assets/img/shot-player.webp" width="1600" height="943" alt="Screenshot of the native player on a sample film: the pointer is on the playback bar at 2:02:17 and a still of that scene is drawn above it, beside the minus 30 and plus 30 second buttons." loading="lazy" decoding="async">
+      <figcaption>The timeline preview in the native player, on a sample library. The film is a stand-in made from the title’s own backdrop; the interface is real. Run the 4.4.2 setup once to get it: the player itself changed. See the <a href="https://github.com/Benitoow/theia-media/blob/main/docs/releases/v4.4.2.md">4.4.2 release notes</a>.</figcaption>
+    </figure>
+
+    <p class="fineprint">Earlier in V4: who is watching at startup, friends by code, Discord presence, a rebuilt installer, watch parties and the island, opinions between friends, and a player that updates its interface without a new download (4.0 to 4.4.1). Windows x64, Linux x64 and both Macs have 4.4.2 setups; Windows and Ubuntu ARM64 keep the explicitly labelled 4.2.1 downloads, and their 4.4.2 setups are planned for early November.</p>
   </div>
 </section>
 
@@ -263,7 +268,7 @@
               <span class="arch-file">theia-setup-windows-arm64.exe · {{size:theia-setup-windows-arm64.exe}}{{from:theia-setup-windows-arm64.exe}}</span>
               <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
             </a>
-            <p class="arch-state">This download is 4.2.1, which passed its native install and test-film checks. The 4.4 setup is deferred: GitHub refused its native job for billing.</p>
+            <p class="arch-state">This download is 4.2.1, which passed its native install and test-film checks. Its player predates 4.4 and does not have the features of 4.4 and later; the new ARM64 setup is planned for early November.</p>
             <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-windows-arm64.exe}}</code></p>
           </li>
         </ul>
@@ -317,7 +322,7 @@
               <span class="arch-file">theia-setup-linux-arm64 · {{size:theia-setup-linux-arm64}}{{from:theia-setup-linux-arm64}}</span>
               <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
             </a>
-            <p class="arch-state">This download is 4.2.1, which passed its native install, test-film and removal checks. The 4.4 setup is deferred: GitHub refused its native job for billing.</p>
+            <p class="arch-state">This download is 4.2.1, which passed its native install, test-film and removal checks. Its player predates 4.4 and does not have the features of 4.4 and later; the new ARM64 setup is planned for early November.</p>
             <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-linux-arm64}}</code></p>
           </li>
         </ul>
@@ -343,8 +348,8 @@
     <ul class="moments">
       <li class="moment reveal">
         <figure>
-          <img src="assets/img/moment-library.webp" width="1448" height="1086" alt="Illustration: a dark gallery hall with empty gilded frames, one of them lit, opening onto a sunset sea." loading="lazy" decoding="async">
-          <figcaption class="chip">Illustration</figcaption>
+          <img src="assets/img/shot-library.webp" width="1200" height="900" alt="Screenshot of the native player: All movies, a library of 132 recent films, with the first rows of cards and one film to resume." loading="lazy" decoding="async">
+          <figcaption class="chip">Screenshot</figcaption>
         </figure>
         <p class="eyebrow">Your library</p>
         <h4>Your folders, where they already are</h4>
@@ -374,12 +379,12 @@
     <ul class="limits">
       <li class="limit reveal">
         <h4>Thin real-world testing</h4>
-        <p>Windows x64 has been used with the maintainer’s own library; 4.4 was checked with generated films on Windows, Linux x64 and both Macs, with Intel under Rosetta. The ARM64 fallback setups were checked for 4.2.1. That says nothing about your screen, your audio chain or your library.</p>
+        <p>Windows x64 has been used with the maintainer’s own library, 4.4.2 included; 4.4 was checked with generated films on Windows, Linux x64 and both Macs, with Intel under Rosetta. The ARM64 fallback setups were checked for 4.2.1. That says nothing about your screen, your audio chain or your library.</p>
       </li>
       <li class="limit reveal">
         <h4>Friends are new</h4>
-        <p>Offline requests and presence pass simulated two-server tests. A successful session between real households over the internet remains unverified.</p>
-        <p>Theia’s Firebase database receives directory entries for all local profiles, including names and pictures, even before a friend is added. Linked friends exchange requests, current presence and, since 4.4.1, the thumb and text of the opinions they write: an opinion is stored in the inbox of each friend who can read it until it is deleted. No library catalogue or viewing history is sent, and no sign-up is required.</p>
+        <p>Offline requests and the new presence pass simulated two-server tests, and the maintainer reported a session between two households on a test build working. Private rooms and the shared countdown have not been tried between two real households.</p>
+        <p>Theia’s Firebase database receives directory entries for all local profiles, including names and pictures, even before a friend is added. Linked friends exchange requests, current presence and the thumb and text of the opinions they write: an opinion is stored in the inbox of each friend who can read it until it is deleted. Presence is your chosen availability, a generic activity (browsing, in a room, watching) and, unless you turn it off, the last moment your player was seen; only that moment is kept, never a history, and invisible publishes none of it. No library catalogue or viewing history is sent, and no sign-up is required.</p>
       </li>
       <li class="limit reveal">
         <h4>Linux is the narrowest</h4>
@@ -415,7 +420,7 @@
     <div class="prose reveal">
       <p class="statement">Free for personal, non-commercial use under PolyForm Noncommercial 1.0.0 (versions 3.4 and earlier: GPL-3.0).</p>
       <p>The version the download buttons serve today, {{tag}}, is published under {{licence}}. Theia 3.4.0 and every earlier release stay under GPL-3.0 for good, and their source stays public at their tags. Every release from 4.0 is distributed under PolyForm Noncommercial 1.0.0: you may use and share it for noncommercial purposes, and commercial use needs a separate licence. From 4.0 the source code is developed privately and is not published.</p>
-      <p>The server, the library and ordinary viewing are free, 4.0 is free, and nothing paid exists. Which later features might become paid is not decided, and it will be announced well before it happens.</p>
+      <p>The server, the library and ordinary viewing are free, every V4 release is free, and nothing paid exists. For now every V4 feature stays free; which later features might become paid, if any, is not decided, and it will be announced well before it happens. The next step is Theia 5.0, which looks outward, at cloud, servers and storage; there will be no account and no telemetry.</p>
       <p class="links">
         <a href="https://polyformproject.org/licenses/noncommercial/1.0.0">PolyForm Noncommercial 1.0.0 <svg class="icon" aria-hidden="true"><use href="#i-external"/></svg></a>
         <a href="https://github.com/Benitoow/theia-media/blob/v3.4.0/LICENSE">GPL-3.0, as published with 3.4.0 <svg class="icon" aria-hidden="true"><use href="#i-external"/></svg></a>
@@ -432,7 +437,7 @@
       <h2 id="help-title">Help test it</h2>
     </header>
     <div class="prose reveal">
-      <p>Automated checks cover installation and a generated film. They cannot cover your screen, your sound system or your library. Try Theia for a week if you can, and tell us what worked as well as what failed. Reports from Intel Macs, Apple Silicon Macs, Windows ARM64 and Ubuntu machines are especially useful, and so is a try of friends between two households.</p>
+      <p>Automated checks cover installation and a generated film. They cannot cover your screen, your sound system or your library. Try Theia for a week if you can, and tell us what worked as well as what failed. Reports from Intel Macs, Apple Silicon Macs and Ubuntu machines are especially useful, and so is a try of friends and a private room between two households.</p>
       <p class="cta-row">
         <a class="btn" href="https://github.com/Benitoow/theia-media/issues/10">Join the field test <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
         <a class="link" href="https://discord.gg/p4Rp4zHdHf">or talk to other testers on Discord</a>
@@ -448,7 +453,7 @@
   <div class="wrap footer-grid">
     <div>
       <p class="lockup">Theia</p>
-      <p>One maintainer, built with disclosed AI assistance. The illustrations on this page are AI-generated; the recording is real. This page sets no cookies, runs no analytics and loads nothing from other sites.</p>
+      <p>One maintainer, built with disclosed AI assistance. The illustrations on this page are AI-generated; the recording and the screenshots are real, and the screenshots show a sample library. This page sets no cookies, runs no analytics and loads nothing from other sites.</p>
     </div>
     <nav aria-label="Project">
       <ul>
