@@ -1,8 +1,8 @@
 # Theia field test
 
-The current release is `v4.4.4`, the latest update of V4 (see
-[the release notes](releases/v4.4.4.md), which also hold what 4.4.2 and 4.4.3
-brought). 4.4.4 is free. Real household reports still matter: native CI checks cover installation and a generated film on every
+The current release is `v4.4.5`, the last update of V4 (see
+[the release notes](releases/v4.4.5.md), which also hold what 4.4.2, 4.4.3 and 4.4.4
+brought). 4.4.5 is free. Real household reports still matter: native CI checks cover installation and a generated film on every
 platform, while actual libraries, display/audio chains, unusual files and two
 real households need real devices. A **private watch party between two
 households**, and a week of presence between friends, are the reports most
@@ -13,7 +13,7 @@ x64. The Windows and Ubuntu ARM64 setups are deferred and keep 4.2.1, which does
 not have the 4.4 features. The existing web viewer stays available for phones and
 TVs, without active viewing support; web settings and administration remain
 maintained. The platform limits, and what was and was not checked, are in the
-[4.4.4 release notes](releases/v4.4.4.md).
+[4.4.5 release notes](releases/v4.4.5.md).
 
 ## Who this is for
 
@@ -72,7 +72,7 @@ two real servers on one machine and in the native player, and presence has been
 tried between two households on a test build; a clean week over the internet on
 the released version is still the proof wanted.
 
-1. Both people install 4.4.4, with the server running and at least one profile.
+1. Both people install 4.4.5, with the server running and at least one profile.
 2. In the player, open the friends sheet. Each person copies their profile's code
    and sends it to the other, by any channel.
 3. One person enters the other's code. They should be told at once which profile
@@ -98,7 +98,7 @@ an IP address, before pasting a report in public.
 ## Testing a private room
 
 Rooms need remote access on both sides, and **both people need 4.4.2 or later**
-(test with 4.4.4): an older server refuses to create or join a private room.
+(test with 4.4.5): an older server refuses to create or join a private room.
 
 1. One person starts a film and opens a room. It should say *Private room*, with
    nobody invited yet.
@@ -135,6 +135,6 @@ Repeated failures and blocked household workflows set the maintenance priority.
 Feature ideas are recorded, but they are not a promise or a queue ordered by
 votes. When roughly ten real households have produced enough evidence, the
 maintainer can decide which library-facing problems justify new features. V4 is
-complete, and 4.4.4 is its latest update; reports now catch regressions in
+complete, and 4.4.5 is its last update; reports now catch regressions in
 existing playback and sharing and decide what is worth doing next. Which later features might become
 paid is not decided and is not decided by votes.

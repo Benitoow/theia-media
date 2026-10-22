@@ -19,7 +19,7 @@
 <p align="center">
   <a href="https://benitoow.github.io/theia-media/">Website</a> ·
   <a href="#downloads">Downloads</a> ·
-  <a href="docs/releases/v4.4.4.md">4.4.4 release notes</a> ·
+  <a href="docs/releases/v4.4.5.md">4.4.5 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
@@ -51,27 +51,28 @@ Docker stack and no external database to install.
 | --- | --- | --- |
 | One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud library. Metadata comes from TMDB; updates come from GitHub Releases. |
 
-## Theia 4.4.4
+## Theia 4.4.5
 
 > [!IMPORTANT]
-> **Theia is free, and 4.4.4 is the latest update of the V4 line.** The
+> **Theia is free, and 4.4.5 is the last update of the V4 line.** The
 > server, the library, ordinary viewing and everything in this release cost
 > nothing, and every change reaches everyone for free for a duration that is not
 > decided. Which later features might become paid, if any, has not been decided
 > either; it will be settled in the open and announced well before it happens.
 > Nothing is paid today.
 
-4.4.4 keeps the end of an episode out of your way: the countdown steps aside
-and waits while you read the timeline, *Skip opening* leaves the picture after a
-few seconds and comes back with the controls, and the buttons are redrawn - a
-*Next episode* pill that fills as the countdown runs. It also carries 4.4.3's
-repair of the update path for installations updated from a tester build. A
-**product update**: update from Theia's own button, no setup needed.
-[Read the 4.4.4 release notes](docs/releases/v4.4.4.md), which also hold
+4.4.5 fills the profile circle: a small photo no longer shows with black around
+it, and you frame your photo in the circle before saving it. On a fresh
+installation, *Skip opening* and *Next episode* now appear from the first
+episode. It also carries 4.4.4, which keeps the end of an episode out of your
+way (the countdown waits while you read the timeline, *Skip opening* leaves by
+itself, new buttons), and 4.4.3's repair of the update path. A **product
+update**: update from Theia's own button, no setup needed.
+[Read the 4.4.5 release notes](docs/releases/v4.4.5.md), which also hold
 everything 4.4.2 brought.
 
 4.4.2 improved the native player, so **an installation older than 4.4.2 runs the
-4.4.4 setup once**: a server-only update does not replace the player. Your
+4.4.5 setup once**: a server-only update does not replace the player. Your
 library, profiles, watchlists and history stay in place.
 
 - **A timeline you can read.** A still of the exact scene follows the pointer along
@@ -264,9 +265,9 @@ what it carries.
 Mac apps are ad-hoc signed and not notarised: open the app the first time with
 Control-click → Open.
 
-**Upgrading from 4.4.x:** 4.4.3 and 4.4.4 are product updates for a level-3
+**Upgrading from 4.4.x:** 4.4.3, 4.4.4 and 4.4.5 are product updates for a level-3
 player: use Theia's own update button. An installation older than 4.4.2 runs the
-4.4.4 setup once; it replaces the native player, which the new interface
+4.4.5 setup once; it replaces the native player, which the new interface
 requires, and keeps your data. **Upgrading from 3.x:** run the new setup. It reads
 the installation, updates it in place, closes running programs and restarts the
 server; your data stays. An automatic server update alone does not replace an
@@ -403,6 +404,9 @@ file. They are not detected from picture or sound, and many files have none.
 Each release has its own notes, with what changed, what to do when updating and
 what was and was not checked.
 
+- **[4.4.5](docs/releases/v4.4.5.md)** — the last V4 update: a small profile photo
+  fills its circle, you frame your photo before saving it, and the episode buttons
+  appear on a fresh installation.
 - **[4.4.4](docs/releases/v4.4.4.md)** — the end of an episode, out of your way:
   the countdown waits while you read the timeline, *Skip opening* leaves by
   itself, and new *Skip* and *Next episode* buttons.
@@ -435,7 +439,7 @@ what was and was not checked.
 - **[3.4 and earlier](docs/releases/v3.4.0.md)** — the V3 generation, up to the
   native desktop apps.
 
-**After 4.4.4.** The next step is **Theia 5.0**, which looks outward: cloud and
+**After 4.4.5.** The next step is **Theia 5.0**, which looks outward: cloud and
 servers, and storage in the cloud, the things that surround Theia. Whether it also
 opens Theia to mods or plugins is not decided, and there is no date. **There will be
 no account and no telemetry**, and for now every feature of V4 stays free. Comments
