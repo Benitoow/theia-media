@@ -92,7 +92,7 @@
   <nav class="nav" aria-label="Primary">
     <ul>
       <li><a href="#demo">Demo</a></li>
-      <li class="nav-wide"><a href="#new">New in 4.4.2</a></li>
+      <li class="nav-wide"><a href="#new">New in 4.4.3</a></li>
       <li><a href="#download">Download</a></li>
       <li class="nav-wide"><a href="#limits">Limits</a></li>
       <li class="nav-wide"><a href="#licence">Licence</a></li>
@@ -188,9 +188,9 @@
 <section id="new" class="section" aria-labelledby="new-title">
   <div class="wrap">
     <header class="section-head reveal">
-      <p class="eyebrow">Theia 4.4.2</p>
-      <h2 id="new-title">The last V4 update.</h2>
-      <p class="section-lead">4.4.2 closes V4: a timeline you can read, episodes that follow on, settings you can trust, and friends you can see. The server, the library, ordinary viewing and everything in this release cost nothing. The next step is Theia 5.0; there will be no account and no telemetry, and for now every V4 feature stays free. Which later features might become paid, if any, is not decided, and it will be announced well before it happens.</p>
+      <p class="eyebrow">Theia 4.4.3</p>
+      <h2 id="new-title">The last V4 update, repaired.</h2>
+      <p class="section-lead">4.4.3 repairs the interface update path at the end of V4: a tester build now ranks below its release, so the update button no longer replaces the server and leaves the interface behind. 4.4.2 closes V4 with a timeline you can read, episodes that follow on, settings you can trust, and friends you can see. The server, the library, ordinary viewing and everything in this release cost nothing. The next step is Theia 5.0; there will be no account and no telemetry, and for now every V4 feature stays free. Which later features might become paid, if any, is not decided, and it will be announced well before it happens.</p>
     </header>
 
     <ul class="limits">
@@ -222,10 +222,10 @@
 
     <figure class="shot reveal">
       <img src="assets/img/shot-player.webp" width="1600" height="943" alt="Screenshot of the native player on a sample film: the pointer is on the playback bar at 2:02:17 and a still of that scene is drawn above it, beside the minus 30 and plus 30 second buttons." loading="lazy" decoding="async">
-      <figcaption>The timeline preview in the native player, on a sample library. The film is a stand-in made from the title’s own backdrop; the interface is real. Run the 4.4.2 setup once to get it: the player itself changed. See the <a href="https://github.com/Benitoow/theia-media/blob/main/docs/releases/v4.4.2.md">4.4.2 release notes</a>.</figcaption>
+      <figcaption>The timeline preview in the native player, on a sample library. The film is a stand-in made from the title’s own backdrop; the interface is real. Run the 4.4.3 setup once to get it from an older version: the player itself changed in 4.4.2. See the <a href="https://github.com/Benitoow/theia-media/blob/main/docs/releases/v4.4.3.md">4.4.3 release notes</a>.</figcaption>
     </figure>
 
-    <p class="fineprint">Earlier in V4: who is watching at startup, friends by code, Discord presence, a rebuilt installer, watch parties and the island, opinions between friends, and a player that updates its interface without a new download (4.0 to 4.4.1). Windows x64, Linux x64 and both Macs have 4.4.2 setups; Windows and Ubuntu ARM64 keep the explicitly labelled 4.2.1 downloads, and their 4.4.2 setups are planned for early November.</p>
+    <p class="fineprint">Earlier in V4: who is watching at startup, friends by code, Discord presence, a rebuilt installer, watch parties and the island, opinions between friends, and a player that updates its interface without a new download (4.0 to 4.4.1). Windows x64, Linux x64 and both Macs have 4.4.3 setups; Windows and Ubuntu ARM64 keep the explicitly labelled 4.2.1 downloads, and their 4.4.x setups are planned for early November.</p>
   </div>
 </section>
 
@@ -259,7 +259,7 @@
               <span class="arch-file">theia-setup-windows-amd64.exe · {{size:theia-setup-windows-amd64.exe}}{{from:theia-setup-windows-amd64.exe}}</span>
               <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
             </a>
-            <p class="arch-state">4.4.2 passed the generated-film and visible-controls checks on the maintainer’s Windows computer.</p>
+            <p class="arch-state">The 4.4.2 player it carries passed the generated-film and visible-controls checks on the maintainer’s Windows computer.</p>
             <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-windows-amd64.exe}}</code></p>
           </li>
           <li class="arch">
@@ -285,7 +285,7 @@
               <span class="arch-file">theia-setup-darwin-arm64 · {{size:theia-setup-darwin-arm64}}{{from:theia-setup-darwin-arm64}}</span>
               <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
             </a>
-            <p class="arch-state">4.4.2 passed install, test-film and visible-controls checks on a hosted Apple Silicon Mac. Hardware decoding and HDR remain unverified on a physical display.</p>
+            <p class="arch-state">The 4.4.2 player it carries passed install, test-film and visible-controls checks on a hosted Apple Silicon Mac. Hardware decoding and HDR remain unverified on a physical display.</p>
             <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-darwin-arm64}}</code></p>
           </li>
           <li class="arch">
@@ -294,7 +294,7 @@
               <span class="arch-file">theia-setup-darwin-amd64 · {{size:theia-setup-darwin-amd64}}{{from:theia-setup-darwin-amd64}}</span>
               <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
             </a>
-            <p class="arch-state">4.4.2 passed install, test-film and visible-controls checks under Rosetta on a hosted Apple Silicon Mac. A physical Intel Mac, hardware decoding and HDR remain unverified.</p>
+            <p class="arch-state">The 4.4.2 player it carries passed install, test-film and visible-controls checks under Rosetta on a hosted Apple Silicon Mac. A physical Intel Mac, hardware decoding and HDR remain unverified.</p>
             <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-darwin-amd64}}</code></p>
           </li>
         </ul>
@@ -313,7 +313,7 @@
               <span class="arch-file">theia-setup-linux-amd64 · {{size:theia-setup-linux-amd64}}{{from:theia-setup-linux-amd64}}</span>
               <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
             </a>
-            <p class="arch-state">4.4.2 passed the automated install, test-film and removal checks on a native runner. Reports from a real machine are wanted.</p>
+            <p class="arch-state">The 4.4.2 player it carries passed the automated install, test-film and removal checks on a native runner. Reports from a real machine are wanted.</p>
             <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-linux-amd64}}</code></p>
           </li>
           <li class="arch">
