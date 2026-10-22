@@ -59,23 +59,31 @@ ffmpeg -i n-timeline.png -vf "scale=1600:943:flags=lanczos"   -c:v libwebp -qual
 
 | | |
 | --- | --- |
-| Published | `video/theia-install-tour.mp4`: H.264 High, 1920 × 1080, 30 fps, no audio, 1 min 44 s, about 12 MB |
-| Source | `TUTO_THEIA_3K_60FPS.webm`, supplied by the maintainer: VP9, **1920 × 1080** (the "3K" in its name is not its size), 60 fps, no audio, 206,511,566 bytes, muxed by Mediabunny. SHA-256 `6aaff7765909f739b742da5629880c034e8b002820f3c555e0bfa9acb82fc989` |
-| Poster | `video/theia-install-tour-poster.webp`: the frame at 58.5 s, 1600 × 900, WebP quality 76 |
+| Published | `video/theia-install-tour.mp4`: H.264 High, 1920 × 1080, 30 fps, no audio, 1 min 30 s, about 11 MB (10,982,499 bytes), the Explorer window blurred |
+| Source | `VidéoTheia.webm`, supplied by the maintainer on 22 October 2026: VP9 (Profile 0), 1920 × 1080, 60 fps, no audio, 170,715,480 bytes, muxed by Mediabunny 1.61.0. SHA-256 `207eff8da87bb540daca7cdddc7d1a11e5e5942cbbcf19d250258362e43144ee` |
+| Poster | `video/theia-install-tour-poster.webp`: the frame at 78.0 s (the home screen), 1600 × 900, WebP quality 76 |
 | Captions | `video/theia-install-tour.en.vtt`: written from the recording, scene times checked against its frames |
 
 Re-encoded with the FFmpeg that Theia manages (Jellyfin FFmpeg 8.1.2, which has
 libx264 and libwebp; no `ffprobe` is installed on this machine):
 
 ```sh
-ffmpeg -y -i TUTO_THEIA_3K_60FPS.webm -an -map_metadata -1 \
-  -vf "fps=30,scale=1920:1080:flags=lanczos,format=yuv420p" \
-  -c:v libx264 -preset slower -crf 27 -profile:v high -level 4.1 -g 90 -keyint_min 30 \
+ffmpeg -y -i "VidéoTheia.webm" -an -map_metadata -1 \
+  -filter_complex "[0:v]fps=30,split[a][b];[b]gblur=sigma=28:steps=2,format=yuva420p,fade=t=in:st=49.5:d=0.3:alpha=1,fade=t=out:st=58.0:d=0.3:alpha=1[bl];[a][bl]overlay=format=auto,scale=1920:1080:flags=lanczos,format=yuv420p[v]" -map "[v]" \
+  -c:v libx264 -preset slower -crf 30 -profile:v high -level 4.1 -g 90 -keyint_min 30 \
   -movflags +faststart -x264-params colorprim=bt709:transfer=bt709:colormatrix=bt709 -color_range tv \
-  -metadata title="Theia 3.4.0 install and tour (screen recording, no sound)" theia-install-tour.mp4
-ffmpeg -y -ss 58.5 -i TUTO_THEIA_3K_60FPS.webm -frames:v 1 -vf scale=1600:900:flags=lanczos \
+  -metadata title="Theia 4.4.4 install and tour (screen recording, no sound)" theia-install-tour.mp4
+ffmpeg -y -ss 78.0 -i "VidéoTheia.webm" -frames:v 1 -vf scale=1600:900:flags=lanczos \
   -c:v libwebp -quality 76 -compression_level 6 -preset picture theia-install-tour-poster.webp
 ```
+
+The quality factor is 30. At 27 the same recording weighed 17 MB; the terminal's
+text stays legible at 30, and the file keeps the size of the previous recording (about 12 MB).
+
+The first filter blurs the whole picture from 0:49.8 to 0:58.0, with a 0.3 s
+fade at each end, over the Explorer window of the install scene (visible from
+0:50.5 to 0:57.5). It was checked on frames sampled inside and at the edges of
+that window: no file or folder name can be read in it.
 
 The images, from the originals listed above (`-compression_level 6 -preset picture`
 in every case):
@@ -89,55 +97,47 @@ ffmpeg -i "Villas reliées par un fil doré.png" -c:v libwebp -quality 90 moment
 ffmpeg -i assets/theia-logo.png -vf "crop=1170:330:190:350,scale=600:-2:flags=lanczos" -c:v libwebp -quality 88 theia-wordmark.webp
 ```
 
-**What it is.** A real screen capture of Theia **3.4.0** on Windows, composed by
-the recording tool on a gradient backdrop. The version is visible in Settings,
-under Server and Update (`v3.4.0`). The setup it runs is the published one: the
-file `theia-setup-windows-amd64.exe` in the maintainer's `Downloads` folder has
-the same SHA-256 (`c81fdd23fc0f7a9885a68103ce89530177b5d38c64df10ddbb0d043de805767d`)
-and size (72,216,613 bytes) as the GitHub release asset.
+**What it is.** A real screen capture of Theia **4.4.4** on Windows, composed by
+the recording tool, with camera moves, on a gradient backdrop. The version is
+visible in the installer (`4.4.4` under its name) and on the GitHub release page
+(*Theia v4.4.4*, marked Latest). It has **not** been checked that the setup it
+downloads is the published one: the file in the Downloads folder is named
+`theia-setup-windows-amd64`, and the release list shows the Windows x64 setup at
+67.9 MB. Windows, the browser and Explorer are in French; Theia is in English.
 
-**Scenes, in order**, with the times the page and the captions use:
+**Scenes, in order**, with the times the page and the captions use, checked against
+frames sampled every second around each change:
 
 | Time | Scene |
 | --- | --- |
-| 0:00 | The GitHub release page of v3.4.0 in a web browser; the assets list; the setup for Windows x64 |
-| 0:19 | Windows Terminal running `theia-setup`: language, role, data folder, port, network name, film folder, autostart, plan, "Installation finished." |
-| 0:40 | The desktop; a third-party launcher finds the Theia entries; Theia Player opens |
-| 0:56 | Home, a film page (cast), the films and series lists, a series with its episodes, search |
-| 1:17 | Settings: Interface, Playback, Subtitles, Viewing, Server (`http://127.0.0.1:8383`, `v3.4.0`), Update |
-| 1:36 | Profiles, then "Personnaliser le profil": name, "Changer la photo", "Retirer la photo" |
+| 0:00 | The GitHub repository, then the release page of v4.4.4, its assets list and the download of the setup for Windows x64 (it starts at about 0:21) |
+| 0:31 | The setup opened from the Downloads folder in Windows Terminal: language, purpose, films (the folder is copied from Explorer, blurred from 0:50 to 0:58, and pasted), summary at 1:03, installation, "Theia is installed" at 1:08 |
+| 1:10 | The Windows Firewall prompt for `theia-server`, allowed |
+| 1:15 | "Who's watching?", then the home screen (*The Deer Hunter*), the films and the series |
+| 1:26 | Settings, General: the app language and asking who is watching at startup |
 
-**What it does not show.** A film playing. A profile photo being changed: the
-editor opens and closes, and the avatar in the navigation is the same picture
-every time the navigation is visible, from about 1:00 to the last frame. Any
-system other than Windows. The interface is in
-French; the page says so.
-
-**The profile editor is in the published release.** At the tag `v3.4.0`,
-`player/ui/src/lib/catalogues.js` carries `personalizeProfile`,
-`changePicture` and `removePicture`, and `player/ui/src/components/ProfileDialog.tsx`
-implements them (decision 136 records the avatar work). It is not a 4.0 feature.
-The V4 profile chooser ("Who's watching?", `docs/v4.md`) is a different, future
-screen, and nothing on the page presents it as available.
+**What it does not show.** A film playing. The profile editor, or a profile photo
+being changed (the profile has the letter M, not a photo). Friends and rooms. Any
+system other than Windows. The page says so.
 
 **Rights not verified.** The recording shows things the maintainer did not make
 for Theia, and the right of each to appear in a public recording has not been
 checked:
 
-- posters, backdrops and portraits of real people, supplied by TMDB for two
-  titles of the maintainer's own library (*The Deer Hunter*, 1978, and
-  *Star Wars: Maul - Shadow Lord*, 2026), visible in the Browse scene (0:56 to
-  1:17), in the viewing statistics of the Settings scene and in the poster;
+- posters, backdrops and portraits of real people, supplied by TMDB for titles of
+  the maintainer's own library: *The Deer Hunter* (1978) on the home screen and in
+  the poster, and the artwork of *Cyberpunk: Edgerunners* and *Star Wars: Maul -
+  Shadow Lord* in the series list (1:15 to 1:26);
 - a desktop wallpaper that is a still from a film, not identified, around the
   windows throughout;
-- a profile photo of a cat wearing glasses and an ID badge, with a small "AI"
-  mark, whose origin is unknown. It is probably the file `ШишкаБой.jpg` saved in
-  `Downloads` the same morning (65,015 bytes, SHA-256
-  `de9bbc6c29a1b402801fd71e9b09be7aec374dab0fe767706f56d690fb6fa3ef`);
-  that file is **not** published and is not on the page.
+- the maintainer's own computer. The Explorer window of the install scene, which
+  listed the folders of his Documents folder and the names of the files in his film
+  folder, is blurred from 0:50 to 0:58. What is not blurred: the Windows user name,
+  which appears in file paths during the install, and the left-hand list of an
+  earlier Explorer window (Downloads, 0:31 to 0:35), which holds a few folder names.
 
 The clean fix is to record it again with the repository's own demo media, a
-neutral wallpaper and an avatar made for the purpose, which is what §12.1 asks.
+neutral wallpaper and a folder made for the purpose, which is what §12.1 asks.
 
 ## The mark, the icons and the share card
 
