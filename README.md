@@ -19,7 +19,7 @@
 <p align="center">
   <a href="https://benitoow.github.io/theia-media/">Website</a> ·
   <a href="#downloads">Downloads</a> ·
-  <a href="docs/releases/v4.4.2.md">4.4.2 release notes</a> ·
+  <a href="docs/releases/v4.4.3.md">4.4.3 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
@@ -51,18 +51,27 @@ Docker stack and no external database to install.
 | --- | --- | --- |
 | One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud library. Metadata comes from TMDB; updates come from GitHub Releases. |
 
-## Theia 4.4.2
+## Theia 4.4.3
 
 > [!IMPORTANT]
-> **Theia is free, and 4.4.2 is the last update of the V4 line.** The server, the
-> library, ordinary viewing and everything in this release cost nothing, and every
-> change reaches everyone for free for a duration that is not decided. Which later
-> features might become paid, if any, has not been decided either; it will be
-> settled in the open and announced well before it happens. Nothing is paid today.
+> **Theia is free, and 4.4.3 is a repair at the end of the V4 line.** The
+> server, the library, ordinary viewing and everything in this release cost
+> nothing, and every change reaches everyone for free for a duration that is not
+> decided. Which later features might become paid, if any, has not been decided
+> either; it will be settled in the open and announced well before it happens.
+> Nothing is paid today.
 
-4.4.2 improves the native player, so **run the 4.4.2 setup once**: a server-only
-update does not replace the player. Your library, profiles, watchlists and
-history stay in place. [Read the 4.4.2 release notes](docs/releases/v4.4.2.md).
+4.4.3 fixes the interface update path left behind by 4.4.2: an installation
+updated from a tester build saw the server change version while the interface
+stayed on the tester build. The update button now reads a tester build as older
+than its release, and the signed interface pack carries the repair. A **product
+update**: update from Theia's own button, no setup needed.
+[Read the 4.4.3 release notes](docs/releases/v4.4.3.md).
+
+4.4.2 improves the native player, so **an installation older than 4.4.2 runs the
+4.4.3 setup once**: a server-only update does not replace the player. Your
+library, profiles, watchlists and history stay in place.
+[Read the 4.4.2 release notes](docs/releases/v4.4.2.md).
 
 - **A timeline you can read.** A still of the exact scene follows the pointer along
   the playback bar, with its time, and nothing seeks until you click.
@@ -254,11 +263,13 @@ what it carries.
 Mac apps are ad-hoc signed and not notarised: open the app the first time with
 Control-click → Open.
 
-**Upgrading from 4.4.x:** run the 4.4.2 setup once. It replaces the native player,
-which the new interface requires, and keeps your data. **Upgrading from 3.x:** run
-the new setup. It reads the installation, updates it in place, closes running
-programs and restarts the server; your data stays. An automatic server update
-alone does not replace an older player.
+**Upgrading from 4.4.x:** 4.4.2 and 4.4.3 are product updates for a level-3
+player: use Theia's own update button. An installation older than 4.4.2 runs the
+4.4.3 setup once; it replaces the native player, which the new interface
+requires, and keeps your data. **Upgrading from 3.x:** run the new setup. It reads
+the installation, updates it in place, closes running programs and restarts the
+server; your data stays. An automatic server update alone does not replace an
+older player.
 
 Ubuntu desktop prerequisites:
 
@@ -391,9 +402,13 @@ file. They are not detected from picture or sound, and many files have none.
 Each release has its own notes, with what changed, what to do when updating and
 what was and was not checked.
 
-- **[4.4.2](docs/releases/v4.4.2.md)** — the last V4 update: the exact-frame
+- **[4.4.3](docs/releases/v4.4.3.md)** — the interface follows the update: a
+  tester build now ranks below its release, and the signed pack carries the
+  repair so a level-3 player updates silently.
+- **[4.4.2](docs/releases/v4.4.2.md)** — the V4 finale: the exact-frame
   timeline, episodes that follow on, eight settings categories, player updates
-  as a choice, richer presence and private rooms. Run the setup once.
+  as a choice, richer presence and private rooms. Run the setup once from older
+  than 4.4.2.
 - **[4.4.1](docs/releases/v4.4.1.md)** — one opinion per title, shown as your own
   review with Edit and Delete; opinions carried through Firebase; friends shown as
   online, inactive or offline.
@@ -416,7 +431,7 @@ what was and was not checked.
 - **[3.4 and earlier](docs/releases/v3.4.0.md)** — the V3 generation, up to the
   native desktop apps.
 
-**After 4.4.2.** The next step is **Theia 5.0**, which looks outward: cloud and
+**After 4.4.3.** The next step is **Theia 5.0**, which looks outward: cloud and
 servers, and storage in the cloud, the things that surround Theia. Whether it also
 opens Theia to mods or plugins is not decided, and there is no date. **There will be
 no account and no telemetry**, and for now every feature of V4 stays free. Comments
