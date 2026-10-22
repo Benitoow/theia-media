@@ -1,8 +1,8 @@
 # Theia field test
 
-The current release is `v4.4.2`, the last update of V4 (see
-[the release notes](releases/v4.4.2.md)). 4.4.2 is free. Real household reports
-still matter: native CI checks cover installation and a generated film on every
+The current release is `v4.4.4`, the latest update of V4 (see
+[the release notes](releases/v4.4.4.md), which also hold what 4.4.2 and 4.4.3
+brought). 4.4.4 is free. Real household reports still matter: native CI checks cover installation and a generated film on every
 platform, while actual libraries, display/audio chains, unusual files and two
 real households need real devices. A **private watch party between two
 households**, and a week of presence between friends, are the reports most
@@ -12,8 +12,8 @@ Try the desktop apps on Windows x64, macOS Intel/Apple Silicon or Ubuntu 24.04
 x64. The Windows and Ubuntu ARM64 setups are deferred and keep 4.2.1, which does
 not have the 4.4 features. The existing web viewer stays available for phones and
 TVs, without active viewing support; web settings and administration remain
-maintained. The tested platform limits are at the end of the
-[4.4.2 release notes](releases/v4.4.2.md).
+maintained. The platform limits, and what was and was not checked, are in the
+[4.4.4 release notes](releases/v4.4.4.md).
 
 ## Who this is for
 
@@ -39,9 +39,14 @@ messy libraries are as useful as large ones.
    where available. Test remote access only through Theia's WireGuard flow.
 6. Watch a series through two or three episodes. If a file names its opening or
    its ending in its chapters, **Skip opening** and the 30-second **Next episode**
-   countdown should appear; if not, nothing extra should appear. Check that the
-   countdown can be cancelled and that it never runs on past the last episode of
-   a season.
+   countdown should appear; if not, nothing extra should appear. **Skip opening**
+   should leave the picture by itself after about eight seconds and come back when
+   you move the mouse. Near the end of an episode, move the pointer onto the
+   playback bar: the end-of-episode buttons should step aside and the countdown
+   should wait until you leave the bar. Check that the countdown can be cancelled
+   and that it never runs on past the last episode of a season. This is the
+   behaviour of 4.4.4 that was not tried on a real episode in the native player
+   before publication, so a report on it, working or not, is wanted.
 7. Open Settings and change a few things: the skip step, audio and subtitle
    languages, an audio output, the interface scale. Close and reopen the player
    and check that they stayed. Note anything you could not find.
@@ -51,7 +56,9 @@ messy libraries are as useful as large ones.
    place, keep your data and start the server again. Note what it suggested for
    your film folders and whether the suggestions were right. From 4.4.2 the
    player should not look for updates until you ask, or turn on **Automatic
-   updates**.
+   updates**. If you are on 4.4.2 or 4.4.3, update from *Settings → Updates* with
+   **Check for updates**: no setup is needed, and the new interface applies the
+   next time the player starts.
 10. Leave Theia running through ordinary library changes, restarts and at least
     a few complete viewing sessions. Close the window after a film: it should
     close without having to end the task.
@@ -65,7 +72,7 @@ two real servers on one machine and in the native player, and presence has been
 tried between two households on a test build; a clean week over the internet on
 the released version is still the proof wanted.
 
-1. Both people install 4.4.2, with the server running and at least one profile.
+1. Both people install 4.4.4, with the server running and at least one profile.
 2. In the player, open the friends sheet. Each person copies their profile's code
    and sends it to the other, by any channel.
 3. One person enters the other's code. They should be told at once which profile
@@ -90,7 +97,8 @@ an IP address, before pasting a report in public.
 
 ## Testing a private room
 
-Rooms need remote access on both sides, and **both people need 4.4.2**.
+Rooms need remote access on both sides, and **both people need 4.4.2 or later**
+(test with 4.4.4): an older server refuses to create or join a private room.
 
 1. One person starts a film and opens a room. It should say *Private room*, with
    nobody invited yet.
@@ -127,6 +135,6 @@ Repeated failures and blocked household workflows set the maintenance priority.
 Feature ideas are recorded, but they are not a promise or a queue ordered by
 votes. When roughly ten real households have produced enough evidence, the
 maintainer can decide which library-facing problems justify new features. V4 is
-complete with 4.4.2; reports now catch regressions in existing playback and
-sharing and decide what is worth doing next. Which later features might become
+complete, and 4.4.4 is its latest update; reports now catch regressions in
+existing playback and sharing and decide what is worth doing next. Which later features might become
 paid is not decided and is not decided by votes.
