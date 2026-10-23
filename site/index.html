@@ -31,8 +31,7 @@
 <meta name="twitter:image:alt" content="The Theia wordmark and the line “Your films and series. Your network. No account.”, beside an illustration of a marble statue reaching toward a sunrise.">
 
 <link rel="preload" href="assets/fonts/cinzel-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="assets/img/hero-statue.webp" as="image" type="image/webp" media="(min-width: 701px)" fetchpriority="high">
-<link rel="preload" href="assets/img/hero-statue-narrow.webp" as="image" type="image/webp" media="(max-width: 700px)" fetchpriority="high">
+<link rel="preload" href="assets/video/hero-ascii-poster.webp" as="image" type="image/webp" fetchpriority="high">
 
 <link rel="stylesheet" href="assets/css/site.css">
 
@@ -86,10 +85,12 @@
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></symbol>
   <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 5h5v5m0-5-9 9M17 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h4"/></symbol>
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
 </svg>
 
 <header class="site-header">
   <nav class="nav" aria-label="Primary">
+    <a class="nav-brand" href="#top" aria-label="Theia home">Theia<span aria-hidden="true"></span></a>
     <ul>
       <li><a href="#demo">Demo</a></li>
       <li class="nav-wide"><a href="#new">New in 4.4.5</a></li>
@@ -105,23 +106,30 @@
 
 <!-- ================================================================ hero -->
 <section class="hero" aria-labelledby="hero-title">
-  <div class="hero-art">
-    <picture>
-      <source media="(max-width: 700px)" srcset="assets/img/hero-statue-narrow.webp" width="800" height="826">
-      <img src="assets/img/hero-statue.webp" width="1672" height="941" alt="Illustration: a marble statue wearing a laurel wreath, reaching toward a sunrise over a misty coast." fetchpriority="high" decoding="async">
-    </picture>
-    <p class="art-label">Illustration · AI-generated<span class="art-more">, not a screenshot</span></p>
+  <div class="hero-media" aria-hidden="true">
+    <img class="hero-poster" src="assets/video/hero-ascii-poster.webp" width="800" height="600" alt="" fetchpriority="high" decoding="async">
+    <video id="hero-film" autoplay muted loop playsinline preload="none" width="1200" height="900" poster="assets/video/hero-ascii-poster.webp" aria-hidden="true" tabindex="-1">
+      <source data-src="assets/video/hero-ascii.webm" type="video/webm">
+      <source data-src="assets/video/hero-ascii.mp4" type="video/mp4">
+    </video>
   </div>
-  <div class="wrap">
+  <div class="wrap hero-layout">
     <div class="hero-copy">
-      <img class="hero-mark" src="assets/img/theia-wordmark.webp" width="600" height="170" alt="Theia">
-      <h1 id="hero-title"><span>Your films and series.</span> <span class="gilded">Your network. No account.</span></h1>
-      <p class="lead">Theia turns folders of films and series into a private cinema. A small server looks after your library; a native desktop player plays it, and friends can see what you are watching. No cloud account, no telemetry, no Docker.</p>
+      <p class="eyebrow hero-eyebrow">Self-hosted. Uncomplicated.</p>
+      <h1 id="hero-title"><span>Your cinema.</span> <span class="gilded">Your rules.</span></h1>
+      <p class="lead">Your own films and series, in one beautiful library. A small server at home. A native player on your desktop. No cloud account. No telemetry.</p>
       <p class="cta-row">
-        <a class="btn" href="#download">Download <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        <a class="link" href="#demo">Watch it install</a>
+        <a class="btn" href="#download">Get Theia <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <a class="link hero-demo" href="#demo"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg> Watch it install</a>
       </p>
-      <p class="hero-note">Young software, one maintainer. Windows x64 is the only platform validated on real hardware so far. <a href="#limits">The limits are listed below</a>.</p>
+      <p class="hero-platforms">Windows <span aria-hidden="true">/</span> macOS <span aria-hidden="true">/</span> Linux</p>
+    </div>
+    <div class="hero-footer">
+      <p class="hero-note">Young software, one maintainer. Windows x64 is the only platform validated on real hardware so far. <a href="#limits">Read the limits</a>.</p>
+      <a class="hero-scroll" href="#demo">Step inside <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      <button class="hero-motion" type="button" aria-controls="hero-film" aria-label="Pause animation" hidden>
+        <svg class="icon" aria-hidden="true"><use href="#i-pause"/></svg>
+      </button>
     </div>
   </div>
 </section>
@@ -452,7 +460,7 @@
   <div class="wrap footer-grid">
     <div>
       <p class="lockup">Theia</p>
-      <p>One maintainer, built with disclosed AI assistance. The illustrations on this page are AI-generated; the recording and the screenshots are real, and the screenshots show a sample library. This page sets no cookies, runs no analytics and loads nothing from other sites.</p>
+      <p>One maintainer, built with disclosed AI assistance. The still illustrations are AI-generated; the recording and the screenshots are real, and the screenshots show a sample library. This page sets no cookies, runs no analytics and loads nothing from other sites.</p>
     </div>
     <nav aria-label="Project">
       <ul>

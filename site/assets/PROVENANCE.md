@@ -5,11 +5,46 @@ right to use it, to be recorded beside it. This is that record, written on
 2 October 2026 from the files themselves. It is documentation: the build does
 not ship it.
 
-Three kinds of image live on the page and are never confused. **The recording is a
+Four kinds of media live on the page and are never confused. **The recording is a
 real capture** of the shipped application. **The screenshots are real captures** of the shipped player on a sample library,
 labelled *Screenshot*. **The illustrations are generated**,
 are labelled *Illustration* wherever they appear, and are never framed as a
-screenshot.
+screenshot. **The hero is the maintainer-supplied ASCII film leader**, used as a
+decorative background without a visible attribution label at the maintainer's
+explicit request on 23 October 2026. It is never presented as a product capture.
+
+## The ASCII hero
+
+Supplied by the maintainer as `ascii-magic.webm`, with an explicit request to use
+it in the hero. It is a monochrome ASCII rendition of a cinema film leader,
+not an application recording. No external image or video was fetched.
+
+| Published file | Source and transformation |
+| --- | --- |
+| `video/hero-ascii.webm` | The supplied file, unchanged: VP8, 1200 × 900, about 10.97 s, 110 frames with variable timing (about 10 fps), no audio, 2,354,356 bytes. SHA-256 `3ceeb548a1b7b4c17a53e96142f0331c94def3aaca1df0e85eb789c0e705f35f` |
+| `video/hero-ascii.mp4` | H.264 High fallback, 800 × 600, 24 fps, no audio, 1,541,343 bytes, metadata removed, fast-start enabled |
+| `video/hero-ascii-poster.webp` | Frame at 4.4 s, 800 × 600, WebP quality 78, 115,418 bytes |
+
+The supplied file identifies Chrome as its encoder, but does not identify the
+creator or licence of the underlying film leader. The maintainer authorized its
+use; third-party rights have not been independently established. This record
+does not invent a public-domain or generated-media claim.
+
+Derivatives use the same managed FFmpeg as the recording below:
+
+```sh
+ffmpeg -i ascii-magic.webm -an -map_metadata -1 \
+  -vf "fps=24,scale=800:600:flags=lanczos,format=yuv420p" \
+  -c:v libx264 -crf 30 -preset medium -profile:v high -level 3.1 \
+  -movflags +faststart hero-ascii.mp4
+ffmpeg -ss 4.4 -i ascii-magic.webm -frames:v 1 \
+  -vf "scale=800:600:flags=lanczos" -c:v libwebp -quality 78 \
+  -compression_level 6 hero-ascii-poster.webp
+```
+
+The background covers the entire hero, starts silently when visible, and loops.
+Reduced motion, data saving, no JavaScript or unavailable playback keep the
+local poster. The native product recording below still requires user action.
 
 ## The three illustrations
 
@@ -23,7 +58,7 @@ The prompts were not kept.
 
 | Published file | Original | Original SHA-256 | Where it is used |
 | --- | --- | --- | --- |
-| `img/hero-statue.webp`, `img/hero-statue-narrow.webp` | `Statue de marbre face à l’aube.png`, 1672 × 941. The narrow file is the right-hand 912 px, scaled to 800 × 826 | `53674c7c836f9d24a2080aac69f19d845626a0adb6bcb27fbd5c91a7eb061424` | The hero, and the share card |
+| Former `img/hero-statue.webp`, `img/hero-statue-narrow.webp` (retired on 23 October 2026) | `Statue de marbre face à l’aube.png`, 1672 × 941. The narrow file was the right-hand 912 px, scaled to 800 × 826 | `53674c7c836f9d24a2080aac69f19d845626a0adb6bcb27fbd5c91a7eb061424` | Former hero; the statue remains in the share card |
 | `img/moment-player.webp` | `Main de marbre tenant un astre doré.png`, 1730 × 909, cropped to 1212 × 909 (x 420 to 1632) | `87a9150e3f28eae53d5569b4ada4fbe64923658c46e82c60313dc05ff3606dfe` | "The player" |
 | `img/moment-remote.webp` | `Villas reliées par un fil doré.png`, 1448 × 1086 | `dd1acd615a13f7f37f880c0bff20bd46b87314c551286603514a2e65632ac793` | "Away from home" |
 
@@ -143,7 +178,7 @@ neutral wallpaper and a folder made for the purpose, which is what §12.1 asks.
 
 | File | What it is |
 | --- | --- |
-| `img/theia-wordmark.webp` | A crop (x 190, y 350, 1170 × 330), scaled to 600 px wide, of `assets/theia-logo.png`, the repository's prestige logo (SHA-256 `ec101250872a049fad617cb9e523f77bf40f1fe078227d50da4f6d49036bc912`). It is already public in the README; this page does not re-check the licence of its photographic base (founding spec §11.10) |
+| Former `img/theia-wordmark.webp` (retired on 23 October 2026) | A crop (x 190, y 350, 1170 × 330), scaled to 600 px wide, of `assets/theia-logo.png`, the repository's prestige logo (SHA-256 `ec101250872a049fad617cb9e523f77bf40f1fe078227d50da4f6d49036bc912`). The header now sets the wordmark in the local Cinzel face; the share card retains its original wordmark |
 | `img/favicon-16.png`, `img/favicon-32.png`, `img/apple-touch-icon.png` | Copied unchanged from `web/static/`: crops of `assets/theia-icon.png`, itself a crop of the maintainer-supplied `assets/logo_icon_TNY.png` (SHA-256 `54046c5d9c50af5973b17a2298148d6b1a913ee6e59e6ff7241fc6a1751691c5`). **Source and licence not yet recorded** (decision 167) |
 | `img/og-image.jpg` | The share card, 1200 × 630: the hero illustration, the wordmark and the title set in Cinzel, composed in HTML and rendered with the repository's Playwright. It carries the *Illustration* label |
 

@@ -124,9 +124,9 @@ const walk = (directory) => {
 walk(dist);
 const kib = (bytes) => `${(bytes / 1024).toFixed(1)} KiB`;
 const total = files.reduce((sum, file) => sum + file.size, 0);
-const video = files.filter((file) => file.path.endsWith('.mp4')).reduce((sum, file) => sum + file.size, 0);
+const video = files.filter((file) => /\.(mp4|webm)$/.test(file.path)).reduce((sum, file) => sum + file.size, 0);
 console.log(`build: ${siteUrl}/  ->  ${relative(process.cwd(), dist) || dist}`);
-console.log(`       release ${release.tag} (${tokens.date}, ${licence}); ${files.length} files, ${kib(total)} (${kib(video)} of it the recording)`);
+console.log(`       release ${release.tag} (${tokens.date}, ${licence}); ${files.length} files, ${kib(total)} (${kib(video)} of it video)`);
 
 if (argv.includes('--check')) {
 	const run = spawnSync(process.execPath, [join(here, 'check.mjs'), '--site-url', siteUrl], { stdio: 'inherit' });

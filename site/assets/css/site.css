@@ -5,8 +5,8 @@
    the same names; nothing here is a new colour. The accent budget is five uses
    a screen: the rule of the mark, the second line of the title, focus, and the
    playback progress of the browser's own controls. The main action is bone,
-   not gold (section 12.4). Motion is a reveal on scroll and nothing else, and
-   it disappears under prefers-reduced-motion. */
+   not gold (section 12.4). The decorative ASCII loop is user-pausable;
+   reduced motion keeps its poster and disables scroll reveals. */
 
 @font-face {
   font-family: "Cinzel Variable";
@@ -248,7 +248,17 @@ h1 span {
   position: absolute;
   inset: 0 0 auto 0;
   z-index: 10;
-  padding-block: 0.75rem;
+  padding-block: 1rem;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  width: min(100% - 2 * var(--gutter), var(--wrap));
+  margin-inline: auto;
+  padding-bottom: 1rem;
 }
 
 .nav ul {
@@ -256,7 +266,7 @@ h1 span {
   justify-content: flex-end;
   gap: 0.125rem;
   margin: 0;
-  padding: 0 calc(var(--gutter) - 0.5rem);
+  padding: 0;
   list-style: none;
 }
 
@@ -285,8 +295,48 @@ h1 span {
   height: 0.95em;
 }
 
-@media (max-width: 40rem) {
+.nav .nav-brand {
+  flex: none;
+  gap: 0.7rem;
+  padding: 0;
+  border-radius: 0;
+  color: var(--bone);
+  font: 400 1.5rem/1 var(--font-display);
+  letter-spacing: 0.14em;
+}
+
+.nav-brand span {
+  width: 1.5rem;
+  height: 1px;
+  background: var(--accent);
+}
+
+.nav .nav-brand:hover {
+  background: none;
+}
+
+@media (max-width: 52rem) {
   .nav-wide {
+    display: none;
+  }
+}
+
+@media (max-width: 40rem) {
+  .nav {
+    gap: 0.5rem;
+  }
+
+  .nav a {
+    padding-inline: 0.55rem;
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+  }
+
+  .nav .nav-brand {
+    font-size: 1.25rem;
+  }
+
+  .nav-brand span {
     display: none;
   }
 }
@@ -296,55 +346,47 @@ h1 span {
 .hero {
   position: relative;
   isolation: isolate;
-  display: grid;
-  align-items: center;
-  min-height: min(100svh, 56rem);
-  padding-block: clamp(6.5rem, 12vw, 8.5rem) clamp(3.5rem, 7vw, 5rem);
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  padding-top: 6rem;
   overflow: clip;
 }
 
-.hero-art {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-}
-
-.hero-art img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 70% 40%;
-}
-
-/* A reading veil on the left, where the title sits, and a floor into the page. */
-.hero-art::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(90deg, var(--ink) 2%, rgb(11 10 9 / 0.9) 30%, rgb(11 10 9 / 0.5) 52%, rgb(11 10 9 / 0) 76%),
-    linear-gradient(0deg, var(--ink) 0, rgb(11 10 9 / 0) 22%),
-    linear-gradient(180deg, rgb(11 10 9 / 0.7) 0, rgb(11 10 9 / 0) 18%);
+.hero-layout {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
 }
 
 .hero-copy {
-  display: grid;
-  gap: 1.5rem;
-  justify-items: start;
-  max-width: 38rem;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.75rem;
+  min-width: 0;
+  padding-block: clamp(3rem, 7vh, 6rem);
+  text-align: center;
 }
 
-/* The prestige mark: its black is the page's black, so it is screened in. */
-.hero-mark {
-  width: clamp(10.5rem, 20vw, 15rem);
-  height: auto;
-  mix-blend-mode: screen;
+.hero-eyebrow {
+  color: var(--parchment);
+}
+
+.hero h1 {
+  font-size: clamp(2.8rem, 9vw, 8.25rem);
+  line-height: 0.97;
+  letter-spacing: -0.045em;
 }
 
 .lead {
   max-width: 34rem;
   color: var(--parchment);
-  font-size: clamp(1.0625rem, 1.5vw, 1.25rem);
+  font-size: clamp(1rem, 1.25vw, 1.125rem);
+  line-height: 1.75;
 }
 
 .cta-row {
@@ -354,11 +396,16 @@ h1 span {
   gap: 0.5rem 1.5rem;
 }
 
+.hero .cta-row {
+  justify-content: center;
+  gap: 0.75rem;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
-  min-height: 54px;
+  min-height: 56px;
   padding: 0 1.75rem;
   border-radius: 999px;
   background: var(--bone);
@@ -381,65 +428,204 @@ h1 span {
   min-height: 44px;
 }
 
-.hero-note {
-  max-width: 32rem;
+.hero-demo {
+  gap: 0.65rem;
+  min-height: 56px;
+  padding: 0 1.5rem;
+  border: 1px solid rgb(237 231 220 / 0.3);
+  border-radius: 999px;
+  background: rgb(11 10 9 / 0.45);
+  font: 500 0.8125rem/1 var(--font-label);
+  letter-spacing: 0.08em;
+  text-decoration: none;
+}
+
+.hero-demo:hover {
+  background: var(--raised);
+}
+
+.hero-platforms {
+  display: flex;
+  gap: 0.75rem;
+  color: var(--parchment);
+  font: 400 0.75rem/1.5 var(--font-label);
+  letter-spacing: 0.1em;
+}
+
+.hero-platforms span {
   color: var(--muted);
-  font-size: 0.9375rem;
+}
+
+.hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  isolation: isolate;
+  background: var(--ink);
+}
+
+.hero-media img,
+.hero-media video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  mix-blend-mode: screen;
+  filter: sepia(0.2);
+  /* Dissolve both media paths into the navigation's warm black. */
+  mask-image: linear-gradient(180deg, transparent 6rem, #000 clamp(16rem, 32svh, 24rem));
+}
+
+.hero-media video {
+  opacity: 0;
+}
+
+.hero-media.is-playing video {
+  opacity: 1;
+}
+
+.hero-media.is-playing .hero-poster {
+  visibility: hidden;
+}
+
+.hero-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(11 10 9 / 0.7), rgb(11 10 9 / 0.15) 24%, rgb(11 10 9 / 0.3) 65%, var(--ink)),
+    radial-gradient(ellipse 60% 70% at 50% 48%, rgb(11 10 9 / 0.74), rgb(11 10 9 / 0.56) 58%, rgb(11 10 9 / 0.25));
+}
+
+.hero-motion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  justify-self: end;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.75rem;
+  border: 1px solid rgb(237 231 220 / 0.25);
+  border-radius: 999px;
+  background: rgb(11 10 9 / 0.5);
+  color: var(--parchment);
+  cursor: pointer;
+}
+
+.hero-motion[hidden] {
+  display: none;
+}
+
+.hero-motion:hover {
+  background: var(--raised);
+  color: var(--bone);
+}
+
+.hero-motion .icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.hero-footer {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1.5rem;
+  padding-block: 1.5rem;
+  border-top: 1px solid rgb(237 231 220 / 0.15);
+}
+
+.hero-note {
+  max-width: 34rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.7;
 }
 
 .hero-note a {
   color: var(--parchment);
 }
 
-.art-label {
-  position: absolute;
-  right: var(--gutter);
-  bottom: 1rem;
-  z-index: 1;
-  padding: 0.35rem 0.7rem;
-  border-radius: 999px;
-  background: rgb(11 10 9 / 0.78);
-  color: var(--parchment);
-  font: 500 0.75rem/1.2 var(--font-label);
+.hero-scroll {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  gap: 0.75rem;
+  min-height: 44px;
+  font: 500 0.6875rem/1.2 var(--font-label);
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  text-decoration: none;
+}
+
+.hero-scroll .icon {
+  transform: rotate(90deg);
+}
+
+@media (max-width: 60rem) {
+  .nav a {
+    padding-inline: 0.6rem;
+    letter-spacing: 0.1em;
+  }
+}
+
+@media (max-width: 23rem) {
+  .nav a:not(.nav-brand) {
+    justify-content: center;
+    min-width: 44px;
+    padding-inline: 0.3rem;
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+  }
+
+  .nav .icon {
+    display: none;
+  }
 }
 
 @media (max-width: 43.75rem) {
   .hero {
-    display: block;
-    min-height: 0;
-    padding: 0 0 2.5rem;
+    padding-top: 6rem;
   }
 
-  .hero-art {
-    position: relative;
-    inset: auto;
-    z-index: 0;
-    aspect-ratio: 800 / 826;
-    max-height: 82svh;
+  .hero-copy {
+    gap: 1.5rem;
+    padding-block: 3rem;
   }
 
-  .hero-art::after {
-    background:
-      linear-gradient(0deg, var(--ink) 0, rgb(11 10 9 / 0) 38%),
-      linear-gradient(180deg, rgb(11 10 9 / 0.7) 0, rgb(11 10 9 / 0) 20%);
+  .hero h1 {
+    font-size: clamp(2.55rem, 11.4vw, 4.5rem);
   }
 
-  .hero .wrap {
-    position: relative;
-    margin-top: -7rem;
+  .hero .cta-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.625rem;
+    width: min(100%, 26rem);
   }
 
-  /* Under the navigation, on the dark side of the picture, clear of the title. */
-  .art-label {
-    top: 4rem;
-    right: auto;
-    bottom: auto;
-    left: var(--gutter);
+  .hero .cta-row a {
+    justify-content: center;
+    gap: 0.5rem;
+    padding-inline: 0.5rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
   }
 
-  .art-more {
+  .hero-footer {
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+    padding-block: 1.25rem;
+  }
+
+  .hero-note {
+    font-size: 0.75rem;
+  }
+
+  .hero-scroll {
     display: none;
   }
 }
@@ -1044,6 +1230,12 @@ h1 span {
   white-space: nowrap;
 }
 
+@media (max-width: 23rem) {
+  .nowrap {
+    white-space: normal;
+  }
+}
+
 /* ----------------------------------------------------------------- footer */
 
 .site-footer {
@@ -1145,7 +1337,8 @@ h1 span {
     color: CanvasText;
   }
 
-  .hero-art::after {
+  .hero-media {
     display: none;
   }
+
 }

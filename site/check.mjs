@@ -131,7 +131,7 @@ const local = (reference) => reference.split('#')[0].split('?')[0];
 const exists = (reference) => existsSync(join(dist, decodeURIComponent(local(reference))));
 const referenced = [];
 for (const tag of tags) {
-	for (const name of ['src', 'poster', 'href']) {
+	for (const name of ['src', 'poster', 'href', 'data-src']) {
 		const value = tag.attributes[name];
 		if (value === undefined) continue;
 		const subresource = !(tag.name === 'a' || (tag.name === 'link' && ['canonical', 'alternate'].includes(tag.attributes.rel)));
@@ -176,12 +176,23 @@ for (const source of ofTag('source').filter((tag) => tag.attributes.srcset)) {
 
 // -------------------------------------------------------------------- video
 const videos = ofTag('video');
-check(videos.length === 1, `expected one <video>, found ${videos.length}`);
+check(videos.length === 2, `expected a decorative hero and one recording, found ${videos.length} videos`);
+const recording = videos.find((video) => video.attributes.id === 'tour');
+const hero = videos.find((video) => video.attributes.id === 'hero-film');
 for (const video of videos) {
-	check('controls' in video.attributes, '<video> has no controls');
-	check(!('autoplay' in video.attributes), '<video> must not autoplay');
-	check(video.attributes.preload === 'metadata', '<video> must use preload="metadata"');
 	check(Boolean(video.attributes.poster), '<video> has no poster');
+	check(Boolean(video.attributes.width) && Boolean(video.attributes.height), '<video> does not declare width and height');
+}
+check(Boolean(recording) && 'controls' in recording.attributes, 'the recording has no native controls');
+check(Boolean(recording) && !('autoplay' in recording.attributes), 'the product recording must not autoplay');
+check(recording?.attributes.preload === 'metadata', 'the recording must use preload="metadata"');
+check(Boolean(hero) && 'autoplay' in hero.attributes && 'muted' in hero.attributes && 'loop' in hero.attributes && 'playsinline' in hero.attributes, 'the background hero must play automatically, silently, looping and inline');
+check(hero?.attributes.preload === 'none' && hero?.attributes['aria-hidden'] === 'true', 'the decorative hero must start as an inert poster');
+check(ofTag('button').some((button) => button.attributes['aria-controls'] === 'hero-film'), 'the hero has no motion control');
+const heroSources = ofTag('source').filter((source) => source.attributes['data-src']);
+check(heroSources.length === 2 && heroSources.every((source) => !source.attributes.src), 'hero sources must wait for the motion and visibility checks');
+for (const type of ['video/webm', 'video/mp4']) {
+	check(heroSources.some((source) => source.attributes.type === type), `the hero has no ${type} source`);
 }
 const track = ofTag('track')[0];
 check(Boolean(track) && track.attributes.kind === 'captions', 'the video has no captions track');
@@ -202,7 +213,7 @@ const forbidden = [
 	[/\bcoming soon\b/i, 'says "coming soon": nothing paid is announced on this page (decisions 161, 163)'],
 	[/[$€£]\s?\d|\b\d+\s?(?:USD|EUR|dollars?|euros?)\b/i, 'prints a price: nothing paid exists'],
 	[/\b(?:Pro|Premium|Plus|Supporter)\b(?! (?:Wars|Pass))/, 'names a paid tier: nothing paid exists'],
-	[/\bautoplay\b/i, 'mentions autoplay (the page never autoplays; the player setting is not this page\'s subject)'],
+	[/\bautoplay\b/i, 'mentions autoplay in the visible copy (the decorative hero is not a product feature)'],
 	[/\b(?:atmos|dts-hd(?: ma)?|truehd)\b[^.]{0,80}\bend[- ]to[- ]end\b(?![^.]{0,40}\bnot\b)/i, 'claims bitstream audio end to end: not observed (docs/v3.3.md)']
 ];
 for (const [pattern, why] of forbidden) {
@@ -224,10 +235,12 @@ const walk = (directory) => {
 	}
 };
 walk(dist);
-const heavy = files.filter((file) => !file.path.endsWith('.mp4'));
+const heavy = files.filter((file) => !/\.(mp4|webm)$/.test(file.path));
 const weight = heavy.reduce((sum, file) => sum + file.size, 0);
+const heroWeight = files.filter((file) => /\/hero-ascii\.(mp4|webm)$/.test(file.path)).reduce((sum, file) => sum + file.size, 0);
 check(Buffer.byteLength(html) < 90 * 1024, `index.html is ${(Buffer.byteLength(html) / 1024).toFixed(0)} KiB; keep it under 90`);
-check(weight < 1.5 * 1024 * 1024, `everything but the recording weighs ${(weight / 1024).toFixed(0)} KiB; keep it under 1536`);
+check(weight < 1.5 * 1024 * 1024, `everything but the videos weighs ${(weight / 1024).toFixed(0)} KiB; keep it under 1536`);
+check(heroWeight < 4 * 1024 * 1024, `the hero formats together weigh ${(heroWeight / 1024).toFixed(0)} KiB; keep them under 4096`);
 const unreferenced = files.filter((file) => !/\.(txt|xml|html)$|^\.nojekyll$|LICENSE/.test(file.path) && !html.includes(file.path) && !html.includes(file.path.replace(/^assets\//, '')));
 for (const file of unreferenced) check(false, `${file.path} is shipped but never referenced`);
 
@@ -238,4 +251,4 @@ if (failures.length > 0) {
 	console.error('');
 	process.exit(1);
 }
-console.log(`check: ${files.length} files, ${(weight / 1024).toFixed(0)} KiB without the recording, no problem found.`);
+console.log(`check: ${files.length} files, ${(weight / 1024).toFixed(0)} KiB without the videos, ${(heroWeight / 1024).toFixed(0)} KiB of hero formats, no problem found.`);
