@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://benitoow.github.io/theia-media/">Website</a> ·
+  <a href="https://theia-media.app/">Website</a> ·
   <a href="#downloads">Downloads</a> ·
   <a href="docs/releases/v4.4.5.md">4.4.5 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·

@@ -429,7 +429,6 @@ export function build(argv = process.argv.slice(2)) {
       siteUrl,
     ),
   );
-  writeFileSync(join(dist, ".nojekyll"), "");
   console.log(
     `build: ${release.tag}; ${languages.length} languages and English root; ${siteUrl}/ -> ${relative(process.cwd(), dist)}`,
   );

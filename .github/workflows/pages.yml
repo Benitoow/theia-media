@@ -1,14 +1,12 @@
-# Publishes site/ to GitHub Pages (decision 164). Manual: Actions > Pages > Run workflow.
-# The address is site/site.config.json unless the repository variable SITE_URL is set.
-# After each release, run node site/fetch-release.mjs and commit site/release.json.
+# Publishes only the page that sends the old GitHub Pages address
+# (benitoow.github.io/theia-media/) to theia-media.app, from site/legacy.
+# The website itself is built and served by Cloudflare Pages from this repository
+# (decision 164): it is not published from here. Manual: Actions > Pages > Run workflow.
 
 name: Pages
 
 on:
   workflow_dispatch:
-  # push:
-  #   branches: [main]
-  #   paths: ['site/**']
 
 permissions:
   contents: read
@@ -27,17 +25,9 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-      # An empty SITE_URL falls back to site/site.config.json.
-      - name: Build and check the page
-        run: node site/build.mjs --check
-        env:
-          SITE_URL: ${{ vars.SITE_URL }}
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: site/dist
+          path: site/legacy
       - id: deployment
         uses: actions/deploy-pages@v5

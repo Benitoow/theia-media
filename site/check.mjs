@@ -419,7 +419,7 @@ const walk = (directory) => {
 };
 walk(dist);
 for (const file of files)
-  if (!/\.(?:html|txt|xml)$|\.nojekyll$|og-image\.jpg$/.test(file))
+  if (!/\.(?:html|txt|xml)$|og-image\.jpg$/.test(file))
     check(
       allReferences.has(file),
       `unreferenced asset ${relative(dist, file)}`,
