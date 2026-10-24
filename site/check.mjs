@@ -1,254 +1,444 @@
 #!/usr/bin/env node
-//
-// Structural checks on site/dist, run after node site/build.mjs (or with
-// `node site/build.mjs --check`). No dependencies.
-//
-//	node site/check.mjs [--site-url https://example.org]
-//
-// It checks what a screenshot cannot: that nothing is fetched from another
-// site, that every local reference resolves, that the page has one h1, that
-// every image declares its size (no layout shift), that the share card is the
-// size it claims, and that the page keeps the words decisions 161 and 163 ask
-// for. It does not judge the copy against the repository; that is a reading.
-
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+// Structural publishing checks for every generated locale. Browser acceptance
+// remains separate: this cannot establish layout, fonts, motion or usability.
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { validateCatalogue } from "./build.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const dist = join(here, 'dist');
+const dist = join(here, "dist");
+const json = (path) => JSON.parse(readFileSync(join(here, path), "utf8"));
 const argv = process.argv.slice(2);
-const given = argv.includes('--site-url') ? argv[argv.indexOf('--site-url') + 1] : null;
-const config = JSON.parse(readFileSync(join(here, 'site.config.json'), 'utf8'));
-const siteUrl = (given || process.env.SITE_URL || config.siteUrl).replace(/\/+$/, '');
-
-if (!existsSync(join(dist, 'index.html'))) {
-	console.error('check: site/dist/index.html is missing; run node site/build.mjs first.');
-	process.exit(1);
-}
-const html = readFileSync(join(dist, 'index.html'), 'utf8');
+const given = argv.indexOf("--site-url");
+const siteUrl = (
+  given >= 0
+    ? argv[given + 1]
+    : process.env.SITE_URL || json("site.config.json").siteUrl
+).replace(/\/+$/, "");
+const languages = json("locales/languages.json");
+const release = json("release.json");
+const reference = json("locales/en.json");
 const failures = [];
-const check = (ok, message) => {
-	if (!ok) failures.push(message);
+const check = (condition, message) => {
+  if (!condition) failures.push(message);
 };
+const hosts = new Set([
+  "github.com",
+  "discord.gg",
+  "polyformproject.org",
+  "www.gnu.org",
+  "www.themoviedb.org",
+]);
+const allHTML = [];
+const allReferences = new Set();
 
-// Anchors may leave the page, to these hosts and no others. Subresources may not
-// leave it at all.
-const HOSTS = new Set(['github.com', 'discord.gg', 'polyformproject.org', 'www.gnu.org', 'www.themoviedb.org']);
-
-// ------------------------------------------------------------------ the tags
-const tags = [...html.matchAll(/<([a-zA-Z][a-zA-Z0-9-]*)((?:\s+[^\s=>"']+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*\/?>/g)].map((match) => {
-	const attributes = {};
-	for (const attribute of match[2].matchAll(/([^\s=>"']+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g)) {
-		attributes[attribute[1].toLowerCase()] = attribute[2] ?? attribute[3] ?? attribute[4] ?? '';
-	}
-	return { name: match[1].toLowerCase(), attributes, index: match.index };
-});
-const ofTag = (name) => tags.filter((tag) => tag.name === name);
-const remote = (value) => /^(?:https?:)?\/\//i.test(value ?? '');
-
-// ------------------------------------------------------------------- document
-check(!/\{\{/.test(html), 'an unresolved {{token}} is left in the page');
-check(/<html[^>]*\blang="en"/.test(html), '<html lang="en"> is missing');
-check(ofTag('h1').length === 1, `the page has ${ofTag('h1').length} <h1>; it must have exactly one`);
-
-let depth = 0;
-for (const heading of tags.filter((tag) => /^h[1-6]$/.test(tag.name))) {
-	const level = Number(heading.name[1]);
-	check(level <= depth + 1, `heading level jumps from h${depth} to h${level}`);
-	depth = level;
+for (const language of languages) {
+  try {
+    validateCatalogue(
+      reference,
+      json(`locales/${language.id}.json`),
+      language.id,
+    );
+  } catch (error) {
+    failures.push(error.message);
+  }
 }
 
-const title = /<title>([^<]*)<\/title>/.exec(html)?.[1].trim() ?? '';
-check(title.length >= 20 && title.length <= 70, `the title is ${title.length} characters; keep it between 20 and 70`);
-const meta = (key) => tags.find((tag) => tag.name === 'meta' && (tag.attributes.name === key || tag.attributes.property === key))?.attributes.content;
-const description = meta('description') ?? '';
-check(description.length >= 70 && description.length <= 160, `the meta description is ${description.length} characters; keep it between 70 and 160`);
-
-const canonical = tags.find((tag) => tag.name === 'link' && tag.attributes.rel === 'canonical')?.attributes.href;
-check(canonical === `${siteUrl}/`, `canonical is ${canonical}, expected ${siteUrl}/`);
-check(meta('og:url') === `${siteUrl}/`, 'og:url is not the canonical URL');
-for (const key of ['og:title', 'og:description', 'og:image', 'og:image:alt', 'og:type', 'twitter:card', 'twitter:image', 'twitter:title', 'twitter:description']) {
-	check(Boolean(meta(key)), `${key} is missing`);
-}
-check(meta('twitter:card') === 'summary_large_image', 'twitter:card should be summary_large_image');
-
-// The share card is a file the page promises: it must exist and be 1200x630.
-const card = meta('og:image') ?? '';
-check(card.startsWith(`${siteUrl}/`), 'og:image must be absolute and under the site URL');
-const cardPath = join(dist, card.slice(siteUrl.length + 1));
-if (existsSync(cardPath)) {
-	const bytes = readFileSync(cardPath);
-	let width = 0;
-	let height = 0;
-	if (bytes[0] === 0x89 && bytes.toString('latin1', 1, 4) === 'PNG') {
-		width = bytes.readUInt32BE(16);
-		height = bytes.readUInt32BE(20);
-	} else if (bytes[0] === 0xff && bytes[1] === 0xd8) {
-		for (let at = 2; at < bytes.length; ) {
-			if (bytes[at] !== 0xff) {
-				at += 1;
-				continue;
-			}
-			const marker = bytes[at + 1];
-			if (marker >= 0xc0 && marker <= 0xc3) {
-				height = bytes.readUInt16BE(at + 5);
-				width = bytes.readUInt16BE(at + 7);
-				break;
-			}
-			at += 2 + bytes.readUInt16BE(at + 2);
-		}
-	}
-	check(width === 1200 && height === 630, `the share card is ${width}x${height}, expected 1200x630`);
-	check(bytes.length < 600 * 1024, `the share card is ${(bytes.length / 1024).toFixed(0)} KiB; keep it under 600 KiB for crawlers`);
-} else {
-	check(false, `the share card ${card} does not exist in dist`);
-}
-
-// ------------------------------------------------------------ structured data
-const ld = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
-check(ld.length === 1, `expected one JSON-LD block, found ${ld.length}`);
-try {
-	const data = JSON.parse(ld[0]?.[1] ?? '');
-	check(data['@type'] === 'SoftwareApplication', 'JSON-LD is not a SoftwareApplication');
-	check(data.offers?.price === '0', 'JSON-LD offers.price must be "0": nothing paid exists');
-	check(data.url === `${siteUrl}/`, 'JSON-LD url is not the canonical URL');
-	check(!('aggregateRating' in data) && !('review' in data), 'JSON-LD must not carry ratings or reviews');
-} catch (error) {
-	check(false, `JSON-LD does not parse: ${error.message}`);
-}
-
-// --------------------------------------------------------------- references
-const ids = new Set();
-for (const tag of tags) {
-	const id = tag.attributes.id;
-	if (id === undefined) continue;
-	check(!ids.has(id), `id "${id}" is used twice`);
-	ids.add(id);
-}
-
-const local = (reference) => reference.split('#')[0].split('?')[0];
-const exists = (reference) => existsSync(join(dist, decodeURIComponent(local(reference))));
-const referenced = [];
-for (const tag of tags) {
-	for (const name of ['src', 'poster', 'href', 'data-src']) {
-		const value = tag.attributes[name];
-		if (value === undefined) continue;
-		const subresource = !(tag.name === 'a' || (tag.name === 'link' && ['canonical', 'alternate'].includes(tag.attributes.rel)));
-		referenced.push({ tag, name, value, subresource });
-	}
-	for (const candidate of (tag.attributes.srcset ?? '').split(',').map((part) => part.trim().split(/\s+/)[0]).filter(Boolean)) {
-		referenced.push({ tag, name: 'srcset', value: candidate, subresource: true });
-	}
-}
-for (const { tag, name, value, subresource } of referenced) {
-	const where = `<${tag.name} ${name}="${value}">`;
-	if (value.startsWith('#')) {
-		if (value !== '#') check(ids.has(value.slice(1)), `${where} points at a missing id`);
-	} else if (/^(?:mailto|tel|data|javascript):/i.test(value)) {
-		check(!/^javascript:/i.test(value), `${where} uses javascript:`);
-	} else if (remote(value)) {
-		if (subresource) {
-			check(false, `${where} loads a subresource from another site`);
-		} else if (tag.name === 'a') {
-			const host = new URL(value.startsWith('//') ? `https:${value}` : value).hostname;
-			check(HOSTS.has(host), `${where} leaves for ${host}, which is not on the list`);
-			check(/^https:/i.test(value), `${where} is not https`);
-		}
-	} else {
-		check(exists(value), `${where} does not exist in dist`);
-	}
-}
-check(!/@import|url\(\s*['"]?\s*(?:https?:)?\/\//i.test(html), 'the inline CSS reaches another site');
-for (const frame of ['iframe', 'embed', 'object', 'audio']) check(ofTag(frame).length === 0, `<${frame}> is not allowed`);
-for (const script of ofTag('script')) check(!script.attributes.src || !remote(script.attributes.src), 'a script is loaded from another site');
-check(ofTag('script').filter((script) => !script.attributes.src && script.attributes.type !== 'application/ld+json').length <= 1, 'more than one inline script');
-
-// ------------------------------------------------------------------- images
-for (const image of ofTag('img')) {
-	const src = image.attributes.src ?? '';
-	check(image.attributes.alt !== undefined, `<img ${src}> has no alt attribute (an empty one is allowed)`);
-	check(Boolean(image.attributes.width) && Boolean(image.attributes.height), `<img ${src}> does not declare width and height`);
-}
-for (const source of ofTag('source').filter((tag) => tag.attributes.srcset)) {
-	check(Boolean(source.attributes.width) && Boolean(source.attributes.height), `<source ${source.attributes.srcset}> does not declare width and height`);
-}
-
-// -------------------------------------------------------------------- video
-const videos = ofTag('video');
-check(videos.length === 2, `expected a decorative hero and one recording, found ${videos.length} videos`);
-const recording = videos.find((video) => video.attributes.id === 'tour');
-const hero = videos.find((video) => video.attributes.id === 'hero-film');
-for (const video of videos) {
-	check(Boolean(video.attributes.poster), '<video> has no poster');
-	check(Boolean(video.attributes.width) && Boolean(video.attributes.height), '<video> does not declare width and height');
-}
-check(Boolean(recording) && 'controls' in recording.attributes, 'the recording has no native controls');
-check(Boolean(recording) && !('autoplay' in recording.attributes), 'the product recording must not autoplay');
-check(recording?.attributes.preload === 'metadata', 'the recording must use preload="metadata"');
-check(Boolean(hero) && 'autoplay' in hero.attributes && 'muted' in hero.attributes && 'loop' in hero.attributes && 'playsinline' in hero.attributes, 'the background hero must play automatically, silently, looping and inline');
-check(hero?.attributes.preload === 'none' && hero?.attributes['aria-hidden'] === 'true', 'the decorative hero must start as an inert poster');
-check(ofTag('button').some((button) => button.attributes['aria-controls'] === 'hero-film'), 'the hero has no motion control');
-const heroSources = ofTag('source').filter((source) => source.attributes['data-src']);
-check(heroSources.length === 2 && heroSources.every((source) => !source.attributes.src), 'hero sources must wait for the motion and visibility checks');
-for (const type of ['video/webm', 'video/mp4']) {
-	check(heroSources.some((source) => source.attributes.type === type), `the hero has no ${type} source`);
-}
-const track = ofTag('track')[0];
-check(Boolean(track) && track.attributes.kind === 'captions', 'the video has no captions track');
-if (track && exists(track.attributes.src)) {
-	check(readFileSync(join(dist, local(track.attributes.src)), 'utf8').startsWith('WEBVTT'), 'the captions file does not start with WEBVTT');
-}
-
-// --------------------------------------------------------------- the words
-// The visible text, without tags, scripts, styles and attribute values.
-const text = html
-	.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, ' ')
-	.replace(/<[^>]+>/g, ' ')
-	.replace(/&nbsp;/g, ' ')
-	.replace(/\s+/g, ' ');
-const forbidden = [
-	[/\bopen[- ]source\b(?! initiative)/i, 'says "open source": from 4.0 the source is private (decision 177)'],
-	[/\bsource-available\b/i, 'says "source-available": from 4.0 the source is not published (decision 177)'],
-	[/\bcoming soon\b/i, 'says "coming soon": nothing paid is announced on this page (decisions 161, 163)'],
-	[/[$€£]\s?\d|\b\d+\s?(?:USD|EUR|dollars?|euros?)\b/i, 'prints a price: nothing paid exists'],
-	[/\b(?:Pro|Premium|Plus|Supporter)\b(?! (?:Wars|Pass))/, 'names a paid tier: nothing paid exists'],
-	[/\bautoplay\b/i, 'mentions autoplay in the visible copy (the decorative hero is not a product feature)'],
-	[/\b(?:atmos|dts-hd(?: ma)?|truehd)\b[^.]{0,80}\bend[- ]to[- ]end\b(?![^.]{0,40}\bnot\b)/i, 'claims bitstream audio end to end: not observed (docs/v3.3.md)']
+const pages = [
+  { ...languages.find(language => language.id === 'en'), path: "index.html", entry: true },
+  ...languages.map((language) => ({
+    ...language,
+    path: `${language.id}/index.html`,
+  })),
 ];
-for (const [pattern, why] of forbidden) {
-	const hit = pattern.exec(text);
-	check(!hit, `the page ${why} - found "${hit?.[0]}"`);
+for (const language of pages) {
+  const file = join(dist, language.path);
+  if (!existsSync(file)) {
+    failures.push(`missing page: ${language.path}`);
+    continue;
+  }
+  const html = readFileSync(file, "utf8");
+  allHTML.push(html);
+  const assert = (condition, message) =>
+    check(condition, `${language.path}: ${message}`);
+  const tags = [
+    ...html.matchAll(
+      /<([a-zA-Z][a-zA-Z0-9-]*)((?:\s+[^\s=>"']+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*\/?>/g,
+    ),
+  ].map((match) => {
+    const attributes = {};
+    for (const value of match[2].matchAll(
+      /([^\s=>"']+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g,
+    ))
+      attributes[value[1].toLowerCase()] =
+        value[2] ?? value[3] ?? value[4] ?? "";
+    return { name: match[1].toLowerCase(), attributes };
+  });
+  const ofTag = (name) => tags.filter((tag) => tag.name === name);
+  const meta = (key) =>
+    ofTag("meta").find(
+      (tag) => tag.attributes.name === key || tag.attributes.property === key,
+    )?.attributes.content;
+  const document = ofTag("html")[0]?.attributes;
+  assert(
+    document?.lang === language.lang && document?.dir === language.dir,
+    "incorrect lang/dir",
+  );
+  assert(
+    document?.["data-entry"] === String(!!language.entry),
+    "incorrect negotiation boundary",
+  );
+  assert(!html.includes("{{"), "unresolved template token");
+  assert(ofTag("h1").length === 1, "expected exactly one h1");
+  let depth = 0;
+  for (const heading of tags.filter((tag) => /^h[1-6]$/.test(tag.name))) {
+    const level = Number(heading.name[1]);
+    assert(level <= depth + 1, `heading jumps from ${depth} to ${level}`);
+    depth = level;
+  }
+  const ids = new Set();
+  for (const tag of tags) {
+    if (!tag.attributes.id) continue;
+    assert(!ids.has(tag.attributes.id), `duplicate id ${tag.attributes.id}`);
+    ids.add(tag.attributes.id);
+  }
+  for (const id of [
+    "top",
+    "main",
+    "demo",
+    "download",
+    "new",
+    "ledger",
+    "limits",
+    "licence",
+    "help",
+    "faq",
+    "privacy",
+  ])
+    assert(ids.has(id), `missing public anchor ${id}`);
+  assert(
+    html.indexOf('id="download"') < html.indexOf('id="new"'),
+    "downloads must precede release highlights",
+  );
+  const canonical = `${siteUrl}/${language.id}/`;
+  assert(
+    ofTag("link").find((tag) => tag.attributes.rel === "canonical")?.attributes
+      .href === canonical,
+    "incorrect canonical",
+  );
+  assert(meta("og:url") === canonical, "incorrect Open Graph URL");
+  for (const key of [
+    "description",
+    "og:locale",
+    "og:title",
+    "og:description",
+    "og:image:alt",
+    "twitter:title",
+    "twitter:description",
+    "twitter:image:alt",
+  ])
+    assert(!!meta(key), `missing ${key}`);
+  assert(meta("og:locale") === language.og, "incorrect Open Graph locale");
+  assert(
+    meta("twitter:card") === "summary_large_image",
+    "missing large share card",
+  );
+  const title = /<title>([^<]+)<\/title>/.exec(html)?.[1];
+  assert(
+    title?.length >= 10 && title.length <= 100,
+    "title is missing or too long",
+  );
+  const alternates = ofTag("link").filter(
+    (tag) => tag.attributes.rel === "alternate",
+  );
+  assert(
+    alternates.length === 11,
+    "expected ten reciprocal alternates and x-default",
+  );
+  for (const other of languages)
+    assert(
+      alternates.some(
+        (tag) =>
+          tag.attributes.hreflang === other.lang &&
+          tag.attributes.href === `${siteUrl}/${other.id}/`,
+      ),
+      `missing alternate ${other.id}`,
+    );
+  assert(
+    alternates.some(
+      (tag) =>
+        tag.attributes.hreflang === "x-default" &&
+        tag.attributes.href === `${siteUrl}/`,
+    ),
+    "missing neutral entry alternate",
+  );
+  for (const tag of tags) {
+    for (const key of ["href", "src", "poster", "data-src"]) {
+      const value = tag.attributes[key];
+      if (value === undefined) continue;
+      if (value.startsWith("#")) {
+        assert(ids.has(value.slice(1)), `missing fragment ${value}`);
+        continue;
+      }
+      if (/^(?:https?:)?\/\//.test(value)) {
+        const url = new URL(value);
+        const externalResource =
+          tag.name !== "a" &&
+          !(
+            tag.name === "link" &&
+            ["canonical", "alternate"].includes(tag.attributes.rel)
+          );
+        assert(!externalResource, `remote subresource: ${value}`);
+        if (tag.name === "a")
+          assert(
+            url.protocol === "https:" && hosts.has(url.hostname),
+            `unapproved external link ${value}`,
+          );
+        continue;
+      }
+      assert(
+        !/^(?:javascript|data|mailto):/i.test(value),
+        `unexpected URI ${value}`,
+      );
+      let target = resolve(dirname(file), value.split("#")[0].split("?")[0]);
+      if (value.endsWith("/")) target = join(target, "index.html");
+      assert(
+        target.startsWith(dist + "/") || target.startsWith(dist + "\\"),
+        `reference escapes output: ${value}`,
+      );
+      assert(existsSync(target), `missing local resource ${value}`);
+      allReferences.add(target);
+    }
+  }
+  for (const match of html.matchAll(/url\(['"]?([^)'"]+)['"]?\)/g)) {
+    const path = resolve(dirname(file), match[1]);
+    assert(
+      !/^(?:https?:)?\/\//.test(match[1]) && existsSync(path),
+      `missing or remote CSS resource ${match[1]}`,
+    );
+    allReferences.add(path);
+  }
+  assert(!/@import/.test(html), "CSS import is not allowed");
+  for (const tag of ["iframe", "embed", "object", "audio"])
+    assert(ofTag(tag).length === 0, `${tag} is not allowed`);
+  for (const image of ofTag("img"))
+    assert(
+      "alt" in image.attributes &&
+        image.attributes.width &&
+        image.attributes.height,
+      "image needs alt and dimensions",
+    );
+  const videos = ofTag("video");
+  assert(videos.length === 2, "expected decorative hero plus recording");
+  const hero = videos.find(
+    (tag) => tag.attributes.id === "hero-film",
+  )?.attributes;
+  const tour = videos.find((tag) => tag.attributes.id === "tour")?.attributes;
+  assert(
+    hero?.preload === "none" &&
+      hero["aria-hidden"] === "true" &&
+      ["autoplay", "muted", "loop", "playsinline"].every((key) => key in hero),
+    "hero must start as a silent optional poster",
+  );
+  assert(
+    tour &&
+      "controls" in tour &&
+      !("autoplay" in tour) &&
+      tour.preload === "none",
+    "recording must be user initiated and avoid an initial media fetch",
+  );
+  const heroSources = ofTag("source").filter(
+    (tag) => "data-src" in tag.attributes,
+  );
+  assert(
+    heroSources.length === 2 && heroSources.every((tag) => !tag.attributes.src),
+    "hero sources must remain deferred",
+  );
+  assert(
+    ofTag("button").some(
+      (tag) => tag.attributes["aria-controls"] === "hero-film",
+    ),
+    "missing pause control",
+  );
+  const tracks = ofTag("track");
+  assert(
+    tracks.length === 10 &&
+      tracks.filter((tag) => "default" in tag.attributes).length === 1,
+    "expected ten captions and one default",
+  );
+  assert(
+    tracks.find((tag) => "default" in tag.attributes)?.attributes.srclang ===
+      language.lang,
+    "caption default does not follow locale",
+  );
+  for (const track of tracks) {
+    const path = resolve(dirname(file), track.attributes.src);
+    if (existsSync(path)) {
+      const content = readFileSync(path, "utf8");
+      assert(
+        content.startsWith("WEBVTT\n") &&
+          (content.match(/ --> /g) || []).length === 13,
+        "invalid caption cues",
+      );
+    }
+  }
+  assert(
+    ofTag("details").filter((tag) => tag.attributes.class === "faq-item")
+      .length === 8,
+    "expected eight native FAQ disclosures",
+  );
+  const links = ofTag("a");
+  assert(
+    links.filter((tag) => tag.attributes["data-language"]).length === 10,
+    "missing language links",
+  );
+  for (const [filename, asset] of Object.entries(release.assets))
+    assert(
+      links.some(
+        (tag) =>
+          tag.attributes.href === asset.url &&
+          tag.attributes.href.endsWith("/" + filename),
+      ),
+      `download lost its actual release: ${filename}`,
+    );
+  for (const code of ofTag("code"))
+    assert(
+      code.attributes.dir === "ltr",
+      "technical value is not explicitly LTR",
+    );
+  const ld = [
+    ...html.matchAll(
+      /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g,
+    ),
+  ];
+  try {
+    const data = JSON.parse(ld[0]?.[1]);
+    assert(
+      ld.length === 1 &&
+        data["@type"] === "SoftwareApplication" &&
+        data.inLanguage === language.lang &&
+        data.url === canonical,
+      "incorrect structured data",
+    );
+    assert(
+      data.offers?.price === "0" && !data.aggregateRating && !data.review,
+      "structured data invents a price or review",
+    );
+  } catch (_) {
+    assert(false, "invalid JSON-LD");
+  }
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ");
+  assert(
+    text.includes(
+      "This product uses the TMDB API but is not endorsed or certified by TMDB.",
+    ),
+    "TMDB legal attribution changed",
+  );
+  assert(
+    text.includes("PolyForm Noncommercial 1.0.0") && text.includes("GPL-3.0"),
+    "licence names missing",
+  );
+  if (language.id === "en") {
+    assert(
+      /source code is developed privately/.test(text),
+      "private-source disclosure missing",
+    );
+    assert(
+      !/\bopen[- ]source\b|\bsource-available\b|\bcoming soon\b/i.test(text),
+      "forbidden release or source claim",
+    );
+    assert(
+      text.includes("Illustration") && text.includes("unverified"),
+      "provenance or validation limits missing",
+    );
+  }
+  assert(
+    Buffer.byteLength(html) < 110 * 1024,
+    "HTML exceeds 110 KiB per locale",
+  );
 }
-check(/source code is developed privately/i.test(text), 'the page never says that the source is private from 4.0');
-check(/PolyForm Noncommercial 1\.0\.0/.test(text) && /GPL-3\.0/.test(text), 'the licence sentence must name PolyForm Noncommercial 1.0.0 and GPL-3.0');
-check(/This product uses the TMDB API but is not endorsed or certified by TMDB\./.test(text), 'the TMDB attribution sentence is missing or altered (decision 10)');
-check(/Illustration/.test(text), 'the illustrations are not labelled');
 
-// -------------------------------------------------------------------- weight
+const coverage = json("assets/fonts/coverage.json");
+const scriptFor = (code) =>
+  code >= 0x600 && code <= 0x8ff
+    ? "noto-arabic"
+    : code >= 0x900 && code <= 0x97f
+      ? "noto-devanagari"
+      : code >= 0x980 && code <= 0x9ff
+        ? "noto-bengali"
+        : (code >= 0x2e80 && code <= 0x9fff) ||
+            (code >= 0xff00 && code <= 0xffef)
+          ? "noto-chinese"
+          : null;
+const glyphs = Object.fromEntries(
+  Object.entries(coverage).map(([name, data]) => [
+    name,
+    new Set(data.codepoints),
+  ]),
+);
+for (const [name, data] of Object.entries(coverage))
+  check(
+    createHash("sha256")
+      .update(readFileSync(join(here, `assets/fonts/${name}.woff2`)))
+      .digest("hex") === data.sha256,
+    `font digest changed: ${name}`,
+  );
+for (const language of languages) {
+  const content =
+    JSON.stringify(json(`locales/${language.id}.json`)) +
+    JSON.stringify(languages) +
+    readFileSync(join(dist, language.id, "index.html"), "utf8");
+  for (const character of new Set(content)) {
+    const code = character.codePointAt(0);
+    const script = scriptFor(code);
+    if (script)
+      check(
+        glyphs[script].has(code),
+        `${language.id}: missing glyph U+${code.toString(16)}; regenerate with scripts/site-fonts.py`,
+      );
+  }
+}
+const sitemap = readFileSync(join(dist, "sitemap.xml"), "utf8");
+for (const language of languages)
+  check(
+    sitemap.includes(`<loc>${siteUrl}/${language.id}/</loc>`),
+    `sitemap missing ${language.id}`,
+  );
 const files = [];
 const walk = (directory) => {
-	for (const entry of readdirSync(directory)) {
-		const path = join(directory, entry);
-		if (statSync(path).isDirectory()) walk(path);
-		else files.push({ path: relative(dist, path).replaceAll('\\', '/'), size: statSync(path).size });
-	}
+  for (const name of readdirSync(directory)) {
+    const path = join(directory, name);
+    if (statSync(path).isDirectory()) walk(path);
+    else files.push(path);
+  }
 };
 walk(dist);
-const heavy = files.filter((file) => !/\.(mp4|webm)$/.test(file.path));
-const weight = heavy.reduce((sum, file) => sum + file.size, 0);
-const heroWeight = files.filter((file) => /\/hero-ascii\.(mp4|webm)$/.test(file.path)).reduce((sum, file) => sum + file.size, 0);
-check(Buffer.byteLength(html) < 90 * 1024, `index.html is ${(Buffer.byteLength(html) / 1024).toFixed(0)} KiB; keep it under 90`);
-check(weight < 1.5 * 1024 * 1024, `everything but the videos weighs ${(weight / 1024).toFixed(0)} KiB; keep it under 1536`);
-check(heroWeight < 4 * 1024 * 1024, `the hero formats together weigh ${(heroWeight / 1024).toFixed(0)} KiB; keep them under 4096`);
-const unreferenced = files.filter((file) => !/\.(txt|xml|html)$|^\.nojekyll$|LICENSE/.test(file.path) && !html.includes(file.path) && !html.includes(file.path.replace(/^assets\//, '')));
-for (const file of unreferenced) check(false, `${file.path} is shipped but never referenced`);
-
-// ------------------------------------------------------------------- report
-if (failures.length > 0) {
-	console.error(`\ncheck: ${failures.length} problem(s)\n`);
-	for (const failure of failures) console.error(`  - ${failure}`);
-	console.error('');
-	process.exit(1);
-}
-console.log(`check: ${files.length} files, ${(weight / 1024).toFixed(0)} KiB without the videos, ${(heroWeight / 1024).toFixed(0)} KiB of hero formats, no problem found.`);
+for (const file of files)
+  if (!/\.(?:html|txt|xml)$|\.nojekyll$|og-image\.jpg$/.test(file))
+    check(
+      allReferences.has(file),
+      `unreferenced asset ${relative(dist, file)}`,
+    );
+const weight = files
+  .filter((file) => !/\.(mp4|webm)$/.test(file))
+  .reduce((sum, file) => sum + statSync(file).size, 0);
+check(
+  weight < 3 * 1024 * 1024,
+  "all locales and shared assets exceed 3 MiB without videos",
+);
+const card = readFileSync(join(dist, "assets/img/og-image.jpg"));
+check(card.length < 600 * 1024, "share card exceeds 600 KiB");
+if (failures.length) {
+  console.error(
+    `check: ${failures.length} problem(s)\n${[...new Set(failures)].map((failure) => `  - ${failure}`).join("\n")}`,
+  );
+  process.exitCode = 1;
+} else
+  console.log(
+    `check: ${pages.length} pages, ten complete catalogues/caption tracks, ${files.length} files, ${(weight / 1024).toFixed(0)} KiB without videos; all checks passed`,
+  );

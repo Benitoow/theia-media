@@ -22,7 +22,7 @@ not an application recording. No external image or video was fetched.
 | Published file | Source and transformation |
 | --- | --- |
 | `video/hero-ascii.webm` | The supplied file, unchanged: VP8, 1200 × 900, about 10.97 s, 110 frames with variable timing (about 10 fps), no audio, 2,354,356 bytes. SHA-256 `3ceeb548a1b7b4c17a53e96142f0331c94def3aaca1df0e85eb789c0e705f35f` |
-| `video/hero-ascii.mp4` | H.264 High fallback, 800 × 600, 24 fps, no audio, 1,541,343 bytes, metadata removed, fast-start enabled |
+| `video/hero-ascii.mp4` | Preferred H.264 High stream, 800 × 600, 24 fps, no audio, 1,541,343 bytes, metadata removed, fast-start enabled |
 | `video/hero-ascii-poster.webp` | Frame at 4.4 s, 800 × 600, WebP quality 78, 115,418 bytes |
 
 The supplied file identifies Chrome as its encoder, but does not identify the
@@ -97,7 +97,7 @@ ffmpeg -i n-timeline.png -vf "scale=1600:943:flags=lanczos"   -c:v libwebp -qual
 | Published | `video/theia-install-tour.mp4`: H.264 High, 1920 × 1080, 30 fps, no audio, 1 min 30 s, about 11 MB (10,982,499 bytes), the Explorer window blurred |
 | Source | `VidéoTheia.webm`, supplied by the maintainer on 22 October 2026: VP9 (Profile 0), 1920 × 1080, 60 fps, no audio, 170,715,480 bytes, muxed by Mediabunny 1.61.0. SHA-256 `207eff8da87bb540daca7cdddc7d1a11e5e5942cbbcf19d250258362e43144ee` |
 | Poster | `video/theia-install-tour-poster.webp`: the frame at 78.0 s (the home screen), 1600 × 900, WebP quality 76 |
-| Captions | `video/theia-install-tour.en.vtt`: written from the recording, scene times checked against its frames |
+| Captions | Ten `video/theia-install-tour.<locale>.vtt` tracks generated from the strict site catalogues; the 13 shared cue times were checked against the original recording. The default follows the site language. The translations are AI-authored and have not been reviewed by native speakers. |
 
 Re-encoded with the FFmpeg that Theia manages (Jellyfin FFmpeg 8.1.2, which has
 libx264 and libwebp; no `ffprobe` is installed on this machine):
@@ -192,3 +192,22 @@ License 1.1; the licence texts travel beside the files in `fonts/`.
 
 The TMDB logo. Decision 10 keeps text alone, because no copy of the logo has had
 its licence checked; the footer carries the attribution sentence verbatim.
+
+
+## Local script fonts, 24 October 2026
+
+The multilingual site adds Noto Sans Arabic (also Urdu), Noto Sans Devanagari,
+Noto Sans Bengali and Noto Sans SC from Google Fonts at commit
+`e7db6ca603fd4862010383ff17ffd6cc4ffac1c0`. All four OFL 1.1 licence texts were
+read and are shipped in `fonts/LICENSE-notosans*.txt`. Source URLs and SHA-256
+digests are recorded in `fonts/sources.json`. Noto Sans SC's reserved name is
+`Source`; no derivative is named Source.
+
+`scripts/site-fonts.py` retains OpenType shaping while producing WOFF2 subsets
+of the catalogue/endonym characters and Intl date/unit/digit output. The
+resulting digests and glyph coverage are in `fonts/coverage.json`. These are
+vendored assets: ordinary builds and visitors never contact a font service.
+The existing Cinzel/Jost assets and licences are unchanged. The shared social
+card retains its original artwork and English tagline; each locale translates
+its metadata and image description, not the recorded application or artwork.
+

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "en",
+    "lang": "en",
+    "name": "English",
+    "intl": "en-GB",
+    "og": "en_GB",
+    "dir": "ltr"
+  },
+  {
+    "id": "zh-hans",
+    "lang": "zh-Hans",
+    "name": "简体中文",
+    "intl": "zh-CN",
+    "og": "zh_CN",
+    "dir": "ltr"
+  },
+  {
+    "id": "hi",
+    "lang": "hi",
+    "name": "हिन्दी",
+    "intl": "hi-IN",
+    "og": "hi_IN",
+    "dir": "ltr"
+  },
+  {
+    "id": "es",
+    "lang": "es",
+    "name": "Español",
+    "intl": "es",
+    "og": "es_ES",
+    "dir": "ltr"
+  },
+  {
+    "id": "ar",
+    "lang": "ar",
+    "name": "العربية",
+    "intl": "ar",
+    "og": "ar_AR",
+    "dir": "rtl"
+  },
+  {
+    "id": "fr",
+    "lang": "fr",
+    "name": "Français",
+    "intl": "fr-FR",
+    "og": "fr_FR",
+    "dir": "ltr"
+  },
+  {
+    "id": "bn",
+    "lang": "bn",
+    "name": "বাংলা",
+    "intl": "bn-BD",
+    "og": "bn_BD",
+    "dir": "ltr"
+  },
+  {
+    "id": "pt-br",
+    "lang": "pt-BR",
+    "name": "Português",
+    "intl": "pt-BR",
+    "og": "pt_BR",
+    "dir": "ltr"
+  },
+  {
+    "id": "id",
+    "lang": "id",
+    "name": "Bahasa Indonesia",
+    "intl": "id-ID",
+    "og": "id_ID",
+    "dir": "ltr"
+  },
+  {
+    "id": "ur",
+    "lang": "ur",
+    "name": "اردو",
+    "intl": "ur-PK",
+    "og": "ur_PK",
+    "dir": "rtl"
+  }
+]

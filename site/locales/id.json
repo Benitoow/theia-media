@@ -1,0 +1,214 @@
+{
+  "meta": {
+    "title": "Theia — bioskop milikmu, tanpa kerumitan",
+    "description": "Film dan serialmu, dalam satu tempat. Server pribadi dan pemutar native untuk Windows, macOS, dan Linux. Gratis untuk penggunaan pribadi, tanpa akun atau telemetri.",
+    "shareAlt": "Nama Theia di samping ilustrasi patung marmer yang menghadap matahari terbit."
+  },
+  "nav": {
+    "home": "Beranda Theia",
+    "skip": "Langsung ke konten",
+    "primary": "Navigasi utama",
+    "discover": "Kenali",
+    "download": "Unduh",
+    "faq": "Pertanyaan",
+    "github": "GitHub",
+    "menu": "Menu",
+    "language": "Bahasa",
+    "project": "Tautan proyek"
+  },
+  "hero": {
+    "eyebrow": "Di rumahmu. Tanpa kerumitan.",
+    "line1": "Bioskopmu.",
+    "line2": "Aturanmu.",
+    "lead": "Film dan serialmu, dalam satu tempat. Server kecil di rumah. Pemutar native di komputer. Tanpa akun. Tanpa telemetri.",
+    "download": "Unduh Theia",
+    "watch": "Lihat pemasangan",
+    "note": "Satu pengembang. Windows x64 adalah satu-satunya platform yang sejauh ini digunakan dengan koleksi rumah tangga nyata.",
+    "limits": "Kenali batasannya",
+    "start": "Masuk ke bioskop"
+  },
+  "discover": {
+    "eyebrow": "Lebih sedikit pengaturan. Lebih banyak film.",
+    "title": "Filmmu, di rumah.",
+    "intro": "Biarkan berkasmu di tempatnya. Theia menyatukan koleksi, pemutar, dan teman-temanmu.",
+    "benefits": [
+      {
+        "title": "Koleksi yang terasa milikmu",
+        "body": "Tambahkan foldermu. Film dan serial tersusun dengan poster, pemeran, dan progres tontonanmu.",
+        "label": "Tangkapan layar",
+        "alt": "Koleksi film di pemutar native, dengan gambar dan film untuk dilanjutkan, memakai koleksi contoh."
+      },
+      {
+        "title": "Pemutar untuk berkasmu",
+        "body": "Matroska, takarir gambar, dan pratinjau adegan. Pilihan audio dan takarirmu mengikuti serialnya.",
+        "label": "Tangkapan layar",
+        "alt": "Pemutar native menampilkan film contoh dari gambar latar, dengan pratinjau di atas garis waktu."
+      },
+      {
+        "title": "Dekat, meski berjauhan",
+        "body": "Tambahkan teman lewat kode, berbagi ulasan, dan undang ke ruang pribadi. Video jarak jauh mengalir langsung lewat WireGuard.",
+        "label": "Ilustrasi",
+        "alt": "Ilustrasi dua rumah yang terhubung oleh seutas benang emas di antara bukit gelap."
+      }
+    ]
+  },
+  "tour": {
+    "eyebrow": "Aplikasi yang sebenarnya",
+    "title": "Dari unduhan ke koleksimu.",
+    "intro": "90 detik. Pemasangan nyata Theia 4.4.4 di Windows, tanpa suara.",
+    "caption": "Rekaman nyata, bukan maket. Theia dalam bahasa Inggris; Windows dan peramban dalam bahasa Prancis. Aplikasi saat ini tersedia dalam bahasa Inggris dan Prancis.",
+    "play": "Putar rekaman pemasangan",
+    "fallback": "Unduh rekaman",
+    "details": "Rincian rekaman",
+    "scenes": "Pemasangan dalam tiga langkah",
+    "from": "Putar mulai",
+    "limits": "Tidak menampilkan pemutaran film, teman, ruang, editor profil, atau perubahan setelah 4.4.4. Gambar dan potret berasal dari TMDB. Berkas pribadi diburamkan.",
+    "steps": [
+      {
+        "title": "Unduh",
+        "body": "Pilih sistem dan prosesor. Satu pemasang berisi server, peluncur, pemutar, dan mesin media."
+      },
+      {
+        "title": "Pasang",
+        "body": "Pilih bahasa Inggris atau Prancis, peran komputer, dan foldermu. Tinjau rencana sebelum memasang."
+      },
+      {
+        "title": "Buka",
+        "body": "Jalankan Theia, izinkan server di jaringan tepercaya, lalu pilih siapa yang menonton dan jelajahi koleksi."
+      }
+    ]
+  },
+  "download": {
+    "eyebrow": "Anggap seperti rumah sendiri",
+    "title": "Film berikutnya dimulai di sini.",
+    "intro": "Pilih sistem, lalu prosesor. Unduhan hanya dimulai saat kamu memilih berkas.",
+    "system": "Sistemmu",
+    "processor": "Prosesormu",
+    "mobile": "Aplikasi Theia ditujukan untuk komputer desktop. Penampil web yang ada tetap tersedia di ponsel dan TV; pemutarannya tidak lagi dikembangkan secara aktif.",
+    "windowsWarning": "Windows dapat menampilkan peringatan reputasi: pemasang belum ditandatangani dengan sertifikat kode. Periksa SHA-256 sebelum menjalankannya. Tidak meminta hak administrator.",
+    "macosWarning": "Aplikasi ditandatangani ad hoc, tanpa notarisasi. macOS mungkin meminta izin di Privasi & Keamanan. Jadikan pemasang dapat dijalankan dengan chmod +x, lalu jalankan.",
+    "linuxWarning": "Hanya Ubuntu 24.04, X11 atau XWayland. Pasang prasyarat di bawah, gunakan chmod +x, lalu jalankan. Dekode perangkat lunak, SDR, dan audio PCM; distribusi lain belum diverifikasi.",
+    "prerequisites": "Prasyarat Ubuntu",
+    "x64": "Prosesor Intel dan AMD",
+    "arm": "Prosesor ARM",
+    "apple": "Chip Apple",
+    "intel": "Prosesor Intel",
+    "current": "Rilis terkini",
+    "legacy": "Versi terdahulu",
+    "version": "Versi",
+    "verify": "Verifikasi berkas ini",
+    "command": "Perintah verifikasi",
+    "filename": "Nama berkas",
+    "checksum": "SHA-256",
+    "copy": "Salin",
+    "copied": "Tersalin",
+    "copyFailed": "Tidak dapat menyalin. Pilih nilainya dan salin secara manual.",
+    "verifiedWindows": "Pemutar diuji dengan film buatan dan kontrol yang terlihat di komputer Windows pengembang.",
+    "verifiedMac": "Pemasangan dan film buatan diuji di Mac Apple Silicon yang dihosting. HDR pada layar fisik dan dekode perangkat keras belum diverifikasi.",
+    "verifiedIntel": "Diuji lewat Rosetta di Mac Apple Silicon yang dihosting. Mac Intel fisik, HDR, dan dekode perangkat keras belum diverifikasi.",
+    "verifiedLinux": "Lulus uji otomatis pemasangan, film buatan, dan penghapusan di runner native. Laporan komputer nyata disambut baik.",
+    "legacyNote": "Pemasang lama ini mendahului 4.4 dan belum memiliki fitur pemutar terbaru. Versinya sendiri tertera di atas.",
+    "upgrade": "Sudah memakai Theia? Jalankan pemasang untuk memperbarui program tanpa menghapus koleksi dan progres. Pembaruan server saja tidak mengganti pemutar.",
+    "release": "Semua berkas rilis",
+    "help": "Prosesor apa yang kupakai?"
+  },
+  "news": {
+    "eyebrow": "Pembaruan, tanpa keramaian",
+    "title": "Detail kecil. Malam lebih nyaman.",
+    "notes": "Baca catatan rilis",
+    "items": [
+      {
+        "title": "Foto dengan bingkai yang pas",
+        "body": "Geser dan perbesar foto profil sebelum menyimpan. Foto kecil pun memenuhi lingkaran."
+      },
+      {
+        "title": "Episode berikutnya, sesuai keinginanmu",
+        "body": "Bab bernama memungkinkan melewati pembuka. Episode berikutnya memakai hitung mundur yang bisa dibatalkan dan berhenti di akhir musim."
+      },
+      {
+        "title": "Garis waktu yang jelas",
+        "body": "Pratinjau adegan sebelum berpindah. Pertahankan pilihan audio dan takarir dengan pengaturan yang tidak mengganggu."
+      }
+    ]
+  },
+  "faq": {
+    "eyebrow": "Beberapa hal yang perlu diketahui",
+    "title": "Pertanyaan bagus.",
+    "intro": "Jawaban jelas sebelum menonton. Butuh bantuan? Temui kami di GitHub atau Discord.",
+    "items": [
+      {
+        "question": "Apakah Theia menyediakan film atau serial?",
+        "answer": "Tidak. Theia mengatur dan memutar video yang sudah kamu miliki dan berhak kamu gunakan. Ini bukan katalog streaming dan tidak menyediakan film. Poster, sinopsis, dan pemeran berasal dari TMDB dan disimpan dalam cache lokal."
+      },
+      {
+        "question": "Apakah gratis? Apakah kode sumbernya terbuka untuk umum?",
+        "answer": "Server, koleksi, pemutaran biasa, dan semua fitur V4 gratis untuk penggunaan pribadi nonkomersial. Belum ada fitur berbayar. Jika ada kelak, akan diumumkan sebelumnya.\n\nMulai 4.0, rilis menggunakan PolyForm Noncommercial 1.0.0; kode dikembangkan secara privat dan tidak diterbitkan. Versi 3.4.0 dan sebelumnya tetap GPL-3.0 dengan sumber di tag publik. Penggunaan komersial memerlukan lisensi terpisah."
+      },
+      {
+        "question": "Sistem apa yang didukung dan benar-benar diuji?",
+        "answer": "Pemasang tersedia untuk Windows, macOS, dan Ubuntu 24.04. Hanya Windows x64 digunakan dengan koleksi nyata pengembang. Pemutar 4.4.2 yang disertakan lulus film buatan di Windows, Linux x64, dan Mac yang dihosting, dengan Intel lewat Rosetta; ini tidak memvalidasi layar atau rangkaian audiomu. Unduhan ARM64 lama diberi label jelas.\n\nLinux memakai dekode perangkat lunak, SDR, dan PCM. macOS memakai PCM; HDR layar fisik dan dekode perangkat keras belum diverifikasi. Windows meminta bitstream lalu kembali ke PCM jika ditolak; Atmos atau DTS-HD MA sampai ke penerima AV belum diverifikasi. Penampil web ponsel dan TV tetap tersedia tanpa pengembangan pemutaran aktif."
+      },
+      {
+        "question": "Prosesor mana yang harus dipilih?",
+        "answer": "Di Windows, buka Pengaturan → Sistem → Tentang, lalu baca Jenis sistem: Intel atau AMD berarti x64; ARM berarti ARM64. Mengenai Mac Ini menunjukkan chip Apple atau prosesor Intel. Di Ubuntu, uname -m menunjukkan x86_64 untuk x64 atau aarch64 untuk ARM64. Situs hanya memilih sistem; kamu memilih prosesor."
+      },
+      {
+        "question": "Bagaimana memasang atau memperbarui Theia?",
+        "answer": "Unduh pemasang sesuai sistem dan prosesor. Pilih bahasa, peran komputer — server, pemutar, atau keduanya — serta folder. Buka lewat peluncur atau dengan theia. Di macOS dan Ubuntu, jadikan pemasang dapat dijalankan terlebih dahulu. Ubuntu juga memerlukan prasyarat yang disebutkan.\n\nUntuk memperbarui, jalankan pemasang baru: koleksi dan progres tetap ada. Pemasang dan aplikasi saat ini mendukung Inggris dan Prancis, terpisah dari bahasa situs ini."
+      },
+      {
+        "question": "Apa yang tetap pribadi dan apa yang keluar dari komputer?",
+        "answer": "Tanpa akun Theia dan telemetri. Gambar berasal dari TMDB, pembaruan dari GitHub. Layanan teman memakai Firebase proyek: direktori menerima nama dan foto profil lokal bahkan sebelum menambahkan teman. Teman bertukar permintaan, kehadiran saat ini, dan ulasan; ulasan tetap di kotak masuk penerima sampai dihapus. Kehadiran hanya menyimpan waktu terakhir, bukan riwayat aktivitas; mode tidak terlihat menyembunyikannya. Katalog dan riwayat tontonan tidak dikirim ke basis data itu. Kehadiran dapat menyertakan judul tontonan kecuali kamu menyembunyikannya; mode tidak terlihat tidak menerbitkan informasi kehadiran itu.\n\nSiapa pun yang dapat mengakses port 8383 di jaringanmu dapat menjelajah dan mengelola Theia. Gunakan jaringan tepercaya dan jangan pernah meneruskan port itu ke internet. Situs ini tidak memakai analitik, sematan jarak jauh, atau cookie; pilihan bahasa eksplisit hanya disimpan di peramban ini."
+      },
+      {
+        "question": "Bagaimana teman, ruang, dan akses jarak jauh bekerja?",
+        "answer": "Tukar kode teman dan undang teman ke ruang pribadi. Akses jarak jauh memakai kunci perangkat dan koneksi WireGuard langsung, tanpa relay media atau layanan kendali. Direktori, kehadiran, dan ulasan memakai Firebase. Koneksi bergantung pada jaringan kalian.\n\nPengembang melaporkan sesi uji dua rumah tangga yang berhasil, tetapi ruang pribadi dan hitung mundur bersama belum mendapat validasi lengkap antar dua rumah tangga nyata. Tidak ada TV langsung, DVR, koleksi musik, plugin, atau izin multipengguna."
+      },
+      {
+        "question": "Di mana mendapatkan bantuan atau melaporkan masalah?",
+        "answer": "Bergabunglah di Discord atau buat issue GitHub. Sertakan versi, sistem, prosesor, dan kejadian. Untuk masalah pemutaran, tambahkan format video dan audio. Ceritakan juga yang berhasil. Jangan unggah kredensial atau koleksi pribadi; laporkan masalah keamanan lewat kebijakan keamanan repositori."
+      }
+    ]
+  },
+  "legal": {
+    "title": "Filmmu. Ketentuanmu.",
+    "body": "Gratis untuk penggunaan pribadi nonkomersial di bawah PolyForm Noncommercial 1.0.0. Versi 3.4.0 dan sebelumnya: GPL-3.0. Mulai 4.0, sumber bersifat privat. Lihat ketentuan lisensi sebenarnya.",
+    "details": "Baca lisensi"
+  },
+  "help": {
+    "eyebrow": "Malam berikutnya milikmu",
+    "title": "Sediakan ruang untuk bioskopmu.",
+    "body": "Coba Theia dengan koleksimu. Beri tahu apa yang berhasil, apa yang tidak, dan komputer yang digunakan.",
+    "discord": "Gabung Discord",
+    "feedback": "Bagikan laporan uji"
+  },
+  "footer": {
+    "about": "Satu pengembang dengan bantuan AI yang diungkapkan. Tangkapan layar dan rekaman menampilkan aplikasi nyata; tangkapan layar memakai koleksi contoh. Ilustrasi diberi label.",
+    "privacy": "Tanpa cookie, analitik, atau sumber daya jarak jauh. Pilihan bahasa tetap di peramban ini.",
+    "releases": "Rilis",
+    "security": "Keamanan",
+    "type": "Font lokal di bawah SIL Open Font License 1.1.",
+    "languageNote": "Situs: sepuluh bahasa. Aplikasi: Inggris dan Prancis."
+  },
+  "ui": {
+    "pause": "Jeda animasi",
+    "resume": "Putar animasi",
+    "showing": "Unduhan yang ditampilkan:",
+    "status": "Status penyalinan"
+  },
+  "captions": [
+    "Unduh pemasang sistemmu dari rilis GitHub terbaru. Di sini, Windows x64 versi 4.4.4.",
+    "Buka pemasang dari folder Unduhan.",
+    "Pemasang adalah formulir terminal layar penuh. Pilih Inggris atau Prancis.",
+    "Pilih peran komputer: server, pemutar, atau keduanya. Lalu folder media.",
+    "Folder disalin dari Explorer. Berkas pribadi diburamkan dalam rekaman.",
+    "Tempel ke formulir. Pemasang menghitung video dalam folder.",
+    "Tinjau rencana sebelum ada yang ditulis. Lalu pasang.",
+    "Jalankan Theia dari menu Mulai, desktop, atau dengan theia di terminal.",
+    "Windows meminta izin server menggunakan jaringan. Rekaman mengizinkannya.",
+    "Pilih siapa yang menonton. Profil tidak memakai kata sandi.",
+    "Beranda menampilkan film unggulan dan tambahan terbaru.",
+    "Jelajahi film, lalu serial.",
+    "Pengaturan umum mencakup bahasa aplikasi dan pemilihan profil saat mulai."
+  ]
+}

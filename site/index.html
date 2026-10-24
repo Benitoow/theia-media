@@ -1,484 +1,151 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{lang}}" dir="{{dir}}" data-entry="{{entry}}" data-locales="{{language_ids}}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Theia — self-hosted film &amp; series media server, native player</title>
-<meta name="description" content="Theia is a self-hosted media server for your own films and series, with a native player for Windows, macOS and Linux. No account, no telemetry.">
+<title>{{t:meta.title}}</title>
+<meta name="description" content="{{t:meta.description}}">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#0B0A09">
-<link rel="canonical" href="{{site_url}}/">
-
-<link rel="icon" href="assets/img/favicon-32.png" type="image/png" sizes="32x32">
-<link rel="icon" href="assets/img/favicon-16.png" type="image/png" sizes="16x16">
-<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
-
+<link rel="canonical" href="{{canonical}}">
+{{alternates}}
+<link rel="icon" href="{{base}}assets/img/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="{{base}}assets/img/favicon-16.png" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="{{base}}assets/img/apple-touch-icon.png">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Theia">
-<meta property="og:locale" content="en_US">
-<meta property="og:url" content="{{site_url}}/">
-<meta property="og:title" content="Theia — Your films and series. Your network. No account.">
-<meta property="og:description" content="Theia is a self-hosted media server for your own films and series, with a native player for Windows, macOS and Linux. No account, no telemetry.">
+<meta property="og:locale" content="{{og_locale}}">
+<meta property="og:url" content="{{canonical}}">
+<meta property="og:title" content="{{t:meta.title}}">
+<meta property="og:description" content="{{t:meta.description}}">
 <meta property="og:image" content="{{site_url}}/assets/img/og-image.jpg">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="The Theia wordmark and the line “Your films and series. Your network. No account.”, beside an illustration of a marble statue reaching toward a sunrise.">
+<meta property="og:image:alt" content="{{t:meta.shareAlt}}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Theia — Your films and series. Your network. No account.">
-<meta name="twitter:description" content="Theia is a self-hosted media server for your own films and series, with a native player for Windows, macOS and Linux. No account, no telemetry.">
+<meta name="twitter:title" content="{{t:meta.title}}">
+<meta name="twitter:description" content="{{t:meta.description}}">
 <meta name="twitter:image" content="{{site_url}}/assets/img/og-image.jpg">
-<meta name="twitter:image:alt" content="The Theia wordmark and the line “Your films and series. Your network. No account.”, beside an illustration of a marble statue reaching toward a sunrise.">
-
-<link rel="preload" href="assets/fonts/cinzel-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="assets/video/hero-ascii-poster.webp" as="image" type="image/webp" fetchpriority="high">
-
+<meta name="twitter:image:alt" content="{{t:meta.shareAlt}}">
+{{font_preload}}
+<link rel="preload" href="{{base}}assets/video/hero-ascii-poster.webp" as="image" type="image/webp" fetchpriority="high">
 <link rel="stylesheet" href="assets/css/site.css">
-
-<script>
-/* Runs before the first paint so the download station opens on the right system
-   without a flash. It guesses the operating system only, never the processor, and
-   it starts nothing. Without JavaScript every system stays visible. */
-(function (root) {
-  var nav = navigator, hints = nav.userAgentData, agent = nav.userAgent || '';
-  var platform = (hints && hints.platform) || nav.platform || '';
-  var phone = !!(hints && hints.mobile) || /Android|iPhone|iPad|iPod|Mobile/i.test(agent) || (/Macintosh/.test(agent) && nav.maxTouchPoints > 1);
-  var os = 'windows';
-  if (!phone) {
-    if (/^Win/i.test(platform) || /Windows/.test(agent)) os = 'windows';
-    else if (/^Mac/i.test(platform) || /Macintosh/.test(agent)) os = 'macos';
-    else if (/Linux|CrOS|X11/i.test(platform + ' ' + agent)) os = 'linux';
-  }
-  root.classList.add('js');
-  root.dataset.os = os;
-  if (phone) root.dataset.mobile = '';
-})(document.documentElement);
-</script>
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "Theia",
-  "applicationCategory": "MultimediaApplication",
-  "operatingSystem": "Windows, macOS, Linux (Ubuntu 24.04)",
-  "description": "Theia is a self-hosted media server for your own films and series, with a native player for Windows, macOS and Linux. No account, no telemetry.",
-  "softwareVersion": "{{version}}",
-  "url": "{{site_url}}/",
-  "downloadUrl": "https://github.com/Benitoow/theia-media/releases/latest",
-  "screenshot": "{{site_url}}/assets/video/theia-install-tour-poster.webp",
-  "isAccessibleForFree": true,
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-  "license": [
-    "https://polyformproject.org/licenses/noncommercial/1.0.0",
-    "https://www.gnu.org/licenses/gpl-3.0.html"
-  ]
-}
-</script>
+<script>{{bootstrap}}</script>
+<script type="application/ld+json">{{structured_data}}</script>
 </head>
-
 <body id="top">
-<a class="skip" href="#main">Skip to content</a>
-
+<a class="skip" href="#main">{{t:nav.skip}}</a>
 <svg class="sprite" aria-hidden="true" focusable="false">
   <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></symbol>
-  <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 5h5v5m0-5-9 9M17 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h4"/></symbol>
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></symbol>
   <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 8h16M4 16h16"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M15 4H6a2 2 0 0 0-2 2v9"/></symbol>
 </svg>
 
 <header class="site-header">
-  <nav class="nav" aria-label="Primary">
-    <a class="nav-brand" href="#top" aria-label="Theia home">Theia<span aria-hidden="true"></span></a>
-    <ul>
-      <li><a href="#demo">Demo</a></li>
-      <li class="nav-wide"><a href="#new">New in 4.4.5</a></li>
-      <li><a href="#download">Download</a></li>
-      <li class="nav-wide"><a href="#limits">Limits</a></li>
-      <li class="nav-wide"><a href="#licence">Licence</a></li>
-      <li><a href="https://github.com/Benitoow/theia-media">GitHub <svg class="icon" aria-hidden="true"><use href="#i-external"/></svg></a></li>
-    </ul>
-  </nav>
+  <div class="wrap nav">
+    <a class="nav-brand" href="#top" aria-label="{{t:nav.home}}" lang="en" dir="ltr">Theia<span aria-hidden="true"></span></a>
+    <nav class="desktop-nav" aria-label="{{t:nav.primary}}">{{navigation}}</nav>
+    <div class="nav-tools">
+      <details class="language-menu" data-menu>
+        <summary aria-label="{{t:nav.language}}: {{language_name}}"><svg class="icon" aria-hidden="true"><use href="#i-globe"/></svg><span>{{language_name}}</span><span class="chevron" aria-hidden="true"></span></summary>
+        <nav class="menu-panel" aria-label="{{t:nav.language}}">{{language_links}}</nav>
+      </details>
+      <details class="mobile-menu" data-menu>
+        <summary aria-label="{{t:nav.menu}}"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg><span>{{t:nav.menu}}</span></summary>
+        <nav class="menu-panel" aria-label="{{t:nav.primary}}">{{navigation}}</nav>
+      </details>
+    </div>
+  </div>
 </header>
 
 <main id="main">
-
-<!-- ================================================================ hero -->
 <section class="hero" aria-labelledby="hero-title">
   <div class="hero-media" aria-hidden="true">
-    <img class="hero-poster" src="assets/video/hero-ascii-poster.webp" width="800" height="600" alt="" fetchpriority="high" decoding="async">
-    <video id="hero-film" autoplay muted loop playsinline preload="none" width="1200" height="900" poster="assets/video/hero-ascii-poster.webp" aria-hidden="true" tabindex="-1">
-      <source data-src="assets/video/hero-ascii.webm" type="video/webm">
-      <source data-src="assets/video/hero-ascii.mp4" type="video/mp4">
+    <img class="hero-poster" src="{{base}}assets/video/hero-ascii-poster.webp" width="800" height="600" alt="" fetchpriority="high" decoding="async">
+    <video id="hero-film" autoplay muted loop playsinline preload="none" width="1200" height="900" poster="{{base}}assets/video/hero-ascii-poster.webp" aria-hidden="true" tabindex="-1">
+      <source data-src="{{base}}assets/video/hero-ascii.mp4" type="video/mp4">
+      <source data-src="{{base}}assets/video/hero-ascii.webm" type="video/webm">
     </video>
   </div>
   <div class="wrap hero-layout">
     <div class="hero-copy">
-      <p class="eyebrow hero-eyebrow">Self-hosted. Uncomplicated.</p>
-      <h1 id="hero-title"><span>Your cinema.</span> <span class="gilded">Your rules.</span></h1>
-      <p class="lead">Your own films and series, in one beautiful library. A small server at home. A native player on your desktop. No cloud account. No telemetry.</p>
-      <p class="cta-row">
-        <a class="btn" href="#download">Get Theia <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        <a class="link hero-demo" href="#demo"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg> Watch it install</a>
-      </p>
-      <p class="hero-platforms">Windows <span aria-hidden="true">/</span> macOS <span aria-hidden="true">/</span> Linux</p>
+      <p class="eyebrow">{{t:hero.eyebrow}}</p>
+      <h1 id="hero-title"><span>{{t:hero.line1}}</span> <span class="gilded">{{t:hero.line2}}</span></h1>
+      <p class="lead">{{t:hero.lead}}</p>
+      <div class="cta-row">
+        <a class="btn" href="#download">{{t:hero.download}}<svg class="icon icon-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <a class="btn btn-outline" href="#demo"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>{{t:hero.watch}}</a>
+      </div>
+      <p class="hero-platforms" dir="ltr">Windows <span aria-hidden="true">/</span> macOS <span aria-hidden="true">/</span> Linux</p>
     </div>
     <div class="hero-footer">
-      <p class="hero-note">Young software, one maintainer. Windows x64 is the only platform validated on real hardware so far. <a href="#limits">Read the limits</a>.</p>
-      <a class="hero-scroll" href="#demo">Step inside <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-      <button class="hero-motion" type="button" aria-controls="hero-film" aria-label="Pause animation" hidden>
-        <svg class="icon" aria-hidden="true"><use href="#i-pause"/></svg>
-      </button>
+      <p class="hero-note">{{t:hero.note}} <a href="#limits">{{t:hero.limits}}</a>.</p>
+      <a class="hero-scroll text-link" href="#discover">{{t:hero.start}}<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      <span class="hero-motion-slot"><button class="hero-motion" type="button" aria-controls="hero-film" aria-label="{{t:ui.pause}}" data-pause="{{t:ui.pause}}" data-resume="{{t:ui.resume}}" hidden><svg class="icon" aria-hidden="true"><use href="#i-pause"/></svg></button></span>
     </div>
   </div>
 </section>
 
-<!-- ================================================================ demo -->
-<section id="demo" class="section" aria-labelledby="demo-title">
+<section id="discover" class="section discovery" aria-labelledby="discover-title">
   <div class="wrap">
-    <header class="section-head reveal">
-      <p class="eyebrow">A real recording</p>
-      <h2 id="demo-title">Download, install, open.</h2>
-      <p class="section-lead">Theia 4.4.4 on Windows, from the release page to the library: 1 min 30 s, no sound. Theia is shown in English, Windows and the browser in French; Theia ships in English and French.</p>
-    </header>
-
-    <figure class="tour reveal">
-      <div class="tour-frame">
-        <video id="tour" controls preload="metadata" playsinline width="1920" height="1080" poster="assets/video/theia-install-tour-poster.webp">
-          <source src="assets/video/theia-install-tour.mp4" type="video/mp4">
-          <track kind="captions" src="assets/video/theia-install-tour.en.vtt" srclang="en" label="English">
-          <p>This browser cannot play the recording. <a href="assets/video/theia-install-tour.mp4">Download the MP4</a> (11 MB, no sound).</p>
-        </video>
-        <button class="tour-play" type="button" aria-label="Play the recording"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
-      </div>
-      <figcaption>A real screen recording of the shipped application, made on Windows with the maintainer’s own library. Not a mockup. Posters, backdrops and cast portraits come from TMDB.</figcaption>
-    </figure>
-
-    <ol class="scenes reveal" aria-label="The recording, scene by scene">
-      <li class="scene">
-        <a class="scene-time" href="#demo" data-seek="0"><span class="visually-hidden">Play from </span>0:00</a>
-        <span class="scene-title">Download</span>
-        <p>Get the setup for your system from the latest release page on GitHub. Here, the Windows x64 setup of 4.4.4.</p>
-      </li>
-      <li class="scene">
-        <a class="scene-time" href="#demo" data-seek="31"><span class="visually-hidden">Play from </span>0:31</a>
-        <span class="scene-title">Install</span>
-        <p>Open the setup. It is one full-screen form in a terminal: the language, what this computer is for, and the folders that hold your films, with a count of the videos found in the one you add. The Explorer window where the folder is picked is blurred here, because it shows the maintainer’s own files. The form shows its plan before anything is written, then installs.</p>
-      </li>
-      <li class="scene">
-        <a class="scene-time" href="#demo" data-seek="68"><span class="visually-hidden">Play from </span>1:08</a>
-        <span class="scene-title">Open</span>
-        <p>Start Theia from the Start Menu or the Desktop, or by typing <code>theia</code> in a terminal. The first time, Windows asks whether the server may use the network; the recording allows it.</p>
-      </li>
-      <li class="scene">
-        <a class="scene-time" href="#demo" data-seek="75"><span class="visually-hidden">Play from </span>1:15</a>
-        <span class="scene-title">Browse</span>
-        <p>Choose who is watching (profiles have no password), then the home screen with the film being shown and what was added recently, the films and the series.</p>
-      </li>
-      <li class="scene">
-        <a class="scene-time" href="#demo" data-seek="86"><span class="visually-hidden">Play from </span>1:26</a>
-        <span class="scene-title">Settings</span>
-        <p>The general page, with the app language and whether to ask who is watching at startup. The other pages, for playback, audio and subtitles, the server and updates, are in the menu beside it.</p>
-      </li>
-    </ol>
-
-    <p class="fineprint">What the recording does not show: a film playing, so it says nothing about picture or sound; any system other than Windows; friends and rooms; the profile editor; anything new since 4.4.4.</p>
-  </div>
-</section>
-
-<!-- ================================================================== new -->
-<section id="new" class="section" aria-labelledby="new-title">
-  <div class="wrap">
-    <header class="section-head reveal">
-      <p class="eyebrow">Theia 4.4.5</p>
-      <h2 id="new-title">The end of V4, out of your way.</h2>
-      <p class="section-lead">4.4.5 is the last update of V4. A small profile photo now fills its circle, you frame your photo before saving it, and on a fresh installation Skip opening and Next episode appear from the first episode. It carries 4.4.4, which keeps the end of an episode out of your way, and 4.4.3, which repaired the interface update path. 4.4.2 closes V4 with a timeline you can read, episodes that follow on, settings you can trust, and friends you can see. The server, the library, ordinary viewing and everything in this release cost nothing. The next step is Theia 5.0; there will be no account and no telemetry, and for now every V4 feature stays free. Which later features might become paid, if any, is not decided, and it will be announced well before it happens.</p>
-    </header>
-
-    <ul class="limits">
-      <li class="limit reveal">
-        <h3>A timeline you can read</h3>
-        <p>Move the pointer along the playback bar: a still of the exact scene follows it, with its time. Nothing seeks until you click.</p>
-      </li>
-      <li class="limit reveal">
-        <h3>Episodes that follow on</h3>
-        <p>Skip the opening with a click while the offer is on screen, watch the Next episode button fill over a 30-second countdown you can cancel, and stop at the end of a season. The markers are the chapters named in the file; Theia does not guess.</p>
-      </li>
-      <li class="limit reveal">
-        <h3>Settings you can trust</h3>
-        <p>Eight categories, audio and subtitle choices remembered per series, ordered languages, an audio output, interface scale, cache sizes and shortcuts you can change. The player updates only when you ask, unless you switch automatic updates on.</p>
-      </li>
-      <li class="limit reveal">
-        <h3>Presence you can read</h3>
-        <p>Friends are online, inactive, watching or offline. You can be up for a film, do not disturb or invisible, hide the title you are watching, and ask for a quiet notice when a friend returns. Ending a friendship ends it on both sides.</p>
-      </li>
-      <li class="limit reveal">
-        <h3>Private rooms</h3>
-        <p>A watch-party room admits only the friends its host invites. Each invitation is for one profile and lasts until the room ends; others may ask to join, and the host answers.</p>
-      </li>
-      <li class="limit reveal">
-        <h3>Spoiler protection</h3>
-        <p>On a series page, one switch blurs the pictures of the episodes you have not finished and turns off their previews.</p>
-      </li>
-      <li class="limit reveal">
-        <h3>Your photo, framed</h3>
-        <p>Choose a photo for your profile, then drag and zoom it inside the circle before saving. A small photo fills the circle instead of sitting in a black square.</p>
-      </li>
-    </ul>
-
-    <figure class="shot reveal">
-      <img src="assets/img/shot-player.webp" width="1600" height="943" alt="Screenshot of the native player on a sample film: the pointer is on the playback bar at 2:02:17 and a still of that scene is drawn above it, beside the minus 30 and plus 30 second buttons." loading="lazy" decoding="async">
-      <figcaption>The timeline preview in the native player, on a sample library. The film is a stand-in made from the title’s own backdrop; the interface is real. Run the 4.4.5 setup once to get it from an older version: the player itself changed in 4.4.2. See the <a href="https://github.com/Benitoow/theia-media/blob/main/docs/releases/v4.4.5.md">4.4.5 release notes</a>.</figcaption>
-    </figure>
-
-    <p class="fineprint">Earlier in V4: who is watching at startup, friends by code, Discord presence, a rebuilt installer, watch parties and the island, opinions between friends, and a player that updates its interface without a new download (4.0 to 4.4.1). Windows x64, Linux x64 and both Macs have 4.4.5 setups; Windows and Ubuntu ARM64 keep the explicitly labelled 4.2.1 downloads, and their 4.4.x setups are planned for early November.</p>
-  </div>
-</section>
-
-<!-- ========================================================== download -->
-<section id="download" class="section" aria-labelledby="download-title">
-  <div class="wrap">
-    <header class="section-head reveal">
-      <p class="eyebrow">Latest release · {{tag}} · {{date}} · {{licence}}</p>
-      <h2 id="download-title">Download Theia</h2>
-      <p class="section-lead">Choose your system, then your processor. Every file is a complete setup: server, launcher, native player and media engine. It asks whether this machine serves, plays or does both. Nothing downloads until you click a file.</p>
-    </header>
-
-    <div class="station reveal">
-      <p class="step-label os-step"><span>1</span> Your system</p>
-      <div class="os-switch" role="group" aria-label="Operating system">
-        <button class="os-pill" type="button" data-os-pill="windows" aria-pressed="true">Windows</button>
-        <button class="os-pill" type="button" data-os-pill="macos" aria-pressed="false">macOS</button>
-        <button class="os-pill" type="button" data-os-pill="linux" aria-pressed="false">Linux</button>
-      </div>
-      <p class="mobile-note">Theia’s apps are for desktop computers. On a phone or a television, open your server’s address in the browser instead; the web viewer stays available.</p>
-      <p id="os-live" class="visually-hidden" aria-live="polite"></p>
-
-      <section class="panel" id="panel-windows" aria-labelledby="panel-windows-title">
-        <h3 id="panel-windows-title" class="panel-title">Windows</h3>
-        <p class="panel-note">The setup is not code-signed, so Windows may show a reputation warning: compare its SHA-256 with the one below before you run it. It installs for your user only and asks for no administrator rights.</p>
-        <p class="step-label"><span>2</span> Your processor</p>
-        <ul class="arches">
-          <li class="arch">
-            <a class="arch-link" href="{{url:theia-setup-windows-amd64.exe}}">
-              <span class="arch-name">Windows x64 <span class="arch-sub">Intel and AMD processors</span></span>
-              <span class="arch-file">theia-setup-windows-amd64.exe · {{size:theia-setup-windows-amd64.exe}}{{from:theia-setup-windows-amd64.exe}}</span>
-              <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
-            </a>
-            <p class="arch-state">The 4.4.2 player it carries passed the generated-film and visible-controls checks on the maintainer’s Windows computer.</p>
-            <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-windows-amd64.exe}}</code></p>
-          </li>
-          <li class="arch">
-            <a class="arch-link" href="{{url:theia-setup-windows-arm64.exe}}">
-              <span class="arch-name">Windows ARM64 <span class="arch-sub">ARM processors</span></span>
-              <span class="arch-file">theia-setup-windows-arm64.exe · {{size:theia-setup-windows-arm64.exe}}{{from:theia-setup-windows-arm64.exe}}</span>
-              <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
-            </a>
-            <p class="arch-state">This download is 4.2.1, which passed its native install and test-film checks. Its player predates 4.4 and does not have the features of 4.4 and later; the new ARM64 setup is planned for early November.</p>
-            <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-windows-arm64.exe}}</code></p>
-          </li>
-        </ul>
-      </section>
-
-      <section class="panel" id="panel-macos" aria-labelledby="panel-macos-title">
-        <h3 id="panel-macos-title" class="panel-title">macOS</h3>
-        <p class="panel-note">The app is ad-hoc signed, not notarised: macOS may ask you to allow it in Privacy &amp; Security the first time you open it. Make the setup executable with <code>chmod +x</code> followed by its file name, then run it.</p>
-        <p class="step-label"><span>2</span> Your processor</p>
-        <ul class="arches">
-          <li class="arch">
-            <a class="arch-link" href="{{url:theia-setup-darwin-arm64}}">
-              <span class="arch-name">Mac with an Apple chip <span class="arch-sub">Apple Silicon</span></span>
-              <span class="arch-file">theia-setup-darwin-arm64 · {{size:theia-setup-darwin-arm64}}{{from:theia-setup-darwin-arm64}}</span>
-              <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
-            </a>
-            <p class="arch-state">The 4.4.2 player it carries passed install, test-film and visible-controls checks on a hosted Apple Silicon Mac. Hardware decoding and HDR remain unverified on a physical display.</p>
-            <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-darwin-arm64}}</code></p>
-          </li>
-          <li class="arch">
-            <a class="arch-link" href="{{url:theia-setup-darwin-amd64}}">
-              <span class="arch-name">Mac with an Intel processor <span class="arch-sub">Intel</span></span>
-              <span class="arch-file">theia-setup-darwin-amd64 · {{size:theia-setup-darwin-amd64}}{{from:theia-setup-darwin-amd64}}</span>
-              <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
-            </a>
-            <p class="arch-state">The 4.4.2 player it carries passed install, test-film and visible-controls checks under Rosetta on a hosted Apple Silicon Mac. A physical Intel Mac, hardware decoding and HDR remain unverified.</p>
-            <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-darwin-amd64}}</code></p>
-          </li>
-        </ul>
-      </section>
-
-      <section class="panel" id="panel-linux" aria-labelledby="panel-linux-title">
-        <h3 id="panel-linux-title" class="panel-title">Linux</h3>
-        <p class="panel-note">Ubuntu 24.04 with X11 or XWayland; other distributions are not verified. Install the prerequisites first, then make the setup executable with <code>chmod +x</code> and run it. Decoding is in software, rendering is SDR and audio is PCM.</p>
-        <pre class="command"><code>sudo apt install libwebkit2gtk-4.1-0 libayatana-appindicator3-1</code></pre>
-        <p class="panel-note">The media engine is no longer a prerequisite: an LGPL build ships beside the player, with the licence text of every library it carries (<a href="https://github.com/Benitoow/theia-media/blob/main/docs/releases/v4.0.0.md">4.0 release notes</a>).</p>
-        <p class="step-label"><span>2</span> Your processor</p>
-        <ul class="arches">
-          <li class="arch">
-            <a class="arch-link" href="{{url:theia-setup-linux-amd64}}">
-              <span class="arch-name">Ubuntu 24.04 x64 <span class="arch-sub">Intel and AMD processors</span></span>
-              <span class="arch-file">theia-setup-linux-amd64 · {{size:theia-setup-linux-amd64}}{{from:theia-setup-linux-amd64}}</span>
-              <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
-            </a>
-            <p class="arch-state">The 4.4.2 player it carries passed the automated install, test-film and removal checks on a native runner. Reports from a real machine are wanted.</p>
-            <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-linux-amd64}}</code></p>
-          </li>
-          <li class="arch">
-            <a class="arch-link" href="{{url:theia-setup-linux-arm64}}">
-              <span class="arch-name">Ubuntu 24.04 ARM64 <span class="arch-sub">ARM processors</span></span>
-              <span class="arch-file">theia-setup-linux-arm64 · {{size:theia-setup-linux-arm64}}{{from:theia-setup-linux-arm64}}</span>
-              <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
-            </a>
-            <p class="arch-state">This download is 4.2.1, which passed its native install, test-film and removal checks. Its player predates 4.4 and does not have the features of 4.4 and later; the new ARM64 setup is planned for early November.</p>
-            <p class="digest"><span>SHA-256</span> <code>{{sha:theia-setup-linux-arm64}}</code></p>
-          </li>
-        </ul>
-      </section>
-    </div>
-
-    <div class="station-foot reveal">
-      <p><strong>Check a download.</strong> Compare its SHA-256 with <code>Get-FileHash &lt;file&gt;</code> in PowerShell, or <code>shasum -a 256 &lt;file&gt;</code> on macOS and Linux. GitHub lists the digest of every file on the <a href="{{release_url}}">release page</a>.</p>
-      <p><strong>Upgrading from 3.x?</strong> Run the new setup: it updates the installation in place and keeps your library and progress. An automatic server update alone does not replace the old player.</p>
+    <header class="section-head"><p class="eyebrow">{{t:discover.eyebrow}}</p><h2 id="discover-title">{{t:discover.title}}</h2><p class="section-lead">{{t:discover.intro}}</p></header>
+    <div class="benefits">{{benefits}}</div>
+    <div id="demo" class="demo" aria-labelledby="demo-title">
+      <div class="tour-heading"><div><p class="eyebrow">{{t:tour.eyebrow}}</p><h3 id="demo-title">{{t:tour.title}}</h3></div><p>{{t:tour.intro}}</p></div>
+      <figure class="tour">
+        <div class="tour-frame">
+          <video id="tour" controls preload="none" playsinline width="1920" height="1080" poster="{{base}}assets/video/theia-install-tour-poster.webp">
+            <source src="{{base}}assets/video/theia-install-tour.mp4" type="video/mp4">
+            {{caption_tracks}}
+            <p><a href="{{base}}assets/video/theia-install-tour.mp4">{{t:tour.fallback}}</a></p>
+          </video>
+          <button class="tour-play" type="button" aria-label="{{t:tour.play}}"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
+        </div>
+        <figcaption>{{t:tour.caption}}</figcaption>
+      </figure>
+      <ol class="scenes" aria-label="{{t:tour.scenes}}">{{steps}}</ol>
+      <details class="quiet-details recording-details"><summary>{{t:tour.details}}</summary><p>{{t:tour.limits}}</p></details>
     </div>
   </div>
 </section>
 
-<!-- ============================================================= ledger -->
-<section id="ledger" class="section" aria-labelledby="ledger-title">
+<section id="download" class="section download-section" aria-labelledby="download-title">
   <div class="wrap">
-    <header class="section-head reveal">
-      <p class="eyebrow">The honest ledger</p>
-      <h2 id="ledger-title">What you gain. What you give up.</h2>
-    </header>
-
-    <h3 class="ledger-side reveal">You gain</h3>
-    <ul class="moments">
-      <li class="moment reveal">
-        <figure>
-          <img src="assets/img/shot-library.webp" width="1200" height="900" alt="Screenshot of the native player: All movies, a library of 132 recent films, with the first rows of cards and one film to resume." loading="lazy" decoding="async">
-          <figcaption class="chip">Screenshot</figcaption>
-        </figure>
-        <p class="eyebrow">Your library</p>
-        <h4>Your folders, where they already are</h4>
-        <p>Point Theia at the folders you already have. It scans them, watches for new files, groups alternate versions of a film under one title and leaves every file where it is. Posters, synopses and cast come from TMDB and are cached by the server.</p>
-      </li>
-      <li class="moment reveal">
-        <figure>
-          <img src="assets/img/moment-player.webp" width="1212" height="909" alt="Illustration: a marble hand holding a glowing golden sphere above a dark coastline." loading="lazy" decoding="async">
-          <figcaption class="chip">Illustration</figcaption>
-        </figure>
-        <p class="eyebrow">The player</p>
-        <h4>A player that does its own work</h4>
-        <p>The native player reads Matroska directly and draws subtitles itself, image-based ones such as PGS and VobSub included. It remembers where you stopped, offers the next episode, and keeps your audio and subtitle choices, volume and window size.</p>
-      </li>
-      <li class="moment reveal">
-        <figure>
-          <img src="assets/img/moment-remote.webp" width="1448" height="1086" alt="Illustration: two lit houses on dark hillsides, joined across a misty valley by a single golden thread." loading="lazy" decoding="async">
-          <figcaption class="chip">Illustration</figcaption>
-        </figure>
-        <p class="eyebrow">Away from home</p>
-        <h4>Direct film streams</h4>
-        <p>Remote access is built in: a device you authorise connects over WireGuard with its own key. Films and rooms travel directly, without a media relay. Friend requests, presence and opinions use the Firebase directory described below.</p>
-      </li>
-    </ul>
-
-    <h3 id="limits" class="ledger-side reveal">You give up</h3>
-    <ul class="limits">
-      <li class="limit reveal">
-        <h4>Thin real-world testing</h4>
-        <p>Windows x64 has been used with the maintainer’s own library, 4.4.2 included; 4.4.2 was checked with generated films on Windows, Linux x64 and both Macs, with Intel under Rosetta. The ARM64 fallback setups were checked for 4.2.1. That says nothing about your screen, your audio chain or your library.</p>
-      </li>
-      <li class="limit reveal">
-        <h4>Friends are new</h4>
-        <p>Offline requests and the new presence pass simulated two-server tests, and the maintainer reported a session between two households on a test build working. Private rooms and the shared countdown have not been tried between two real households.</p>
-        <p>Theia’s Firebase database receives directory entries for all local profiles, including names and pictures, even before a friend is added. Linked friends exchange requests, current presence and the thumb and text of the opinions they write: an opinion is stored in the inbox of each friend who can read it until it is deleted. Presence is your chosen availability, a generic activity (browsing, in a room, watching) and, unless you turn it off, the last moment your player was seen; only that moment is kept, never a history, and invisible publishes none of it. No library catalogue or viewing history is sent, and no sign-up is required.</p>
-      </li>
-      <li class="limit reveal">
-        <h4>Linux is the narrowest</h4>
-        <p>Ubuntu 24.04 only, through X11 or XWayland, with software decoding, SDR and PCM audio. Hardware acceleration and HDR output are not available there yet.</p>
-      </li>
-      <li class="limit reveal">
-        <h4>Sound is not proven end to end</h4>
-        <p>On Windows the player asks the audio output for bitstream passthrough (Dolby TrueHD and Atmos, DTS-HD MA) and falls back to PCM if the output refuses. That mechanism is verified. Delivery to an AV receiver is not: the maintainer has none to test with. macOS and Linux use PCM.</p>
-      </li>
-      <li class="limit reveal">
-        <h4>Unsigned binaries</h4>
-        <p>Windows setups are not code-signed and may trigger a reputation warning. Mac apps are ad-hoc signed and not notarised, so macOS asks for approval on first launch.</p>
-      </li>
-      <li class="limit reveal">
-        <h4>No login on your network</h4>
-        <p>Anyone who can reach port 8383 on your network can browse, stream and administer Theia. Keep it on a trusted network and never forward port 8383 to the internet; use the remote-access screen instead.</p>
-      </li>
-      <li class="limit reveal">
-        <h4>Desktop first, and small</h4>
-        <p>Phones and televisions use the existing browser viewer, which no longer receives playback development. There is no live TV, DVR, music library, plugins or multi-user permissions.</p>
-      </li>
-    </ul>
-  </div>
-</section>
-
-<!-- ============================================================ licence -->
-<section id="licence" class="section" aria-labelledby="licence-title">
-  <div class="wrap split">
-    <header class="section-head reveal">
-      <p class="eyebrow">Licence</p>
-      <h2 id="licence-title"><span class="nowrap">Free for personal use.</span> Not for sale.</h2>
-    </header>
-    <div class="prose reveal">
-      <p class="statement">Free for personal, non-commercial use under PolyForm Noncommercial 1.0.0 (versions 3.4 and earlier: GPL-3.0).</p>
-      <p>The version the download buttons serve today, {{tag}}, is published under {{licence}}. Theia 3.4.0 and every earlier release stay under GPL-3.0 for good, and their source stays public at their tags. Every release from 4.0 is distributed under PolyForm Noncommercial 1.0.0: you may use and share it for noncommercial purposes, and commercial use needs a separate licence. From 4.0 the source code is developed privately and is not published.</p>
-      <p>The server, the library and ordinary viewing are free, every V4 release is free, and nothing paid exists. For now every V4 feature stays free; which later features might become paid, if any, is not decided, and it will be announced well before it happens. The next step is Theia 5.0, which looks outward, at cloud, servers and storage; there will be no account and no telemetry.</p>
-      <p class="links">
-        <a href="https://polyformproject.org/licenses/noncommercial/1.0.0">PolyForm Noncommercial 1.0.0 <svg class="icon" aria-hidden="true"><use href="#i-external"/></svg></a>
-        <a href="https://github.com/Benitoow/theia-media/blob/v3.4.0/LICENSE">GPL-3.0, as published with 3.4.0 <svg class="icon" aria-hidden="true"><use href="#i-external"/></svg></a>
-      </p>
+    <header class="section-head"><p class="eyebrow">{{t:download.eyebrow}}</p><h2 id="download-title">{{t:download.title}}</h2><p class="section-lead">{{t:download.intro}}</p><p class="release-line"><bdi>{{tag}}</bdi><span aria-hidden="true"> · </span><time datetime="{{date_iso}}">{{date}}</time><span aria-hidden="true"> · </span><span>{{licence}}</span></p></header>
+    <div class="station">
+      <div class="station-top"><p class="step-label"><span aria-hidden="true">01</span>{{t:download.system}}</p><div class="os-switch" role="group" aria-label="{{t:download.system}}"><button class="os-pill" type="button" data-os-pill="windows" aria-pressed="true">Windows</button><button class="os-pill" type="button" data-os-pill="macos" aria-pressed="false">macOS</button><button class="os-pill" type="button" data-os-pill="linux" aria-pressed="false">Linux</button></div></div>
+      <p class="mobile-note">{{t:download.mobile}}</p>
+      <p id="os-live" class="visually-hidden" aria-live="polite" data-showing="{{t:ui.showing}}"></p>
+      {{download_panels}}
     </div>
+    <div class="station-foot"><p>{{t:download.upgrade}}</p><div><a class="text-link" href="#faq-processor">{{t:download.help}}</a><a class="text-link" href="{{release_url}}">{{t:download.release}}<svg class="icon icon-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a></div></div>
   </div>
 </section>
 
-<!-- ============================================================== help -->
+<section id="new" class="section news-section" aria-labelledby="new-title">
+  <div class="wrap"><header class="section-head news-head"><div><p class="eyebrow">{{t:news.eyebrow}} <bdi>· {{tag}}</bdi></p><h2 id="new-title">{{t:news.title}}</h2></div><a class="text-link" href="{{release_notes}}">{{t:news.notes}}<svg class="icon icon-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a></header><div class="news-grid">{{news}}</div></div>
+</section>
+
+<section id="faq" class="section faq-section" aria-labelledby="faq-title">
+  <div class="wrap faq-wrap"><span id="ledger" class="anchor-alias"></span><header class="section-head"><p class="eyebrow">{{t:faq.eyebrow}}</p><h2 id="faq-title">{{t:faq.title}}</h2><p class="section-lead">{{t:faq.intro}}</p></header><div class="faq-list">{{faq}}</div></div>
+</section>
+
+<section id="licence" class="legal-section" aria-labelledby="licence-title">
+  <div class="wrap legal-grid"><h2 id="licence-title">{{t:legal.title}}</h2><div><p>{{t:legal.body}}</p><details class="quiet-details"><summary>{{t:legal.details}}</summary><div class="licence-links"><a href="https://polyformproject.org/licenses/noncommercial/1.0.0" lang="en">PolyForm Noncommercial 1.0.0</a><a href="https://github.com/Benitoow/theia-media/blob/v3.4.0/LICENSE" lang="en">GPL-3.0</a></div></details></div></div>
+</section>
+
 <section id="help" class="section help" aria-labelledby="help-title">
-  <div class="wrap split">
-    <header class="section-head reveal">
-      <p class="eyebrow">Field test</p>
-      <h2 id="help-title">Help test it</h2>
-    </header>
-    <div class="prose reveal">
-      <p>Automated checks cover installation and a generated film. They cannot cover your screen, your sound system or your library. Try Theia for a week if you can, and tell us what worked as well as what failed. Reports from Intel Macs, Apple Silicon Macs and Ubuntu machines are especially useful, and so is a try of friends and a private room between two households.</p>
-      <p class="cta-row">
-        <a class="btn" href="https://github.com/Benitoow/theia-media/issues/10">Join the field test <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        <a class="link" href="https://discord.gg/p4Rp4zHdHf">or talk to other testers on Discord</a>
-      </p>
-    </div>
-  </div>
+  <div class="wrap"><p class="eyebrow">{{t:help.eyebrow}}</p><h2 id="help-title">{{t:help.title}}</h2><p class="section-lead">{{t:help.body}}</p><div class="cta-row"><a class="btn" href="#download">{{t:hero.download}}<svg class="icon icon-arrow" aria-hidden="true"><use href="#i-download"/></svg></a><a class="btn btn-secondary" href="https://discord.gg/p4Rp4zHdHf">{{t:help.discord}}</a><a class="text-link" href="https://github.com/Benitoow/theia-media/issues/10">{{t:help.feedback}}<svg class="icon icon-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a></div></div>
 </section>
-
 </main>
 
-<!-- ============================================================ footer -->
-<footer class="site-footer">
-  <div class="wrap footer-grid">
-    <div>
-      <p class="lockup">Theia</p>
-      <p>One maintainer, built with disclosed AI assistance. The still illustrations are AI-generated; the recording and the screenshots are real, and the screenshots show a sample library. This page sets no cookies, runs no analytics and loads nothing from other sites.</p>
-    </div>
-    <nav aria-label="Project">
-      <ul>
-        <li><a href="https://github.com/Benitoow/theia-media">GitHub repository</a></li>
-        <li><a href="https://github.com/Benitoow/theia-media/releases">Releases</a></li>
-        <li><a href="https://github.com/Benitoow/theia-media/issues/10">Field test</a></li>
-        <li><a href="https://discord.gg/p4Rp4zHdHf">Discord</a></li>
-        <li><a href="https://polyformproject.org/licenses/noncommercial/1.0.0">PolyForm Noncommercial 1.0.0</a></li>
-        <li><a href="https://github.com/Benitoow/theia-media/blob/v3.4.0/LICENSE">GPL-3.0 (3.4.0 and earlier)</a></li>
-      </ul>
-    </nav>
-    <div class="credits">
-      <p>This product uses the TMDB API but is not endorsed or certified by TMDB. <a href="https://www.themoviedb.org/">themoviedb.org</a></p>
-      <p>Type: Cinzel and Jost, under the SIL Open Font License 1.1.</p>
-    </div>
-  </div>
-</footer>
-
-<script src="assets/js/site.js" defer></script>
+<footer class="site-footer"><div class="wrap footer-grid"><div><p class="lockup" lang="en" dir="ltr">Theia</p><p>{{t:footer.about}}</p><p>{{t:footer.privacy}}</p></div><nav aria-label="{{t:nav.project}}"><a href="https://github.com/Benitoow/theia-media">GitHub</a><a href="https://github.com/Benitoow/theia-media/releases">{{t:footer.releases}}</a><a href="https://discord.gg/p4Rp4zHdHf">Discord</a><a href="https://github.com/Benitoow/theia-media/security/policy">{{t:footer.security}}</a></nav><div class="credits"><p>{{t:footer.languageNote}}</p><p lang="en">This product uses the TMDB API but is not endorsed or certified by TMDB. <a href="https://www.themoviedb.org/">themoviedb.org</a></p><p>{{t:footer.type}}</p></div></div></footer>
+<p id="copy-status" class="copy-status" role="status" aria-live="polite" aria-label="{{t:ui.status}}" data-success="{{t:download.copied}}" data-failure="{{t:download.copyFailed}}"></p>
+<script src="{{base}}assets/js/site.js" defer></script>
 </body>
 </html>

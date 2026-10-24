@@ -1,0 +1,214 @@
+{
+  "meta": {
+    "title": "Theia — tu propio cine, sin complicaciones",
+    "description": "Tus películas y series, juntas. Servidor personal y reproductor nativo para Windows, macOS y Linux. Gratis para uso personal, sin cuenta ni telemetría.",
+    "shareAlt": "El nombre Theia junto a una estatua de mármol ilustrada que se acerca al amanecer."
+  },
+  "nav": {
+    "home": "Inicio de Theia",
+    "skip": "Ir al contenido",
+    "primary": "Navegación principal",
+    "discover": "Descubrir",
+    "download": "Descargar",
+    "faq": "Preguntas",
+    "github": "GitHub",
+    "menu": "Menú",
+    "language": "Idioma",
+    "project": "Enlaces del proyecto"
+  },
+  "hero": {
+    "eyebrow": "En tu casa. Sin complicaciones.",
+    "line1": "Tu cine.",
+    "line2": "Tus reglas.",
+    "lead": "Tus películas y series, en un lugar. Un pequeño servidor en casa. Un reproductor nativo en tu ordenador. Sin cuenta. Sin telemetría.",
+    "download": "Descargar Theia",
+    "watch": "Ver la instalación",
+    "note": "Un solo desarrollador. Windows x64 es la única plataforma usada con una biblioteca doméstica real hasta ahora.",
+    "limits": "Conoce los límites",
+    "start": "Pasa a la sala"
+  },
+  "discover": {
+    "eyebrow": "Menos ajustes. Más cine.",
+    "title": "Tus películas, en casa.",
+    "intro": "Deja tus archivos donde están. Theia reúne tu biblioteca, el reproductor y tus amigos.",
+    "benefits": [
+      {
+        "title": "Una biblioteca que es tuya",
+        "body": "Añade tus carpetas. Películas y series encuentran su sitio, con carteles, reparto y progreso de reproducción.",
+        "label": "Captura de pantalla",
+        "alt": "La biblioteca del reproductor nativo con imágenes y una película para continuar, en una biblioteca de muestra."
+      },
+      {
+        "title": "Un reproductor para tus archivos",
+        "body": "Matroska, subtítulos de imagen y vista previa de escenas. Tus preferencias de audio y subtítulos siguen a tus series.",
+        "label": "Captura de pantalla",
+        "alt": "El reproductor nativo muestra una película de prueba basada en su imagen de fondo, con vista previa sobre la barra de reproducción."
+      },
+      {
+        "title": "Cerca, incluso a distancia",
+        "body": "Añade amigos por código, comparte opiniones e invítalos a una sala privada. Los vídeos remotos viajan directamente por WireGuard.",
+        "label": "Ilustración",
+        "alt": "Ilustración de dos casas conectadas por un hilo dorado entre colinas oscuras."
+      }
+    ]
+  },
+  "tour": {
+    "eyebrow": "La aplicación real",
+    "title": "De la descarga a tus películas.",
+    "intro": "90 segundos. Una instalación real de Theia 4.4.4 en Windows, sin sonido.",
+    "caption": "Grabación real, no una maqueta. Theia aparece en inglés; Windows y el navegador en francés. La aplicación está disponible en inglés y francés.",
+    "play": "Reproducir la grabación de instalación",
+    "fallback": "Descargar la grabación",
+    "details": "Detalles de la grabación",
+    "scenes": "Instalación en tres pasos",
+    "from": "Reproducir desde",
+    "limits": "No muestra reproducción de películas, amigos, salas, editor de perfiles ni cambios posteriores a 4.4.4. Las imágenes y retratos vienen de TMDB. Los archivos personales están difuminados.",
+    "steps": [
+      {
+        "title": "Descargar",
+        "body": "Elige sistema y procesador. Un instalador incluye servidor, lanzador, reproductor y motor multimedia."
+      },
+      {
+        "title": "Instalar",
+        "body": "Elige inglés o francés, la función del ordenador y tus carpetas. Revisa el plan antes de instalar."
+      },
+      {
+        "title": "Abrir",
+        "body": "Inicia Theia, permite el servidor en tu red de confianza y elige quién está viendo para explorar tu biblioteca."
+      }
+    ]
+  },
+  "download": {
+    "eyebrow": "Estás en tu casa",
+    "title": "Tu próxima película empieza aquí.",
+    "intro": "Elige tu sistema y tu procesador. Nada se descarga hasta que elijas un archivo.",
+    "system": "Tu sistema",
+    "processor": "Tu procesador",
+    "mobile": "Las aplicaciones Theia son de escritorio. El visor web existente sigue disponible en móviles y televisores; su reproducción ya no se desarrolla activamente.",
+    "windowsWarning": "Windows puede mostrar una advertencia de reputación: el instalador no está firmado. Comprueba su SHA-256 antes de ejecutarlo. No pide permisos de administrador.",
+    "macosWarning": "La aplicación tiene firma ad hoc, sin notarización. macOS puede pedir autorización en Privacidad y seguridad. Usa chmod +x para hacer ejecutable el instalador y después ejecútalo.",
+    "linuxWarning": "Solo Ubuntu 24.04, X11 o XWayland. Instala los requisitos siguientes, usa chmod +x y ejecuta el instalador. Decodificación por software, SDR y audio PCM; otras distribuciones no están verificadas.",
+    "prerequisites": "Requisitos de Ubuntu",
+    "x64": "Procesadores Intel y AMD",
+    "arm": "Procesadores ARM",
+    "apple": "Chip de Apple",
+    "intel": "Procesador Intel",
+    "current": "Versión actual",
+    "legacy": "Versión anterior",
+    "version": "Versión",
+    "verify": "Verificar este archivo",
+    "command": "Comando de verificación",
+    "filename": "Nombre del archivo",
+    "checksum": "SHA-256",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "copyFailed": "No se pudo copiar. Selecciona el valor y cópialo manualmente.",
+    "verifiedWindows": "Reproductor comprobado con una película generada y controles visibles en el ordenador Windows del desarrollador.",
+    "verifiedMac": "Instalación y película generada comprobadas en un Mac Apple Silicon alojado. HDR en pantalla física y decodificación por hardware sin verificar.",
+    "verifiedIntel": "Comprobado con Rosetta en un Mac Apple Silicon alojado. Mac Intel físico, HDR y decodificación por hardware sin verificar.",
+    "verifiedLinux": "Superó pruebas automatizadas de instalación, película generada y desinstalación en un ejecutor nativo. Se agradecen pruebas en equipos reales.",
+    "legacyNote": "Este instalador es anterior a 4.4 y no incluye las nuevas funciones del reproductor. Arriba se indica su propia versión.",
+    "upgrade": "¿Ya usas Theia? Ejecuta el instalador para actualizar los programas y conservar biblioteca y progreso. Actualizar solo el servidor no reemplaza el reproductor.",
+    "release": "Todos los archivos de la versión",
+    "help": "¿Qué procesador tengo?"
+  },
+  "news": {
+    "eyebrow": "Novedades, sin ruido",
+    "title": "Pequeños detalles. Mejores noches.",
+    "notes": "Leer las notas de la versión",
+    "items": [
+      {
+        "title": "Tu foto, bien encuadrada",
+        "body": "Mueve y amplía tu foto de perfil antes de guardarla. Las fotos pequeñas también llenan el círculo."
+      },
+      {
+        "title": "El próximo episodio, a tu ritmo",
+        "body": "Los capítulos con nombre permiten saltar la introducción. El siguiente episodio tiene una cuenta atrás cancelable y se detiene al acabar la temporada."
+      },
+      {
+        "title": "Una barra que se entiende",
+        "body": "Previsualiza la escena antes de saltar. Conserva tus preferencias de audio y subtítulos, con ajustes discretos."
+      }
+    ]
+  },
+  "faq": {
+    "eyebrow": "Conviene saberlo",
+    "title": "Buenas preguntas.",
+    "intro": "Respuestas claras antes de darle al play. Si necesitas ayuda, estamos en GitHub y Discord.",
+    "items": [
+      {
+        "question": "¿Theia incluye películas o series?",
+        "answer": "No. Theia organiza y reproduce vídeos que ya tienes y puedes usar legalmente. No es un catálogo de streaming ni proporciona películas. Carteles, sinopsis y reparto vienen de TMDB y se guardan en la caché local."
+      },
+      {
+        "question": "¿Es gratis? ¿El código es público?",
+        "answer": "El servidor, la biblioteca, la reproducción habitual y todas las funciones V4 son gratis para uso personal no comercial. No existe ninguna función de pago. Cualquier función de pago futura se anunciará previamente.\n\nDesde 4.0 se usa PolyForm Noncommercial 1.0.0; el código se desarrolla de forma privada y no se publica. La versión 3.4.0 y anteriores conservan GPL-3.0 y sus fuentes en las etiquetas públicas. El uso comercial requiere otra licencia."
+      },
+      {
+        "question": "¿Qué sistemas funcionan y cuáles están probados?",
+        "answer": "Hay instaladores para Windows, macOS y Ubuntu 24.04. Solo Windows x64 se usa con la biblioteca real del desarrollador. Los reproductores 4.4.2 incluidos pasaron pruebas con películas generadas en Windows, Linux x64 y Mac alojados, con Intel mediante Rosetta; eso no valida tu pantalla o equipo de sonido. Las descargas ARM64 antiguas están indicadas.\n\nLinux usa decodificación por software, SDR y PCM. macOS usa PCM; HDR físico y decodificación por hardware sin verificar. Windows solicita bitstream y vuelve a PCM si falla; no se ha verificado Atmos o DTS-HD MA hasta un receptor. El visor web de móviles y televisores sigue disponible sin desarrollo activo de reproducción."
+      },
+      {
+        "question": "¿Qué procesador elijo?",
+        "answer": "En Windows, abre Configuración → Sistema → Acerca de y consulta Tipo de sistema: Intel o AMD corresponde a x64; ARM corresponde a ARM64. Acerca de este Mac muestra un chip Apple o un procesador Intel. En Ubuntu, uname -m muestra x86_64 para x64 o aarch64 para ARM64. El sitio selecciona solo el sistema; tú eliges el procesador."
+      },
+      {
+        "question": "¿Cómo instalo o actualizo Theia?",
+        "answer": "Descarga el instalador de tu sistema y procesador. Elige idioma, función del ordenador —servidor, reproductor o ambos— y carpetas. Inicia Theia desde tu lanzador o con theia. En macOS y Ubuntu debes hacerlo ejecutable primero. Ubuntu necesita también los requisitos indicados.\n\nPara actualizar, ejecuta el nuevo instalador: biblioteca y progreso se conservan. El instalador y la aplicación ofrecen inglés y francés, independientemente del idioma de esta web."
+      },
+      {
+        "question": "¿Qué permanece privado y qué sale del ordenador?",
+        "answer": "Sin cuenta Theia ni telemetría. TMDB proporciona imágenes y GitHub las actualizaciones. El servicio de amigos usa Firebase del proyecto: el directorio recibe nombres y fotos de perfiles locales incluso antes de añadir amigos. Se intercambian solicitudes, presencia y opiniones; estas permanecen en los buzones de sus destinatarios hasta eliminarlas. La presencia conserva solo el último instante, sin historial; el modo invisible la oculta. El catálogo y el historial de reproducción no se envían a esa base. La presencia puede incluir el título que ves si no lo ocultas; el modo invisible no publica esa información.\n\nCualquiera que alcance el puerto 8383 de tu red puede consultar y administrar Theia. Usa una red de confianza y nunca expongas ese puerto a internet. Esta web no tiene analítica, contenido remoto integrado ni cookies; la elección explícita de idioma se guarda solo en este navegador."
+      },
+      {
+        "question": "¿Cómo funcionan los amigos, salas y acceso remoto?",
+        "answer": "Intercambia códigos de amigo e invita a tus amigos a salas privadas. El acceso remoto usa claves de dispositivo y conexiones WireGuard directas, sin intermediario multimedia ni servicio de control. Directorio, presencia y opiniones usan Firebase. La conectividad depende de vuestras redes.\n\nEl desarrollador comunicó una sesión de prueba entre dos hogares, pero las salas privadas y la cuenta atrás compartida aún no tienen una validación completa entre hogares reales. No hay TV en directo, DVR, música, plugins ni permisos multiusuario."
+      },
+      {
+        "question": "¿Dónde consigo ayuda o comunico un error?",
+        "answer": "Entra en Discord o abre una incidencia en GitHub. Indica versión, sistema, procesador y qué ocurrió. Para errores de reproducción, añade los formatos de vídeo y audio. Cuenta también lo que funcionó. No publiques credenciales o bibliotecas privadas; utiliza la política de seguridad del repositorio para vulnerabilidades."
+      }
+    ]
+  },
+  "legal": {
+    "title": "Tus películas. Tus condiciones.",
+    "body": "Gratis para uso personal no comercial bajo PolyForm Noncommercial 1.0.0. Versiones 3.4.0 y anteriores: GPL-3.0. Desde 4.0 el código es privado. Consulta los términos de las licencias.",
+    "details": "Leer las licencias"
+  },
+  "help": {
+    "eyebrow": "La próxima noche es tuya",
+    "title": "Haz sitio para tu cine.",
+    "body": "Prueba Theia con tu biblioteca. Cuéntanos qué funciona, qué falla y en qué equipo.",
+    "discord": "Entrar en Discord",
+    "feedback": "Compartir una prueba"
+  },
+  "footer": {
+    "about": "Un desarrollador, con asistencia de IA declarada. Las capturas y grabación muestran la aplicación real; las capturas usan una biblioteca de muestra. Las ilustraciones están identificadas.",
+    "privacy": "Sin cookies, analítica ni recursos remotos. Tu idioma se guarda en este navegador.",
+    "releases": "Versiones",
+    "security": "Seguridad",
+    "type": "Tipografías locales bajo SIL Open Font License 1.1.",
+    "languageNote": "Web: diez idiomas. Aplicación: inglés y francés."
+  },
+  "ui": {
+    "pause": "Pausar la animación",
+    "resume": "Reproducir la animación",
+    "showing": "Descargas mostradas:",
+    "status": "Estado de la copia"
+  },
+  "captions": [
+    "Descarga el instalador de tu sistema desde la última versión de GitHub. Aquí, Windows x64, versión 4.4.4.",
+    "Abre el instalador desde Descargas.",
+    "El instalador es un formulario de terminal a pantalla completa. Elige inglés o francés.",
+    "Elige la función del ordenador: servidor, reproductor o ambos, y tus carpetas.",
+    "Se copia la carpeta desde el Explorador. Los archivos personales están difuminados.",
+    "Pégala en el formulario. El instalador cuenta los vídeos de la carpeta.",
+    "Revisa el plan antes de escribir nada. Después, instala.",
+    "Inicia Theia desde Inicio, el escritorio o con theia en una terminal.",
+    "Windows pide permiso para que el servidor use la red. La grabación lo permite.",
+    "Elige quién está viendo. Los perfiles no tienen contraseña.",
+    "La pantalla de inicio muestra la película destacada y lo añadido recientemente.",
+    "Explora películas y después series.",
+    "Los ajustes generales incluyen el idioma y la selección de perfil al iniciar."
+  ]
+}
