@@ -628,29 +628,23 @@ a:hover .icon-arrow {
   min-inline-size: 0;
 }
 .benefit figure {
-  position: relative;
   margin-block-end: 1.25rem;
-  aspect-ratio: 16/10;
-  overflow: hidden;
-  border-radius: 16px;
-  background: var(--surface);
 }
 .benefit img {
   display: block;
   inline-size: 100%;
-  block-size: 100%;
-  object-fit: contain;
+  block-size: auto;
+  /* Match the player capture so its title bar and playback controls stay whole. */
+  aspect-ratio: 1600/943;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 16px;
 }
 .benefit figcaption {
-  position: absolute;
-  inset-inline-start: 0.75rem;
-  inset-block-end: 0.75rem;
-  padding: 0.3rem 0.6rem;
-  max-inline-size: calc(100% - 1.5rem);
-  border-radius: 6px;
-  background: #0b0a09e8;
-  color: var(--parchment);
+  margin-block-start: 0.5rem;
+  color: var(--muted);
   font-size: 0.75rem;
+  line-height: 1.3;
 }
 .benefit h3 {
   margin-block-end: 0.75rem;
@@ -1491,13 +1485,9 @@ html:lang(zh-Hans) .eyebrow {
     overflow: visible;
   }
   .benefit figcaption {
-    position: static;
     font-size: 0.65rem;
-    padding: 0.2rem;
-    max-inline-size: none;
-    background: var(--surface);
+    margin-block-start: 0.35rem;
     text-align: center;
-    line-height: 1.3;
   }
   .benefit img {
     border-radius: 12px;

@@ -198,7 +198,7 @@ export function build(argv = process.argv.slice(2)) {
     const images = [
       ["shot-library.webp", 1200, 900],
       ["shot-player.webp", 1600, 943],
-      ["moment-remote.webp", 1212, 909],
+      ["shot-friends.webp", 1200, 707],
     ];
     const benefits = catalogue.discover.benefits
       .map(

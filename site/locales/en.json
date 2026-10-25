@@ -2,7 +2,7 @@
   "meta": {
     "title": "Theia — your own cinema, without the complications",
     "description": "Your films and series, together. A personal media server and native player for Windows, macOS and Linux. Free for personal use, no account or telemetry.",
-    "shareAlt": "The Theia wordmark beside an illustrated marble statue reaching toward a sunrise."
+    "shareAlt": "The native player's film library, with landscape artwork and a film to continue watching, on a sample library."
   },
   "nav": {
     "home": "Theia home",
@@ -47,8 +47,8 @@
       {
         "title": "Closer, even from a distance",
         "body": "Add friends by code, exchange opinions and invite them into a private room. Remote streams travel directly over WireGuard.",
-        "label": "Illustration",
-        "alt": "Illustration of two homes connected across dark hills by a single golden thread."
+        "label": "Screenshot",
+        "alt": "Friends list in Theia on a sample library: invented profiles watching a film, online or up for a film."
       }
     ]
   },
@@ -85,8 +85,8 @@
     "system": "Your system",
     "processor": "Your processor",
     "mobile": "Theia's apps are for desktop computers. The existing browser viewer remains available on phones and TVs; its playback is no longer actively developed.",
-    "windowsWarning": "Windows may show a reputation warning: the setup is not code-signed. Check its SHA-256 before running it. No administrator rights are requested.",
-    "macosWarning": "The app is ad-hoc signed, not notarised. macOS may require approval in Privacy & Security. Make the setup executable with chmod +x, then run it.",
+    "windowsWarning": "Windows may show a SmartScreen warning because Theia is not code-signed yet. Click More info, then Run anyway. Check its SHA-256 before running it. No administrator rights are requested.",
+    "macosWarning": "Make the setup executable with chmod +x, then run it. The app is ad-hoc signed and not notarised: open the app the first time with Control-click, then Open.",
     "linuxWarning": "Ubuntu 24.04, X11 or XWayland only. Install the prerequisites below, then use chmod +x and run the setup. Software decoding, SDR and PCM audio; other distributions are unverified.",
     "prerequisites": "Ubuntu prerequisites",
     "x64": "Intel and AMD processors",
@@ -158,7 +158,7 @@
       },
       {
         "question": "What stays private? What leaves my computer?",
-        "answer": "No Theia account and no telemetry. Artwork comes from TMDB and updates from GitHub. The friends service uses the project's Firebase database: directory entries include local profile names and pictures even before adding a friend. Friends exchange requests, current presence and opinions; opinions remain in recipients' inboxes until deleted. Presence stores only the last moment, not an activity history; invisible hides presence. Your library catalogue and viewing history are not sent there. Presence can include the title you are watching unless you hide it; invisible mode publishes none of that presence.\n\nAnyone who can reach port 8383 on your network can browse and administer Theia. Use a trusted network and never forward that port to the internet. This website has no analytics, remote embeds or cookies; an explicit language choice is stored only in this browser."
+        "answer": "No cloud account and no telemetry. Theia uses three external services: TMDB for film and series metadata and artwork; GitHub Releases for updates; and Firebase Realtime Database (project theia-friends, with anonymous sign-in and token renewal) solely for the friends service: friend codes, profile photos, requests, presence and opinions.\n\nFirebase connects when the server starts and follows its inbox. It publishes directory entries for all local profiles, even before you add a friend: friend-code identifiers, names, the server public key, local profile numbers and port; photos are uploaded separately. Linked friends exchange presence, which can include the current title, episode details and artwork paths, room invitations, server version and direct tunnel addresses. You can hide the title and last-seen time. Invisible hides activity, titles, room offers and last-seen time; it does not disconnect Firebase or remove directory entries and photos. Opinions remain in recipients' inboxes until deleted or the friendship ends. Your library catalogue and viewing history are not uploaded.\n\nAnyone who can reach port 8383 on your network can browse and administer Theia. Use a trusted network and never forward that port to the internet. This website has no analytics, remote embeds or cookies; an explicit language choice is stored only in this browser."
       },
       {
         "question": "How do friends, rooms and remote access work?",
@@ -183,7 +183,7 @@
     "feedback": "Share a field report"
   },
   "footer": {
-    "about": "One maintainer, with disclosed AI assistance. Screenshots and the recording show the real application; the screenshots use a sample library. Illustrations are labelled.",
+    "about": "One maintainer, with disclosed AI assistance. Screenshots and the recording show the real application; the screenshots use a sample library.",
     "privacy": "No cookies. No analytics. No remote resources. Your language choice stays in this browser.",
     "releases": "Releases",
     "security": "Security",

@@ -34,6 +34,13 @@ looks after your library, a native desktop player plays it, and your friends can
 see who is around and watch with you. There is no cloud account, no telemetry, no
 Docker stack and no external database to install.
 
+Theia still contacts three external services: **TMDB** for film and series
+metadata, **GitHub Releases** for updates, and **Firebase Realtime Database**
+(project `theia-friends`, with anonymous authentication) for friend codes,
+profile photos, requests, presence and opinions. Firebase connects when the
+server starts, even before you add a friend; see
+[Privacy, data and limitations](#privacy-data-and-limitations).
+
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/film.webp" alt="A film page: backdrop, poster, rating, year, runtime and genres, a Resume button, thumbs, and the Synopsis, Cast and Reviews tabs"></td>
@@ -49,7 +56,7 @@ Docker stack and no external database to install.
 
 | One download | Built for choosing | Private by default |
 | --- | --- | --- |
-| One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud library. Metadata comes from TMDB; updates come from GitHub Releases. |
+| One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud account. TMDB supplies metadata, GitHub Releases supplies updates, and Firebase carries the friends service described above. |
 
 ## Theia 4.4.6
 
@@ -110,7 +117,7 @@ house, not on taste.
 
 | Your setup | What to install | Why |
 | --- | --- | --- |
-| One computer that holds the films and is plugged into the screen | **All-in-one**, the default answer in the installer | It serves and it plays. Nothing travels over the network, so nothing is limited by it. |
+| One computer that holds the films and is plugged into the screen | **All-in-one**, the default answer in the installer | It serves and it plays. The video stays on that computer, so playback is not limited by the network. |
 | A small machine in a cupboard or a NAS, and a television, a laptop or a desktop you watch on | **Server only** on that machine, then **player only** on each device you watch on | The server indexes, stores and streams; the player uses the sound and picture hardware of the machine in front of you, which is where the difference is heard. |
 | A computer that only watches, with the films held elsewhere | **Player only** | No library is scanned or stored locally. It asks the server for the catalogue and the files. |
 | A phone, tablet or television browser | **Nothing**; open the address the server prints in a browser | The web viewer remains available. Its viewing features are complete and no longer developed; server settings and administration are still maintained. |
@@ -150,7 +157,7 @@ Other Linux distributions are not verified.
 - **Friends and shared viewing.** See who is around and what they watch, write an
   opinion on a film or a series for your friends, and watch together in a private
   room. See [Friends and rooms](#friends-and-rooms).
-- **Access outside the house without a Theia cloud.** The built-in remote mode
+- **Direct access outside the house.** The built-in remote mode
   uses device-keyed WireGuard and exposes viewer capabilities only. There is no
   relay, rendezvous server or control plane.
 - **Updates with a way back.** Theia verifies release digests, waits for playback
@@ -167,6 +174,11 @@ permissions. Dedicated phone and TV apps have no announced date; those devices
 use the web viewer for now.
 
 ## Three-minute setup
+
+> [!IMPORTANT]
+> **Windows:** Windows may show a SmartScreen warning because Theia is not code-signed yet. Click More info, then Run anyway.
+>
+> **macOS:** Mac apps are ad-hoc signed and not notarised: open the app the first time with Control-click → Open.
 
 1. Download the setup for your computer from [Downloads](#downloads). On
    macOS/Linux, make it executable with `chmod +x <filename>`, then run it. The
@@ -258,9 +270,6 @@ what it carries.
 | Windows ARM64 | [Windows ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-windows-arm64.exe) (4.2.1) | 4.4 deferred; native checks pending |
 | Ubuntu 24.04 ARM64 | [Linux ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-linux-arm64) (4.2.1) | 4.4 deferred; native checks pending |
 
-Mac apps are ad-hoc signed and not notarised: open the app the first time with
-Control-click → Open.
-
 **Upgrading from 4.4.x:** run the 4.4.6 setup once, or use Theia's setup-update
 button. It replaces the native player with the level-4 shell required by this
 release and keeps your data. **Upgrading from 3.x:** run the new setup. It reads
@@ -284,10 +293,8 @@ The six standalone `theia-server-<os>-<arch>[.exe]` files remain for existing
 server updaters. Player, launcher and engine files are carried inside the public
 setups; the internal payload ZIPs are not additional downloads.
 
-Windows binaries are unsigned and may show a reputation warning. Mac apps
-are ad-hoc signed and not notarised, so macOS may require first-launch approval
-in Privacy & Security. The setup payload includes `START-HERE.txt` with platform
-instructions.
+See the [first-launch warnings](#three-minute-setup) before running a download.
+The setup payload includes `START-HERE.txt` with platform instructions.
 
 > [!WARNING]
 > The LAN service has no login. Anyone who can reach TCP `8383` can browse,
@@ -366,17 +373,34 @@ Theia stores configuration, SQLite data and cached artwork under `%APPDATA%\Thei
 on Windows, `~/Library/Application Support/Theia` on macOS and `~/.config/theia`
 on Linux. Media stays in the folders you selected.
 
-The outbound services are TMDB for metadata, GitHub Releases for updates and,
-for friends in other households, Theia's Firebase Realtime Database. Firebase
-receives, under an anonymous server identity, directory entries for all local
-profiles (their names, pictures, server public key, profile number and port),
-even before a friend is added. Between linked friends it carries requests, your
-current presence and the opinions you write. Presence is your chosen availability,
+The only external services are:
+
+- **TMDB:** film and series metadata and artwork.
+- **GitHub Releases:** update checks and downloads, including the pinned FFmpeg
+  download when conversion is needed.
+- **Firebase Realtime Database**, project `theia-friends`, and Firebase's
+  anonymous sign-in and token renewal: the friends service only (friend codes,
+  profile photos, requests, presence and opinions).
+
+**Firebase connects when the server starts**, opens an inbox event stream and
+publishes directory entries for **all local profiles**, even before a friend is
+added or the friends sheet is opened. Its anonymous server identity and refresh
+token are kept locally in `firebase-identity.json`. Directory entries contain
+the friend-code identifier, profile name, server public key, local profile
+number, port and a timestamp; profile photos are uploaded separately as JPEG
+data with a version. No email address or password is requested.
+
+Requests are delivered to the recipient's inbox; linked friends exchange
+current presence and the opinions you write. Presence also includes the server
+version, supported social protocols and direct tunnel addresses. It can include
+the current title, year, episode details and TMDB artwork paths, and a room
+invitation. Presence is your chosen availability,
 a generic activity (browsing, in a room, watching) and, unless you turn it off,
 the last moment your player was seen; only that last moment is kept, never a
 history. *Invisible* publishes no activity, title, room offer or last-seen time,
-and hiding a title hides its artwork and episode details too. An opinion is stored
-in the inbox of each friend who can read it until you delete it, end the
+and hiding a title hides its artwork and episode details too. Invisible mode
+does not disconnect Firebase or remove directory entries and photos. An opinion
+is stored in the inbox of each friend who can read it until you delete it, end the
 friendship, or they delete it, and ending a friendship leaves an authenticated
 removal notice for the other side until their server has processed it. Your
 library catalogue and viewing history are not uploaded. These choices belong to a

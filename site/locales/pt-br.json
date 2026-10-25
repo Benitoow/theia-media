@@ -2,7 +2,7 @@
   "meta": {
     "title": "Theia — seu cinema, sem complicações",
     "description": "Seus filmes e séries, juntos. Servidor pessoal e player nativo para Windows, macOS e Linux. Grátis para uso pessoal, sem conta nem telemetria.",
-    "shareAlt": "O nome Theia ao lado de uma estátua de mármore ilustrada voltada para o nascer do sol."
+    "shareAlt": "A biblioteca do player nativo com imagens e um filme para continuar, usando uma biblioteca de demonstração."
   },
   "nav": {
     "home": "Início do Theia",
@@ -47,8 +47,8 @@
       {
         "title": "Perto, mesmo à distância",
         "body": "Adicione amigos por código, troque opiniões e convide para salas privadas. Os vídeos remotos passam diretamente pelo WireGuard.",
-        "label": "Ilustração",
-        "alt": "Ilustração de duas casas conectadas por um fio dourado entre colinas escuras."
+        "label": "Captura de tela",
+        "alt": "Lista de amigos do Theia em uma biblioteca de demonstração: perfis fictícios assistindo, online ou disponíveis para um filme."
       }
     ]
   },
@@ -85,8 +85,8 @@
     "system": "Seu sistema",
     "processor": "Seu processador",
     "mobile": "Os aplicativos Theia são para computadores. O visualizador web existente continua disponível em celulares e TVs; sua reprodução não recebe desenvolvimento ativo.",
-    "windowsWarning": "O Windows pode exibir um aviso de reputação: o instalador não tem assinatura de código. Verifique o SHA-256 antes de executar. Não pede direitos de administrador.",
-    "macosWarning": "O aplicativo tem assinatura ad hoc, sem notarização. O macOS pode exigir autorização em Privacidade e Segurança. Use chmod +x para tornar o instalador executável e depois execute.",
+    "windowsWarning": "O Windows pode mostrar um aviso do SmartScreen porque o Theia ainda não tem assinatura de código. Clique em Mais informações e depois em Executar assim mesmo. Verifique o SHA-256 antes de executar. Não são solicitados direitos de administrador.",
+    "macosWarning": "Torne o instalador executável com chmod +x e execute-o. O aplicativo tem assinatura ad hoc, sem notarização: na primeira vez, abra com Control-clique e depois Abrir.",
     "linuxWarning": "Somente Ubuntu 24.04, X11 ou XWayland. Instale os pré-requisitos abaixo, use chmod +x e execute. Decodificação por software, SDR e áudio PCM; outras distribuições não foram verificadas.",
     "prerequisites": "Pré-requisitos do Ubuntu",
     "x64": "Processadores Intel e AMD",
@@ -158,7 +158,7 @@
       },
       {
         "question": "O que fica privado e o que sai do computador?",
-        "answer": "Sem conta Theia nem telemetria. As imagens vêm do TMDB e as atualizações do GitHub. Amigos usam o Firebase do projeto: o diretório recebe nomes e fotos dos perfis locais mesmo antes de adicionar amigos. Amigos trocam pedidos, presença atual e opiniões; estas ficam nas caixas dos destinatários até serem apagadas. A presença guarda só o último instante, sem histórico; o modo invisível a oculta. Catálogo e histórico de reprodução não são enviados a essa base. A presença pode incluir o título assistido se você não o ocultar; o modo invisível não publica essas informações.\n\nQuem alcançar a porta 8383 na sua rede pode consultar e administrar o Theia. Use uma rede confiável e nunca encaminhe essa porta à internet. Este site não tem análise de audiência, conteúdo remoto incorporado ou cookies; a escolha explícita de idioma fica só neste navegador."
+        "answer": "Sem conta na nuvem e sem telemetria. O Theia usa três serviços externos: TMDB para metadados e imagens de filmes e séries; GitHub Releases para atualizações; e Firebase Realtime Database (projeto theia-friends, com autenticação anônima e renovação de token) apenas para o serviço de amigos: códigos, fotos de perfil, pedidos, presença e opiniões.\n\nO Firebase se conecta ao iniciar o servidor e acompanha sua caixa de entrada. Publica entradas de todos os perfis locais antes mesmo de adicionar amigos: identificadores dos códigos, nomes, chave pública do servidor, números de perfil e porta; as fotos são enviadas separadamente. Amigos conectados trocam presença, que pode incluir o título atual, detalhes do episódio, caminhos das imagens, convites de salas, versão do servidor e endereços do túnel direto. Você pode ocultar o título e a última presença. Invisível oculta atividade, títulos, salas e última presença; não desconecta o Firebase nem remove o diretório ou as fotos. As opiniões ficam nas caixas de entrada até serem excluídas ou a amizade terminar. O catálogo e o histórico de reprodução não são enviados.\n\nQuem alcançar a porta 8383 na sua rede pode consultar e administrar o Theia. Use uma rede confiável e nunca encaminhe essa porta à internet. Este site não tem análise de audiência, conteúdo remoto incorporado ou cookies; a escolha explícita de idioma fica só neste navegador."
       },
       {
         "question": "Como funcionam amigos, salas e acesso remoto?",
@@ -183,7 +183,7 @@
     "feedback": "Compartilhar um relato"
   },
   "footer": {
-    "about": "Um desenvolvedor, com assistência de IA declarada. Capturas e gravação mostram o aplicativo real; as capturas usam uma biblioteca de demonstração. Ilustrações estão identificadas.",
+    "about": "Um desenvolvedor, com assistência de IA declarada. Capturas e gravação mostram o aplicativo real; as capturas usam uma biblioteca de demonstração.",
     "privacy": "Sem cookies, análise de audiência ou recursos remotos. Seu idioma fica neste navegador.",
     "releases": "Versões",
     "security": "Segurança",

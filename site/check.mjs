@@ -353,7 +353,7 @@ for (const language of pages) {
       "forbidden release or source claim",
     );
     assert(
-      text.includes("Illustration") && text.includes("unverified"),
+      text.includes("sample library") && text.includes("unverified"),
       "provenance or validation limits missing",
     );
   }

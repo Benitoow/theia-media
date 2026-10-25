@@ -2,7 +2,7 @@
   "meta": {
     "title": "Theia — votre cinéma, sans les complications",
     "description": "Vos films et séries, réunis. Un serveur personnel et un lecteur natif pour Windows, macOS et Linux. Gratuit à usage personnel, sans compte ni télémétrie.",
-    "shareAlt": "Le nom Theia près d’une statue de marbre illustrée, tournée vers un lever de soleil."
+    "shareAlt": "La bibliothèque de films du lecteur natif, avec vignettes et un film à reprendre, sur une bibliothèque de démonstration."
   },
   "nav": {
     "home": "Accueil Theia",
@@ -47,8 +47,8 @@
       {
         "title": "Proches, même à distance",
         "body": "Ajoutez des amis par code, échangez vos avis et invitez-les dans une salle privée. À distance, les flux passent directement par WireGuard.",
-        "label": "Illustration",
-        "alt": "Illustration de deux maisons reliées par un fil doré à travers des collines sombres."
+        "label": "Capture d’écran",
+        "alt": "Liste d’amis dans Theia sur une bibliothèque de démonstration : profils fictifs en séance, en ligne ou disponibles pour un film."
       }
     ]
   },
@@ -85,8 +85,8 @@
     "system": "Votre système",
     "processor": "Votre processeur",
     "mobile": "Les applications Theia sont destinées aux ordinateurs. Le lecteur web existant reste accessible sur téléphone et TV ; sa lecture n’est plus développée activement.",
-    "windowsWarning": "Windows peut afficher un avertissement de réputation : l’installateur n’est pas signé. Vérifiez son SHA-256 avant de l’exécuter. Aucun droit administrateur n’est demandé.",
-    "macosWarning": "L’application est signée ad hoc, sans notarisation. macOS peut demander une autorisation dans Confidentialité et sécurité. Rendez l’installateur exécutable avec chmod +x, puis lancez-le.",
+    "windowsWarning": "Windows peut afficher l’avertissement SmartScreen « Windows a protégé votre ordinateur », car Theia n’est pas encore signé. Cliquez sur Informations complémentaires, puis Exécuter quand même. Vérifiez le SHA-256 du fichier avant de l’exécuter. Aucun droit administrateur n’est demandé.",
+    "macosWarning": "Rendez l’installateur exécutable avec chmod +x, puis lancez-le. L’application est signée ad hoc, sans notarisation : ouvrez-la la première fois avec Contrôle-clic, puis Ouvrir.",
     "linuxWarning": "Ubuntu 24.04, X11 ou XWayland uniquement. Installez les prérequis ci-dessous, puis utilisez chmod +x et lancez l’installateur. Décodage logiciel, SDR et audio PCM ; autres distributions non vérifiées.",
     "prerequisites": "Prérequis Ubuntu",
     "x64": "Processeurs Intel et AMD",
@@ -158,7 +158,7 @@
       },
       {
         "question": "Qu’est-ce qui reste privé ? Qu’est-ce qui sort de mon ordinateur ?",
-        "answer": "Aucun compte Theia, aucune télémétrie. Les visuels viennent de TMDB et les mises à jour de GitHub. Le service d’amis utilise la base Firebase du projet : l’annuaire reçoit noms et photos des profils locaux, même avant l’ajout d’un ami. Les amis échangent demandes, présence actuelle et avis ; les avis restent dans les boîtes des destinataires jusqu’à leur suppression. La présence conserve seulement le dernier instant, sans historique d’activité ; le mode invisible la masque. Votre catalogue et votre historique de lecture ne sont pas envoyés à cette base. La présence peut inclure le titre regardé si vous ne le masquez pas ; le mode invisible ne publie aucune de ces informations de présence.\n\nToute personne pouvant joindre le port 8383 sur votre réseau peut consulter et administrer Theia. Utilisez un réseau de confiance et ne redirigez jamais ce port vers internet. Ce site n’utilise ni analyse d’audience, ni contenu distant intégré, ni cookies ; votre choix explicite de langue reste dans ce navigateur."
+        "answer": "Aucun compte cloud, aucune télémétrie. Theia utilise trois services externes : TMDB pour les métadonnées et visuels des films et séries ; GitHub Releases pour les mises à jour ; et Firebase Realtime Database (projet theia-friends, avec authentification anonyme et renouvellement du jeton) uniquement pour le service d’amis : codes amis, photos de profil, demandes, présence et avis.\n\nFirebase se connecte au démarrage du serveur et suit sa boîte de réception. L’annuaire reçoit tous les profils locaux, même avant l’ajout d’un ami : identifiants des codes amis, noms, clé publique du serveur, numéros des profils locaux et port ; les photos sont envoyées séparément. Les amis liés échangent leur présence, qui peut inclure le titre regardé, les détails de l’épisode et les chemins des visuels, les invitations en salle, la version du serveur et les adresses du tunnel direct. Vous pouvez masquer le titre et la dernière présence. Le mode invisible masque activité, titres, propositions de salle et dernière présence ; il ne déconnecte pas Firebase et ne retire ni annuaire ni photos. Les avis restent dans les boîtes des destinataires jusqu’à leur suppression ou la fin de l’amitié. Votre catalogue et votre historique de lecture ne sont pas envoyés.\n\nToute personne pouvant joindre le port 8383 sur votre réseau peut consulter et administrer Theia. Utilisez un réseau de confiance et ne redirigez jamais ce port vers internet. Ce site n’utilise ni analyse d’audience, ni contenu distant intégré, ni cookies ; votre choix explicite de langue reste dans ce navigateur."
       },
       {
         "question": "Comment fonctionnent les amis, les salles et l’accès distant ?",
@@ -183,7 +183,7 @@
     "feedback": "Partager un retour"
   },
   "footer": {
-    "about": "Un développeur, avec une assistance IA déclarée. Captures et enregistrement montrent la vraie application ; les captures utilisent une bibliothèque de démonstration. Les illustrations sont signalées.",
+    "about": "Un développeur, avec une assistance IA déclarée. Captures et enregistrement montrent la vraie application ; les captures utilisent une bibliothèque de démonstration.",
     "privacy": "Sans cookies, analyse d’audience ou ressources distantes. Votre choix de langue reste dans ce navigateur.",
     "releases": "Versions",
     "security": "Sécurité",

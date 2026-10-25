@@ -2,7 +2,7 @@
   "meta": {
     "title": "Theia — bioskop milikmu, tanpa kerumitan",
     "description": "Film dan serialmu, dalam satu tempat. Server pribadi dan pemutar native untuk Windows, macOS, dan Linux. Gratis untuk penggunaan pribadi, tanpa akun atau telemetri.",
-    "shareAlt": "Nama Theia di samping ilustrasi patung marmer yang menghadap matahari terbit."
+    "shareAlt": "Koleksi film di pemutar native, dengan gambar dan film untuk dilanjutkan, memakai koleksi contoh."
   },
   "nav": {
     "home": "Beranda Theia",
@@ -47,8 +47,8 @@
       {
         "title": "Dekat, meski berjauhan",
         "body": "Tambahkan teman lewat kode, berbagi ulasan, dan undang ke ruang pribadi. Video jarak jauh mengalir langsung lewat WireGuard.",
-        "label": "Ilustrasi",
-        "alt": "Ilustrasi dua rumah yang terhubung oleh seutas benang emas di antara bukit gelap."
+        "label": "Tangkapan layar",
+        "alt": "Daftar teman Theia pada koleksi contoh: profil rekaan yang sedang menonton, daring, atau siap menonton film."
       }
     ]
   },
@@ -85,8 +85,8 @@
     "system": "Sistemmu",
     "processor": "Prosesormu",
     "mobile": "Aplikasi Theia ditujukan untuk komputer desktop. Penampil web yang ada tetap tersedia di ponsel dan TV; pemutarannya tidak lagi dikembangkan secara aktif.",
-    "windowsWarning": "Windows dapat menampilkan peringatan reputasi: pemasang belum ditandatangani dengan sertifikat kode. Periksa SHA-256 sebelum menjalankannya. Tidak meminta hak administrator.",
-    "macosWarning": "Aplikasi ditandatangani ad hoc, tanpa notarisasi. macOS mungkin meminta izin di Privasi & Keamanan. Jadikan pemasang dapat dijalankan dengan chmod +x, lalu jalankan.",
+    "windowsWarning": "Windows dapat menampilkan peringatan SmartScreen karena Theia belum ditandatangani dengan sertifikat kode. Klik Info selengkapnya, lalu Tetap jalankan. Periksa SHA-256 sebelum menjalankannya. Hak administrator tidak diminta.",
+    "macosWarning": "Jadikan pemasang dapat dijalankan dengan chmod +x, lalu jalankan. Aplikasi ditandatangani secara ad hoc, tanpa notarisasi: saat pertama kali, buka dengan Control-klik, lalu Buka.",
     "linuxWarning": "Hanya Ubuntu 24.04, X11 atau XWayland. Pasang prasyarat di bawah, gunakan chmod +x, lalu jalankan. Dekode perangkat lunak, SDR, dan audio PCM; distribusi lain belum diverifikasi.",
     "prerequisites": "Prasyarat Ubuntu",
     "x64": "Prosesor Intel dan AMD",
@@ -158,7 +158,7 @@
       },
       {
         "question": "Apa yang tetap pribadi dan apa yang keluar dari komputer?",
-        "answer": "Tanpa akun Theia dan telemetri. Gambar berasal dari TMDB, pembaruan dari GitHub. Layanan teman memakai Firebase proyek: direktori menerima nama dan foto profil lokal bahkan sebelum menambahkan teman. Teman bertukar permintaan, kehadiran saat ini, dan ulasan; ulasan tetap di kotak masuk penerima sampai dihapus. Kehadiran hanya menyimpan waktu terakhir, bukan riwayat aktivitas; mode tidak terlihat menyembunyikannya. Katalog dan riwayat tontonan tidak dikirim ke basis data itu. Kehadiran dapat menyertakan judul tontonan kecuali kamu menyembunyikannya; mode tidak terlihat tidak menerbitkan informasi kehadiran itu.\n\nSiapa pun yang dapat mengakses port 8383 di jaringanmu dapat menjelajah dan mengelola Theia. Gunakan jaringan tepercaya dan jangan pernah meneruskan port itu ke internet. Situs ini tidak memakai analitik, sematan jarak jauh, atau cookie; pilihan bahasa eksplisit hanya disimpan di peramban ini."
+        "answer": "Tanpa akun cloud dan tanpa telemetri. Theia memakai tiga layanan eksternal: TMDB untuk metadata dan gambar film serta serial; GitHub Releases untuk pembaruan; dan Firebase Realtime Database (proyek theia-friends, dengan autentikasi anonim dan pembaruan token) hanya untuk layanan teman: kode, foto profil, permintaan, kehadiran, dan ulasan.\n\nFirebase terhubung saat server dimulai dan mengikuti kotak masuknya. Entri semua profil lokal diterbitkan bahkan sebelum menambahkan teman: pengenal kode, nama, kunci publik server, nomor profil lokal, dan porta; foto dikirim terpisah. Teman yang terhubung bertukar kehadiran, yang dapat memuat judul saat ini, detail episode, jalur gambar, undangan ruang, versi server, dan alamat terowongan langsung. Judul dan waktu terakhir terlihat dapat disembunyikan. Mode tak terlihat menyembunyikan aktivitas, judul, ruang, dan waktu terakhir terlihat; mode ini tidak memutus Firebase atau menghapus direktori dan foto. Ulasan tetap di kotak masuk sampai dihapus atau pertemanan berakhir. Katalog dan riwayat tontonan tidak diunggah.\n\nSiapa pun yang dapat mengakses port 8383 di jaringanmu dapat menjelajah dan mengelola Theia. Gunakan jaringan tepercaya dan jangan pernah meneruskan port itu ke internet. Situs ini tidak memakai analitik, sematan jarak jauh, atau cookie; pilihan bahasa eksplisit hanya disimpan di peramban ini."
       },
       {
         "question": "Bagaimana teman, ruang, dan akses jarak jauh bekerja?",
@@ -183,7 +183,7 @@
     "feedback": "Bagikan laporan uji"
   },
   "footer": {
-    "about": "Satu pengembang dengan bantuan AI yang diungkapkan. Tangkapan layar dan rekaman menampilkan aplikasi nyata; tangkapan layar memakai koleksi contoh. Ilustrasi diberi label.",
+    "about": "Satu pengembang dengan bantuan AI yang diungkapkan. Tangkapan layar dan rekaman menampilkan aplikasi nyata; tangkapan layar memakai koleksi contoh.",
     "privacy": "Tanpa cookie, analitik, atau sumber daya jarak jauh. Pilihan bahasa tetap di peramban ini.",
     "releases": "Rilis",
     "security": "Keamanan",
