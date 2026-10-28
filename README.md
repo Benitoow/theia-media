@@ -22,7 +22,7 @@
   <a href="docs/releases/v4.4.6.md">4.4.6 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
-  <a href="https://discord.gg/p4Rp4zHdHf">Discord</a>
+  <a href="https://discord.gg/5E55F7XFZp">Discord</a>
 </p>
 
 ![The home screen of the native player: navigation with friends around, the film you were watching and the rows below it](docs/screenshots/home.webp)
@@ -478,7 +478,7 @@ worked as well as what failed.
 
 - [Join the field test](https://github.com/Benitoow/theia-media/issues/new?template=field_test.yml)
   and read the short [testing guide](docs/field-testing.md).
-- Talk to other users and testers on the [Discord server](https://discord.gg/p4Rp4zHdHf).
+- Talk to other users and testers on the [Discord server](https://discord.gg/5E55F7XFZp).
 - A [GitHub star](https://github.com/Benitoow/theia-media) helps this small
   project reach more people. Thank you to everyone who already has.
 
