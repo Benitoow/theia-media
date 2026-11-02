@@ -6,6 +6,7 @@
   },
   "nav": {
     "home": "Accueil Theia",
+    "v5": "Theia 5",
     "skip": "Aller au contenu",
     "primary": "Navigation principale",
     "discover": "Découvrir",
@@ -26,6 +27,73 @@
     "note": "Un seul développeur. Windows x64 est la seule plateforme utilisée avec une vraie bibliothèque de foyer à ce jour.",
     "limits": "Connaître les limites",
     "start": "Entrer dans la salle"
+  },
+  "v5": {
+    "pill": "Theia 5 arrive",
+    "eyebrow": "Theia 5",
+    "title": "Tout ce que vous possédez, dans une seule bibliothèque.",
+    "lead": "Vos ordinateurs, votre NAS et votre cloud forment une seule bibliothèque, avec un seul profil qui vous suit de l’un à l’autre.",
+    "planned": "Sortie prévue",
+    "promise": "Un objectif, pas une promesse : Theia 5 n’est publié que si ses vérifications finales passent.",
+    "timer": "Temps restant avant l’ouverture de la fenêtre de sortie",
+    "days": "jours",
+    "hours": "heures",
+    "minutes": "minutes",
+    "seconds": "secondes",
+    "open": "La fenêtre de sortie est ouverte. Theia 5 peut arriver à tout moment avant sa fermeture.",
+    "after": "La fenêtre annoncée est terminée. Consultez la page des versions pour la dernière version.",
+    "featuresTitle": "Ce qui arrive avec la 5.0",
+    "features": [
+      {
+        "title": "Une bibliothèque, plusieurs endroits",
+        "body": "Films, Séries, Recherche et Accueil réunissent vos ordinateurs, vos dossiers NAS et votre cloud. Une petite ligne indique où se trouve chaque copie."
+      },
+      {
+        "title": "Un profil qui vous suit",
+        "body": "Associez votre profil à vos serveurs. Ce que vous avez vu et l’endroit où vous vous êtes arrêté vous suivent d’un serveur à l’autre."
+      },
+      {
+        "title": "Google Drive comme source",
+        "body": "Lisez depuis les dossiers Drive que vous choisissez, par petits morceaux. Tant que Google n’a pas approuvé la connexion de Theia, la connexion peut demander votre propre client Google."
+      },
+      {
+        "title": "Dossiers NAS",
+        "body": "Un partage NAS monté sur un serveur rejoint la bibliothèque, et votre historique survit s’il se met en veille. Le kit de test UGREEN n’est pas vérifié sur un vrai UGREEN pour l’instant."
+      },
+      {
+        "title": "Serveurs et sources, dans les réglages",
+        "body": "Ajoutez, renommez et reconnectez serveurs et sources dans une seule page de réglages, chacun avec une petite icône : tour, portable, NAS ou cloud. Appairez une machine avec un code court."
+      },
+      {
+        "title": "Une page pour chaque titre",
+        "body": "La même page de titre, quelle que soit la source du fichier : lire, reprendre, marquer comme vu, laisser un avis et prévisualiser une scène."
+      },
+      {
+        "title": "Vu veut dire vu",
+        "body": "L’anti-spoil montre l’image d’un épisode dès que vous passez son dernier cinquième, et le chapitre de générique de fin d’un fichier compte comme vu."
+      },
+      {
+        "title": "Une mise à jour qui garde tout",
+        "body": "Passer de la 4.4.6 conserve bibliothèque, profils et historique. Vérifié sur une vraie installation 4.4.6, retour arrière compris."
+      }
+    ],
+    "laterTitle": "Pas dans la 5.0",
+    "laterIntro": "Prévu, mais pas promis pour cette version. Chaque élément est annoncé une fois prouvé sur du vrai matériel.",
+    "later": [
+      {
+        "title": "Une application Android",
+        "body": "Une application pour téléphone, pour votre serveur ou vos sources. Pas encore commencée ; prévue après la version pour ordinateur."
+      },
+      {
+        "title": "Android TV et Google TV",
+        "body": "Diffusion ou application sur la télé : le salon est encore à l’étude."
+      },
+      {
+        "title": "Ordinateurs ARM",
+        "body": "Applications Windows et Linux ARM64 natives, annoncées seulement une fois construites et vérifiées. Les anciens installateurs ARM64 restent signalés comme anciennes versions."
+      }
+    ],
+    "foot": "Windows est vérifié en premier. Les notes de version diront ce qui a été vérifié sur quel système, et ce qui ne l’a pas été."
   },
   "discover": {
     "eyebrow": "Moins de réglages. Plus de cinéma.",

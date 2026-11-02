@@ -223,6 +223,70 @@
   });
   show(root.dataset.os || "windows", false);
 
+  // ---- the pre-release countdown (decision 227) ----
+  // The page states the dates and its promise without this. Script only fills the
+  // time left and marks which day of the window it is; it stops once the window
+  // has closed and while the tab is hidden.
+  var countdown = document.querySelector("[data-v5]");
+  if (countdown) {
+    var opens = Date.parse(countdown.dataset.opens);
+    var closes = Date.parse(countdown.dataset.closes);
+    var clock = countdown.querySelector(".v5-clock");
+    var windowDays = countdown.querySelectorAll(".v5-day");
+    var statuses = countdown.querySelectorAll("[data-when]");
+    var digits = {};
+    countdown.querySelectorAll("[data-unit]").forEach(function (node) {
+      digits[node.dataset.unit] = node;
+    });
+    var two = function (value) {
+      return (value < 10 ? "0" : "") + value;
+    };
+    try {
+      var numbers = new Intl.NumberFormat(countdown.dataset.locale, {
+        minimumIntegerDigits: 2,
+        useGrouping: false,
+      });
+      two = function (value) {
+        return numbers.format(value);
+      };
+    } catch (_) {}
+    var countdownTimer = 0;
+    var tick = function () {
+      var now = Date.now();
+      var phase = now < opens ? "before" : now < closes ? "open" : "after";
+      if (phase === "before") {
+        var left = Math.max(0, Math.floor((opens - now) / 1000));
+        digits.days.textContent = two(Math.floor(left / 86400));
+        digits.hours.textContent = two(Math.floor((left % 86400) / 3600));
+        digits.minutes.textContent = two(Math.floor((left % 3600) / 60));
+        digits.seconds.textContent = two(left % 60);
+      }
+      clock.hidden = phase !== "before";
+      statuses.forEach(function (node) {
+        node.hidden = node.dataset.when !== phase;
+      });
+      windowDays.forEach(function (day) {
+        var state =
+          now >= Date.parse(day.dataset.end)
+            ? "past"
+            : now >= Date.parse(day.dataset.start)
+              ? "today"
+              : "next";
+        day.dataset.state = state;
+        if (state === "today") day.setAttribute("aria-current", "date");
+        else day.removeAttribute("aria-current");
+      });
+      window.clearTimeout(countdownTimer);
+      if (phase !== "after" && !document.hidden)
+        countdownTimer = window.setTimeout(
+          tick,
+          phase === "before" ? 1000 - (now % 1000) : 30000,
+        );
+    };
+    document.addEventListener("visibilitychange", tick);
+    tick();
+  }
+
   // ---- the recording: scene times seek it, and the list follows it ----
   var video = document.getElementById("tour");
   var scenes = document.querySelectorAll(".scene");

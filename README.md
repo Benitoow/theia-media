@@ -11,6 +11,7 @@
 <p align="center">
   <a href="https://github.com/Benitoow/theia-media/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Benitoow/theia-media?style=flat-square&color=C8A24A"></a>
   <a href="LICENSE"><img alt="Free for noncommercial use: PolyForm Noncommercial from 4.0, GPL-3.0 up to 3.4" src="https://img.shields.io/badge/licence-PolyForm%20NC%20(4.0%2B)%20%C2%B7%20GPL--3.0%20(%E2%89%A43.4)-555?style=flat-square"></a>
+  <a href="#theia-5-is-on-its-way"><img alt="Theia 5: planned for 6 to 8 November 2026" src="https://img.shields.io/badge/Theia%205-6%E2%80%938%20November%202026-C8A24A?style=flat-square"></a>
   <img alt="Windows x64" src="https://img.shields.io/badge/Windows-x64-555?style=flat-square">
   <img alt="Ubuntu 24.04 x64" src="https://img.shields.io/badge/Ubuntu%2024.04-x64-555?style=flat-square">
   <img alt="macOS: Apple Silicon and Intel" src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-555?style=flat-square">
@@ -18,6 +19,7 @@
 
 <p align="center">
   <a href="https://theia-media.app/">Website</a> ·
+  <a href="#theia-5-is-on-its-way">Theia 5</a> ·
   <a href="#downloads">Downloads</a> ·
   <a href="docs/releases/v4.4.6.md">4.4.6 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
@@ -57,6 +59,37 @@ server starts, even before you add a friend; see
 | One download | Built for choosing | Private by default |
 | --- | --- | --- |
 | One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud account. TMDB supplies metadata, GitHub Releases supplies updates, and Firebase carries the friends service described above. |
+
+## Theia 5 is on its way
+
+> [!IMPORTANT]
+> **Theia 5 is planned for Friday 6 to Sunday 8 November 2026** (Europe/Paris).
+> That is a target, not a promise: it is published only when its final checks
+> pass. Until then the downloads below are 4.4.6, and the live countdown is on
+> [theia-media.app](https://theia-media.app/).
+
+Theia 5 is about one thing: **everything you own, in one library.** Your
+computers, your NAS and your cloud become a single library, with one profile that
+follows you from one to the other.
+
+| What arrives with 5.0 | What it means |
+| --- | --- |
+| **One library, many places** | Films, Series, Search and Home combine your computers, NAS folders and cloud. A small line says where each copy lives. |
+| **One profile that follows you** | Link your profile across your servers. What you watched and where you stopped follows you from one server to the next. |
+| **Google Drive as a source** | Stream from the Drive folders you choose, in short pieces. Until Google approves Theia's own connection, connecting may ask for your own Google client. |
+| **NAS folders** | A NAS share mounted on a server joins the library, and your history survives if it sleeps. The UGREEN test kit is unverified on a real UGREEN so far. |
+| **Servers and sources, in settings** | Add, rename and reconnect servers and sources on one settings page, each with a small icon: tower, laptop, NAS or cloud. Pair a machine with a short code. |
+| **One page for every title** | The same title page whichever source holds the file: play, resume, mark as watched, leave an opinion and preview a scene. |
+| **Watched means watched** | Anti-spoil shows an episode's artwork once you pass its last fifth, and a file's own ending-credits chapter counts as watched. |
+| **An update that keeps everything** | Upgrading from 4.4.6 keeps your library, profiles and history. Checked on a real 4.4.6 installation, rollback included. |
+
+**Not in 5.0.** Planned, but not promised for this release; each one is announced
+once it is proven on real hardware: an **Android app** (not started yet), **Android
+TV and Google TV** (still being studied), and native **Windows and Linux ARM64**
+apps (older ARM64 setups stay labelled as earlier versions).
+
+Windows is checked first. The 5.0 release notes will say what was checked on which
+system, and what was not.
 
 ## Theia 4.4.6
 

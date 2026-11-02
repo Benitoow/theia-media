@@ -6,6 +6,7 @@
   },
   "nav": {
     "home": "Beranda Theia",
+    "v5": "Theia 5",
     "skip": "Langsung ke konten",
     "primary": "Navigasi utama",
     "discover": "Kenali",
@@ -26,6 +27,73 @@
     "note": "Satu pengembang. Windows x64 adalah satu-satunya platform yang sejauh ini digunakan dengan koleksi rumah tangga nyata.",
     "limits": "Kenali batasannya",
     "start": "Masuk ke bioskop"
+  },
+  "v5": {
+    "pill": "Theia 5 segera hadir",
+    "eyebrow": "Theia 5",
+    "title": "Semua milik Anda, dalam satu perpustakaan.",
+    "lead": "Komputer, NAS, dan cloud Anda menjadi satu perpustakaan, dengan satu profil yang mengikuti Anda dari satu ke yang lain.",
+    "planned": "Rilis yang direncanakan",
+    "promise": "Sebuah target, bukan janji: Theia 5 hanya dirilis jika pemeriksaan akhirnya lolos.",
+    "timer": "Sisa waktu sampai jendela rilis dibuka",
+    "days": "hari",
+    "hours": "jam",
+    "minutes": "menit",
+    "seconds": "detik",
+    "open": "Jendela rilis sudah dibuka. Theia 5 bisa hadir kapan saja sebelum jendela ditutup.",
+    "after": "Jendela yang diumumkan telah berakhir. Lihat halaman rilis untuk versi terbaru.",
+    "featuresTitle": "Yang hadir bersama 5.0",
+    "features": [
+      {
+        "title": "Satu perpustakaan, banyak tempat",
+        "body": "Film, Serial, Pencarian, dan Beranda menggabungkan komputer, folder NAS, dan cloud Anda. Satu baris kecil menunjukkan di mana setiap salinan berada."
+      },
+      {
+        "title": "Satu profil yang mengikuti Anda",
+        "body": "Tautkan profil Anda di seluruh server. Apa yang sudah Anda tonton dan di mana Anda berhenti mengikuti Anda dari satu server ke server lain."
+      },
+      {
+        "title": "Google Drive sebagai sumber",
+        "body": "Putar dari folder Drive yang Anda pilih, dalam potongan kecil. Selama Google belum menyetujui koneksi Theia, proses menghubungkan bisa meminta klien Google milik Anda sendiri."
+      },
+      {
+        "title": "Folder NAS",
+        "body": "Berbagi NAS yang dipasang di server bergabung ke perpustakaan, dan riwayat Anda tetap ada jika NAS tertidur. Kit uji UGREEN belum diverifikasi pada UGREEN asli sejauh ini."
+      },
+      {
+        "title": "Server dan sumber, di pengaturan",
+        "body": "Tambah, ganti nama, dan sambungkan ulang server dan sumber di satu halaman pengaturan, masing-masing dengan ikon kecil: tower, laptop, NAS, atau cloud. Pasangkan mesin dengan kode pendek."
+      },
+      {
+        "title": "Satu halaman untuk setiap judul",
+        "body": "Halaman judul yang sama, apa pun sumber berkasnya: putar, lanjutkan, tandai sudah ditonton, beri pendapat, dan pratinjau sebuah adegan."
+      },
+      {
+        "title": "Ditonton berarti ditonton",
+        "body": "Anti-spoiler menampilkan gambar episode saat Anda melewati seperlima terakhirnya, dan bab kredit akhir pada berkas dihitung sebagai sudah ditonton."
+      },
+      {
+        "title": "Pembaruan yang menjaga semuanya",
+        "body": "Memperbarui dari 4.4.6 mempertahankan perpustakaan, profil, dan riwayat. Diperiksa pada instalasi 4.4.6 yang nyata, termasuk pengembalian ke versi sebelumnya."
+      }
+    ],
+    "laterTitle": "Bukan di 5.0",
+    "laterIntro": "Direncanakan, tetapi tidak dijanjikan untuk rilis ini. Masing-masing diumumkan setelah terbukti pada perangkat keras nyata.",
+    "later": [
+      {
+        "title": "Aplikasi Android",
+        "body": "Aplikasi ponsel untuk server atau sumber Anda. Belum dimulai; direncanakan setelah versi desktop."
+      },
+      {
+        "title": "Android TV dan Google TV",
+        "body": "Casting atau aplikasi di TV: ruang keluarga masih dikaji."
+      },
+      {
+        "title": "Komputer ARM",
+        "body": "Aplikasi Windows dan Linux ARM64 asli, diumumkan hanya setelah dibuat dan diperiksa. Penginstal ARM64 lama tetap diberi label versi sebelumnya."
+      }
+    ],
+    "foot": "Windows diperiksa lebih dulu. Catatan rilis akan menyebut apa yang diperiksa pada sistem mana, dan apa yang tidak."
   },
   "discover": {
     "eyebrow": "Lebih sedikit pengaturan. Lebih banyak film.",

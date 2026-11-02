@@ -6,6 +6,7 @@
   },
   "nav": {
     "home": "Theia home",
+    "v5": "Theia 5",
     "skip": "Skip to content",
     "primary": "Main navigation",
     "discover": "Discover",
@@ -26,6 +27,73 @@
     "note": "One maintainer. Windows x64 is the only platform used with a real household library so far.",
     "limits": "Know the limits",
     "start": "Step inside"
+  },
+  "v5": {
+    "pill": "Theia 5 arrives",
+    "eyebrow": "Theia 5",
+    "title": "Everything you own, in one library.",
+    "lead": "Your computers, your NAS and your cloud become a single library, with one profile that follows you from one to the other.",
+    "planned": "Planned release",
+    "promise": "A target, not a promise: Theia 5 is published only when its final checks pass.",
+    "timer": "Time left until the release window opens",
+    "days": "days",
+    "hours": "hours",
+    "minutes": "minutes",
+    "seconds": "seconds",
+    "open": "The release window is open. Theia 5 can arrive at any moment before it closes.",
+    "after": "The announced window has ended. See the releases page for the latest version.",
+    "featuresTitle": "What arrives with 5.0",
+    "features": [
+      {
+        "title": "One library, many places",
+        "body": "Films, Series, Search and Home combine your computers, NAS folders and cloud. A small line says where each copy lives."
+      },
+      {
+        "title": "One profile that follows you",
+        "body": "Link your profile across your servers. What you watched and where you stopped follows you from one server to the next."
+      },
+      {
+        "title": "Google Drive as a source",
+        "body": "Stream from the Drive folders you choose, in short pieces. Until Google approves Theia's own connection, connecting may ask for your own Google client."
+      },
+      {
+        "title": "NAS folders",
+        "body": "A NAS share mounted on a server joins the library, and your history survives if it sleeps. The UGREEN test kit is unverified on a real UGREEN so far."
+      },
+      {
+        "title": "Servers and sources, in settings",
+        "body": "Add, rename and reconnect servers and sources on one settings page, each with a small icon: tower, laptop, NAS or cloud. Pair a machine with a short code."
+      },
+      {
+        "title": "One page for every title",
+        "body": "The same title page whichever source holds the file: play, resume, mark as watched, leave an opinion and preview a scene."
+      },
+      {
+        "title": "Watched means watched",
+        "body": "Anti-spoil shows an episode's artwork once you pass its last fifth, and a file's own ending-credits chapter counts as watched."
+      },
+      {
+        "title": "An update that keeps everything",
+        "body": "Upgrading from 4.4.6 keeps your library, profiles and history. Checked on a real 4.4.6 installation, rollback included."
+      }
+    ],
+    "laterTitle": "Not in 5.0",
+    "laterIntro": "Planned, but not promised for this release. Each one is announced once it is proven on real hardware.",
+    "later": [
+      {
+        "title": "An Android app",
+        "body": "A phone app for your server or your sources. Not started yet; planned after the desktop release."
+      },
+      {
+        "title": "Android TV and Google TV",
+        "body": "Casting or an app on the TV: the living room is still being studied."
+      },
+      {
+        "title": "ARM computers",
+        "body": "Native Windows and Linux ARM64 apps, announced only once built and checked. Older ARM64 setups stay labelled as earlier versions."
+      }
+    ],
+    "foot": "Windows is checked first. The release notes will say what was checked on which system, and what was not."
   },
   "discover": {
     "eyebrow": "Less setup. More cinema.",

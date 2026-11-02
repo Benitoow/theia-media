@@ -6,6 +6,7 @@
   },
   "nav": {
     "home": "Início do Theia",
+    "v5": "Theia 5",
     "skip": "Ir para o conteúdo",
     "primary": "Navegação principal",
     "discover": "Conhecer",
@@ -26,6 +27,73 @@
     "note": "Um único desenvolvedor. Windows x64 é a única plataforma usada com uma biblioteca doméstica real até agora.",
     "limits": "Conheça os limites",
     "start": "Entre na sala"
+  },
+  "v5": {
+    "pill": "O Theia 5 chega",
+    "eyebrow": "Theia 5",
+    "title": "Tudo o que você tem, em uma única biblioteca.",
+    "lead": "Seus computadores, seu NAS e sua nuvem formam uma só biblioteca, com um único perfil que acompanha você de um para o outro.",
+    "planned": "Lançamento previsto",
+    "promise": "Uma meta, não uma promessa: o Theia 5 só é publicado quando passa pelas verificações finais.",
+    "timer": "Tempo restante até a abertura da janela de lançamento",
+    "days": "dias",
+    "hours": "horas",
+    "minutes": "minutos",
+    "seconds": "segundos",
+    "open": "A janela de lançamento está aberta. O Theia 5 pode chegar a qualquer momento antes de ela fechar.",
+    "after": "A janela anunciada terminou. Veja a página de versões para a última versão.",
+    "featuresTitle": "O que chega com a 5.0",
+    "features": [
+      {
+        "title": "Uma biblioteca, vários lugares",
+        "body": "Filmes, Séries, Busca e Início reúnem seus computadores, suas pastas de NAS e sua nuvem. Uma linha pequena mostra onde está cada cópia."
+      },
+      {
+        "title": "Um perfil que acompanha você",
+        "body": "Vincule seu perfil entre seus servidores. O que você assistiu e onde parou acompanha você de um servidor para o outro."
+      },
+      {
+        "title": "Google Drive como fonte",
+        "body": "Assista a partir das pastas do Drive que você escolher, em pequenos trechos. Enquanto o Google não aprovar a conexão do Theia, conectar pode pedir seu próprio cliente Google."
+      },
+      {
+        "title": "Pastas de NAS",
+        "body": "Um compartilhamento de NAS montado em um servidor entra na biblioteca, e seu histórico sobrevive se ele entrar em repouso. O kit de teste da UGREEN ainda não foi verificado em uma UGREEN real."
+      },
+      {
+        "title": "Servidores e fontes, nas configurações",
+        "body": "Adicione, renomeie e reconecte servidores e fontes em uma só página de configurações, cada um com um ícone pequeno: torre, notebook, NAS ou nuvem. Pareie uma máquina com um código curto."
+      },
+      {
+        "title": "Uma página para cada título",
+        "body": "A mesma página de título, seja qual for a fonte do arquivo: reproduzir, retomar, marcar como assistido, deixar uma opinião e pré-visualizar uma cena."
+      },
+      {
+        "title": "Assistido é assistido",
+        "body": "O antispoiler mostra a imagem de um episódio quando você passa do último quinto, e o capítulo de créditos finais de um arquivo conta como assistido."
+      },
+      {
+        "title": "Uma atualização que guarda tudo",
+        "body": "Atualizar da 4.4.6 mantém biblioteca, perfis e histórico. Verificado em uma instalação real da 4.4.6, com volta à versão anterior."
+      }
+    ],
+    "laterTitle": "Fora da 5.0",
+    "laterIntro": "Planejado, mas não prometido para esta versão. Cada item será anunciado quando for comprovado em hardware real.",
+    "later": [
+      {
+        "title": "Um app para Android",
+        "body": "Um app de celular para seu servidor ou suas fontes. Ainda não começou; planejado para depois da versão para computador."
+      },
+      {
+        "title": "Android TV e Google TV",
+        "body": "Transmitir ou um app na TV: a sala ainda está em estudo."
+      },
+      {
+        "title": "Computadores ARM",
+        "body": "Apps nativos de Windows e Linux ARM64, anunciados só depois de construídos e verificados. Instaladores ARM64 antigos continuam marcados como versões anteriores."
+      }
+    ],
+    "foot": "O Windows é verificado primeiro. As notas da versão dirão o que foi verificado em qual sistema, e o que não foi."
   },
   "discover": {
     "eyebrow": "Menos ajustes. Mais cinema.",

@@ -95,6 +95,20 @@ export function build(argv = process.argv.slice(2)) {
   )
     throw new Error("invalid release version or date");
   const [major, minor] = version.split(".").map(Number);
+  // A pre-release announcement (decision 227): shown while the published release
+  // is older than the announced one, and gone from the build once it is out.
+  const announcement = json("announcement.json");
+  const opens = new Date(announcement.opens);
+  const closes = new Date(announcement.closes);
+  if (
+    !/^\d+\.\d+\.\d+$/.test(announcement.version) ||
+    !Number.isFinite(opens.getTime()) ||
+    !Number.isFinite(closes.getTime()) ||
+    closes <= opens ||
+    (closes - opens) % 86400000 !== 0
+  )
+    throw new Error("invalid announcement");
+  const announcing = major < Number(announcement.version.split(".")[0]);
   const licence =
     major < 3 || (major === 3 && minor <= 4)
       ? "GPL-3.0"
@@ -236,6 +250,42 @@ export function build(argv = process.argv.slice(2)) {
             .join("")}</div></details>`,
       )
       .join("\n");
+    // The pre-release announcement. Dates come from announcement.json and are
+    // formatted by Intl in the announced time zone, so no catalogue carries one.
+    const inZone = (options) =>
+      new Intl.DateTimeFormat(language.intl, {
+        ...options,
+        timeZone: announcement.timeZone,
+      });
+    const isoDay = (date) =>
+      new Intl.DateTimeFormat("en-CA", { timeZone: announcement.timeZone }).format(
+        date,
+      );
+    const windowEnd = new Date(closes.getTime() - 60000);
+    const v5Pill = announcing
+      ? `<a class="v5-pill" href="#v5"><span class="v5-dot" aria-hidden="true"></span><span>${t("v5.pill")}</span><span aria-hidden="true">·</span><time datetime="${isoDay(opens)}">${escapeHTML(inZone({ weekday: "long", day: "numeric", month: "long" }).format(opens))}</time>${icon("arrow", "icon-arrow")}</a>`
+      : "";
+    const v5Section = announcing
+      ? `<section id="v5" class="section v5-section" aria-labelledby="v5-title"><div class="wrap">
+<header class="section-head"><p class="eyebrow">${t("v5.eyebrow")}</p><h2 id="v5-title">${t("v5.title")}</h2><p class="section-lead">${t("v5.lead")}</p></header>
+<div class="v5-countdown" data-v5 data-opens="${opens.toISOString()}" data-closes="${closes.toISOString()}" data-locale="${escapeHTML(language.intl)}">
+<div class="v5-when"><p class="v5-label">${t("v5.planned")}</p><p class="v5-range">${escapeHTML(inZone({ dateStyle: "full" }).formatRange(opens, windowEnd))}</p><p class="v5-promise">${t("v5.promise")}</p></div>
+<div class="v5-live">
+<div class="v5-clock" role="timer" aria-label="${t("v5.timer")}" hidden>${["days", "hours", "minutes", "seconds"].map((unit) => `<div class="v5-cell"><span class="v5-num" data-unit="${unit}" dir="ltr">--</span><span class="v5-unit">${t(`v5.${unit}`)}</span></div>`).join("")}</div>
+<p class="v5-status" data-when="open" hidden>${t("v5.open")}</p>
+<p class="v5-status" data-when="after" hidden>${t("v5.after")}</p>
+<ol class="v5-days" aria-label="${t("v5.planned")}">${Array.from({ length: (closes - opens) / 86400000 }, (_, index) => {
+          const start = new Date(opens.getTime() + index * 86400000);
+          const end = new Date(start.getTime() + 86400000);
+          return `<li class="v5-day" data-state="next" data-start="${start.toISOString()}" data-end="${end.toISOString()}">${escapeHTML(inZone({ weekday: "short", day: "numeric" }).format(start))}</li>`;
+        }).join("")}</ol>
+</div></div>
+<h3 class="v5-sub">${t("v5.featuresTitle")}</h3>
+<ul class="v5-grid">${catalogue.v5.features.map((item, index) => `<li class="v5-item"><span aria-hidden="true">0${index + 1}</span><h4>${escapeHTML(item.title)}</h4><p>${escapeHTML(item.body)}</p></li>`).join("\n")}</ul>
+<div class="v5-later"><h3 class="v5-sub">${t("v5.laterTitle")}</h3><p class="v5-later-intro">${t("v5.laterIntro")}</p><ul class="v5-later-list">${catalogue.v5.later.map((item) => `<li class="v5-later-item"><h4>${escapeHTML(item.title)}</h4><p>${escapeHTML(item.body)}</p></li>`).join("\n")}</ul></div>
+<p class="v5-foot">${t("v5.foot")}</p>
+</div></section>`
+      : "";
     const canonical = `${siteUrl}/${language.id}/`;
     const font =
       {
@@ -273,6 +323,7 @@ export function build(argv = process.argv.slice(2)) {
         `<link rel="alternate" hreflang="x-default" href="${siteUrl}/">`,
       ].join("\n"),
       navigation: [
+        ...(announcing ? [["v5", "#v5"]] : []),
         ["discover", "#discover"],
         ["download", "#download"],
         ["faq", "#faq"],
@@ -290,6 +341,8 @@ export function build(argv = process.argv.slice(2)) {
       benefits,
       steps,
       faq,
+      v5_pill: v5Pill,
+      v5_section: v5Section,
       download_panels: downloadPanels,
       news: catalogue.news.items
         .map(
@@ -331,6 +384,8 @@ export function build(argv = process.argv.slice(2)) {
       "benefits",
       "steps",
       "faq",
+      "v5_pill",
+      "v5_section",
       "download_panels",
       "news",
       "caption_tracks",

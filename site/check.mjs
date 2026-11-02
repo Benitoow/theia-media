@@ -20,6 +20,12 @@ const siteUrl = (
 const languages = json("locales/languages.json");
 const release = json("release.json");
 const reference = json("locales/en.json");
+// Decision 227: the pre-release announcement exists exactly while the published
+// release is older than the announced one.
+const announcement = json("announcement.json");
+const announcing =
+  Number(release.tag.replace(/^v/, "").split(".")[0]) <
+  Number(announcement.version.split(".")[0]);
 const failures = [];
 const check = (condition, message) => {
   if (!condition) failures.push(message);
@@ -122,6 +128,29 @@ for (const language of pages) {
     html.indexOf('id="download"') < html.indexOf('id="new"'),
     "downloads must precede release highlights",
   );
+  if (announcing) {
+    assert(ids.has("v5"), "missing announcement section v5");
+    assert(
+      html.indexOf('id="v5"') < html.indexOf('id="discover"'),
+      "the announcement must precede discovery",
+    );
+    assert(
+      html.includes(`data-opens="${new Date(announcement.opens).toISOString()}"`) &&
+        html.includes(
+          `data-closes="${new Date(announcement.closes).toISOString()}"`,
+        ),
+      "announcement dates differ from announcement.json",
+    );
+    assert(
+      ofTag("a").filter((tag) => tag.attributes.class === "v5-pill").length === 1,
+      "expected one announcement pill in the hero",
+    );
+  } else {
+    assert(
+      !ids.has("v5") && !html.includes("v5-pill"),
+      "the announcement must leave once its version is published",
+    );
+  }
   const canonical = `${siteUrl}/${language.id}/`;
   assert(
     ofTag("link").find((tag) => tag.attributes.rel === "canonical")?.attributes
