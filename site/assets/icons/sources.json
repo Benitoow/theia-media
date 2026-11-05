@@ -1,0 +1,254 @@
+{
+  "sets": {
+    "lucide": {
+      "name": "Lucide",
+      "kind": "ui",
+      "repo": "lucide-icons/lucide",
+      "tag": "1.61.0",
+      "commit": "c29c276f16590cf017126671535ad8c792be64d8",
+      "directory": "icons",
+      "licence": "ISC",
+      "licenceFile": "LICENSE",
+      "saveLicenceAs": "LICENSE-lucide.txt",
+      "licenceSha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57"
+    },
+    "simple-icons": {
+      "name": "Simple Icons",
+      "kind": "logo",
+      "repo": "simple-icons/simple-icons",
+      "tag": "16.35.0",
+      "commit": "ed9a5192b24ad2f169bf1009931da0df27d5a49a",
+      "directory": "icons",
+      "licence": "CC0-1.0",
+      "licenceFile": "LICENSE.md",
+      "saveLicenceAs": "LICENSE-simple-icons.txt",
+      "noticeFile": "DISCLAIMER.md",
+      "saveNoticeAs": "DISCLAIMER-simple-icons.txt",
+      "licenceSha256": "9046848b63a5c92bff14e4accca80bd987e0623b74adf9226ce5198d312b79d5",
+      "noticeSha256": "5757a1f28eff735a8b5e7425478f367812d71e974530f5bedd01219480965f4a"
+    },
+    "svg-logos": {
+      "name": "SVG Logos",
+      "kind": "logo",
+      "repo": "gilbarbara/logos",
+      "commit": "608007b99fab1d55be5de9f9ec2c75bcc80a438c",
+      "directory": "logos",
+      "licence": "CC0-1.0",
+      "licenceFile": "LICENSE.txt",
+      "saveLicenceAs": "LICENSE-svg-logos.txt",
+      "licenceSha256": "36ffd9dc085d529a7e60e1276d73ae5a030b020313e6c5408593a6ae2af39673"
+    }
+  },
+  "icons": [
+    {
+      "id": "arrow",
+      "set": "lucide",
+      "file": "arrow-right",
+      "sha256": "288397fdb73bb4f783cf9eabb726ff47357df1d4e3f1201dd748090579f108b9"
+    },
+    {
+      "id": "download",
+      "set": "lucide",
+      "file": "download",
+      "sha256": "3daeee13ded5a3afa2198b1bb4e2262d163922f97d96ac6ff9953e8ed4fe039d"
+    },
+    {
+      "id": "play",
+      "set": "lucide",
+      "file": "play",
+      "sha256": "d7c34786135922a92b6896f6c2384ceeb0346afbf6041dc79982011411409833"
+    },
+    {
+      "id": "pause",
+      "set": "lucide",
+      "file": "pause",
+      "sha256": "f122ec4ea7f5693a0b1baafa9c708b53980dc87b4aacb297c6e6f71c1a4c115c"
+    },
+    {
+      "id": "globe",
+      "set": "lucide",
+      "file": "globe",
+      "sha256": "82c6b8fa0b8e8d775ec9becd86f74a4e50bff7bee4c81f7362de45348504f14d"
+    },
+    {
+      "id": "menu",
+      "set": "lucide",
+      "file": "menu",
+      "sha256": "af6491988ac1ba30dc5414f485bc48713e957e1edb0fbef4a0dd8691c3c21598"
+    },
+    {
+      "id": "copy",
+      "set": "lucide",
+      "file": "copy",
+      "sha256": "ea80e566c7a12628a447cb53179b19aea4f60b9143e2becd0d0f20bf260e5718"
+    },
+    {
+      "id": "library",
+      "set": "lucide",
+      "file": "library",
+      "sha256": "892ba1bd1ee2e5bba320eea1c30c83ed83055ded5a0a0c0e7e4ee5fb06c307a5"
+    },
+    {
+      "id": "player",
+      "set": "lucide",
+      "file": "circle-play",
+      "sha256": "10b5deb7c8fa5587897a1eb3d7ffc3c6c2f7b1b7f9a5b5080050aa529e9eb9ae"
+    },
+    {
+      "id": "friends",
+      "set": "lucide",
+      "file": "users",
+      "sha256": "eeed488a1ec95ba730dd69996536fb65061d6ea273afb2429ae47e65eebf401c"
+    },
+    {
+      "id": "layers",
+      "set": "lucide",
+      "file": "layers",
+      "sha256": "ce16d0a955e3581cda17f6b2fd5c5bc2034b405f9cecc31c8ebb8495b4afc1bb"
+    },
+    {
+      "id": "profile",
+      "set": "lucide",
+      "file": "circle-user-round",
+      "sha256": "a7061596d155332f46cebc93e7458ff3f0a3a87b84b441d04b07461f0bfcffc2"
+    },
+    {
+      "id": "nas",
+      "set": "lucide",
+      "file": "hard-drive",
+      "sha256": "324363c40f54e4ca843de0ad1d023b063b70a26a83bb2e0a9e9f4aad9af37378"
+    },
+    {
+      "id": "server",
+      "set": "lucide",
+      "file": "server",
+      "sha256": "f7bea54b609dc488f3b848995014041846b2443fd2a880653e9e583d7a034f61"
+    },
+    {
+      "id": "title",
+      "set": "lucide",
+      "file": "clapperboard",
+      "sha256": "e4d78946cda7812f13c431c68b6d4d0077a92217c7f468667a203f237e247d7e"
+    },
+    {
+      "id": "watched",
+      "set": "lucide",
+      "file": "eye",
+      "sha256": "5bf90197dd7629cad64a2e48d1186a71559deb6121207d10e3dc5b19ebaffdcf"
+    },
+    {
+      "id": "update",
+      "set": "lucide",
+      "file": "refresh-cw",
+      "sha256": "2e10dd403c85a24f163d59fc6151aa21147fe9402e1305dfc8979208caee8944"
+    },
+    {
+      "id": "phone",
+      "set": "lucide",
+      "file": "smartphone",
+      "sha256": "f9fdb700b50feb5fc6436f53eb9813e9eb56a9071ac4cdcba69c7f7c1c13877d"
+    },
+    {
+      "id": "tv",
+      "set": "lucide",
+      "file": "tv",
+      "sha256": "0ef7db17794919d11c241d7f12e23c4cfd3f9e536c0d59fc282657666ed0b39f"
+    },
+    {
+      "id": "chip",
+      "set": "lucide",
+      "file": "cpu",
+      "sha256": "ec83bb69ec029d367d749afc445b39c8e95891ebf99b0400652677c2b149b99c"
+    },
+    {
+      "id": "film",
+      "set": "lucide",
+      "file": "film",
+      "sha256": "85cfa80821b34f512bd401a1249957c9f2f612497602ecc31dff39517823ee52"
+    },
+    {
+      "id": "shield",
+      "set": "lucide",
+      "file": "shield-check",
+      "sha256": "8d4fcdbde5bba4abb1a2f6fe53e37ceb6343a1d5449a9d88f6f97c1971d26c4e"
+    },
+    {
+      "id": "windows",
+      "set": "svg-logos",
+      "file": "microsoft-windows-icon",
+      "sha256": "3657d42a52f2190ad6bf44198f31647747e28ab315bb7fd8e0b1e2f8273bc2d6"
+    },
+    {
+      "id": "apple",
+      "set": "simple-icons",
+      "file": "apple",
+      "sha256": "2a1509dccd25e6d2bc7a11a8e52941077e1a48555e192ce638699b9f083c2a7c"
+    },
+    {
+      "id": "linux",
+      "set": "simple-icons",
+      "file": "linux",
+      "sha256": "7e55f2779ae11a83c9dad2d0414a65d8ca7867d0716ce58bfe41ed299ae1447f"
+    },
+    {
+      "id": "github",
+      "set": "simple-icons",
+      "file": "github",
+      "sha256": "3bf8cceead820aec50d4ee825a3fd02c5a1cd6665cc9cf4cbf3d9c8861a204bb"
+    },
+    {
+      "id": "discord",
+      "set": "simple-icons",
+      "file": "discord",
+      "sha256": "1d364b72c9eaf1fe37d17ca88cd8fb541308dc0f3b09e2ab3b824f380b3493d5"
+    },
+    {
+      "id": "rss",
+      "set": "simple-icons",
+      "file": "rss",
+      "sha256": "b31e1d6c3147795d2aa186e7515b624bb2b8046b30fce1063f111b36c99b9ef8"
+    },
+    {
+      "id": "firebase",
+      "set": "simple-icons",
+      "file": "firebase",
+      "sha256": "3f46d84a41479d7789cc36b82c2b6852e6bbbfd30ebee5b7a3aef7d49758295a"
+    },
+    {
+      "id": "googledrive",
+      "set": "simple-icons",
+      "file": "googledrive",
+      "sha256": "7e678aba9e463140ec8603f0e6cc78bb80f6caf9cd3ee73335026a90729a1a40"
+    },
+    {
+      "id": "ffmpeg",
+      "set": "simple-icons",
+      "file": "ffmpeg",
+      "sha256": "076e200007de7d3f03ddc970e63a23f7cb46a772d1f4e7c670ceb22a9d46ed35"
+    },
+    {
+      "id": "mpv",
+      "set": "simple-icons",
+      "file": "mpv",
+      "sha256": "9e0e99ee8cdbb5289a981a0195200c4ecdcd53d068462a02a635761c56e176c2"
+    },
+    {
+      "id": "sqlite",
+      "set": "simple-icons",
+      "file": "sqlite",
+      "sha256": "71d4153bc9661dfe6b92dad70f737ec2b6c7c839311e502b4ca66fe664fe12b6"
+    },
+    {
+      "id": "go",
+      "set": "simple-icons",
+      "file": "go",
+      "sha256": "36a745fe15584bf138d02ae6abcbdd155bc1cd4f4976634ad34861b2059db559"
+    },
+    {
+      "id": "svelte",
+      "set": "simple-icons",
+      "file": "svelte",
+      "sha256": "a38cef0f4fc36bc63519ce34d24a91022f19ec6998ea402c5e155c7479a46f4c"
+    }
+  ]
+}

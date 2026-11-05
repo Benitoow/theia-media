@@ -1,0 +1,280 @@
+/* What's new: the announcement of a coming version while there is one (decisions
+   227 and 230), then the highlights of the latest release. Without script the
+   dates and the promise stand alone; the clock only appears when script can
+   fill it. Bone on ink, no gold, no pulse. */
+.v5-section {
+  padding-block-start: 0;
+}
+/* The page title is the one display line; the announcement answers it below. */
+.v5-section .section-head h2 {
+  font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+}
+.v5-countdown {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: 2rem clamp(2rem, 5vw, 4rem);
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+}
+.v5-label {
+  margin-block-end: 0.6rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+.v5-range {
+  color: var(--bone);
+  font: 400 clamp(1.5rem, 3vw, 2.25rem) / 1.2 var(--font-display);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+.v5-promise {
+  max-inline-size: 28rem;
+  margin-block-start: 1rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+.v5-live {
+  display: grid;
+  gap: 1rem;
+  min-inline-size: 0;
+}
+.v5-clock {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.v5-cell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  justify-items: center;
+  gap: 0.35rem;
+  min-inline-size: 0;
+  padding: 1rem 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--ink);
+}
+.v5-num {
+  color: var(--bone);
+  font: 400 clamp(2rem, 4.2vw, 3.1rem) / 1 var(--font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.v5-unit {
+  max-inline-size: 100%;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  overflow-wrap: break-word;
+}
+.v5-status {
+  color: var(--bone);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+.v5-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.v5-day {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  padding: 0.4rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+.v5-day[data-state="past"]::before {
+  content: "✓";
+  margin-inline-end: 0.4rem;
+}
+.v5-day[data-state="today"] {
+  border-color: var(--bone);
+  background: var(--bone);
+  color: var(--ink);
+  font-weight: 500;
+}
+.v5-sub {
+  margin-block: clamp(3.5rem, 7vw, 5.5rem) 2rem;
+  font-size: clamp(1.5rem, 2.8vw, 2.1rem);
+  font-weight: 400;
+}
+.v5-grid,
+.v5-later-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 clamp(2rem, 5vw, 4.5rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.v5-later-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.v5-item,
+.v5-later-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0 1.25rem;
+  min-inline-size: 0;
+  padding-block: 1.75rem;
+  border-block-start: 1px solid var(--line);
+}
+.v5-later-item {
+  border-block-start: 1px dashed var(--line-strong);
+}
+.v5-item h4,
+.v5-later-item h4 {
+  margin: 0.15rem 0 0.5rem;
+  color: var(--bone);
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+.v5-item p,
+.v5-later-item p {
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+.v5-later .v5-sub {
+  margin-block-end: 0.75rem;
+}
+.v5-later-intro {
+  max-inline-size: 40rem;
+  margin-block-end: 1.5rem;
+  color: var(--muted);
+}
+.v5-later-item h4 {
+  color: var(--parchment);
+}
+.v5-foot {
+  max-inline-size: 43rem;
+  margin-block-start: 2.5rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.news-section {
+  border-block-start: 1px solid var(--line);
+}
+.news-head {
+  display: flex;
+  max-inline-size: none;
+  justify-content: space-between;
+  align-items: end;
+  gap: 2rem;
+}
+.news-head h2 {
+  max-inline-size: 40rem;
+}
+.news-head > div {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.news-head > .text-link {
+  flex: none;
+  font-size: 0.9375rem;
+}
+.news-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2rem clamp(2rem, 4vw, 3.5rem);
+}
+.news-item {
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid var(--line);
+}
+.news-item p {
+  margin-block-start: 0.75rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+html:lang(ar) .v5-label,
+html:lang(ur) .v5-label,
+html:lang(hi) .v5-label,
+html:lang(bn) .v5-label,
+html:lang(zh-Hans) .v5-label,
+html:lang(ar) .v5-unit,
+html:lang(ur) .v5-unit,
+html:lang(hi) .v5-unit,
+html:lang(bn) .v5-unit,
+html:lang(zh-Hans) .v5-unit {
+  letter-spacing: normal;
+  text-transform: none;
+}
+html:lang(ar) .v5-range,
+html:lang(ur) .v5-range,
+html:lang(hi) .v5-range,
+html:lang(bn) .v5-range,
+html:lang(zh-Hans) .v5-range,
+html:lang(ar) .v5-num,
+html:lang(ur) .v5-num,
+html:lang(hi) .v5-num,
+html:lang(bn) .v5-num,
+html:lang(zh-Hans) .v5-num {
+  letter-spacing: normal;
+  line-height: 1.3;
+}
+
+@media (max-width: 64rem) {
+  .news-head {
+    align-items: start;
+    flex-direction: column;
+  }
+  .news-head > .text-link {
+    margin-block-start: -0.5rem;
+  }
+  .v5-later-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 52rem) {
+  .v5-countdown,
+  .v5-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .news-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.75rem;
+  }
+}
+@media (max-width: 42rem) {
+  .v5-item,
+  .v5-later-item {
+    gap: 0 1rem;
+    padding-block: 1.25rem;
+  }
+  .v5-item p,
+  .v5-later-item p {
+    font-size: 0.875rem;
+  }
+  .news-item p {
+    font-size: 0.875rem;
+  }
+}
+/* Four cells hold "minutes" and "segundos" down to 26rem; below it two rows of two
+   keep every unit on one line, at any text size (the breakpoint is in rem). */
+@media (max-width: 26rem) {
+  .v5-clock {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

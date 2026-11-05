@@ -224,3 +224,47 @@ The existing Cinzel/Jost assets and licences are unchanged. The shared social
 card retains its original artwork and English tagline; each locale translates
 its metadata and image description, not the recorded application or artwork.
 
+## Icons and brand marks, 4 November 2026
+
+The maintainer asked for real company logos and icons, taken from the icon repositories on
+GitHub (decision 230). Thirty-five SVG files are vendored in `assets/icons/`, each pinned
+to an upstream commit and a SHA-256 in `assets/icons/sources.json`; the licence texts
+were fetched from the same commits and are shipped with the site
+(`assets/icons/LICENSE-*.txt`, `DISCLAIMER-simple-icons.txt`). Each file went through the
+whitelist in `site/icons.mjs` (shapes and numbers only) before it was kept, and the markup
+a page receives is rebuilt from the values that passed. They are drawn in
+`.theia-private/site-v5/shots/icon-sheet.png` (proof output).
+
+| Set | Upstream, commit | Licence | Files and use |
+| --- | --- | --- | --- |
+| Lucide 1.61.0 | `lucide-icons/lucide`, `c29c276f16590cf017126671535ad8c792be64d8` (21 October 2026) | ISC, with MIT for the icons derived from Feather (`arrow-right`, `download`, `server`, `smartphone`, `tv` among those used) | 22 interface icons: arrows, play and pause, menu, globe, copy, the three product moments, the eight items of the announcement and its three "not yet" items, film, shield |
+| Simple Icons 16.35.0 | `simple-icons/simple-icons`, `ed9a5192b24ad2f169bf1009931da0df27d5a49a` (11 October 2026) | CC0 1.0 for the collection; its disclaimer says an icon may carry its own licence, which was checked per icon below | 12 marks: Apple, Linux, GitHub, Discord, the feed glyph, Firebase, Google Drive, FFmpeg, mpv, SQLite, Go, Svelte |
+| SVG Logos | `gilbarbara/logos`, `608007b99fab1d55be5de9f9ec2c75bcc80a438c` (the last commit to touch the file, 18 April 2023) | CC0 1.0 | 1 mark: the Windows logo (`microsoft-windows-icon.svg`), which Simple Icons no longer carries |
+
+**What a mark is for.** It names an operating system (Windows, macOS, Linux: the hero line and
+the download pills), a service Theia talks to (GitHub, Firebase and Google Drive on the privacy
+page, Google Drive in the announcement), a place to follow it (GitHub, Discord and the
+release feed in the footer) or a tool it is built with (the five in "Built with"). It is drawn in
+the page's text colour, never the brand's own, and the page says that names and logos belong
+to their owners and imply no endorsement.
+
+**Checked per icon, in the Simple Icons data of that commit** (`data/simple-icons.json`): none of the twelve
+used carries a licence entry of its own. Two that were considered did, and were not used:
+**Tauri** (CC BY-NC-ND 4.0) and **Rust** (CC BY-SA 4.0). Also not used, by choice: the marks of
+processor makers (Intel, AMD, Arm), whose guidelines are strict about logos and whose names say the same
+thing; **WireGuard**, whose trademark policy fixes the colour of its logo (the privacy page names it in
+words); **Ubuntu** (Tux names Linux); and **TMDB**, whose mark stays out as decision 10 says, the attribution
+sentence in the footer standing alone. Go's brand page (read on 4 November 2026) says the Go name and logo
+may be used freely to refer to the Go language.
+
+**Rights not verified.** Trademarks are used nominatively and no brand's own guidelines were
+audited beyond the notes above: Apple, Microsoft (Windows), GitHub, Discord, Firebase, Google Drive,
+FFmpeg (a trademark of Fabrice Bellard), mpv, SQLite and Svelte. The guideline links Simple Icons
+records are, for GitHub `github.com/logos`, Discord `discord.com/branding`, Firebase
+`firebase.google.com/brand-guidelines` and Go `go.dev/brand`. The maintainer can remove any of them: a
+brand mark is one `logo(...)` call in `site/build.mjs` or one `{{logo:...}}` in a page template, and
+its entry in `sources.json`.
+
+**Fonts, 4 November 2026.** The four script subsets were regenerated from the pinned sources for the 45
+new catalogue keys (Chinese 679 to 705 characters, Arabic, Devanagari and Bengali one each); digests and
+coverage are in `fonts/coverage.json`.

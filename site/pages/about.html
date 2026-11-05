@@ -1,0 +1,29 @@
+<div class="wrap page-head">
+  <h1 id="page-title">{{t:about.title}}</h1>
+  <p class="lead">{{t:about.lead}}</p>
+</div>
+
+<section id="licence" class="section split-section" aria-labelledby="licence-title">
+  <div class="wrap split">
+    <header class="split-head"><h2 id="licence-title">{{t:legal.title}}</h2></header>
+    <div class="split-body">
+      <p>{{t:legal.body}}</p>
+      <p class="split-label">{{t:legal.details}}</p>
+      <ul class="licence-links"><li><a href="https://polyformproject.org/licenses/noncommercial/1.0.0" lang="en">PolyForm Noncommercial 1.0.0</a></li><li><a href="https://github.com/Benitoow/theia-media/blob/v3.4.0/LICENSE" lang="en">GPL-3.0</a></li></ul>
+    </div>
+  </div>
+</section>
+
+{{block:built}}
+
+<section id="credits" class="section split-section" aria-labelledby="credits-title">
+  <div class="wrap split">
+    <header class="split-head"><h2 id="credits-title">{{t:about.creditsTitle}}</h2></header>
+    <div class="split-body">
+      <p>{{t:footer.about}}</p>
+      <p>{{t:footer.type}}</p>
+      <p>{{t:about.icons}}</p>
+      <ul class="licence-links">{{block:icon_licences}}</ul>
+    </div>
+  </div>
+</section>

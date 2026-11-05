@@ -4,21 +4,44 @@
     "description": "Film dan serialmu, dalam satu tempat. Server pribadi dan pemutar native untuk Windows, macOS, dan Linux. Gratis untuk penggunaan pribadi, tanpa akun atau telemetri.",
     "shareAlt": "Koleksi film di pemutar native, dengan gambar dan film untuk dilanjutkan, memakai koleksi contoh."
   },
+  "pages": {
+    "download": {
+      "title": "Unduh Theia untuk Windows, macOS, dan Linux",
+      "description": "Pilih sistem dan prosesor Anda. Setiap berkas menampilkan versi, ukuran, dan SHA-256. Gratis untuk penggunaan pribadi, tanpa akun."
+    },
+    "new": {
+      "title": "Yang baru di Theia",
+      "description": "Apa yang dibawa versi berikutnya dan apa yang diubah versi terbaru, dijelaskan apa adanya, beserta apa yang diperiksa di sistem mana."
+    },
+    "questions": {
+      "title": "Pertanyaan tentang Theia",
+      "description": "Jawaban lugas tentang film, harga, sistem yang didukung, privasi, teman, dan bantuan, sebelum Anda menekan putar."
+    },
+    "privacy": {
+      "title": "Privasi: apa yang dikirim Theia dan apa yang disimpannya",
+      "description": "Tanpa akun dan tanpa telemetri. Apa yang keluar dari komputer Anda, ke siapa dan mengapa, serta apa yang tidak pernah keluar."
+    },
+    "about": {
+      "title": "Tentang Theia: lisensi, kredit, dan alat",
+      "description": "Gratis untuk penggunaan pribadi nonkomersial. Siapa yang membuat Theia, lisensi yang berlaku, dan alat yang dipakai untuk membangunnya."
+    }
+  },
   "nav": {
     "home": "Beranda Theia",
-    "v5": "Theia 5",
     "skip": "Langsung ke konten",
     "primary": "Navigasi utama",
-    "discover": "Kenali",
     "download": "Unduh",
     "faq": "Pertanyaan",
     "github": "GitHub",
     "menu": "Menu",
     "language": "Bahasa",
-    "project": "Tautan proyek"
+    "project": "Tautan proyek",
+    "new": "Yang baru",
+    "about": "Tentang",
+    "privacy": "Privasi",
+    "pages": "Halaman situs"
   },
   "hero": {
-    "eyebrow": "Di rumahmu. Tanpa kerumitan.",
     "line1": "Bioskopmu.",
     "line2": "Aturanmu.",
     "lead": "Film dan serialmu, dalam satu tempat. Server kecil di rumah. Pemutar native di komputer. Tanpa akun. Tanpa telemetri.",
@@ -26,11 +49,10 @@
     "watch": "Lihat pemasangan",
     "note": "Satu pengembang. Windows x64 adalah satu-satunya platform yang sejauh ini digunakan dengan koleksi rumah tangga nyata.",
     "limits": "Kenali batasannya",
-    "start": "Masuk ke bioskop"
+    "platforms": "Tersedia untuk"
   },
   "v5": {
     "pill": "Theia 5 segera hadir",
-    "eyebrow": "Theia 5",
     "title": "Semua milik Anda, dalam satu perpustakaan.",
     "lead": "Komputer, NAS, dan cloud Anda menjadi satu perpustakaan, dengan satu profil yang mengikuti Anda dari satu ke yang lain.",
     "planned": "Rilis yang direncanakan",
@@ -96,7 +118,6 @@
     "foot": "Windows diperiksa lebih dulu. Catatan rilis akan menyebut apa yang diperiksa pada sistem mana, dan apa yang tidak."
   },
   "discover": {
-    "eyebrow": "Lebih sedikit pengaturan. Lebih banyak film.",
     "title": "Filmmu, di rumah.",
     "intro": "Biarkan berkasmu di tempatnya. Theia menyatukan koleksi, pemutar, dan teman-temanmu.",
     "benefits": [
@@ -120,8 +141,11 @@
       }
     ]
   },
+  "built": {
+    "title": "Dibangun dengan",
+    "lead": "Pekerjaan beratnya dilakukan oleh alat-alat ternama. Nama dan logo mereka milik pemiliknya, hanya muncul untuk menyebut apa yang dipakai Theia, dan tidak menyiratkan dukungan."
+  },
   "tour": {
-    "eyebrow": "Aplikasi yang sebenarnya",
     "title": "Dari unduhan ke koleksimu.",
     "intro": "90 detik. Pemasangan nyata Theia 4.4.4 di Windows, tanpa suara.",
     "caption": "Rekaman nyata, bukan maket. Theia dalam bahasa Inggris; Windows dan peramban dalam bahasa Prancis. Aplikasi saat ini tersedia dalam bahasa Inggris dan Prancis.",
@@ -147,7 +171,6 @@
     ]
   },
   "download": {
-    "eyebrow": "Anggap seperti rumah sendiri",
     "title": "Film berikutnya dimulai di sini.",
     "intro": "Pilih sistem, lalu prosesor. Unduhan hanya dimulai saat kamu memilih berkas.",
     "system": "Sistemmu",
@@ -180,8 +203,11 @@
     "release": "Semua berkas rilis",
     "help": "Prosesor apa yang kupakai?"
   },
+  "new": {
+    "title": "Yang baru",
+    "lead": "Setiap rilis, dijelaskan apa adanya: apa yang berubah, apa yang diperiksa, dan apa yang belum."
+  },
   "news": {
-    "eyebrow": "Pembaruan, tanpa keramaian",
     "title": "Detail kecil. Malam lebih nyaman.",
     "notes": "Baca catatan rilis",
     "items": [
@@ -199,8 +225,29 @@
       }
     ]
   },
+  "privacy": {
+    "title": "Privasi",
+    "lead": "Tanpa akun dan tanpa telemetri. Halaman ini menyebutkan dengan tepat apa yang keluar dari komputer Anda, ke siapa dan mengapa, serta apa yang tidak pernah keluar.",
+    "staysTitle": "Yang tetap di komputer Anda",
+    "stays": "Katalog koleksi Anda, riwayat tontonan, dan berkas Anda. Theia tidak mengunggahnya.",
+    "leavesTitle": "Yang keluar, dan mengapa",
+    "tmdb": "Mencari poster, sinopsis, dan pemeran untuk judul di koleksi Anda. Hasilnya disimpan di komputer Anda.",
+    "github": "Memeriksa pembaruan dan mengunduhnya dari rilis proyek.",
+    "firebase": "Menjalankan layanan teman: kode teman, foto profil, kehadiran, dan ulasan, lewat masuk anonim. Tersambung selama server Anda berjalan.",
+    "remote": "Menonton jarak jauh menghubungkan perangkat Anda sendiri secara langsung, lewat WireGuard. Tidak ada relai maupun bidang kendali di tengahnya.",
+    "driveTitle": "Google Drive, mulai Theia 5",
+    "drive": "Theia 5 dapat membaca berkas video dari folder Google Drive yang Anda pilih. Anda masuk di halaman Google sendiri, jadi Theia tidak pernah melihat kata sandi Google Anda. Otorisasi tetap berada di komputer yang menjalankan server Theia Anda, dan Theia hanya menampilkan daftar serta memutar berkas yang Anda izinkan, ke perangkat Anda sendiri. Tidak ada yang dikirim ke pengembang. Anda dapat memutuskan Drive di Theia, atau mencabut akses di akun Google Anda, kapan saja.",
+    "fullTitle": "Jawaban lengkap",
+    "siteTitle": "Situs web ini",
+    "site": "Tanpa cookie, tanpa analitik, dan tanpa sumber daya jarak jauh. Pilihan bahasa Anda tetap di peramban ini. Penyedia hosting, seperti penyedia hosting web mana pun, melihat alamat IP pengunjung di log servernya sendiri."
+  },
+  "about": {
+    "title": "Tentang Theia",
+    "lead": "Satu pengembang, server media pribadi yang gratis, dan penjelasan apa adanya tentang cara pembuatannya.",
+    "creditsTitle": "Kredit",
+    "icons": "Ikon antarmuka dan logo merek di situs ini disimpan bersamanya, masing-masing dengan teks lisensinya."
+  },
   "faq": {
-    "eyebrow": "Beberapa hal yang perlu diketahui",
     "title": "Pertanyaan bagus.",
     "intro": "Jawaban jelas sebelum menonton. Butuh bantuan? Temui kami di GitHub atau Discord.",
     "items": [
@@ -244,7 +291,6 @@
     "details": "Baca lisensi"
   },
   "help": {
-    "eyebrow": "Malam berikutnya milikmu",
     "title": "Sediakan ruang untuk bioskopmu.",
     "body": "Coba Theia dengan koleksimu. Beri tahu apa yang berhasil, apa yang tidak, dan komputer yang digunakan.",
     "discord": "Gabung Discord",
@@ -256,7 +302,15 @@
     "releases": "Rilis",
     "security": "Keamanan",
     "type": "Font lokal di bawah SIL Open Font License 1.1.",
-    "languageNote": "Situs: sepuluh bahasa. Aplikasi: Inggris dan Prancis."
+    "languageNote": "Situs: sepuluh bahasa. Aplikasi: Inggris dan Prancis.",
+    "latest": "Rilis terbaru",
+    "explore": "Jelajahi",
+    "project": "Proyek",
+    "follow": "Ikuti",
+    "feed": "Umpan rilis",
+    "licence": "Lisensi",
+    "credits": "Kredit",
+    "rights": "Gratis untuk penggunaan pribadi nonkomersial."
   },
   "ui": {
     "pause": "Jeda animasi",

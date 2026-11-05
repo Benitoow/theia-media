@@ -1,0 +1,17 @@
+<div class="wrap page-head">
+  <h1 id="page-title">{{t:download.title}}</h1>
+  <p class="lead">{{t:download.intro}}</p>
+  <p class="release-line"><bdi>{{tag}}</bdi><span aria-hidden="true"> · </span><time datetime="{{date_iso}}">{{date}}</time><span aria-hidden="true"> · </span><span>{{licence}}</span></p>
+</div>
+
+<section id="download" class="section download-section" aria-labelledby="page-title">
+  <div class="wrap">
+    <div class="station">
+      <div class="station-top"><p class="step-label"><span aria-hidden="true">01</span>{{t:download.system}}</p><div class="os-switch" role="group" aria-label="{{t:download.system}}"><button class="os-pill" type="button" data-os-pill="windows" aria-pressed="true">{{logo:windows}}Windows</button><button class="os-pill" type="button" data-os-pill="macos" aria-pressed="false">{{logo:apple}}macOS</button><button class="os-pill" type="button" data-os-pill="linux" aria-pressed="false">{{logo:linux}}Linux</button></div></div>
+      <p class="mobile-note">{{t:download.mobile}}</p>
+      <p id="os-live" class="visually-hidden" aria-live="polite" data-showing="{{t:ui.showing}}"></p>
+      {{block:download_panels}}
+    </div>
+    <div class="station-foot"><p>{{t:download.upgrade}}</p><div><a class="text-link" href="{{href:questions#faq-processor}}">{{t:download.help}}</a><a class="text-link" href="{{release_url}}">{{logo:github}}{{t:download.release}}{{icon:arrow:icon-arrow}}</a></div></div>
+  </div>
+</section>

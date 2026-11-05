@@ -1,0 +1,369 @@
+/* Tokens, reset, type, actions, icons and the layout primitives every page shares.
+   Gold is reserved for the mark, the title's second line and focus. Space is the
+   main material: one idea per screen, and room around it. docs/design-system.md
+   section 12. */
+:root {
+  --ink: #0b0a09;
+  --surface: #131211;
+  --raised: #1c1a18;
+  --line: #2a2724;
+  --line-strong: #454039;
+  --line-hover: #625b51;
+  --bone: #ede7dc;
+  --parchment: #d6cfc2;
+  --muted: #8c857a;
+  --accent: #c8a24a;
+  --accent-bright: #e3c173;
+  --font-body:
+    "Jost Variable", "Theia Arabic", "Theia Devanagari", "Theia Bengali",
+    "Theia Chinese", sans-serif;
+  --font-display: "Cinzel Variable", serif;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --control-radius: 14px;
+  --section-space: clamp(5rem, 11vw, 9.5rem);
+  --head-space: clamp(2.5rem, 5vw, 4.5rem);
+  --measure: 38rem;
+  color-scheme: dark;
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 2rem;
+}
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--parchment);
+  font: 400 1rem/1.7 var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+button,
+summary {
+  font: inherit;
+}
+button,
+a,
+summary {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  outline-offset: 5px;
+}
+button {
+  color: inherit;
+}
+a {
+  color: inherit;
+  text-underline-offset: 0.22em;
+}
+a:hover {
+  color: var(--bone);
+}
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--accent-bright);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+h1,
+h2,
+h3,
+h4,
+p,
+figure {
+  margin: 0;
+}
+h1,
+h2 {
+  color: var(--bone);
+  font-family: var(--font-display);
+  font-weight: 400;
+  text-wrap: balance;
+}
+/* At large text sizes a single long word must break rather than push the page sideways. */
+h1,
+h2,
+h3,
+h4,
+p,
+li,
+summary,
+figcaption,
+.scene-title {
+  overflow-wrap: break-word;
+}
+h2 {
+  font-size: clamp(2rem, 4.2vw, 3.4rem);
+  line-height: 1.16;
+  letter-spacing: -0.035em;
+}
+h3 {
+  color: var(--bone);
+  font-size: 1.25rem;
+  line-height: 1.3;
+  font-weight: 500;
+  text-wrap: balance;
+}
+img,
+video {
+  max-width: 100%;
+}
+bdi,
+code {
+  unicode-bidi: isolate;
+}
+code,
+pre {
+  direction: ltr;
+  text-align: left;
+  font:
+    400 0.8125rem/1.6 ui-monospace,
+    "Cascadia Code",
+    Consolas,
+    monospace;
+}
+code {
+  overflow-wrap: anywhere;
+}
+[hidden] {
+  display: none !important;
+}
+.sprite {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+}
+.icon,
+.logo {
+  inline-size: 1.15rem;
+  block-size: 1.15rem;
+  flex: none;
+}
+.icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.logo {
+  fill: currentColor;
+  stroke: none;
+}
+/* A small square that holds an icon or a mark: the one decoration the page uses. */
+.tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--parchment);
+}
+.tile .icon,
+.tile .logo {
+  inline-size: 1.3rem;
+  block-size: 1.3rem;
+}
+.wrap {
+  width: min(100% - 3rem, 76rem);
+  margin-inline: auto;
+}
+.section {
+  padding-block: var(--section-space);
+}
+.section-head {
+  max-inline-size: 46rem;
+  margin-block-end: var(--head-space);
+}
+.section-lead {
+  max-inline-size: var(--measure);
+  margin-block-start: 1.25rem;
+  color: var(--parchment);
+  font-size: 1.125rem;
+  line-height: 1.7;
+}
+.page-head {
+  padding-block: clamp(3rem, 8vw, 6.5rem) clamp(2.5rem, 5vw, 4.5rem);
+}
+.page-head h1 {
+  max-inline-size: 15em;
+  font-size: clamp(2.6rem, 6.2vw, 4.9rem);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+.page-head .lead {
+  margin-block-start: 1.5rem;
+  max-inline-size: var(--measure);
+  font-size: 1.1875rem;
+}
+.lead {
+  line-height: 1.7;
+}
+.visually-hidden,
+.anchor-alias {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.skip {
+  position: fixed;
+  inset-block-start: 0.75rem;
+  inset-inline-start: 1rem;
+  z-index: 20;
+  padding: 1rem;
+  background: var(--bone);
+  color: var(--ink);
+  transform: translateY(-200%);
+}
+.skip:focus {
+  transform: none;
+}
+
+/* Four action treatments, shared across every page. */
+.btn,
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-block-size: 44px;
+  max-inline-size: 100%;
+  font-weight: 500;
+  text-decoration: none;
+  line-height: 1.4;
+}
+.btn {
+  min-block-size: 48px;
+  padding: 0.75rem 1.3rem;
+  border: 1px solid transparent;
+  border-radius: var(--control-radius);
+  background: var(--bone);
+  color: var(--ink);
+  transition:
+    background-color 180ms var(--ease),
+    border-color 180ms var(--ease),
+    transform 180ms var(--ease);
+}
+.btn:hover {
+  background: var(--parchment);
+  color: var(--ink);
+}
+.btn:active {
+  transform: scale(0.98);
+}
+.btn-secondary {
+  background: var(--raised);
+  border-color: var(--line-strong);
+  color: var(--bone);
+}
+.btn-secondary:hover {
+  background: var(--line);
+  color: var(--bone);
+}
+.btn-outline {
+  background: rgb(11 10 9 / 0.48);
+  border-color: var(--line-hover);
+  color: var(--bone);
+}
+.btn-outline:hover {
+  background: var(--raised);
+  border-color: var(--muted);
+  color: var(--bone);
+}
+.text-link {
+  justify-content: flex-start;
+  /* At the largest text sizes the mark and the arrow drop under the words rather than past the edge. */
+  flex-wrap: wrap;
+  color: var(--parchment);
+  border-radius: 4px;
+}
+.text-link:hover {
+  text-decoration: underline;
+}
+.icon-arrow {
+  transition: transform 180ms var(--ease);
+}
+a:hover .icon-arrow {
+  transform: translateX(2px);
+}
+[dir="rtl"] a:hover .icon-arrow {
+  transform: translateX(-2px);
+}
+[dir="rtl"] .icon-arrow use[href="#i-arrow"] {
+  transform-origin: center;
+  transform: rotate(180deg);
+}
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.release-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-block-start: 1.25rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+.quiet-details {
+  margin-block-start: 1rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+.quiet-details summary {
+  min-block-size: 44px;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  cursor: pointer;
+  list-style: none;
+  border-radius: 4px;
+}
+.quiet-details summary::-webkit-details-marker {
+  display: none;
+}
+.quiet-details summary::before {
+  content: "+";
+  font-size: 1.1rem;
+}
+.quiet-details[open] summary::before {
+  content: "−";
+}
+.quiet-details p {
+  max-inline-size: 55rem;
+  margin-block-end: 1rem;
+}
+
+@media (min-width: 100rem) {
+  .wrap {
+    width: min(100% - 6rem, 82rem);
+  }
+}
+@media (max-width: 42rem) {
+  .wrap {
+    width: calc(100% - 2rem);
+  }
+  .section-lead {
+    font-size: 1rem;
+  }
+  .page-head .lead {
+    font-size: 1.0625rem;
+  }
+}

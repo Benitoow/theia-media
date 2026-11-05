@@ -46,8 +46,21 @@ createServer((request, response) => {
 		return response.end();
 	}
 	let path;
-	try { path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname); }
+	let address;
+	try {
+		address = new URL(request.url, 'http://localhost');
+		path = decodeURIComponent(address.pathname);
+	}
 	catch (_) { response.writeHead(400); return response.end(); }
+	// A folder asked for without its slash goes to the slash, as the host does, so
+	// the relative links of its page resolve the same way here as in production.
+	if (!path.endsWith('/')) {
+		const folder = join(root, normalize(path));
+		if (folder.startsWith(root + sep) && existsSync(join(folder, 'index.html')) && statSync(folder).isDirectory()) {
+			response.writeHead(308, { Location: `${address.pathname}/${address.search}` });
+			return response.end();
+		}
+	}
 	if (path.endsWith('/')) path += 'index.html';
 	const file = join(root, normalize(path));
 	if (!file.startsWith(root + sep) || !existsSync(file) || !statSync(file).isFile()) {

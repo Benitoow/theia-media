@@ -1,0 +1,244 @@
+/* The footer is a map of the site: the mark with the latest release, then the
+   pages, the project and where to follow it, then the small print. A soft
+   light and a dotted field sit behind the first column, and nothing moves. */
+.site-footer {
+  position: relative;
+  isolation: isolate;
+  padding-block: clamp(3.5rem, 7vw, 5.5rem) 2rem;
+  border-block-start: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+.site-footer::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  block-size: 26rem;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 34rem 15rem at 16% 9rem,
+      rgb(237 231 220 / 0.07),
+      transparent 70%
+    ),
+    radial-gradient(circle, #ede7dc2b 1px, transparent 1.4px) 0 0 / 22px 22px;
+  mask-image: linear-gradient(180deg, #000 10%, transparent 100%);
+}
+[dir="rtl"] .site-footer::before {
+  transform: scaleX(-1);
+}
+.footer-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr));
+  gap: clamp(2rem, 5vw, 4rem);
+}
+.footer-brand {
+  min-inline-size: 0;
+}
+.footer-blurb {
+  max-inline-size: 24rem;
+  margin-block: 1.25rem 1.75rem;
+  line-height: 1.65;
+}
+.release-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-inline-size: 22rem;
+  min-block-size: 64px;
+  padding-block: 0.6rem;
+  padding-inline: 1.25rem 0.6rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--control-radius);
+  background: var(--surface);
+  color: var(--bone);
+  text-decoration: none;
+  transition:
+    border-color 180ms var(--ease),
+    background-color 180ms var(--ease);
+}
+.release-card:hover {
+  border-color: var(--line-hover);
+  background: var(--raised);
+}
+.release-card-text {
+  display: grid;
+  gap: 0.1rem;
+  min-inline-size: 0;
+}
+.release-card-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.release-card-value {
+  font-size: 0.9375rem;
+}
+.release-card-go {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border-radius: 50%;
+  background: var(--bone);
+  color: var(--ink);
+  transition: background-color 180ms var(--ease);
+}
+.release-card:hover .release-card-go {
+  background: var(--parchment);
+}
+.footer-title {
+  margin-block-end: 0.75rem;
+  color: var(--bone);
+  font-size: 1.0625rem;
+  font-weight: 500;
+}
+.footer-col {
+  min-inline-size: 0;
+}
+.footer-col ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.footer-col a {
+  display: flex;
+  align-items: center;
+  min-block-size: 44px;
+  color: var(--parchment);
+  text-decoration: none;
+}
+.footer-col a:hover {
+  color: var(--bone);
+  text-decoration: underline;
+}
+.footer-col a[aria-current="page"] {
+  color: var(--bone);
+}
+.social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.footer-col .social-link {
+  justify-content: center;
+  inline-size: 44px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  transition:
+    background-color 180ms var(--ease),
+    border-color 180ms var(--ease);
+}
+.footer-col .social-link:hover {
+  background: var(--raised);
+  border-color: var(--line-hover);
+  text-decoration: none;
+}
+.social-link .logo {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+}
+/* The language menu sits in the last row, so it always has the page above it to
+   open into. It opens upward, aligned to the far edge of its button. */
+.footer-language .menu-panel {
+  inset-block: auto calc(100% + 0.75rem);
+  inset-inline: auto 0;
+}
+.footer-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1.5rem;
+}
+.footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 2rem;
+  margin-block-start: clamp(2.5rem, 5vw, 4rem);
+  padding-block-start: 1rem;
+  border-block-start: 1px solid var(--line);
+  font-size: 0.875rem;
+}
+.footer-tools > nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.5rem;
+}
+.footer-tools > nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  color: var(--parchment);
+  text-decoration: none;
+}
+.footer-tools > nav a:hover {
+  color: var(--bone);
+  text-decoration: underline;
+}
+.footer-fine {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem 2rem;
+  padding-block-start: 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+.footer-fine [lang="en"] {
+  font-family: "Jost Variable", sans-serif;
+}
+.footer-fine a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+}
+.copy-status {
+  position: fixed;
+  z-index: 10;
+  inset-inline: 1rem;
+  inset-block-end: 1rem;
+  inline-size: fit-content;
+  max-inline-size: calc(100% - 2rem);
+  margin-inline: auto;
+  padding: 0.8rem 1.1rem;
+  border: 1px solid var(--line-hover);
+  border-radius: 12px;
+  background: var(--raised);
+  color: var(--bone);
+  box-shadow: 0 8px 32px #0006;
+  font-size: 0.875rem;
+}
+.copy-status:empty {
+  display: none;
+}
+
+@media (max-width: 64rem) {
+  .footer-top {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .footer-brand {
+    grid-column: 1/-1;
+  }
+  .footer-fine {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 42rem) {
+  .footer-fine {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .footer-top {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+  }
+  .release-card {
+    max-inline-size: none;
+  }
+}

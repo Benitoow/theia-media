@@ -1,0 +1,8 @@
+[
+  { "id": "home", "slug": "" },
+  { "id": "download", "slug": "download" },
+  { "id": "new", "slug": "new" },
+  { "id": "questions", "slug": "questions" },
+  { "id": "privacy", "slug": "privacy" },
+  { "id": "about", "slug": "about" }
+]

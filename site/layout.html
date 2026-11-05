@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="{{lang}}" dir="{{dir}}" data-entry="{{entry}}" data-locales="{{language_ids}}" data-page="{{page_id}}" data-home="{{home_path}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{meta_title}}</title>
+<meta name="description" content="{{meta_description}}">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B0A09">
+<link rel="canonical" href="{{canonical}}">
+{{alternates}}
+<link rel="icon" href="{{base}}assets/img/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="{{base}}assets/img/favicon-16.png" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="{{base}}assets/img/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Theia">
+<meta property="og:locale" content="{{og_locale}}">
+<meta property="og:url" content="{{canonical}}">
+<meta property="og:title" content="{{meta_title}}">
+<meta property="og:description" content="{{meta_description}}">
+<meta property="og:image" content="{{site_url}}/assets/img/og-image.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{{t:meta.shareAlt}}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{meta_title}}">
+<meta name="twitter:description" content="{{meta_description}}">
+<meta name="twitter:image" content="{{site_url}}/assets/img/og-image.jpg">
+<meta name="twitter:image:alt" content="{{t:meta.shareAlt}}">
+{{font_preload}}
+{{head_extra}}
+<style>{{css}}</style>
+<script>{{bootstrap}}</script>
+<script type="application/ld+json">{{structured_data}}</script>
+</head>
+<body id="top" class="page-{{page_id}}">
+<a class="skip" href="#main">{{t:nav.skip}}</a>
+{{sprite}}
+
+<header class="site-header">
+  <div class="wrap nav">
+    <a class="nav-brand" href="{{href:home}}" aria-label="{{t:nav.home}}" lang="en" dir="ltr">Theia<span aria-hidden="true"></span></a>
+    <nav class="desktop-nav" aria-label="{{t:nav.primary}}">{{block:navigation}}</nav>
+    <div class="nav-tools">
+      <details class="language-menu" data-menu>
+        <summary aria-label="{{t:nav.language}}: {{language_name}}">{{icon:globe}}<span>{{language_name}}</span><span class="chevron" aria-hidden="true"></span></summary>
+        <nav class="menu-panel" aria-label="{{t:nav.language}}">{{block:language_links}}</nav>
+      </details>
+      <details class="mobile-menu" data-menu>
+        <summary aria-label="{{t:nav.menu}}">{{icon:menu}}<span>{{t:nav.menu}}</span></summary>
+        <nav class="menu-panel" aria-label="{{t:nav.primary}}">{{block:navigation_mobile}}</nav>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+{{page}}
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <p class="lockup" lang="en" dir="ltr">Theia<span aria-hidden="true"></span></p>
+        <p class="footer-blurb">{{t:meta.description}}</p>
+        <a class="release-card" href="{{href:download}}">
+          <span class="release-card-text"><span class="release-card-label">{{t:footer.latest}}</span><span class="release-card-value"><bdi>{{tag}}</bdi><span aria-hidden="true"> · </span><time datetime="{{date_iso}}">{{date}}</time></span></span>
+          <span class="release-card-go" aria-hidden="true">{{icon:download}}</span>
+          <span class="visually-hidden">{{t:hero.download}}</span>
+        </a>
+      </div>
+      <nav class="footer-col" aria-labelledby="footer-explore">
+        <p class="footer-title" id="footer-explore">{{t:footer.explore}}</p>
+        <ul>{{block:footer_pages}}</ul>
+      </nav>
+      <nav class="footer-col" aria-labelledby="footer-project">
+        <p class="footer-title" id="footer-project">{{t:footer.project}}</p>
+        <ul>{{block:footer_project}}</ul>
+      </nav>
+      <div class="footer-col">
+        <p class="footer-title" id="footer-follow">{{t:footer.follow}}</p>
+        <ul class="social" aria-labelledby="footer-follow">{{block:social}}</ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; {{year}} <span lang="en" dir="ltr">Theia</span>. {{t:footer.rights}}</p>
+      <div class="footer-tools">
+        <nav aria-label="{{t:nav.pages}}"><a href="{{href:privacy}}">{{t:nav.privacy}}</a><a href="{{href:about#licence}}">{{t:footer.licence}}</a><a href="{{href:about#credits}}">{{t:footer.credits}}</a></nav>
+        <details class="language-menu footer-language" data-menu>
+          <summary aria-label="{{t:nav.language}}: {{language_name}}">{{icon:globe}}<span>{{language_name}}</span><span class="chevron" aria-hidden="true"></span></summary>
+          <nav class="menu-panel" aria-label="{{t:nav.language}}">{{block:language_links}}</nav>
+        </details>
+      </div>
+    </div>
+    <div class="footer-fine">
+      <p>{{t:footer.about}}</p>
+      <p lang="en">This product uses the TMDB API but is not endorsed or certified by TMDB. <a href="https://www.themoviedb.org/">themoviedb.org</a></p>
+      <p>{{t:footer.privacy}}</p>
+      <p>{{t:footer.languageNote}}</p>
+    </div>
+  </div>
+</footer>
+<p id="copy-status" class="copy-status" role="status" aria-live="polite" aria-label="{{t:ui.status}}" data-success="{{t:download.copied}}" data-failure="{{t:download.copyFailed}}"></p>
+<script src="{{base}}assets/js/site.js" defer></script>
+</body>
+</html>

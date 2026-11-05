@@ -1,0 +1,240 @@
+/* The supplied cinema loop keeps the warm dissolves and contrast veils. The hero
+   is one centred composition: the announcement pill when there is one, the two
+   lines, one sentence, two actions and the platforms. Its foot holds the honest
+   note and the pause control, and nothing else. */
+.hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100svh;
+  padding-block-start: 6rem;
+  overflow: clip;
+}
+.hero-layout {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.hero-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.75rem;
+  min-inline-size: 0;
+  padding-block: clamp(3rem, 7vh, 6rem);
+  text-align: center;
+}
+.hero h1 {
+  font-size: clamp(3rem, 8.5vw, 8.2rem);
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+  max-inline-size: 100%;
+}
+.hero h1 span {
+  display: block;
+}
+.gilded {
+  background: linear-gradient(110deg, var(--bone) 8%, var(--accent) 88%);
+  color: transparent;
+  background-clip: text;
+}
+.hero .lead {
+  max-inline-size: 35rem;
+  font-size: 1.1rem;
+}
+.hero .cta-row {
+  justify-content: center;
+  align-items: stretch;
+}
+.hero .btn {
+  min-block-size: 56px;
+  padding-inline: 1.5rem;
+}
+.platforms {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 1.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.875rem;
+  letter-spacing: 0.02em;
+}
+.platforms li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.platforms .logo {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+.hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  isolation: isolate;
+  background: var(--ink);
+}
+.hero-media img,
+.hero-media video {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  object-position: center;
+  mix-blend-mode: screen;
+  filter: sepia(0.2);
+  mask-image: linear-gradient(
+    180deg,
+    transparent 6rem,
+    #000 clamp(16rem, 32svh, 24rem)
+  );
+}
+.hero-media video {
+  opacity: 0;
+}
+.hero-media.is-playing video {
+  opacity: 1;
+}
+.hero-media.is-playing .hero-poster {
+  visibility: hidden;
+}
+.hero-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      rgb(11 10 9 / 0.7),
+      rgb(11 10 9 / 0.15) 24%,
+      rgb(11 10 9 / 0.3) 65%,
+      var(--ink)
+    ),
+    radial-gradient(
+      ellipse 60% 70% at 50% 48%,
+      rgb(11 10 9 / 0.74),
+      rgb(11 10 9 / 0.56) 58%,
+      rgb(11 10 9 / 0.25)
+    );
+}
+.hero-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-block: 1.25rem;
+  border-block-start: 1px solid #ede7dc26;
+}
+.hero-note {
+  max-inline-size: 44rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+.hero-note a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  color: var(--parchment);
+}
+.hero-motion-slot {
+  flex: none;
+  inline-size: 44px;
+  block-size: 44px;
+}
+.hero-motion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 44px;
+  block-size: 44px;
+  padding: 0.75rem;
+  border: 1px solid #ede7dc40;
+  border-radius: 50%;
+  background: #0b0a0980;
+  color: var(--parchment);
+  cursor: pointer;
+}
+.hero-motion:hover {
+  background: var(--raised);
+}
+
+/* The pre-release announcement pill (decision 227). It leaves the build once the
+   announced version is the published one. */
+.v5-pill {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 0.65rem;
+  min-block-size: 44px;
+  max-inline-size: 100%;
+  padding: 0.5rem 1.15rem;
+  border: 1px solid var(--line-hover);
+  border-radius: 999px;
+  background: rgb(11 10 9 / 0.48);
+  color: var(--bone);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  text-decoration: none;
+  transition:
+    background-color 180ms var(--ease),
+    border-color 180ms var(--ease);
+}
+.v5-pill:hover {
+  background: var(--raised);
+  border-color: var(--muted);
+  color: var(--bone);
+}
+.v5-pill time {
+  color: var(--parchment);
+}
+.v5-dot {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  flex: none;
+  border-radius: 50%;
+  background: var(--bone);
+}
+
+@media (max-width: 42rem) {
+  .hero {
+    padding-block-start: 5rem;
+  }
+  .hero-copy {
+    padding-block: 3rem;
+    gap: 1.4rem;
+  }
+  .hero h1 {
+    font-size: clamp(2.6rem, 10.2vw, 4.5rem);
+  }
+  .hero .lead {
+    font-size: 1rem;
+    max-inline-size: 30rem;
+  }
+  .hero .cta-row {
+    inline-size: 100%;
+    gap: 0.65rem;
+  }
+  .hero .btn {
+    flex: 1 1 9rem;
+    padding-inline: 0.65rem;
+    font-size: 0.875rem;
+  }
+  .hero-foot {
+    gap: 1rem;
+    padding-block: 1.1rem;
+  }
+  .hero-note {
+    font-size: 0.75rem;
+  }
+}

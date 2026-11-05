@@ -160,6 +160,10 @@
     // pending when every <source> fails, without raising a video error.
     filmSources.forEach(function (source) {
       source.addEventListener("error", function () {
+        // A source with no src yet is deferred on purpose, and the browser fires an
+        // error at it as soon as the page is parsed (autoplay overrides
+        // preload="none"). That is not a failed movie: only a source we loaded counts.
+        if (!source.getAttribute("src")) return;
         if (failedSources.indexOf(source) === -1) failedSources.push(source);
         var remaining = Array.prototype.some.call(
           filmSources,

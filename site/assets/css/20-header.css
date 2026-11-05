@@ -1,0 +1,217 @@
+/* The header: the mark, four pages, GitHub and the language. Native disclosures
+   also work without JavaScript. It floats over the hero on the home page and
+   sits in the flow everywhere else. */
+.site-header {
+  position: relative;
+  z-index: 5;
+}
+.page-home .site-header {
+  position: absolute;
+  inset: 0 0 auto;
+}
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  min-block-size: 96px;
+}
+.nav-brand,
+.lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--bone);
+  font:
+    400 1.5rem/1 "Cinzel Variable",
+    serif;
+  letter-spacing: 0.16em;
+  text-decoration: none;
+}
+.nav-brand {
+  min-block-size: 44px;
+  flex: none;
+}
+.nav-brand span,
+.lockup span {
+  inline-size: 1.6rem;
+  block-size: 1px;
+  background: var(--accent);
+}
+.desktop-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem 1.75rem;
+  margin-inline-start: auto;
+}
+.desktop-nav a,
+.menu-panel a {
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+.desktop-nav a {
+  color: var(--parchment);
+}
+.desktop-nav a:hover {
+  color: var(--bone);
+  text-decoration: underline;
+}
+.desktop-nav a[aria-current="page"],
+.menu-panel a[aria-current="page"] {
+  color: var(--bone);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.5em;
+}
+.nav-dot {
+  inline-size: 0.4rem;
+  block-size: 0.4rem;
+  border-radius: 50%;
+  background: var(--bone);
+}
+.desktop-nav .nav-icon {
+  justify-content: center;
+  inline-size: 44px;
+  padding: 0;
+  border-radius: 50%;
+}
+.desktop-nav .nav-icon .logo {
+  inline-size: 1.3rem;
+  block-size: 1.3rem;
+}
+.nav-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.language-menu,
+.mobile-menu {
+  position: relative;
+}
+.language-menu summary,
+.mobile-menu summary {
+  min-inline-size: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-block-size: 44px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
+  color: var(--bone);
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.875rem;
+}
+.language-menu summary::-webkit-details-marker,
+.mobile-menu summary::-webkit-details-marker {
+  display: none;
+}
+.language-menu summary:hover,
+.mobile-menu summary:hover,
+.language-menu[open] summary,
+.mobile-menu[open] summary {
+  background: var(--raised);
+}
+.chevron {
+  inline-size: 6px;
+  block-size: 6px;
+  border-inline-end: 1px solid;
+  border-block-end: 1px solid;
+  transform: rotate(45deg);
+  margin-inline-start: 0.3rem;
+  margin-block-end: 3px;
+}
+.menu-panel {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-start: calc(100% + 0.75rem);
+  z-index: 6;
+  width: max-content;
+  max-inline-size: min(21rem, calc(100vw - 2rem));
+  max-block-size: 65svh;
+  overflow: auto;
+  padding: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px #0006;
+}
+.menu-panel a {
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  color: var(--parchment);
+}
+.menu-panel a:hover,
+.menu-panel a[aria-current] {
+  background: var(--raised);
+  color: var(--bone);
+}
+.menu-panel a[aria-current="true"]::after {
+  content: "✓";
+  margin-inline-start: auto;
+}
+.menu-panel [lang] {
+  font-family: var(--font-body);
+  line-height: 1.8;
+}
+.mobile-menu {
+  display: none;
+}
+
+@media (max-width: 64rem) {
+  .nav {
+    gap: 1rem;
+  }
+  .desktop-nav {
+    gap: 0.25rem 1rem;
+  }
+}
+@media (max-width: 52rem) {
+  .desktop-nav {
+    display: none;
+  }
+  .nav-tools {
+    margin-inline-start: auto;
+  }
+  .mobile-menu {
+    display: block;
+  }
+}
+@media (max-width: 42rem) {
+  .nav {
+    flex-wrap: wrap;
+    min-block-size: 80px;
+    gap: 0.5rem;
+  }
+  .nav-brand,
+  .lockup {
+    font-size: 1.2rem;
+    gap: 0.5rem;
+  }
+  .nav-brand span,
+  .lockup span {
+    inline-size: 1rem;
+  }
+  .language-menu summary,
+  .mobile-menu summary {
+    padding: 0.5rem 0.6rem;
+    gap: 0.4rem;
+  }
+  .mobile-menu summary > span {
+    display: none;
+  }
+  .language-menu summary {
+    max-inline-size: min(11rem, calc(100vw - 12.5rem));
+  }
+  .language-menu summary > span:not(.chevron) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

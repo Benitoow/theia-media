@@ -4,21 +4,44 @@
     "description": "Vos films et séries, réunis. Un serveur personnel et un lecteur natif pour Windows, macOS et Linux. Gratuit à usage personnel, sans compte ni télémétrie.",
     "shareAlt": "La bibliothèque de films du lecteur natif, avec vignettes et un film à reprendre, sur une bibliothèque de démonstration."
   },
+  "pages": {
+    "download": {
+      "title": "Télécharger Theia pour Windows, macOS et Linux",
+      "description": "Choisissez votre système et votre processeur. Chaque fichier indique sa version, sa taille et son SHA-256. Gratuit pour un usage personnel, sans compte."
+    },
+    "new": {
+      "title": "Les nouveautés de Theia",
+      "description": "Ce qu’apporte la prochaine version et ce que la dernière a changé, dit simplement, avec ce qui a été vérifié sur quel système."
+    },
+    "questions": {
+      "title": "Questions sur Theia",
+      "description": "Des réponses directes sur les films, le prix, les systèmes pris en charge, la confidentialité, les amis et l’aide, avant d’appuyer sur lecture."
+    },
+    "privacy": {
+      "title": "Confidentialité : ce que Theia envoie et ce qu’il garde",
+      "description": "Sans compte et sans télémétrie. Ce qui quitte votre ordinateur, vers qui et pourquoi, et ce qui ne le quitte jamais."
+    },
+    "about": {
+      "title": "À propos de Theia : licence, crédits et outils",
+      "description": "Gratuit pour un usage personnel non commercial. Qui fait Theia, les licences applicables et les outils sur lesquels il repose."
+    }
+  },
   "nav": {
     "home": "Accueil Theia",
-    "v5": "Theia 5",
     "skip": "Aller au contenu",
     "primary": "Navigation principale",
-    "discover": "Découvrir",
     "download": "Télécharger",
     "faq": "Questions",
     "github": "GitHub",
     "menu": "Menu",
     "language": "Langue",
-    "project": "Liens du projet"
+    "project": "Liens du projet",
+    "new": "Nouveautés",
+    "about": "À propos",
+    "privacy": "Confidentialité",
+    "pages": "Pages du site"
   },
   "hero": {
-    "eyebrow": "Chez vous. Tout simplement.",
     "line1": "Votre cinéma.",
     "line2": "Vos règles.",
     "lead": "Vos films et séries, au même endroit. Un petit serveur chez vous. Un lecteur natif sur votre ordinateur. Sans compte. Sans télémétrie.",
@@ -26,11 +49,10 @@
     "watch": "Voir l’installation",
     "note": "Un seul développeur. Windows x64 est la seule plateforme utilisée avec une vraie bibliothèque de foyer à ce jour.",
     "limits": "Connaître les limites",
-    "start": "Entrer dans la salle"
+    "platforms": "Disponible pour"
   },
   "v5": {
     "pill": "Theia 5 arrive",
-    "eyebrow": "Theia 5",
     "title": "Tout ce que vous possédez, dans une seule bibliothèque.",
     "lead": "Vos ordinateurs, votre NAS et votre cloud forment une seule bibliothèque, avec un seul profil qui vous suit de l’un à l’autre.",
     "planned": "Sortie prévue",
@@ -96,7 +118,6 @@
     "foot": "Windows est vérifié en premier. Les notes de version diront ce qui a été vérifié sur quel système, et ce qui ne l’a pas été."
   },
   "discover": {
-    "eyebrow": "Moins de réglages. Plus de cinéma.",
     "title": "Vos films, chez vous.",
     "intro": "Gardez vos fichiers là où ils sont. Theia réunit la bibliothèque, le lecteur et vos proches.",
     "benefits": [
@@ -120,8 +141,11 @@
       }
     ]
   },
+  "built": {
+    "title": "Construit avec",
+    "lead": "L’essentiel du travail est fait par des outils reconnus. Leurs noms et logos appartiennent à leurs propriétaires, ne servent qu’à nommer ce que Theia utilise et n’impliquent aucune approbation."
+  },
   "tour": {
-    "eyebrow": "La vraie application",
     "title": "Du téléchargement à vos films.",
     "intro": "90 secondes. Une vraie installation de Theia 4.4.4 sur Windows, sans son.",
     "caption": "Enregistrement réel, pas une maquette. Theia est en anglais ; Windows et le navigateur sont en français. L’application propose actuellement le français et l’anglais.",
@@ -147,7 +171,6 @@
     ]
   },
   "download": {
-    "eyebrow": "Faites comme chez vous",
     "title": "Votre prochain film commence ici.",
     "intro": "Choisissez votre système, puis votre processeur. Le téléchargement ne démarre que lorsque vous choisissez un fichier.",
     "system": "Votre système",
@@ -180,8 +203,11 @@
     "release": "Tous les fichiers de la version",
     "help": "Quel est mon processeur ?"
   },
+  "new": {
+    "title": "Nouveautés",
+    "lead": "Chaque version, dite simplement : ce qui a changé, ce qui a été vérifié et ce qui ne l’a pas été."
+  },
   "news": {
-    "eyebrow": "Les nouveautés, sans bruit",
     "title": "De petits détails. De meilleures soirées.",
     "notes": "Lire les notes de version",
     "items": [
@@ -199,8 +225,29 @@
       }
     ]
   },
+  "privacy": {
+    "title": "Confidentialité",
+    "lead": "Sans compte et sans télémétrie. Cette page dit exactement ce qui quitte votre ordinateur, vers qui et pourquoi, et ce qui ne le quitte jamais.",
+    "staysTitle": "Ce qui reste sur vos ordinateurs",
+    "stays": "Le catalogue de votre bibliothèque, votre historique de visionnage et vos fichiers. Theia ne les envoie pas.",
+    "leavesTitle": "Ce qui sort, et pourquoi",
+    "tmdb": "Recherche affiches, synopsis et distributions des titres de votre bibliothèque. Les résultats sont conservés sur votre ordinateur.",
+    "github": "Vérifie les mises à jour et les télécharge depuis les versions du projet.",
+    "firebase": "Fait fonctionner le service d’amis : codes amis, photos de profil, présence et avis, via une connexion anonyme. Il se connecte tant que votre serveur fonctionne.",
+    "remote": "La lecture à distance relie directement vos propres appareils, via WireGuard. Aucun relais ni plan de contrôle ne s’intercale.",
+    "driveTitle": "Google Drive, à partir de Theia 5",
+    "drive": "Theia 5 peut lire des fichiers vidéo dans les dossiers Google Drive que vous choisissez. Vous vous connectez sur la page de Google, donc Theia ne voit jamais votre mot de passe Google. L’autorisation reste sur l’ordinateur qui exécute votre serveur Theia, et Theia ne liste et ne diffuse que les fichiers que vous avez autorisés, vers vos propres appareils. Rien n’est envoyé au développeur. Vous pouvez déconnecter Drive dans Theia, ou révoquer l’accès dans votre compte Google, à tout moment.",
+    "fullTitle": "La réponse complète",
+    "siteTitle": "Ce site web",
+    "site": "Sans cookies, sans analyse d’audience et sans ressources distantes. Votre choix de langue reste dans ce navigateur. L’hébergeur, comme tout hébergeur web, voit les adresses IP des visiteurs dans ses propres journaux de serveur."
+  },
+  "about": {
+    "title": "À propos de Theia",
+    "lead": "Un seul développeur, un serveur multimédia personnel gratuit, et des mots simples sur la façon dont il est fait.",
+    "creditsTitle": "Crédits",
+    "icons": "Les icônes d’interface et les logos de marques de ce site sont conservés avec lui, chacun avec le texte de sa licence."
+  },
   "faq": {
-    "eyebrow": "Quelques points à connaître",
     "title": "Les bonnes questions.",
     "intro": "Des réponses claires avant de lancer la séance. Besoin d’aide ? Retrouvez-nous sur GitHub ou Discord.",
     "items": [
@@ -244,7 +291,6 @@
     "details": "Lire les licences"
   },
   "help": {
-    "eyebrow": "La prochaine soirée est à vous",
     "title": "Faites place à votre cinéma.",
     "body": "Essayez Theia avec votre bibliothèque. Dites-nous ce qui marche, ce qui coince et sur quelle machine.",
     "discord": "Rejoindre Discord",
@@ -256,7 +302,15 @@
     "releases": "Versions",
     "security": "Sécurité",
     "type": "Polices locales sous SIL Open Font License 1.1.",
-    "languageNote": "Site : dix langues. Application : français et anglais."
+    "languageNote": "Site : dix langues. Application : français et anglais.",
+    "latest": "Dernière version",
+    "explore": "Explorer",
+    "project": "Projet",
+    "follow": "Suivre",
+    "feed": "Flux des versions",
+    "licence": "Licence",
+    "credits": "Crédits",
+    "rights": "Gratuit pour un usage personnel non commercial."
   },
   "ui": {
     "pause": "Mettre l’animation en pause",

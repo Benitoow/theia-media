@@ -1,0 +1,90 @@
+/* Script-specific fonts keep joining and natural spacing intact. */
+:lang(ar),
+:lang(ur) {
+  --font-body: "Theia Arabic", "Jost Variable", sans-serif;
+  --font-display: "Theia Arabic", sans-serif;
+}
+:lang(hi) {
+  --font-body: "Theia Devanagari", "Jost Variable", sans-serif;
+  --font-display: "Theia Devanagari", sans-serif;
+}
+:lang(bn) {
+  --font-body: "Theia Bengali", "Jost Variable", sans-serif;
+  --font-display: "Theia Bengali", sans-serif;
+}
+:lang(zh-Hans) {
+  --font-body: "Theia Chinese", "Jost Variable", sans-serif;
+  --font-display: "Theia Chinese", sans-serif;
+}
+html:lang(ar) .hero h1,
+html:lang(ur) .hero h1,
+html:lang(hi) .hero h1,
+html:lang(bn) .hero h1,
+html:lang(zh-Hans) .hero h1 {
+  font-size: clamp(2.8rem, 7.3vw, 6.7rem);
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: normal;
+}
+html:lang(ar) h1,
+html:lang(ur) h1,
+html:lang(hi) h1,
+html:lang(bn) h1,
+html:lang(zh-Hans) h1,
+html:lang(ar) h2,
+html:lang(ur) h2,
+html:lang(hi) h2,
+html:lang(bn) h2,
+html:lang(zh-Hans) h2 {
+  line-height: 1.4;
+  letter-spacing: normal;
+}
+@media (max-width: 42rem) {
+  html:lang(ar) .hero h1,
+  html:lang(ur) .hero h1,
+  html:lang(hi) .hero h1,
+  html:lang(bn) .hero h1,
+  html:lang(zh-Hans) .hero h1 {
+    font-size: clamp(2.2rem, 9.5vw, 4rem);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .btn:active,
+  a:hover .icon-arrow {
+    transform: none;
+  }
+}
+@media (forced-colors: active) {
+  .gilded {
+    background: none;
+    color: CanvasText;
+  }
+  .hero-media {
+    display: none;
+  }
+  .btn,
+  .os-pill,
+  .faq-item,
+  .tile,
+  .release-card,
+  .social-link {
+    border-color: ButtonText;
+  }
+  .faq-sign::before,
+  .faq-sign::after {
+    background: CanvasText;
+  }
+  .release-card-go {
+    background: ButtonText;
+    color: ButtonFace;
+  }
+}

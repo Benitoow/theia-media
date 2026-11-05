@@ -1,0 +1,50 @@
+/* Local fonts only: nothing is requested from a font service. Cinzel and Jost
+   carry the Latin text; Noto subsets carry Arabic, Devanagari, Bengali and
+   Simplified Chinese. See assets/fonts/sources.json and coverage.json. */
+@font-face {
+  font-family: "Cinzel Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 900;
+  src: url(../fonts/cinzel-latin-wght-normal.woff2) format("woff2");
+}
+@font-face {
+  font-family: "Jost Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(../fonts/jost-latin-wght-normal.woff2) format("woff2");
+}
+@font-face {
+  font-family: "Theia Arabic";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 500;
+  src: url(../fonts/noto-arabic.woff2) format("woff2");
+  unicode-range:
+    U+0020-0040, U+00A0, U+0600-06FF, U+0750-077F, U+08A0-08FF, U+200C-200F, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "Theia Devanagari";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 500;
+  src: url(../fonts/noto-devanagari.woff2) format("woff2");
+  unicode-range: U+0020-0040, U+00A0, U+0900-097F, U+1CD0-1CFF, U+200C-200D, U+A8E0-A8FF;
+}
+@font-face {
+  font-family: "Theia Bengali";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 500;
+  src: url(../fonts/noto-bengali.woff2) format("woff2");
+  unicode-range: U+0020-0040, U+00A0, U+0964-0965, U+0980-09FF, U+200C-200D;
+}
+@font-face {
+  font-family: "Theia Chinese";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 500;
+  src: url(../fonts/noto-chinese.woff2) format("woff2");
+  unicode-range: U+0020-0040, U+00A0, U+2E80-9FFF, U+F900-FAFF, U+FF00-FFEF, U+20000-2FA1F;
+}

@@ -1,0 +1,59 @@
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero-media" aria-hidden="true">
+    <img class="hero-poster" src="{{base}}assets/video/hero-ascii-poster.webp" width="800" height="600" alt="" fetchpriority="high" decoding="async">
+    <video id="hero-film" autoplay muted loop playsinline preload="none" width="1200" height="900" poster="{{base}}assets/video/hero-ascii-poster.webp" aria-hidden="true" tabindex="-1">
+      <source data-src="{{base}}assets/video/hero-ascii.mp4" type="video/mp4">
+      <source data-src="{{base}}assets/video/hero-ascii.webm" type="video/webm">
+    </video>
+  </div>
+  <div class="wrap hero-layout">
+    <div class="hero-copy">
+      {{block:v5_pill}}
+      <h1 id="hero-title"><span>{{t:hero.line1}}</span> <span class="gilded">{{t:hero.line2}}</span></h1>
+      <p class="lead">{{t:hero.lead}}</p>
+      <div class="cta-row">
+        <a class="btn" href="{{href:download}}">{{t:hero.download}}{{icon:arrow:icon-arrow}}</a>
+        <a class="btn btn-outline" href="#demo">{{icon:play}}{{t:hero.watch}}</a>
+      </div>
+      <ul class="platforms" dir="ltr" aria-label="{{t:hero.platforms}}">
+        <li>{{logo:windows}}<span>Windows</span></li>
+        <li>{{logo:apple}}<span>macOS</span></li>
+        <li>{{logo:linux}}<span>Linux</span></li>
+      </ul>
+    </div>
+    <div class="hero-foot">
+      <p class="hero-note">{{t:hero.note}} <a href="{{href:questions#limits}}">{{t:hero.limits}}</a>.</p>
+      <span class="hero-motion-slot"><button class="hero-motion" type="button" aria-controls="hero-film" aria-label="{{t:ui.pause}}" data-pause="{{t:ui.pause}}" data-resume="{{t:ui.resume}}" hidden>{{icon:pause}}</button></span>
+    </div>
+  </div>
+</section>
+
+<section id="discover" class="section moments" aria-labelledby="discover-title">
+  <div class="wrap">
+    <header class="section-head"><h2 id="discover-title">{{t:discover.title}}</h2><p class="section-lead">{{t:discover.intro}}</p></header>
+    {{block:moments}}
+  </div>
+</section>
+
+<section id="demo" class="section proof" aria-labelledby="demo-title">
+  <div class="wrap">
+    <header class="section-head"><h2 id="demo-title">{{t:tour.title}}</h2><p class="section-lead">{{t:tour.intro}}</p></header>
+    <figure class="tour">
+      <div class="tour-frame">
+        <video id="tour" controls preload="none" playsinline width="1920" height="1080" poster="{{base}}assets/video/theia-install-tour-poster.webp">
+          <source src="{{base}}assets/video/theia-install-tour.mp4" type="video/mp4">
+          {{block:caption_tracks}}
+          <p><a href="{{base}}assets/video/theia-install-tour.mp4">{{t:tour.fallback}}</a></p>
+        </video>
+        <button class="tour-play" type="button" aria-label="{{t:tour.play}}">{{icon:play}}</button>
+      </div>
+      <figcaption>{{t:tour.caption}}</figcaption>
+    </figure>
+    <ol class="scenes" aria-label="{{t:tour.scenes}}">{{block:scenes}}</ol>
+    <details class="quiet-details recording-details"><summary>{{t:tour.details}}</summary><p>{{t:tour.limits}}</p></details>
+  </div>
+</section>
+
+{{block:built}}
+
+{{block:cta_band}}

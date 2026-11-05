@@ -1,0 +1,42 @@
+<div class="wrap page-head">
+  <h1 id="page-title">{{t:privacy.title}}</h1>
+  <p class="lead">{{t:privacy.lead}}</p>
+</div>
+
+<section class="section split-section" aria-labelledby="stays-title">
+  <div class="wrap split">
+    <header class="split-head"><h2 id="stays-title">{{t:privacy.staysTitle}}</h2></header>
+    <div class="split-body"><p>{{t:privacy.stays}}</p></div>
+  </div>
+</section>
+
+<section id="leaves" class="section split-section" aria-labelledby="leaves-title">
+  <div class="wrap split">
+    <header class="split-head"><h2 id="leaves-title">{{t:privacy.leavesTitle}}</h2></header>
+    <div class="split-body">
+      {{block:services}}
+      <p class="split-note">{{t:privacy.remote}}</p>
+    </div>
+  </div>
+</section>
+
+<section id="drive" class="section split-section" aria-labelledby="drive-title">
+  <div class="wrap split">
+    <header class="split-head"><h2 id="drive-title">{{logo:googledrive}}{{t:privacy.driveTitle}}</h2></header>
+    <div class="split-body"><p>{{t:privacy.drive}}</p></div>
+  </div>
+</section>
+
+<section id="full" class="section split-section" aria-labelledby="full-title">
+  <div class="wrap split">
+    <header class="split-head"><h2 id="full-title">{{t:privacy.fullTitle}}</h2></header>
+    <div class="split-body prose">{{block:privacy_full}}</div>
+  </div>
+</section>
+
+<section id="website" class="section split-section" aria-labelledby="website-title">
+  <div class="wrap split">
+    <header class="split-head"><h2 id="website-title">{{t:privacy.siteTitle}}</h2></header>
+    <div class="split-body"><p>{{t:privacy.site}}</p></div>
+  </div>
+</section>

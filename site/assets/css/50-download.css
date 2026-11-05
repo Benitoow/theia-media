@@ -1,0 +1,324 @@
+/* Each download keeps its exact version; the processor is never guessed. The page
+   is the whole job: one choice of system, one of processor, then the file. */
+.download-section {
+  padding-block: clamp(2.5rem, 5vw, 4.5rem) var(--section-space);
+  background: var(--surface);
+  border-block: 1px solid var(--line);
+}
+.station {
+  padding: clamp(1.25rem, 3.5vw, 3rem);
+  background: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+}
+.station-top {
+  display: none;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+.js .station-top {
+  display: flex;
+}
+.step-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--parchment);
+}
+.step-label > span {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.os-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.os-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-block-size: 44px;
+  padding: 0.5rem 1.3rem;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background-color 180ms var(--ease),
+    color 180ms var(--ease),
+    border-color 180ms var(--ease);
+}
+.os-pill:hover {
+  color: var(--bone);
+}
+.os-pill[aria-pressed="true"] {
+  border-color: var(--line-hover);
+  background: var(--raised);
+  color: var(--bone);
+}
+.mobile-note {
+  display: none;
+  margin-block-start: 1rem;
+  font-size: 0.875rem;
+  color: var(--parchment);
+}
+.js[data-mobile] .mobile-note {
+  display: block;
+}
+.panel {
+  margin-block-start: 2rem;
+}
+.panel + .panel {
+  padding-block-start: 2rem;
+  border-block-start: 1px solid var(--line);
+}
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-block-end: 1rem;
+  font-family: var(--font-body);
+  font-size: 1.375rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+.panel-title .logo {
+  inline-size: 1.4rem;
+  block-size: 1.4rem;
+}
+.js .panel {
+  display: none;
+}
+.js[data-os="windows"] #panel-windows,
+.js[data-os="macos"] #panel-macos,
+.js[data-os="linux"] #panel-linux {
+  display: block;
+}
+.js .panel + .panel {
+  padding: 0;
+  border: 0;
+}
+.js .panel-title {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.panel-note {
+  max-inline-size: 58rem;
+  margin-block-end: 1.5rem;
+  font-size: 0.9375rem;
+  color: var(--parchment);
+}
+.prerequisites {
+  margin-block-end: 1rem;
+}
+.panel > .step-label {
+  margin-block: 1.5rem 1rem;
+}
+.arches {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.arch {
+  min-inline-size: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.arch-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "version icon" "name icon" "file icon";
+  gap: 0.35rem 0.75rem;
+  min-block-size: 132px;
+  padding: 1.5rem;
+  text-decoration: none;
+  color: var(--bone);
+  transition: background-color 180ms var(--ease);
+}
+.arch-link:hover {
+  background: var(--raised);
+}
+.arch-version {
+  grid-area: version;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.arch-version bdi {
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--line-hover);
+  border-radius: 5px;
+  color: var(--parchment);
+}
+.arch-name {
+  grid-area: name;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+.arch-sub {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.arch-size {
+  grid-area: file;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+.arch-link > .icon {
+  grid-area: icon;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+}
+.arch-state {
+  padding: 0 1.5rem 1.1rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+.arch .quiet-details {
+  margin: 0;
+  border-block-start: 1px solid var(--line);
+  padding: 0.25rem 1.5rem;
+}
+.verify-content {
+  display: grid;
+  gap: 0.9rem;
+  padding-block: 0.5rem 1rem;
+}
+.copy-field > span {
+  display: block;
+  margin-block-end: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.copy-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  min-inline-size: 0;
+}
+.copy-row code {
+  display: block;
+  flex: 1;
+  min-inline-size: 0;
+  user-select: all;
+  color: var(--parchment);
+  font-size: 0.75rem;
+}
+.copy-button {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  flex: none;
+  padding: 0.5rem;
+  border: 1px solid var(--line-hover);
+  border-radius: 8px;
+  background: var(--raised);
+  color: var(--bone);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+.js .copy-button {
+  display: inline-flex;
+}
+.copy-button .icon {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+.station-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-block-start: 2rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.station-foot > p {
+  max-inline-size: 45rem;
+}
+.station-foot > div {
+  display: grid;
+  flex: none;
+}
+.station-foot .text-link {
+  font-size: 0.875rem;
+}
+
+@media (max-width: 64rem) {
+  .station-foot {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .station-foot > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 2rem;
+  }
+}
+@media (max-width: 42rem) {
+  .station {
+    padding: 1rem;
+    border-radius: 16px;
+  }
+  .station-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .os-switch {
+    justify-content: space-between;
+    gap: 0.2rem;
+  }
+  .os-pill {
+    flex: 1 1 auto;
+    padding-inline: 0.4rem;
+    gap: 0.4rem;
+  }
+  .arches {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .arch-link {
+    min-block-size: 112px;
+    padding: 1rem;
+  }
+  .arch-state {
+    padding-inline: 1rem;
+  }
+  .arch .quiet-details {
+    padding-inline: 1rem;
+  }
+  .copy-row {
+    gap: 0.5rem;
+  }
+  .copy-button > span {
+    display: none;
+  }
+}

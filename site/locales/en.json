@@ -4,21 +4,44 @@
     "description": "Your films and series, together. A personal media server and native player for Windows, macOS and Linux. Free for personal use, no account or telemetry.",
     "shareAlt": "The native player's film library, with landscape artwork and a film to continue watching, on a sample library."
   },
+  "pages": {
+    "download": {
+      "title": "Download Theia for Windows, macOS and Linux",
+      "description": "Choose your system and processor. Each file shows its version, size and SHA-256. Free for personal use, no account."
+    },
+    "new": {
+      "title": "What's new in Theia",
+      "description": "What the next version brings and what the latest one changed, said plainly, with what was checked on which system."
+    },
+    "questions": {
+      "title": "Questions about Theia",
+      "description": "Straight answers on films, price, supported systems, privacy, friends and help, before you press play."
+    },
+    "privacy": {
+      "title": "Privacy: what Theia sends and what it keeps",
+      "description": "No account and no telemetry. What leaves your computer, to whom and why, and what never does."
+    },
+    "about": {
+      "title": "About Theia: licence, credits and tools",
+      "description": "Free for personal, non-commercial use. Who makes Theia, the licences that apply and the tools it is built with."
+    }
+  },
   "nav": {
     "home": "Theia home",
-    "v5": "Theia 5",
     "skip": "Skip to content",
     "primary": "Main navigation",
-    "discover": "Discover",
     "download": "Download",
     "faq": "Questions",
     "github": "GitHub",
     "menu": "Menu",
     "language": "Language",
-    "project": "Project links"
+    "project": "Project links",
+    "new": "What's new",
+    "about": "About",
+    "privacy": "Privacy",
+    "pages": "Site pages"
   },
   "hero": {
-    "eyebrow": "Self-hosted. Uncomplicated.",
     "line1": "Your cinema.",
     "line2": "Your rules.",
     "lead": "Your films and series, in one place. A small server at home. A native player on your desktop. No account. No telemetry.",
@@ -26,11 +49,10 @@
     "watch": "See it install",
     "note": "One maintainer. Windows x64 is the only platform used with a real household library so far.",
     "limits": "Know the limits",
-    "start": "Step inside"
+    "platforms": "Available for"
   },
   "v5": {
     "pill": "Theia 5 arrives",
-    "eyebrow": "Theia 5",
     "title": "Everything you own, in one library.",
     "lead": "Your computers, your NAS and your cloud become a single library, with one profile that follows you from one to the other.",
     "planned": "Planned release",
@@ -96,7 +118,6 @@
     "foot": "Windows is checked first. The release notes will say what was checked on which system, and what was not."
   },
   "discover": {
-    "eyebrow": "Less setup. More cinema.",
     "title": "Your films, at home.",
     "intro": "Keep your files where they are. Theia brings the library, the player and your friends together.",
     "benefits": [
@@ -120,8 +141,11 @@
       }
     ]
   },
+  "built": {
+    "title": "Built with",
+    "lead": "The heavy lifting is done by well-known tools. Their names and logos belong to their owners, appear only to name what Theia uses, and imply no endorsement."
+  },
   "tour": {
-    "eyebrow": "See the actual application",
     "title": "From download to your library.",
     "intro": "90 seconds. A real installation of Theia 4.4.4 on Windows, without sound.",
     "caption": "Real recording, not a mockup. Theia is in English; Windows and the browser are in French. The application currently ships in English and French.",
@@ -147,7 +171,6 @@
     ]
   },
   "download": {
-    "eyebrow": "Make yourself at home",
     "title": "Your next film starts here.",
     "intro": "Choose your system, then your processor. The download starts only when you choose a file.",
     "system": "Your system",
@@ -180,8 +203,11 @@
     "release": "All release files",
     "help": "Which processor do I have?"
   },
+  "new": {
+    "title": "What's new",
+    "lead": "Each release, said plainly: what changed, what was checked and what was not."
+  },
   "news": {
-    "eyebrow": "The latest, quietly",
     "title": "Small details. Better evenings.",
     "notes": "Read the release notes",
     "items": [
@@ -199,8 +225,29 @@
       }
     ]
   },
+  "privacy": {
+    "title": "Privacy",
+    "lead": "No account and no telemetry. This page says exactly what leaves your computer, to whom and why, and what never does.",
+    "staysTitle": "What stays on your computers",
+    "stays": "Your library catalogue, your viewing history and your files. Theia does not upload them.",
+    "leavesTitle": "What leaves, and why",
+    "tmdb": "Looks up posters, synopses and cast for the titles in your library. Results are kept on your computer.",
+    "github": "Checks for updates and downloads them from the project's releases.",
+    "firebase": "Runs the friends service: friend codes, profile photos, presence and opinions, through an anonymous sign-in. It connects while your server runs.",
+    "remote": "Remote viewing connects your own devices directly, over WireGuard. No relay and no control plane sit in between.",
+    "driveTitle": "Google Drive, from Theia 5",
+    "drive": "Theia 5 can read video files from Google Drive folders you choose. You sign in on Google's own page, so Theia never sees your Google password. The authorisation stays on the computer that runs your Theia server, and Theia only lists and streams the files you allowed, to your own devices. Nothing is sent to the maintainer. You can disconnect Drive in Theia, or revoke access in your Google account, at any time.",
+    "fullTitle": "The full answer",
+    "siteTitle": "This website",
+    "site": "No cookies, no analytics and no remote resources. Your language choice stays in this browser. The host, like any web host, sees visitors' IP addresses in its own server logs."
+  },
+  "about": {
+    "title": "About Theia",
+    "lead": "One maintainer, a free personal media server, and plain words about how it is made.",
+    "creditsTitle": "Credits",
+    "icons": "The interface icons and brand marks on this site are stored with it, each with its licence text."
+  },
   "faq": {
-    "eyebrow": "A few things worth knowing",
     "title": "Good questions.",
     "intro": "Straight answers before you press play. Need a hand? Find us on GitHub or Discord.",
     "items": [
@@ -244,7 +291,6 @@
     "details": "Read the licences"
   },
   "help": {
-    "eyebrow": "The next evening is yours",
     "title": "Make room for your cinema.",
     "body": "Try Theia with your own library. Tell us what worked, what did not, and on which machine.",
     "discord": "Join Discord",
@@ -256,7 +302,15 @@
     "releases": "Releases",
     "security": "Security",
     "type": "Local typefaces under the SIL Open Font License 1.1.",
-    "languageNote": "Website: ten languages. Application: English and French."
+    "languageNote": "Website: ten languages. Application: English and French.",
+    "latest": "Latest release",
+    "explore": "Explore",
+    "project": "Project",
+    "follow": "Follow",
+    "feed": "Release feed",
+    "licence": "Licence",
+    "credits": "Credits",
+    "rights": "Free for personal, non-commercial use."
   },
   "ui": {
     "pause": "Pause animation",
