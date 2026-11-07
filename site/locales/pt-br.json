@@ -9,9 +9,9 @@
       "title": "Baixar o Theia para Windows, macOS e Linux",
       "description": "Escolha seu sistema e processador. Cada arquivo mostra versão, tamanho e SHA-256. Grátis para uso pessoal, sem conta."
     },
-    "new": {
-      "title": "Novidades do Theia",
-      "description": "O que a próxima versão traz e o que a última mudou, dito com clareza, com o que foi verificado em cada sistema."
+    "changelog": {
+      "title": "Histórico de mudanças do Theia — versões desde a 3.3",
+      "description": "Histórico detalhado das versões do Theia desde a 3.3.0, além da próxima versão quando anunciada, com notas de sistema e verificação."
     },
     "questions": {
       "title": "Perguntas sobre o Theia",
@@ -36,7 +36,7 @@
     "menu": "Menu",
     "language": "Idioma",
     "project": "Links do projeto",
-    "new": "Novidades",
+    "changelog": "Mudanças",
     "about": "Sobre",
     "privacy": "Privacidade",
     "pages": "Páginas do site"
@@ -97,18 +97,22 @@
       {
         "title": "Uma atualização que guarda tudo",
         "body": "Atualizar da 4.4.6 mantém biblioteca, perfis e histórico. Verificado em uma instalação real da 4.4.6, com volta à versão anterior."
+      },
+      {
+        "title": "Sua biblioteca no celular",
+        "body": "Um app Android reproduz sua biblioteca a partir do seu servidor, com seu perfil e os pontos em que você parou. Baixe o APK na página da versão."
+      },
+      {
+        "title": "Android TV e Google TV (beta)",
+        "body": "O mesmo app abre uma apresentação para televisão que você controla com o controle remoto e mantém o som AC-3, E-AC-3 e DTS quando a sua TV consegue recebê-lo. Um beta: conte o que encontrar."
       }
     ],
     "laterTitle": "Fora da 5.0",
     "laterIntro": "Planejado, mas não prometido para esta versão. Cada item será anunciado quando for comprovado em hardware real.",
     "later": [
       {
-        "title": "Um app para Android",
-        "body": "Um app de celular para seu servidor ou suas fontes. Ainda não começou; planejado para depois da versão para computador."
-      },
-      {
-        "title": "Android TV e Google TV",
-        "body": "Transmitir ou um app na TV: a sala ainda está em estudo."
+        "title": "Um celular sem servidor e a transmissão",
+        "body": "Um celular que lê sozinho o seu NAS ou o Drive, e a transmissão para uma tela. Anunciados quando estiverem construídos e verificados."
       },
       {
         "title": "Computadores ARM",
@@ -175,7 +179,7 @@
     "intro": "Escolha sistema e processador. O download só começa quando você escolhe um arquivo.",
     "system": "Seu sistema",
     "processor": "Seu processador",
-    "mobile": "Os aplicativos Theia são para computadores. O visualizador web existente continua disponível em celulares e TVs; sua reprodução não recebe desenvolvimento ativo.",
+    "mobile": "Os aplicativos Theia são para computadores, mais um aplicativo Android para celulares e, em beta, para Android TV e Google TV. Os demais celulares e TVs continuam com o visualizador web; a reprodução dele não é mais desenvolvida ativamente.",
     "windowsWarning": "O Windows pode mostrar um aviso do SmartScreen porque o Theia ainda não tem assinatura de código. Clique em Mais informações e depois em Executar assim mesmo. Verifique o SHA-256 antes de executar. Não são solicitados direitos de administrador.",
     "macosWarning": "Torne o instalador executável com chmod +x e execute-o. O aplicativo tem assinatura ad hoc, sem notarização: na primeira vez, abra com Control-clique e depois Abrir.",
     "linuxWarning": "Somente Ubuntu 24.04, X11 ou XWayland. Instale os pré-requisitos abaixo, use chmod +x e execute. Decodificação por software, SDR e áudio PCM; outras distribuições não foram verificadas.",
@@ -203,27 +207,262 @@
     "release": "Todos os arquivos da versão",
     "help": "Qual é meu processador?"
   },
-  "new": {
-    "title": "Novidades",
-    "lead": "Cada versão, dita com clareza: o que mudou, o que foi verificado e o que não foi."
-  },
-  "news": {
-    "title": "Pequenos detalhes. Noites melhores.",
-    "notes": "Ler as notas da versão",
-    "items": [
-      {
-        "title": "Sua foto, bem enquadrada",
-        "body": "Mova e amplie sua foto de perfil antes de salvar. Fotos pequenas também preenchem o círculo."
+  "changelog": {
+    "title": "Histórico de mudanças",
+    "lead": "Cada atualização desde a versão 3.3.0, dita com clareza: o que mudou, o que foi verificado e o que segue sem verificação.",
+    "historyTitle": "Todas as atualizações desde a 3.3.0",
+    "jumpLabel": "Ir para a geração",
+    "jumpV5Upcoming": "Próxima 5.0",
+    "jumpV5": "Geração 5",
+    "jumpV4": "Geração 4",
+    "jumpV3": "Geração 3",
+    "allReleases": "Versões no GitHub",
+    "notes": "Notas da versão",
+    "redirectTitle": "Novidades agora é o Histórico de mudanças",
+    "redirectBody": "Você está sendo redirecionado para o histórico completo de mudanças do Theia.",
+    "redirectAction": "Abrir o histórico de mudanças",
+    "generations": {
+      "v5": {
+        "title": "Geração 5",
+        "lead": "Uma biblioteca unificada entre servidores, compartilhamentos de NAS e Google Drive, um perfil que acompanha você e o aplicativo Android."
       },
-      {
-        "title": "O próximo episódio, no seu ritmo",
-        "body": "Capítulos nomeados permitem pular a abertura. O próximo episódio tem contagem regressiva cancelável e para no fim da temporada."
+      "v4": {
+        "title": "Geração 4",
+        "lead": "Perfis da casa, amigos, opiniões, salas privadas para assistir junto, acesso remoto direto por WireGuard e pacotes de interface assinados."
       },
-      {
-        "title": "Uma linha do tempo legível",
-        "body": "Veja a cena antes de avançar. Mantenha preferências de áudio e legendas, com ajustes discretos."
+      "v3": {
+        "title": "Geração 3 — a partir da 3.3",
+        "lead": "A separação entre servidor, player nativo de desktop e instalador de terminal, e depois as seis plataformas de computador."
       }
-    ]
+    },
+    "releases": {
+      "v5.0.0": {
+        "title": "Tudo o que você tem, em uma única biblioteca",
+        "summary": "Abre a Geração 5 reunindo vários servidores Theia, compartilhamentos de NAS e pastas do Google Drive em uma só biblioteca, junto com perfis vinculados e o aplicativo Android.",
+        "changes": [
+          "Combina vários servidores Theia, pastas de NAS montadas (o histórico sobrevive se o NAS entrar em repouso; o kit de teste da UGREEN continua não verificado em uma UGREEN física) e pastas escolhidas do Google Drive transmitidas em pequenos trechos (enquanto o Google não aprovar o cliente OAuth próprio do Theia, conectar pode pedir o seu próprio cliente Google).",
+          "Vincula seu perfil entre seus servidores para que o estado de assistido e os pontos de retomada acompanhem você de uma máquina para outra com regras determinísticas para conflitos e revisões.",
+          "Adiciona uma página unificada de Servidores e fontes nas configurações do player e na administração web, com ícones de torre, notebook, NAS e nuvem além de pareamento de máquinas por código curto.",
+          "Mostra imediatamente o nome e a foto de perfil de quem enviou nos pedidos de amizade recebidos antes de aceitá-los, mesmo quando o servidor da pessoa está offline; redesenha a tela de conexão e partida a frio para lembrar até seis servidores, exibir estados explícitos de descoberta mDNS e repousar sobre um painel gerado de glifos em latão.",
+          "Unifica a página de título em todas as fontes; revela a imagem antispoiler do episódio após o último quinto e conta capítulos de créditos finais como assistidos; oculta o ponteiro junto com os controles inativos durante a reprodução; segurar Espaço (reproduzir) por 220 ms avança em velocidade 2x fora das salas compartilhadas.",
+          "Publica o app para celulares Android (Android 8.0+, controles portáteis, picture-in-picture, sessão de mídia na tela de bloqueio e retomada entre dispositivos, verificado em um Xiaomi POCO com Android 16) e um beta para Android TV / Google TV com navegação por controle remoto e passthrough AC-3, E-AC-3 e DTS onde houver suporte.",
+          "Atualizar da 4.4.6 preserva sua biblioteca, perfis e histórico (verificado em uma instalação da 4.4.6, com volta à versão anterior incluída); os instaladores de computador para Windows e Linux ARM64 permanecem na 4.2.1."
+        ]
+      },
+      "v4.4.6": {
+        "title": "O acesso remoto se recupera sozinho, e o player sai da frente",
+        "summary": "Atualização do player nativo tornando o acesso remoto automático resistente a portas UDP ocupadas e reinicializações do roteador, corrigindo o link da administração no navegador e mantendo limpas as janelas restauradas.",
+        "changes": [
+          "Reserva automaticamente uma porta UDP livre quando a porta preferida de acesso remoto está ocupada e mostra um erro claro quando uma porta escolhida manualmente já está em uso.",
+          "Verifica periodicamente o encaminhamento de portas UPnP e NAT-PMP e recria automaticamente as regras perdidas após a reinicialização do roteador (verificado em uma Freebox v9).",
+          "Restaura a abertura da administração do servidor no navegador do sistema com um botão Tentar novamente em caso de falha, e impede que voltar com Alt-Tab para uma janela maximizada mantenha os controles sobre um filme em reprodução.",
+          "Publica instaladores de computador para Windows x64, Ubuntu 24.04 x64, macOS Apple Silicon e macOS Intel; os instaladores para Windows e Linux ARM64 permanecem na 4.2.1."
+        ]
+      },
+      "v4.4.5": {
+        "title": "Círculos de perfil preenchidos, enquadramento interativo da foto e capítulos em instalações novas",
+        "summary": "Pacote de interface assinado melhorando avatares pequenos de perfil, adicionando corte e zoom interativos no editor de perfil e aguardando a inspeção de capítulos com FFmpeg em instalações novas.",
+        "changes": [
+          "Redimensiona fotos de perfil de 512 px ou menos para preencher a moldura circular em vez de deixar margens escuras ao redor de imagens pequenas.",
+          "Adiciona arraste com ponteiro, ajuste pelo teclado e controles de zoom ao enquadrar uma foto em Personalizar perfil; o recorte ocorre localmente e os metadados são removidos no servidor.",
+          "Baixa o FFmpeg (~80 MB) verificado por SHA-256 em segundo plano no primeiro episódio de uma instalação nova e verifica por até dois minutos os marcadores de capítulos para exibir Pular abertura e Próximo episódio."
+        ]
+      },
+      "v4.4.4": {
+        "title": "Avisos de fim de episódio que saem da frente",
+        "summary": "Pacote de interface assinado refinando os botões de encerramento de episódio e as pílulas de capítulos para nunca bloquear a linha do tempo no final de um episódio.",
+        "changes": [
+          "Afasta os botões de fim de episódio e pausa a contagem regressiva local do próximo episódio sempre que você passa o cursor ou foca a linha do tempo perto do fim (as contagens em salas continuam sem interrupção).",
+          "Oculta Pular abertura e Ir para cena pós-créditos após oito segundos e os traz de volta sempre que os controles de reprodução despertam.",
+          "Substitui o cartão escuro de fundo por três pílulas distintas: uma escura para Pular abertura, uma clara para Próximo episódio que se preenche ao longo dos 30 segundos de contagem regressiva e uma discreta para Continuar assistindo."
+        ]
+      },
+      "v4.4.3": {
+        "title": "Ordenação de pré-lançamentos no atualizador da interface",
+        "summary": "Pacote de interface assinado corrigindo a comparação de versões semânticas para compilações de teste a fim de que toda base 4.4 receba as atualizações finais da interface sem falhas.",
+        "changes": [
+          "Corrige a ordenação de pré-lançamentos no atualizador de interface para que compilações de teste como 4.4.2-test.3 sejam classificadas como anteriores a versões finais como 4.4.2.",
+          "Republica o pacote de interface assinado com Ed25519 para que as bases nativas de nível 3 atualizem a interface sem precisar executar novamente o instalador completo."
+        ]
+      },
+      "v4.4.2": {
+        "title": "Prévias de cenas, fluxo por capítulos, configurações completas e salas privadas",
+        "summary": "Grande atualização de recursos V4 com miniaturas de quadro exato na linha do tempo, transições de episódios guiadas por capítulos, configurações em oito seções, proteção antispoiler, presença ampliada e salas por convite.",
+        "changes": [
+          "Decodifica prévias de quadro exato ao passar pela linha do tempo em uma segunda instância pausada do mecanismo (com apoio do servidor para arquivos HDR) e adiciona avanços configuráveis de 10 s, 30 s (padrão) ou 60 s que se acumulam em toques rápidos.",
+          "Adiciona Pular abertura manual a partir de capítulos nomeados, contagem regressiva cancelável de 30 segundos para Próximo episódio que para no fim da temporada, Ir para cena pós-créditos e temporizador de desligamento.",
+          "Reorganiza as configurações em oito categorias (Geral, Reprodução, Áudio e legendas, Privacidade, Servidor, Atualizações, Estatísticas, Ajuda) com memória de faixas por série, prioridade de idiomas, preferências forçadas/SDH, seleção de dispositivo de áudio, ajustes de sincronia, escala da interface e atalhos personalizáveis.",
+          "Salva o progresso de reprodução com segurança durante o fechamento controlado da janela e adiciona uma chave de Proteção antispoiler por série que desfoca imagens de episódios não assistidos e oculta sinopses.",
+          "Amplia a presença de amigos (Online, Inativo, Assistindo, Offline; Disponível para um filme, Não perturbe, Invisível; avatares na barra de navegação e avisos de retorno) e faz a remoção de um amigo limpar ambos os lados por aviso na caixa de entrada.",
+          "Adiciona salas privadas somente para convidados para assistir junto, com pedidos opcionais de entrada vindos de amigos."
+        ]
+      },
+      "v4.4.1": {
+        "title": "Opiniões entre casas e presença inativa",
+        "summary": "Pacote de interface assinado levando opiniões sobre títulos entre amigos pelo Firebase sem abrir portas no roteador e introduzindo o estado Inativo automático.",
+        "changes": [
+          "Entrega uma opinião editável e excluível por título (polegar, data e desfoque de spoiler) entre amigos pelo Firebase (theia-friends) sem exigir portas abertas no roteador.",
+          "Altera a presença para Inativo automaticamente após cinco minutos sem uso, suavizando o anel do avatar e excluindo amigos inativos da contagem online.",
+          "Distribuído como pacote de interface assinado com Ed25519 para bases nativas 4.4.0 junto com servidores independentes atualizados."
+        ]
+      },
+      "v4.4.0": {
+        "title": "Uma base nativa estável e atualizações assinadas menores",
+        "summary": "Separa a base nativa congelada do player dos pacotes de interface assinados com Ed25519 com reversão automática, e entrega o diretório de amigos no Firebase.",
+        "changes": [
+          "Separa a base nativa do player dos pacotes de interface assinados com Ed25519, que fazem inicialização de teste ao abrir e voltam automaticamente à versão anterior se a abertura falhar.",
+          "Inclui o diretório de amigos no Firebase, pedidos de amizade capazes de funcionar offline (códigos THEIA2- ao lado dos códigos antigos THEIA1-) e atualizações rápidas de presença sem encaminhamento de portas no roteador.",
+          "Preserva o relógio de reprodução ao recarregar fluxos convertidos, armazena gravações de progresso offline em uma caixa de saída ordenada por servidor e perfil, e desativa a reprodução automática de episódios nas salas.",
+          "Publica instaladores de computador para Windows x64, Ubuntu 24.04 x64, macOS Apple Silicon e macOS Intel; os instaladores para Windows e Linux ARM64 permanecem na 4.2.1 devido aos limites de executores hospedados, enquanto servidores independentes saem para as seis plataformas."
+        ]
+      },
+      "v4.3.1": {
+        "title": "Pedidos de amizade que chegam sem abrir portas no roteador",
+        "summary": "Introduz o diretório anônimo no Firebase para códigos de amigo, pedidos offline e presença; integrado e publicado diretamente dentro da 4.4.0 no mesmo dia.",
+        "changes": [
+          "Move a descoberta de amigos, os pedidos de amizade e a presença para o Firebase Realtime Database (theia-friends) com login anônimo para que os pedidos cheguem mesmo quando o servidor do par está desligado ou atrás de NAT.",
+          "Introduz os códigos de amigo THEIA2-XXXXX-XXXXX mantendo funcionando os códigos THEIA1- existentes, atualiza a presença em um a dois segundos e exibe um aviso explícito de indisponibilidade quando offline.",
+          "Mantém fluxos de mídia, catálogos de biblioteca e histórico de reprodução fora do Firebase; os túneis diretos WireGuard seguem dedicados à reprodução remota e às salas."
+        ]
+      },
+      "v4.3.0": {
+        "title": "Avaliações de títulos, páginas em abas, abertura mais rápida e instaladores para macOS",
+        "summary": "Adiciona avaliações de títulos na casa e entre amigos, redesenha as páginas de títulos com abas e verificações de compatibilidade do dispositivo, reduz o peso do player e restaura ambos os instaladores de macOS.",
+        "changes": [
+          "Permite deixar um polegar para cima ou para baixo e uma avaliação de 500 caracteres por título com chave de spoiler, e tinge os anéis de perfil a partir da foto de cada perfil.",
+          "Redesenha as páginas de filmes e séries com abas (episódios, sinopse, elenco, saga, avaliações), seletor de versão de arquivo e verificação de Reprodução neste dispositivo.",
+          "Reduz o binário do player de computador (11,5 MB ante 15,1 MB) e os arquivos da interface (1,7 MB ante 4,5 MB), abre as páginas de títulos mais rápido e corta pela metade o uso de CPU na busca.",
+          "Restaura os instaladores completos para macOS Apple Silicon e Intel e reinicia de forma limpa os serviços launchd ou systemd após atualizações pelo aplicativo no macOS e Linux.",
+          "Verifica online durante a instalação se existe uma versão mais recente do instalador antes de gravar os arquivos."
+        ]
+      },
+      "v4.2.2": {
+        "title": "Níveis de qualidade sob demanda e salas sem pausas acidentais",
+        "summary": "Inspeciona sob demanda filmes ainda não medidos ao abrir o menu de qualidade e impede que cliques no fundo durante uma sessão em grupo pausem todo mundo.",
+        "changes": [
+          "Dispara uma inspeção imediata do fluxo via FFmpeg ao abrir o menu de qualidade em um filme não medido para que opções de menor qualidade apareçam na hora.",
+          "Faz o clique no fundo do vídeo dentro de uma sala compartilhada despertar os controles em vez de alternar a pausa para toda a sala.",
+          "Destaca o botão da sala enquanto há uma sala ativa e remove a seta inferior enganosa na ilha de reprodução individual.",
+          "Publica instaladores de computador para Windows x64 e Ubuntu 24.04 x64 junto com servidores independentes para todas as seis plataformas."
+        ]
+      },
+      "v4.2.1": {
+        "title": "Áudio compartilhado no Windows junto com chamadas, tela cheia limpa e atualizações verificadas",
+        "summary": "Mantém chamadas de voz audíveis durante a reprodução no Windows por padrão, corrige a sobreposição da barra de tarefas ao ir de maximizado para tela cheia e adiciona atualizações do instalador verificadas por SHA-256.",
+        "changes": [
+          "Define o áudio do Windows em modo compartilhado por padrão para que o Discord e chamadas de voz continuem audíveis ao lado do filme, com uma opção Som intocado até o amplificador para passthrough exclusivo de bitstream.",
+          "Corrige a entrada em tela cheia a partir de uma janela maximizada no Windows para que a barra de tarefas nunca fique por cima, e simplifica a ilha individual de volta ao relógio de horário de término.",
+          "Baixa e verifica por SHA-256 o instalador completo do Windows pelo botão de atualização do aplicativo, e procura atualizações a cada seis horas em servidores sem tela fora da reprodução.",
+          "Serve como o instalador nativo de computador mais recente para Windows ARM64 e Ubuntu 24.04 ARM64 enquanto versões posteriores da V4 publicam instaladores para x64 e macOS."
+        ]
+      },
+      "v4.2.0": {
+        "title": "Artes na ilha da sala, correções de janela e atualização de segurança do Go",
+        "summary": "Traz fotos de perfil e artes do TMDB em cache para a ilha da sala compartilhada, reforça a tela cheia e as transferências de sala, e atualiza o runtime do Go.",
+        "changes": [
+          "Exibe avatares de perfil e pôsteres ou planos de fundo do TMDB em cache dentro da ilha da sala compartilhada com movimento mais fluido e controles individuais de ressincronização e deslocamento.",
+          "Corrige a restauração da janela com as teclas F / Escape e o clique duplo na barra de título, revoga imediatamente transferências de arquivo da sala ao sair ou desfazer amizade e limita esperas de carregamento com vários membros.",
+          "Repara arquivos ausentes do pacote ao executar novamente o instalador e impede que títulos excluídos (HTTP 404 ou 410) bloqueiem o salvamento em fila do progresso de reprodução.",
+          "Recompila os binários do servidor e do instalador com Go 1.26.9 para corrigir o aviso de segurança GO-2026-6617 da biblioteca padrão."
+        ]
+      },
+      "v4.1.0": {
+        "title": "Sessões sincronizadas entre casas",
+        "summary": "Introduz salas criptografadas para até oito pessoas com correção suave de desvio, transmissão direta opcional do arquivo por WireGuard e a ilha dinâmica.",
+        "changes": [
+          "Sincroniza sessões em grupo para até oito participantes usando ajustes suaves de velocidade, espera de buffer de carregamento de 10 segundos, controles só do anfitrião ou compartilhados e compensação de corte por convidado.",
+          "Transmite o arquivo do anfitrião diretamente por WireGuard criptografado quando uma pessoa convidada não possui cópia local na própria biblioteca.",
+          "Adiciona a pílula da ilha dinâmica abaixo da barra de título, mapeamento de portas UPnP/NAT-PMP em múltiplas interfaces, endereços IPv6 em códigos de amigo e verificações de versão do protocolo da sala.",
+          "Encerra automaticamente dez segundos após o fechamento do player de computador o servidor local iniciado pelo inicializador theia."
+        ]
+      },
+      "v4.0.0": {
+        "title": "Perfis, amigos, instalador em tela cheia e uma nova base",
+        "summary": "Abre a Geração 4 com perfis da casa, presença de amigos ponto a ponto por WireGuard, Discord Rich Presence opcional, um instalador de terminal reconstruído e licenciamento PolyForm Noncommercial.",
+        "changes": [
+          "Adiciona a seleção inicial de perfil Quem está assistindo?, códigos de amigo, presença de amigos ponto a ponto via WireGuard (TTL em memória de 90 segundos) e acesso remoto restrito a amigos.",
+          "Introduz o Discord Rich Presence local opcional com uma chave de consentimento separada antes de compartilhar o título assistido.",
+          "Reconstrói o theia-setup como um formulário interativo de terminal em tela cheia com sugestões de pastas, contagem de arquivos de vídeo e atualizações no local mantendo biblioteca e progresso.",
+          "Aprimora a leitura de nomes de arquivos (títulos, anos, marcadores de lançamentos franceses, arquivos multiepisódio), empacota o libmpv LGPL fixado no Linux (PulseAudio/ALSA), agrupa configurações e apresenta o ícone do T sobre o sol.",
+          "Passa os lançamentos a partir da 4.0 para PolyForm Noncommercial 1.0.0 com desenvolvimento privado do código-fonte (a 3.4.0 e anteriores continuam sob GPL-3.0 nas tags públicas), lança o site estático e atualiza source-map-js."
+        ]
+      },
+      "v3.4.0": {
+        "title": "Seis versões de computador, páginas detalhadas e encerramento da V3",
+        "summary": "Versão final da V3 expandindo os instaladores completos de computador para todas as seis combinações de sistema e processador e adicionando páginas ricas de filmes e séries.",
+        "changes": [
+          "Publica instaladores completos para as seis plataformas de computador: Windows x64, Windows ARM64, macOS Apple Silicon, macOS Intel, Ubuntu 24.04 x64 e Ubuntu 24.04 ARM64.",
+          "Adiciona páginas de detalhes de filmes e séries com sinopses do TMDB em cache, fileiras de elenco, inspeção de resolução e HDR do arquivo e verificação de tela e driver de GPU no Windows.",
+          "Completa o acompanhamento de episódios de séries com barras de retomada, controles de marcar como assistido ou redefinir, salto para o próximo episódio não assistido e aviso de próximo episódio de 10 segundos.",
+          "Permite cancelar uma conexão com o servidor em andamento, tenta reenviar automaticamente gravações pendentes de progresso e marca a reprodução do visualizador web como concluída em recursos."
+        ]
+      },
+      "v3.3.6": {
+        "title": "Paridade no empacotamento das versões e integridade do pacote no macOS",
+        "summary": "Reforça o empacotamento das versões com uma verificação de paridade byte a byte de 67 itens e preserva links simbólicos de frameworks e assinaturas de código do macOS na extração e atualização.",
+        "changes": [
+          "Exige correspondência exata da versão do player no ZIP offline do Windows e adiciona no CI uma verificação de paridade byte a byte com 67 comparações entre arquivos avulsos e pacotes offline.",
+          "Ensina o extrator ZIP em Go a recriar com segurança links simbólicos .framework do macOS e preservar permissões 0644/0755 para passar na verificação rigorosa do codesign.",
+          "Atualiza o atualizador do macOS para substituir de forma limpa o pacote completo Theia.app durante as atualizações."
+        ]
+      },
+      "v3.3.5": {
+        "title": "Estúdio de legendas, status de reprodução por eventos e estatísticas de exibição",
+        "summary": "Adiciona um personalizador de legendas ao vivo em escala 1080p, corta em dois terços o uso de CPU em repouso na reprodução, suaviza o redimensionamento das bordas e estreia as estatísticas de exibição.",
+        "changes": [
+          "Adiciona configurações dedicadas de Reprodução e Legendas com prévia ao vivo em escala 1080p para tamanho, posição vertical (sub-pos), cor, contorno, faixa de fundo de 70%, família de fontes e peso em SRT e ASS.",
+          "Substitui a consulta periódica de status por atualizações orientadas a eventos (reduzindo a CPU em repouso de 2,8% para 0,9%) e adia SetWindowRgn ao arrastar bordas para elevar o redimensionamento de 5 para 95 quadros.",
+          "Introduz o painel de estatísticas de exibição com total de horas assistidas, contagens de iniciados e concluídos, barra de divisão entre filmes e séries e séries mais assistidas.",
+          "Adiciona um menu suspenso de transporte com duas abas Idiomas / Qualidade e um controle deslizante de volume retrátil."
+        ]
+      },
+      "v3.3.4": {
+        "title": "O player nativo de computador chega ao Apple Silicon",
+        "summary": "Entrega o aplicativo nativo para macOS Apple Silicon, o instalador e o serviço launchd em segundo plano, junto com compilações reprodutíveis determinísticas.",
+        "changes": [
+          "Publica o Theia.app nativo no macOS Apple Silicon renderizando por uma superfície OpenGL do libmpv, instalado pelo theia-setup-darwin-arm64 com atalho em ~/.local/bin e serviço launchd.",
+          "Preserva links simbólicos de frameworks dentro do ZIP offline do macOS (economizando 25 MB por download) e adapta com clareza a barra de transporte do player web abaixo de 44rem.",
+          "Remove carimbos de data e hora de compilação embutidos para gerar binários determinísticos em Go e no instalador."
+        ]
+      },
+      "v3.3.3": {
+        "title": "Planos de fundo unificados e configurações em painel lateral",
+        "summary": "Traz imagens de fundo suavizadas e mascaradas de forma consistente para Início, Filmes e Séries, amplia as configurações em um painel dividido em seções e verifica os recursos embutidos no CI.",
+        "changes": [
+          "Unifica as imagens de destaque suavizadas e com bordas mascaradas nas telas de Início, Filmes e Séries.",
+          "Substitui a janela estreita de configurações por um painel mais amplo com barra lateral e seções (Interface, Reprodução, Servidor, Atualização), ações Cancelar/Salvar e cópia em um clique da URL do servidor.",
+          "Adiciona uma verificação de lançamento no CI confirmando que os pacotes offline embutem tanto a interface web compilada quanto a chave do TMDB."
+        ]
+      },
+      "v3.3.2": {
+        "title": "O comando inicializador theia e desinstalação limpa",
+        "summary": "Apresenta o comando único theia para iniciar servidor e player juntos, corrige bibliotecas vazias recém-criadas e adiciona a desinstalação limpa.",
+        "changes": [
+          "Adiciona o inicializador theia ao PATH e ao App Paths / Menu Iniciar do Windows, iniciando o theia-server automaticamente quando necessário antes de abrir o theia-player.",
+          "Corrige a tela inicial em uma biblioteca vazia recém-criada (retornando uma lista vazia de fileiras em vez de null) para que instalações novas carreguem imediatamente.",
+          "Adiciona theia-setup --uninstall para encerrar processos em execução e remover binários, atalhos, entradas de registro e alterações no PATH mantendo intacto %APPDATA%\\Theia."
+        ]
+      },
+      "v3.3.1": {
+        "title": "Downloads de versão simplificados e diagnósticos de compilação",
+        "summary": "Simplifica os arquivos de lançamento no GitHub de 20 para 9 downloads claramente nomeados, embute diagnósticos de versão e corrige um aviso de segurança em dependência.",
+        "changes": [
+          "Consolida os arquivos públicos de lançamento de 20 itens para 9 downloads claramente identificados (instalador, pacote offline e pacotes de atualização) e aposenta a ponte temporária de nomes da 3.2.",
+          "Compila e verifica a tag da versão em theia-player --diagnostics e corrige uma condição de corrida na proteção de reprodução do navegador.",
+          "Atualiza devalue para resolver o aviso de segurança GHSA-9rgm-9g3h-6x36."
+        ]
+      },
+      "v3.3.0": {
+        "title": "A geração nativa: servidor, player de computador com libmpv e instalador",
+        "summary": "Divide o Theia em um servidor local, um player nativo de computador construído com Tauri e libmpv LGPL fixado, e um instalador no espaço do usuário sem direitos de administrador.",
+        "changes": [
+          "Separa o Theia em theia-server (indexação da biblioteca, metadados do TMDB em cache e streaming HTTP local), theia-player (aplicativo nativo de computador em Rust/Tauri) e theia-setup.",
+          "Integra um mecanismo libmpv LGPL fixado por SHA-256 com decodificação por hardware d3d11va / gpu-next, Matroska, mapeamento de tons Dolby Vision Profile 7, passthrough de bitstream TrueHD/Atmos/DTS-HD com retorno para PCM e legendas externas e em imagem.",
+          "Instala no espaço do usuário sem privilégios de administrador por um assistente de terminal de seis perguntas ou parâmetros de linha de comando, verificando resumos SHA-256 e aceitando arquivos ZIP offline.",
+          "Carrega todos os dados da biblioteca em duas requisições HTTP locais (medido em 0,7 segundo para 250 filmes)."
+        ]
+      }
+    }
   },
   "privacy": {
     "title": "Privacidade",

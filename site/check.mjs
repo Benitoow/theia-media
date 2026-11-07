@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Structural publishing checks for every generated page of every locale. Browser
-// acceptance remains separate: this cannot establish layout, fonts, motion or
-// usability.
+// Structural publishing checks for every generated page of every locale and the
+// static agent indexes. Browser acceptance remains separate: this cannot
+// establish layout, fonts, motion or usability.
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
@@ -22,13 +22,14 @@ const siteUrl = (
 const languages = json("locales/languages.json");
 const pages = json("pages.json");
 const release = json("release.json");
+const releasesHistory = json("releases-history.json");
 const reference = json("locales/en.json");
-// Decisions 227 and 230: the pre-release announcement exists exactly while the
-// published release is older than the announced one.
+const major = Number(release.tag.replace(/^v/, "").split(".")[0]);
+const visibleReleases = releasesHistory.filter((item) => major >= item.minMajor);
+// Decisions 227, 230 and 237: the pre-release announcement exists exactly while
+// the published release is older than the announced one.
 const announcement = json("announcement.json");
-const announcing =
-  Number(release.tag.replace(/^v/, "").split(".")[0]) <
-  Number(announcement.version.split(".")[0]);
+const announcing = major < Number(announcement.version.split(".")[0]);
 const failures = [];
 const check = (condition, message) => {
   if (!condition) failures.push(message);
@@ -41,11 +42,21 @@ const hosts = new Set([
   "www.themoviedb.org",
 ]);
 // The ids each page must keep: the public anchors, and the sections the old
-// single page had, now on the page that holds them (decision 230).
+// single page had, now on the page that holds them (decisions 230 and 237).
 const anchors = {
   home: ["top", "main", "discover", "demo", "built", "help"],
   download: ["top", "main", "download", "panel-windows", "panel-macos", "panel-linux"],
-  new: ["top", "main", "new", "help"],
+  changelog: [
+    "top",
+    "main",
+    "changelog",
+    "new",
+    "help",
+    ...["v5", "v4", "v3"]
+      .filter((gen) => visibleReleases.some((item) => item.generation === gen))
+      .map((gen) => `gen-${gen}`),
+    ...visibleReleases.map((item) => item.tag.replaceAll(".", "-")),
+  ],
   questions: [
     "top",
     "main",
@@ -153,8 +164,14 @@ for (const doc of documents) {
   }
   for (const id of anchors[doc.page.id] ?? [])
     assert(ids.has(id), `missing anchor ${id}`);
-  // The announcement belongs to the home page (its pill) and the news page (its
-  // section), and leaves both the day its version is published.
+  // Decision 237: Discord belongs in the persistent header (desktop and mobile)
+  // on every page, and in the home hero action row.
+  assert(
+    html.includes('class="nav-discord" href="https://discord.gg/5E55F7XFZp"'),
+    "missing Discord pill in desktop header",
+  );
+  // The announcement belongs to the home page (its pill) and the changelog page
+  // (its section), and leaves both the day its version is published.
   const pill = ofTag("a").filter((tag) =>
     (tag.attributes.class ?? "").split(" ").includes("v5-pill"),
   );
@@ -164,12 +181,12 @@ for (const doc of documents) {
       pill.length === (doc.page.id === "home" ? 1 : 0),
       "the announcement pill belongs to the home page, once",
     );
-    assert(dot, "the navigation should mark the news page while announcing");
+    assert(dot, "the navigation should mark the changelog page while announcing");
     assert(
-      ids.has("v5") === (doc.page.id === "new"),
-      "the announcement section belongs to the news page",
+      ids.has("v5") === (doc.page.id === "changelog"),
+      "the announcement section belongs to the changelog page",
     );
-    if (doc.page.id === "new") {
+    if (doc.page.id === "changelog") {
       assert(
         html.includes(`data-opens="${new Date(announcement.opens).toISOString()}"`) &&
           html.includes(
@@ -178,8 +195,8 @@ for (const doc of documents) {
         "announcement dates differ from announcement.json",
       );
       assert(
-        html.indexOf('id="v5"') < html.indexOf('id="new"'),
-        "the announcement must precede the release highlights",
+        html.indexOf('id="v5"') < html.indexOf('id="changelog"'),
+        "the announcement must precede the release history",
       );
     }
   } else {
@@ -218,7 +235,7 @@ for (const doc of documents) {
   );
   assert(title === meta("og:title"), "title and Open Graph title differ");
   const alternates = ofTag("link").filter(
-    (tag) => tag.attributes.rel === "alternate",
+    (tag) => tag.attributes.rel === "alternate" && "hreflang" in tag.attributes,
   );
   assert(
     alternates.length === 11,
@@ -242,6 +259,21 @@ for (const doc of documents) {
           (doc.page.id === "home" ? `${siteUrl}/` : `${siteUrl}/en/${slug}/`),
     ),
     "missing default alternate",
+  );
+  const machineAlternates = ofTag("link").filter(
+    (tag) => tag.attributes.rel === "alternate" && !("hreflang" in tag.attributes),
+  );
+  assert(
+    machineAlternates.length === 4 &&
+      machineAlternates.some((tag) => (tag.attributes.href ?? "").endsWith("llms.txt")) &&
+      machineAlternates.some((tag) => (tag.attributes.href ?? "").endsWith("llms-full.txt")) &&
+      machineAlternates.some((tag) => (tag.attributes.href ?? "").endsWith("releases.json")) &&
+      machineAlternates.some(
+        (tag) =>
+          tag.attributes.href ===
+          "https://github.com/Benitoow/theia-media/releases.atom",
+      ),
+    "missing machine-readable discovery links",
   );
   const reached = new Set();
   for (const tag of tags) {
@@ -342,6 +374,11 @@ for (const doc of documents) {
   // Media belongs to the home page: the decorative hero and the real recording.
   const videos = ofTag("video");
   if (doc.page.id === "home") {
+    const heroSection = html.slice(0, html.indexOf('id="discover"'));
+    assert(
+      heroSection.includes('href="https://discord.gg/5E55F7XFZp"'),
+      "missing Discord button in home hero",
+    );
     assert(videos.length === 2, "expected decorative hero plus recording");
     const hero = videos.find(
       (tag) => tag.attributes.id === "hero-film",
@@ -410,6 +447,15 @@ for (const doc of documents) {
     faqItems === (doc.page.id === "questions" ? 8 : 0),
     "the eight native FAQ disclosures belong to the questions page",
   );
+  if (doc.page.id === "changelog") {
+    const entries = ofTag("li").filter(
+      (tag) => tag.attributes.class === "release-entry",
+    );
+    assert(
+      entries.length === visibleReleases.length,
+      `expected ${visibleReleases.length} changelog entries, got ${entries.length}`,
+    );
+  }
   if (doc.page.id === "download") {
     for (const [filename, asset] of Object.entries(release.assets))
       assert(
@@ -434,13 +480,40 @@ for (const doc of documents) {
   try {
     const data = JSON.parse(ld[0]?.[1]);
     const software = doc.page.id === "home" || doc.page.id === "download";
+    const expectedType = software
+      ? "SoftwareApplication"
+      : doc.page.id === "questions"
+        ? "FAQPage"
+        : "WebPage";
     assert(
       ld.length === 1 &&
-        data["@type"] === (software ? "SoftwareApplication" : "WebPage") &&
+        data["@type"] === expectedType &&
         data.inLanguage === doc.lang &&
         data.url === canonical,
       "incorrect structured data",
     );
+    if (software) {
+      assert(
+        Array.isArray(data.sameAs) &&
+          data.sameAs.includes("https://discord.gg/5E55F7XFZp") &&
+          data.sameAs.includes("https://github.com/Benitoow/theia-media") &&
+          data.releaseNotes === `${siteUrl}/${doc.id}/changelog/`,
+        "SoftwareApplication missing sameAs or releaseNotes",
+      );
+    }
+    if (doc.page.id === "questions") {
+      assert(
+        Array.isArray(data.mainEntity) && data.mainEntity.length === 8,
+        "FAQPage missing eight questions",
+      );
+    }
+    if (doc.page.id === "changelog") {
+      assert(
+        data.mainEntity?.["@type"] === "ItemList" &&
+          data.mainEntity?.itemListElement?.length === visibleReleases.length,
+        "changelog JSON-LD missing release ItemList",
+      );
+    }
     assert(
       !data.aggregateRating && !data.review && (!software || data.offers?.price === "0"),
       "structured data invents a price or review",
@@ -482,9 +555,97 @@ for (const doc of documents) {
         "icon credits missing",
       );
   }
+  const maxBytes = doc.page.id === "changelog" ? 260 * 1024 : 110 * 1024;
   assert(
-    Buffer.byteLength(html) < 110 * 1024,
-    "HTML exceeds 110 KiB per page",
+    Buffer.byteLength(html) < maxBytes,
+    `HTML exceeds ${Math.round(maxBytes / 1024)} KiB per page`,
+  );
+}
+
+// Legacy /<language>/new/ redirect stubs forward cleanly to ../changelog/.
+for (const language of languages) {
+  const redirectFile = join(dist, language.id, "new", "index.html");
+  check(
+    existsSync(redirectFile),
+    `missing legacy redirect: ${language.id}/new/index.html`,
+  );
+  if (existsSync(redirectFile)) {
+    const redirectHtml = readFileSync(redirectFile, "utf8");
+    check(
+      redirectHtml.includes(
+        `<link rel="canonical" href="${siteUrl}/${language.id}/changelog/">`,
+      ) &&
+        redirectHtml.includes(
+          '<noscript><meta http-equiv="refresh" content="0; url=../changelog/"></noscript>',
+        ) &&
+        redirectHtml.includes('<meta name="robots" content="noindex">'),
+      `${language.id}/new/index.html: invalid redirect metadata`,
+    );
+    const redirectStyle =
+      /<style>([\s\S]*?)<\/style>/.exec(redirectHtml)?.[1] ?? "";
+    check(
+      !/src="https?:/i.test(redirectHtml) &&
+        !/@import|url\(/i.test(redirectStyle),
+      `${language.id}/new/index.html: unexpected remote resource`,
+    );
+  }
+}
+
+// Static agent indexes: llms.txt, llms-full.txt, releases.json and robots.txt.
+for (const artifact of ["llms.txt", "llms-full.txt", "releases.json", "robots.txt"]) {
+  const file = join(dist, artifact);
+  check(existsSync(file), `missing root agent artifact: ${artifact}`);
+  if (!existsSync(file)) continue;
+  const content = readFileSync(file, "utf8");
+  check(
+    !/\.theia-private|CLAUDE\.md|AGENTS\.md|v5-implementation\.md/i.test(content),
+    `${artifact}: leaks private path`,
+  );
+  if (artifact !== "robots.txt") {
+    check(
+      !/\bopen[- ]source\b|\bsource-available\b|\bcoming soon\b/i.test(content),
+      `${artifact}: forbidden release or source claim`,
+    );
+    check(
+      content.includes(release.tag) &&
+        content.includes("https://discord.gg/5E55F7XFZp"),
+      `${artifact}: missing current release tag or Discord link`,
+    );
+  }
+}
+if (existsSync(join(dist, "llms-full.txt"))) {
+  const full = readFileSync(join(dist, "llms-full.txt"), "utf8");
+  for (const item of visibleReleases)
+    check(
+      full.includes(`### ${item.tag} `),
+      `llms-full.txt missing release ${item.tag}`,
+    );
+  for (const asset of Object.values(release.assets))
+    check(full.includes(asset.sha256), "llms-full.txt missing setup SHA-256");
+}
+if (existsSync(join(dist, "releases.json"))) {
+  try {
+    const manifest = JSON.parse(readFileSync(join(dist, "releases.json"), "utf8"));
+    check(
+      manifest.latest?.tag === release.tag &&
+        manifest.discord === "https://discord.gg/5E55F7XFZp" &&
+        Boolean(manifest.upcoming) === announcing &&
+        Array.isArray(manifest.releases) &&
+        manifest.releases.length === visibleReleases.length &&
+        manifest.releases.at(-1)?.tag === "v3.3.0",
+      "releases.json out of sync with release.json or releases-history.json",
+    );
+  } catch (_) {
+    failures.push("releases.json: invalid JSON");
+  }
+}
+if (existsSync(join(dist, "robots.txt"))) {
+  const robots = readFileSync(join(dist, "robots.txt"), "utf8");
+  check(
+    robots.includes(`Sitemap: ${siteUrl}/sitemap.xml`) &&
+      robots.includes(`${siteUrl}/llms.txt`) &&
+      robots.includes(`${siteUrl}/releases.json`),
+    "robots.txt missing sitemap or agent index pointers",
   );
 }
 
@@ -515,7 +676,7 @@ try {
   )();
   for (const [anchor, pageId] of Object.entries(moved)) {
     // #v5 leaves with the announcement the day its version is published (227): an
-    // old link to it then reaches the news page, which is where it should land.
+    // old link to it then reaches the changelog page, which is where it should land.
     if (anchor === "v5" && !announcing) continue;
     const page = pages.find((item) => item.id === pageId);
     const target = join(dist, pathOf("en", page));
@@ -589,15 +750,21 @@ const walk = (directory) => {
 };
 walk(dist);
 for (const file of files)
-  if (!/\.(?:html|txt|xml)$|og-image\.jpg$/.test(file))
+  if (!/\.(?:html|txt|xml|json)$|og-image\.jpg$/.test(file))
     check(
       allReferences.has(file),
       `unreferenced asset ${relative(dist, file)}`,
     );
 // Sixty-one documents share one stylesheet, so the budget is per page and for the
-// shared assets, with a ceiling on the whole site.
+// shared assets, with a ceiling on the whole site (decisions 230 and 237).
 const shared = files
-  .filter((file) => !/\.(mp4|webm|html)$/.test(file))
+  .filter(
+    (file) =>
+      !/\.(mp4|webm|html)$/.test(file) &&
+      !["llms.txt", "llms-full.txt", "releases.json", "robots.txt", "sitemap.xml"].includes(
+        relative(dist, file).replaceAll("\\", "/"),
+      ),
+  )
   .reduce((sum, file) => sum + statSync(file).size, 0);
 const weight = files
   .filter((file) => !/\.(mp4|webm)$/.test(file))
@@ -607,8 +774,8 @@ check(
   "shared assets (fonts, images, captions) exceed 2 MiB without videos",
 );
 check(
-  weight < 8 * 1024 * 1024,
-  "all pages and shared assets exceed 8 MiB without videos",
+  weight < 10 * 1024 * 1024,
+  "all pages, agent indexes and shared assets exceed 10 MiB without videos",
 );
 const card = readFileSync(join(dist, "assets/img/og-image.jpg"));
 check(card.length < 600 * 1024, "share card exceeds 600 KiB");
@@ -619,5 +786,5 @@ if (failures.length) {
   process.exitCode = 1;
 } else
   console.log(
-    `check: ${documents.length} pages (${pages.length} pages x ${languages.length} languages and the English root), ten complete catalogues/caption tracks, ${files.length} files, largest page ${(Math.max(...sizes) / 1024).toFixed(0)} KiB, ${(weight / 1024).toFixed(0)} KiB without videos; all checks passed`,
+    `check: ${documents.length} pages (${pages.length} pages x ${languages.length} languages and the English root), ${languages.length} legacy redirects, agent indexes, ten complete catalogues/caption tracks, ${files.length} files, largest page ${(Math.max(...sizes) / 1024).toFixed(0)} KiB, ${(weight / 1024).toFixed(0)} KiB without videos; all checks passed`,
   );

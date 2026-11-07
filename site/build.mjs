@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// One layout, six page templates, ten strict catalogues, no runtime service or
-// build dependency.
+// One layout, six page templates, ten strict catalogues, static agent indexes,
+// and no runtime service or build dependency.
 // node site/build.mjs --check [--site-url https://example.org/theia]
 import {
   cpSync,
@@ -88,8 +88,10 @@ const V5_ICONS = {
     "title",
     "watched",
     "update",
+    "phone",
+    "tv",
   ],
-  later: ["phone", "tv", "chip"],
+  later: ["phone", "chip"],
 };
 const MOMENT_ICONS = ["library", "player", "friends"];
 const BUILT_WITH = [
@@ -101,6 +103,251 @@ const BUILT_WITH = [
 ];
 // Page switches the script toggles after load: always in the sprite.
 const SCRIPTED_ICONS = ["play", "pause"];
+const ASSET_ROWS = {
+  windows: [
+    ["theia-setup-windows-amd64.exe", "Windows x64", "x64", "verifiedWindows"],
+    [
+      "theia-setup-windows-arm64.exe",
+      "Windows ARM64",
+      "arm",
+      "verifiedWindows",
+    ],
+  ],
+  macos: [
+    ["theia-setup-darwin-arm64", "Mac", "apple", "verifiedMac"],
+    ["theia-setup-darwin-amd64", "Mac Intel", "intel", "verifiedIntel"],
+  ],
+  linux: [
+    ["theia-setup-linux-amd64", "Ubuntu 24.04 x64", "x64", "verifiedLinux"],
+    ["theia-setup-linux-arm64", "Ubuntu 24.04 ARM64", "arm", "verifiedLinux"],
+  ],
+};
+
+function renderLegacyNewRedirect(language, catalogue, siteUrl) {
+  const canonical = `${siteUrl}/${language.id}/changelog/`;
+  return `<!DOCTYPE html>
+<html lang="${escapeHTML(language.lang)}" dir="${escapeHTML(language.dir)}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex">
+<title>${escapeHTML(catalogue.changelog.redirectTitle)} — Theia</title>
+<link rel="canonical" href="${escapeHTML(canonical)}">
+<noscript><meta http-equiv="refresh" content="0; url=../changelog/"></noscript>
+<style>
+  html { background: #0b0a09; color: #ede7dc; font: 400 1rem/1.65 system-ui, sans-serif; }
+  body { margin: 0; min-block-size: 100vh; display: grid; place-items: center; padding: 2rem 1rem; box-sizing: border-box; }
+  main { max-inline-size: 32rem; text-align: center; }
+  .mark { margin: 0 0 1.5rem; font: 400 1.5rem/1 Georgia, serif; letter-spacing: 0.16em; text-transform: uppercase; }
+  h1 { margin: 0 0 1rem; font-weight: 500; font-size: 1.45rem; line-height: 1.3; }
+  p { margin: 0 0 1rem; color: #d6cfc2; }
+  a { display: inline-block; min-block-size: 44px; line-height: 44px; padding-inline: 0.75rem; color: #ede7dc; }
+</style>
+</head>
+<body>
+<main>
+  <p class="mark" aria-hidden="true" lang="en" dir="ltr">Theia</p>
+  <h1>${escapeHTML(catalogue.changelog.redirectTitle)}</h1>
+  <p>${escapeHTML(catalogue.changelog.redirectBody)}</p>
+  <p><a id="moved" href="../changelog/">${escapeHTML(catalogue.changelog.redirectAction)}</a></p>
+</main>
+<script>
+(function () {
+  var target = new URL("../changelog/", location.href);
+  target.search = location.search;
+  target.hash = location.hash;
+  document.getElementById("moved").href = target.href;
+  location.replace(target.href);
+})();
+</script>
+</body>
+</html>
+`;
+}
+
+function buildAgentArtifacts({
+  siteUrl,
+  languages,
+  pages,
+  english,
+  release,
+  licence,
+  announcing,
+  announcement,
+  visibleReleases,
+}) {
+  const publishedDate = release.publishedAt.slice(0, 10);
+  const setupLines = Object.entries(ASSET_ROWS).flatMap(([os, rows]) =>
+    rows.map(([filename, label, , verifiedKey]) => {
+      const asset = release.assets[filename];
+      const tag = asset.tag || release.tag;
+      const legacy = tag !== release.tag;
+      const mb = (asset.size / 1_000_000).toFixed(1);
+      const status = legacy
+        ? english.download.legacyNote
+        : english.download[verifiedKey];
+      return `- **${label}** (${os}, \`${tag}\`, ${mb} MB / ${asset.size} bytes)\n  - URL: ${asset.url}\n  - SHA-256: \`${asset.sha256}\`\n  - Verification status: ${status}`;
+    }),
+  );
+  const pageLines = pages.map((page) => {
+    const meta = page.id === "home" ? english.meta : english.pages[page.id];
+    const url = `${siteUrl}/en/${page.slug ? `${page.slug}/` : ""}`;
+    return `- [${meta.title}](${url}): ${meta.description}`;
+  });
+  const localeLines = languages.map(
+    (item) => `- \`${item.id}\` (${item.name}): ${siteUrl}/${item.id}/`,
+  );
+  const upcomingBlock = announcing
+    ? [
+        "",
+        `## Upcoming Release: Theia ${announcement.version}`,
+        "",
+        `- Planned release window (${announcement.timeZone}): \`${announcement.opens}\` to \`${announcement.closes}\` (exclusive end).`,
+        `- Note: ${english.v5.promise}`,
+        `- Overview: ${english.v5.lead}`,
+        ...english.v5.features.map(
+          (item) => `- **${item.title}**: ${item.body}`,
+        ),
+        ...english.v5.later.map(
+          (item) => `- *Not in ${announcement.version} — ${item.title}*: ${item.body}`,
+        ),
+      ].join("\n")
+    : "";
+
+  const llmsTxt = `# Theia
+
+> ${english.meta.description}
+
+Theia organises and plays video files you already own on your own machines. It is not a streaming catalogue and supplies no films or series. It ships as a local media server (\`theia-server\`), a native desktop player (\`theia-player\`, built with Tauri and pinned LGPL \`libmpv\`), an interactive and scriptable installer (\`theia-setup\`), and the \`theia\` launcher command.
+
+- Latest published release: \`${release.tag}\` (${publishedDate}) — ${release.url}
+- Licence: ${licence} from 4.0 onward (free for personal, non-commercial use; source code is developed privately and is not published). Version 3.4.0 and earlier remain GPL-3.0 at their public tags.
+- Community & support: Discord (${DISCORD}) and GitHub issues (${GITHUB}/issues)
+- Languages: Website in 10 languages; installer and application UI in English and French.
+- Privacy: No user account, no cloud media relay, no telemetry, and no cookies or analytics on this website. External network calls from the application go only to TMDB (posters/metadata cached locally), GitHub Releases (update checks/downloads), Firebase Realtime Database \`theia-friends\` (anonymous sign-in for friend codes, profile photos, presence and opinions), direct peer-to-peer WireGuard tunnels between authorised devices, and optional user-selected Google Drive folders from 5.0 onward.
+
+## Canonical Pages (English)
+
+${pageLines.join("\n")}
+
+## Machine-Readable Indexes
+
+- [Full plain-Markdown reference & complete changelog (3.3.0+)](${siteUrl}/llms-full.txt)
+- [Structured release manifest & changelog JSON](${siteUrl}/releases.json)
+- [GitHub Releases Atom feed](${FEED})
+- [XML Sitemap](${siteUrl}/sitemap.xml)
+
+## Direct Setup Downloads (${release.tag})
+
+${setupLines.join("\n")}
+
+## Command-Line & Non-Interactive Installation
+
+- Interactive setup: run \`theia-setup-windows-amd64.exe\` on Windows, or \`chmod +x ./theia-setup-*\` then \`./theia-setup-*\` on macOS and Ubuntu 24.04.
+- Non-interactive setup flags: \`--lang en|fr --mode both|server|client --media <folder> --port 8383 --yes\` (plus \`--bundle <offline.zip>\` for offline installs).
+- Start Theia after installation: run \`theia\` (starts the local server if needed, then opens the native player).
+- Clean uninstallation: run \`theia-setup --uninstall\` (removes binaries, shortcuts and service entries while keeping user data unless removed manually).
+- Ubuntu 24.04 desktop prerequisites (X11 or XWayland): \`sudo apt install libwebkit2gtk-4.1-0 libayatana-appindicator3-1\`.
+- macOS note: builds are ad-hoc signed and not notarised; on first launch use Control-click -> Open.
+- Security boundary: anyone who can reach port \`8383\` on your network can browse and administer Theia. Run on a trusted local network and never forward port \`8383\` to the public internet (remote access uses encrypted peer-to-peer WireGuard UDP instead).
+${upcomingBlock}
+
+## Localised Site Roots
+
+${localeLines.join("\n")}
+`;
+
+  const changelogMarkdown = visibleReleases
+    .map((item) => {
+      const copy = english.changelog.releases[item.tag];
+      const date = item.tag === release.tag ? publishedDate : item.date;
+      const notesUrl = `${GITHUB}/blob/main/docs/releases/${item.tag}.md`;
+      return `### ${item.tag} (${date}) — ${copy.title}\n\n${copy.summary}\n\n${copy.changes.map((line) => `- ${line}`).join("\n")}\n\nRelease notes: ${notesUrl}`;
+    })
+    .join("\n\n");
+
+  const faqMarkdown = english.faq.items
+    .map((item) => `### ${item.question}\n\n${item.answer}`)
+    .join("\n\n");
+
+  const llmsFullTxt = `${llmsTxt}
+## Privacy & Network Surface
+
+- **Stays on your computers**: ${english.privacy.stays}
+- **TMDB**: ${english.privacy.tmdb}
+- **GitHub Releases**: ${english.privacy.github}
+- **Firebase (\`theia-friends\`)**: ${english.privacy.firebase}
+- **Direct remote viewing**: ${english.privacy.remote}
+- **Google Drive (from Theia 5)**: ${english.privacy.drive}
+- **This website**: ${english.privacy.site}
+
+## Frequently Asked Questions
+
+${faqMarkdown}
+
+## Complete Changelog (from v3.3.0)
+
+${changelogMarkdown}
+`;
+
+  const releasesJson = {
+    schemaVersion: 1,
+    name: "Theia",
+    description: english.meta.description,
+    siteUrl: `${siteUrl}/`,
+    changelogUrl: `${siteUrl}/en/changelog/`,
+    downloadUrl: `${siteUrl}/en/download/`,
+    discord: DISCORD,
+    github: GITHUB,
+    feed: FEED,
+    license: {
+      current: "PolyForm-Noncommercial-1.0.0",
+      legacyUpTo3_4_0: "GPL-3.0-only",
+      sourcePublished: false,
+    },
+    latest: {
+      tag: release.tag,
+      version: release.tag.replace(/^v/, ""),
+      publishedAt: release.publishedAt,
+      url: release.url,
+      assets: release.assets,
+    },
+    upcoming: announcing
+      ? {
+          version: announcement.version,
+          opens: announcement.opens,
+          closes: announcement.closes,
+          timeZone: announcement.timeZone,
+          title: english.v5.title,
+          lead: english.v5.lead,
+          note: english.v5.promise,
+          features: english.v5.features,
+          notInThisRelease: english.v5.later,
+        }
+      : null,
+    releases: visibleReleases.map((item) => {
+      const copy = english.changelog.releases[item.tag];
+      return {
+        tag: item.tag,
+        version: item.tag.replace(/^v/, ""),
+        generation: item.generation,
+        date: item.tag === release.tag ? publishedDate : item.date,
+        current: item.tag === release.tag,
+        title: copy.title,
+        summary: copy.summary,
+        changes: copy.changes,
+        notesUrl: `${GITHUB}/blob/main/docs/releases/${item.tag}.md`,
+      };
+    }),
+  };
+
+  return {
+    llmsTxt,
+    llmsFullTxt,
+    releasesJson: JSON.stringify(releasesJson, null, 2) + "\n",
+  };
+}
 
 export function build(argv = process.argv.slice(2)) {
   const flag = (name) => {
@@ -138,6 +385,21 @@ export function build(argv = process.argv.slice(2)) {
     new Set(pages.map((page) => page.slug)).size !== pages.length
   )
     throw new Error("pages.json must start with home and name unique pages");
+  const releasesHistory = json("releases-history.json");
+  if (
+    !Array.isArray(releasesHistory) ||
+    releasesHistory.length === 0 ||
+    new Set(releasesHistory.map((item) => item.tag)).size !==
+      releasesHistory.length ||
+    !releasesHistory.every(
+      (item) =>
+        /^v\d+\.\d+\.\d+$/.test(item.tag) &&
+        /^\d{4}-\d{2}-\d{2}$/.test(item.date) &&
+        ["v5", "v4", "v3"].includes(item.generation) &&
+        Number.isInteger(item.minMajor),
+    )
+  )
+    throw new Error("invalid releases-history.json");
   const catalogues = Object.fromEntries(
     languages.map((language) => [
       language.id,
@@ -146,6 +408,13 @@ export function build(argv = process.argv.slice(2)) {
   );
   for (const [id, catalogue] of Object.entries(catalogues))
     validateCatalogue(catalogues.en, catalogue, id);
+  if (
+    JSON.stringify(Object.keys(catalogues.en.changelog.releases).sort()) !==
+    JSON.stringify(releasesHistory.map((item) => item.tag).sort())
+  )
+    throw new Error(
+      "changelog.releases keys must match releases-history.json tags",
+    );
   const release = json("release.json");
   const version = release.tag.replace(/^v/, "");
   if (
@@ -154,7 +423,10 @@ export function build(argv = process.argv.slice(2)) {
   )
     throw new Error("invalid release version or date");
   const [major, minor] = version.split(".").map(Number);
-  // A pre-release announcement (decisions 227 and 230): shown while the published
+  const visibleReleases = releasesHistory.filter(
+    (item) => major >= item.minMajor,
+  );
+  // A pre-release announcement (decisions 227, 230 and 237): shown while the published
   // release is older than the announced one, and gone from the build once it is out.
   const announcement = json("announcement.json");
   const opens = new Date(announcement.opens);
@@ -230,39 +502,10 @@ export function build(argv = process.argv.slice(2)) {
     const copyField = (id, label, value, context) =>
       `<div class="copy-field"><span>${label}</span><div class="copy-row"><code id="${id}" dir="ltr">${escapeHTML(value)}</code><button class="copy-button" type="button" data-copy="${id}" aria-label="${t("download.copy")} — ${label} — ${context}">${icon("copy")}<span>${t("download.copy")}</span></button></div></div>`;
 
-    const assetNames = {
-      windows: [
-        [
-          "theia-setup-windows-amd64.exe",
-          "Windows x64",
-          "x64",
-          "verifiedWindows",
-        ],
-        [
-          "theia-setup-windows-arm64.exe",
-          "Windows ARM64",
-          "arm",
-          "verifiedWindows",
-        ],
-      ],
-      macos: [
-        ["theia-setup-darwin-arm64", "Mac", "apple", "verifiedMac"],
-        ["theia-setup-darwin-amd64", "Mac Intel", "intel", "verifiedIntel"],
-      ],
-      linux: [
-        ["theia-setup-linux-amd64", "Ubuntu 24.04 x64", "x64", "verifiedLinux"],
-        [
-          "theia-setup-linux-arm64",
-          "Ubuntu 24.04 ARM64",
-          "arm",
-          "verifiedLinux",
-        ],
-      ],
-    };
     const osMarks = { windows: "windows", macos: "apple", linux: "linux" };
     const blocks = {
       download_panels: () =>
-        Object.entries(assetNames)
+        Object.entries(ASSET_ROWS)
           .map(([os, assets]) => {
             const title = { windows: "Windows", macos: "macOS", linux: "Linux" }[
               os
@@ -381,13 +624,52 @@ export function build(argv = process.argv.slice(2)) {
             `<li>${logo(name)}<span>${label}</span></li>`,
         ).join("")}</ul><p class="built-note">${t("built.lead")}</p></div></section>`,
 
-      news: () =>
-        `<section id="new" class="section news-section" aria-labelledby="new-title"><div class="wrap"><header class="section-head news-head"><div><h2 id="new-title">${t("news.title")}</h2><p class="release-line"><bdi>${escapeHTML(release.tag)}</bdi><span aria-hidden="true"> · </span><time datetime="${release.publishedAt.slice(0, 10)}">${escapeHTML(new Intl.DateTimeFormat(language.intl, { dateStyle: "long", timeZone: "UTC" }).format(new Date(release.publishedAt)))}</time></p></div><a class="text-link" href="https://github.com/Benitoow/theia-media/blob/main/docs/releases/${release.tag}.md">${t("news.notes")}${icon("arrow", "icon-arrow")}</a></header><div class="news-grid">${catalogue.news.items
-          .map(
-            (item) =>
-              `<article class="news-item"><h3>${escapeHTML(item.title)}</h3><p>${escapeHTML(item.body)}</p></article>`,
-          )
-          .join("\n")}</div></div></section>`,
+      changelog_jumps: () => {
+        const pills = [];
+        if (announcing)
+          pills.push(
+            `<a class="jump-pill" href="#v5"><span class="nav-dot" aria-hidden="true"></span>${t("changelog.jumpV5Upcoming")}</a>`,
+          );
+        for (const gen of ["v5", "v4", "v3"]) {
+          if (visibleReleases.some((item) => item.generation === gen))
+            pills.push(
+              `<a class="jump-pill" href="#gen-${gen}">${t(`changelog.jump${gen.toUpperCase()}`)}</a>`,
+            );
+        }
+        return pills.join("\n");
+      },
+
+      changelog: () =>
+        ["v5", "v4", "v3"]
+          .map((gen) => {
+            const entries = visibleReleases.filter(
+              (item) => item.generation === gen,
+            );
+            if (!entries.length) return "";
+            const rows = entries
+              .map((item) => {
+                const entryCopy = catalogue.changelog.releases[item.tag];
+                const id = item.tag.replaceAll(".", "-");
+                const isoDate =
+                  item.tag === release.tag
+                    ? release.publishedAt.slice(0, 10)
+                    : item.date;
+                const formattedDate = new Intl.DateTimeFormat(language.intl, {
+                  dateStyle: "long",
+                  timeZone: "UTC",
+                }).format(new Date(`${isoDate}T00:00:00Z`));
+                const notesUrl = `${GITHUB}/blob/main/docs/releases/${item.tag}.md`;
+                const currentBadge =
+                  item.tag === release.tag
+                    ? `<span class="release-current">${t("download.current")}</span>`
+                    : "";
+                return `<li class="release-entry" id="${id}" aria-labelledby="title-${id}"><div class="release-meta"><div class="release-badges"><span class="release-tag" dir="ltr"><bdi>${escapeHTML(item.tag)}</bdi></span>${currentBadge}</div><time class="release-date" datetime="${isoDate}">${escapeHTML(formattedDate)}</time><a class="text-link release-notes-link" href="${notesUrl}">${t("changelog.notes")}${icon("arrow", "icon-arrow")}</a></div><div class="release-body"><h4 id="title-${id}">${escapeHTML(entryCopy.title)}</h4><p class="release-summary">${escapeHTML(entryCopy.summary)}</p><ul class="release-changes">${entryCopy.changes.map((line) => `<li>${escapeHTML(line)}</li>`).join("")}</ul></div></li>`;
+              })
+              .join("\n");
+            return `<div class="generation-group" id="gen-${gen}" aria-labelledby="gen-${gen}-title"><header class="generation-head"><h3 id="gen-${gen}-title">${t(`changelog.generations.${gen}.title`)}</h3><p class="generation-lead">${t(`changelog.generations.${gen}.lead`)}</p></header><ol class="release-list">${rows}</ol></div>`;
+          })
+          .filter(Boolean)
+          .join("\n"),
 
       cta_band: () =>
         `<section id="help" class="section cta-band" aria-labelledby="help-title"><div class="wrap"><h2 id="help-title">${t("help.title")}</h2><p class="section-lead">${t("help.body")}</p><div class="cta-row"><a class="btn" href="${href("download")}">${t("hero.download")}${icon("download", "icon-arrow")}</a><a class="btn btn-secondary" href="${DISCORD}">${logo("discord")}${t("help.discord")}</a><a class="text-link" href="${FIELD_REPORT}">${t("help.feedback")}${icon("arrow", "icon-arrow")}</a></div></div></section>`,
@@ -425,7 +707,7 @@ export function build(argv = process.argv.slice(2)) {
         [
           ["home", "nav.home"],
           ["download", "nav.download"],
-          ["new", "nav.new"],
+          ["changelog", "nav.changelog"],
           ["questions", "nav.faq"],
           ["about", "nav.about"],
           ["privacy", "nav.privacy"],
@@ -463,7 +745,7 @@ export function build(argv = process.argv.slice(2)) {
 
       v5_pill: () =>
         announcing
-          ? `<a class="v5-pill" href="${href("new#v5")}"><span class="v5-dot" aria-hidden="true"></span><span>${t("v5.pill")}</span><span aria-hidden="true">·</span><time datetime="${isoDay(opens)}">${escapeHTML(inZone({ weekday: "long", day: "numeric", month: "long" }).format(opens))}</time>${icon("arrow", "icon-arrow")}</a>`
+          ? `<a class="v5-pill" href="${href("changelog#v5")}"><span class="v5-dot" aria-hidden="true"></span><span>${t("v5.pill")}</span><span aria-hidden="true">·</span><time datetime="${isoDay(opens)}">${escapeHTML(inZone({ weekday: "long", day: "numeric", month: "long" }).format(opens))}</time>${icon("arrow", "icon-arrow")}</a>`
           : "",
 
       v5_section: () => (announcing ? v5Section() : ""),
@@ -501,17 +783,28 @@ export function build(argv = process.argv.slice(2)) {
 <p class="v5-foot">${t("v5.foot")}</p>
 </div></section>`;
 
-    const navKeys = { new: "new", download: "download", questions: "faq", about: "about" };
+    const navKeys = {
+      changelog: "changelog",
+      download: "download",
+      questions: "faq",
+      about: "about",
+    };
     const navigation = (mobile) =>
       Object.entries(navKeys)
         .map(
           ([id, key]) =>
-            `<a href="${href(id)}"${page.id === id ? ' aria-current="page"' : ""}>${id === "new" && announcing ? '<span class="nav-dot" aria-hidden="true"></span>' : ""}${t(`nav.${key}`)}</a>`,
+            `<a href="${href(id)}"${page.id === id ? ' aria-current="page"' : ""}>${id === "changelog" && announcing ? '<span class="nav-dot" aria-hidden="true"></span>' : ""}${t(`nav.${key}`)}</a>`,
         )
         .concat(
           mobile
-            ? [`<a href="${GITHUB}">${logo("github")}<span lang="en">GitHub</span></a>`]
-            : [`<a class="nav-icon" href="${GITHUB}" aria-label="${t("nav.github")}">${logo("github")}</a>`],
+            ? [
+                `<a href="${DISCORD}">${logo("discord")}<span lang="en" dir="ltr">Discord</span></a>`,
+                `<a href="${GITHUB}">${logo("github")}<span lang="en" dir="ltr">GitHub</span></a>`,
+              ]
+            : [
+                `<a class="nav-discord" href="${DISCORD}">${logo("discord")}<span lang="en" dir="ltr">Discord</span></a>`,
+                `<a class="nav-icon" href="${GITHUB}" aria-label="${t("nav.github")}">${logo("github")}</a>`,
+              ],
         )
         .join("");
 
@@ -538,26 +831,82 @@ export function build(argv = process.argv.slice(2)) {
             operatingSystem: "Windows, macOS, Linux (Ubuntu 24.04)",
             description: meta.description,
             softwareVersion: version,
+            datePublished: release.publishedAt.slice(0, 10),
             inLanguage: language.lang,
             url: canonical,
             downloadUrl: release.url,
+            releaseNotes: `${siteUrl}/${language.id}/changelog/`,
             screenshot: `${siteUrl}/assets/video/theia-install-tour-poster.webp`,
             isAccessibleForFree: true,
             offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+            sameAs: [GITHUB, DISCORD],
             license: [
               "https://polyformproject.org/licenses/noncommercial/1.0.0",
               "https://www.gnu.org/licenses/gpl-3.0.html",
             ],
           }
-        : {
-            "@context": "https://schema.org",
-            "@type": "WebPage",
-            name: meta.title,
-            description: meta.description,
-            inLanguage: language.lang,
-            url: canonical,
-            isPartOf: { "@type": "WebSite", name: "Theia", url: `${siteUrl}/` },
-          };
+        : page.id === "questions"
+          ? {
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              name: meta.title,
+              description: meta.description,
+              inLanguage: language.lang,
+              url: canonical,
+              isPartOf: { "@type": "WebSite", name: "Theia", url: `${siteUrl}/` },
+              mainEntity: catalogue.faq.items.map((item) => ({
+                "@type": "Question",
+                name: item.question,
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: item.answer,
+                },
+              })),
+            }
+          : page.id === "changelog"
+            ? {
+                "@context": "https://schema.org",
+                "@type": "WebPage",
+                name: meta.title,
+                description: meta.description,
+                inLanguage: language.lang,
+                url: canonical,
+                isPartOf: {
+                  "@type": "WebSite",
+                  name: "Theia",
+                  url: `${siteUrl}/`,
+                },
+                mainEntity: {
+                  "@type": "ItemList",
+                  numberOfItems: visibleReleases.length,
+                  itemListOrder: "https://schema.org/ItemListOrderDescending",
+                  itemListElement: visibleReleases.map((item, index) => {
+                    const copy = catalogue.changelog.releases[item.tag];
+                    const id = item.tag.replaceAll(".", "-");
+                    return {
+                      "@type": "ListItem",
+                      position: index + 1,
+                      name: `${item.tag} — ${copy.title}`,
+                      description: copy.summary,
+                      url: `${canonical}#${id}`,
+                    };
+                  }),
+                },
+              }
+            : {
+                "@context": "https://schema.org",
+                "@type": "WebPage",
+                name: meta.title,
+                description: meta.description,
+                inLanguage: language.lang,
+                url: canonical,
+                isPartOf: {
+                  "@type": "WebSite",
+                  name: "Theia",
+                  url: `${siteUrl}/`,
+                },
+                ...(page.id === "about" ? { sameAs: [GITHUB, DISCORD] } : {}),
+              };
     const tokens = {
       lang: language.lang,
       dir: language.dir,
@@ -658,8 +1007,17 @@ export function build(argv = process.argv.slice(2)) {
   const english = languages.find((language) => language.id === "en");
   if (!english) throw new Error("the English entry catalogue is required");
   render(english, pages[0], true);
-  for (const language of languages)
+  for (const language of languages) {
     for (const page of pages) render(language, page);
+    rendered.push({
+      path: `${language.id}/new/index.html`,
+      page: renderLegacyNewRedirect(
+        language,
+        catalogues[language.id],
+        siteUrl,
+      ),
+    });
+  }
 
   const dist = join(here, "dist");
   rmSync(dist, { recursive: true, force: true });
@@ -725,8 +1083,23 @@ export function build(argv = process.argv.slice(2)) {
       siteUrl,
     ),
   );
+  const agentArtifacts = buildAgentArtifacts({
+    siteUrl,
+    languages,
+    pages,
+    english: catalogues.en,
+    release,
+    licence,
+    announcing,
+    announcement,
+    visibleReleases,
+  });
+  writeFileSync(join(dist, "llms.txt"), agentArtifacts.llmsTxt);
+  writeFileSync(join(dist, "llms-full.txt"), agentArtifacts.llmsFullTxt);
+  writeFileSync(join(dist, "releases.json"), agentArtifacts.releasesJson);
+
   console.log(
-    `build: ${release.tag}; ${pages.length} pages x ${languages.length} languages and the English root; ${siteUrl}/ -> ${relative(process.cwd(), dist)}`,
+    `build: ${release.tag}; ${pages.length} pages x ${languages.length} languages, ${languages.length} legacy redirects, agent indexes and the English root; ${siteUrl}/ -> ${relative(process.cwd(), dist)}`,
   );
   if (argv.includes("--check")) {
     const result = spawnSync(

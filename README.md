@@ -11,37 +11,148 @@
 <p align="center">
   <a href="https://github.com/Benitoow/theia-media/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Benitoow/theia-media?style=flat-square&color=C8A24A"></a>
   <a href="LICENSE"><img alt="Free for noncommercial use: PolyForm Noncommercial from 4.0, GPL-3.0 up to 3.4" src="https://img.shields.io/badge/licence-PolyForm%20NC%20(4.0%2B)%20%C2%B7%20GPL--3.0%20(%E2%89%A43.4)-555?style=flat-square"></a>
-  <a href="#theia-5-is-on-its-way"><img alt="Theia 5: planned for 6 to 8 November 2026" src="https://img.shields.io/badge/Theia%205-6%E2%80%938%20November%202026-C8A24A?style=flat-square"></a>
+  <a href="#theia-50-the-biggest-update-theia-has-ever-had"><img alt="Theia 5.0: the biggest update Theia has ever had" src="https://img.shields.io/badge/Theia-5.0-C8A24A?style=flat-square"></a>
+  <a href="https://discord.gg/5E55F7XFZp"><img alt="Join the Discord" src="https://img.shields.io/badge/Discord-join%20us-5865F2?style=flat-square"></a>
   <img alt="Windows x64" src="https://img.shields.io/badge/Windows-x64-555?style=flat-square">
   <img alt="Ubuntu 24.04 x64" src="https://img.shields.io/badge/Ubuntu%2024.04-x64-555?style=flat-square">
   <img alt="macOS: Apple Silicon and Intel" src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-555?style=flat-square">
+  <img alt="Android phone, and Android TV in beta" src="https://img.shields.io/badge/Android-phone%20%C2%B7%20TV%20beta-555?style=flat-square">
 </p>
 
 <p align="center">
   <a href="https://theia-media.app/">Website</a> ·
-  <a href="#theia-5-is-on-its-way">Theia 5</a> ·
+  <a href="#theia-50-the-biggest-update-theia-has-ever-had">Theia 5.0</a> ·
+  <a href="#see-it">Screenshots</a> ·
   <a href="#downloads">Downloads</a> ·
-  <a href="docs/releases/v4.4.6.md">4.4.6 release notes</a> ·
+  <a href="docs/releases/v5.0.0.md">5.0 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/5E55F7XFZp">Discord</a>
 </p>
 
-![The home screen of the native player: navigation with friends around, the film you were watching and the rows below it](docs/screenshots/home.webp)
+![The home screen of Theia: navigation with friends around, the film you were watching, and the rows below it](docs/screenshots/home.webp)
 
-*The home screen of the native player, in English, on a sample library of 132 recent films and 40 series with friends around. How these pictures were made, and what is real in them, is in [docs/screenshots](docs/screenshots/README.md).*
+*The home screen of Theia 5.0, in English, on a sample library of 132 recent films and 40 series with friends around. How every picture on this page was made, and what is real in it, is in [docs/screenshots](docs/screenshots/README.md).*
 
-Theia turns folders of films and series into a private cinema. A small server
-looks after your library, a native desktop player plays it, and your friends can
-see who is around and watch with you. There is no cloud account, no telemetry, no
-Docker stack and no external database to install.
+Theia turns the folders of films and series on your computers, your NAS and your
+Google Drive into one private cinema. A small server looks after your library, a
+native player plays it on your desktop, an Android application plays it on your phone
+and, in beta, on your television, and your friends can see who is around and watch
+with you. There is no cloud account, no telemetry, no Docker stack and no external
+database to install.
 
-Theia still contacts three external services: **TMDB** for film and series
-metadata, **GitHub Releases** for updates, and **Firebase Realtime Database**
-(project `theia-friends`, with anonymous authentication) for friend codes,
-profile photos, requests, presence and opinions. Firebase connects when the
-server starts, even before you add a friend; see
+Theia still contacts three external services by itself: **TMDB** for film and
+series metadata, **GitHub Releases** for updates, and **Firebase Realtime
+Database** (project `theia-friends`, with anonymous authentication) for friend
+codes, profile photos, requests, presence and opinions. Firebase connects when
+the server starts, even before you add a friend. A fourth one exists only if you
+connect it: **Google Drive**, through your own Google client. See
 [Privacy, data and limitations](#privacy-data-and-limitations).
+
+| One download | Built for choosing | Private by default |
+| --- | --- | --- |
+| One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud account. TMDB supplies metadata, GitHub Releases supplies updates, and Firebase carries the friends service described above. |
+
+## Theia 5.0: the biggest update Theia has ever had
+
+> [!IMPORTANT]
+> **Theia 5.0 is the first release of the V5 generation, and the largest one Theia
+> has ever shipped.** It turns your computers, your NAS and your cloud into one
+> library with one profile, and it brings an **Android application** for your phone
+> and a **beta** on Android TV and Google TV. It is published on the release page
+> once its final checks pass. It is a **shell release**: run the 5.0 setup once.
+> [Read the 5.0 release notes](docs/releases/v5.0.0.md) for what was checked on
+> which system, and what was not.
+
+Theia 5 is about one thing: **everything you own, in one library.** Your computers,
+your NAS and your cloud become a single library, with one profile that follows you
+from one to the other, on the desktop, on your phone and on your sofa.
+
+### 5.0 in numbers
+
+Every figure below was counted or measured on the 5.0 tree on 7 November 2026.
+
+| | Theia 5.0 |
+| --- | --- |
+| **Work since 4.4.6** | **75 commits, 478 files touched, 74,909 lines added** in under two weeks (26 October to 7 November) |
+| **Code alone** (Go, Rust, Kotlin, TypeScript, Svelte, JavaScript, CSS) | **289 files and 56,128 lines added**: two and a half times the code of the previous largest release (3.3: 21,461 lines, 130 files) |
+| **Tests** | **913 Go test functions and 109 Rust tests**, plus the browser benches that drive the real interface at three window sizes |
+| **Decisions on record** | **238**, 171 of them still in force: every choice has its reasoning written down |
+| **One server, one file** | A single binary of **about 20 MB**: no Docker, no database to install, no CGO |
+| **Quick to answer** | On a library of **132 films and 40 series**, the home screen answered in **5 ms** (median), the whole film list in **6 ms** and a search in **5 ms**; the 95th percentile stayed **under 12 ms** (curl against a throwaway server on a laptop) |
+| **Where it runs** | Windows, macOS and Linux on the desktop, plus an Android phone application and a television beta: **one library on all of them** |
+| **Languages** | The application in French and English; this project's website in **ten** languages |
+| **What leaves your computer** | TMDB, GitHub Releases, the friends service, and Google Drive only if you connect it. **Telemetry: none. Accounts: none.** |
+
+*What these numbers do not say.* 5.0 is the largest release by code and by files; it
+is not the one with the most commits (3.3 had 75), and no speed-up over 4.4.6 was
+measured, so none is claimed. The timings above are not a benchmark against any other
+server.
+
+### Thank you
+
+Theia has **5 GitHub stars**, and every one of them is somebody who looked at a small
+project and decided it was worth following. **Thank you.** To those five, and to
+everyone who follows Theia, tests it, reports what is wrong and tells a friend: you are
+why a one-person project can ship a release this big.
+
+- **Join the [Discord server](https://discord.gg/5E55F7XFZp).** It is where the
+  field reports land, where questions get answered, and where you will hear things
+  first. There is some heavy news coming.
+- **A [GitHub star](https://github.com/Benitoow/theia-media)** costs nothing and helps
+  this project reach the next person.
+
+### 5.0 is polished. It is not perfect.
+
+5.0 was built, checked and polished to the last detail. And still: nothing that
+exists is free of bugs, and this release is the biggest one so far, so it would be
+strange if it were. If you
+meet one, **tell us** on [Discord](https://discord.gg/5E55F7XFZp) or in a
+[field report](https://github.com/Benitoow/theia-media/issues/new?template=field_test.yml),
+with what you did and what you saw. Reports from real households shape the next
+updates.
+
+### Stay tuned: 5.1
+
+**5.1 is already in the works,** and it is a big step on top of 5.0. We will not say
+more yet. Stay connected: the [Discord](https://discord.gg/5E55F7XFZp) and this page
+are where it will be announced. Thank you for following Theia.
+
+### What arrives with 5.0
+
+| What arrives with 5.0 | What it means |
+| --- | --- |
+| **One library, many places** | Films, Series, Search and Home combine your computers, NAS folders and cloud. A small line says where each copy lives. |
+| **One profile that follows you** | Link your profile across your servers. What you watched and where you stopped follows you from one server to the next. |
+| **Google Drive as a source** | Stream from the Drive folders you choose, in short pieces. Until Google approves Theia's own connection, connecting may ask for your own Google client. |
+| **NAS folders** | A NAS share mounted on a server joins the library, and your history survives if it sleeps. The UGREEN test kit is unverified on a real UGREEN so far. |
+| **Servers and sources, in settings** | Add, rename and reconnect servers and sources on one settings page, in the player and in the browser, each with a small icon: tower, laptop, NAS or cloud. Pair a machine with a short code. |
+| **One page for every title** | The same title page whichever source holds the file: play, resume, mark as watched, leave an opinion and preview a scene. |
+| **Watched means watched** | Anti-spoil shows an episode's artwork once you pass its last fifth, and a file's own ending-credits chapter counts as watched. |
+| **An update that keeps everything** | Upgrading from 4.4.6 keeps your library, profiles and history. Checked on a real 4.4.6 installation, rollback included. |
+| **The pointer leaves the picture** | While a film plays and the controls have gone, the mouse pointer goes with them. It stays on the connect screen, in the library, on a paused film and as soon as you move it again. |
+| **Your library on your phone** | An Android application connects to your server and plays your library: the same profile, the places where you stopped, controls drawn for the hand and picture-in-picture. Download the APK from the release page; it is signed by the maintainer's key, is not on Google Play and does not update itself. |
+| **Android TV and Google TV (beta)** | The same application opens a television presentation you drive with the remote, and keeps AC-3, E-AC-3 and DTS sound as it is when your television or receiver can take it. It is a beta: expect rough edges and tell us what you find. |
+| **Hold to run at 2×** | Hold the play/pause key while a film plays: it runs at double speed, a small `2×` badge says so, and letting go returns to normal. A tap is still play/pause; a watch party keeps one speed for everybody. |
+
+**Not in 5.0.** A phone that reads your NAS or Drive without a server, casting,
+Google TV's home rows and away-from-home use on Android are not part of this release,
+and neither are native **Windows and Linux ARM64** apps (older ARM64 setups stay
+linked and labelled as earlier versions). Offline downloads remain on hold.
+
+Windows is checked first. The [5.0 release notes](docs/releases/v5.0.0.md) say what
+was checked on which system, and what was not.
+
+> [!NOTE]
+> **Theia is free.** The server, the library, ordinary viewing and everything in 5.0
+> cost nothing, and every change reaches everyone for free for a duration that is not
+> decided. Which later features might become paid, if any, has not been decided
+> either; it will be settled in the open and announced well before it happens.
+> Nothing is paid today.
+
+## See it
+
+### On the desktop
 
 <table>
   <tr>
@@ -56,92 +167,49 @@ server starts, even before you add a friend; see
 
 *Further down the home screen: where you stopped, what was added, and the best rated.*
 
-| One download | Built for choosing | Private by default |
-| --- | --- | --- |
-| One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud account. TMDB supplies metadata, GitHub Releases supplies updates, and Firebase carries the friends service described above. |
-
-## Theia 5 is on its way
-
-> [!IMPORTANT]
-> **Theia 5 is planned for Friday 6 to Sunday 8 November 2026** (Europe/Paris).
-> That is a target, not a promise: it is published only when its final checks
-> pass. Until then the downloads below are 4.4.6, and the live countdown is on
-> [theia-media.app](https://theia-media.app/).
-
-Theia 5 is about one thing: **everything you own, in one library.** Your
-computers, your NAS and your cloud become a single library, with one profile that
-follows you from one to the other.
-
-| What arrives with 5.0 | What it means |
-| --- | --- |
-| **One library, many places** | Films, Series, Search and Home combine your computers, NAS folders and cloud. A small line says where each copy lives. |
-| **One profile that follows you** | Link your profile across your servers. What you watched and where you stopped follows you from one server to the next. |
-| **Google Drive as a source** | Stream from the Drive folders you choose, in short pieces. Until Google approves Theia's own connection, connecting may ask for your own Google client. |
-| **NAS folders** | A NAS share mounted on a server joins the library, and your history survives if it sleeps. The UGREEN test kit is unverified on a real UGREEN so far. |
-| **Servers and sources, in settings** | Add, rename and reconnect servers and sources on one settings page, each with a small icon: tower, laptop, NAS or cloud. Pair a machine with a short code. |
-| **One page for every title** | The same title page whichever source holds the file: play, resume, mark as watched, leave an opinion and preview a scene. |
-| **Watched means watched** | Anti-spoil shows an episode's artwork once you pass its last fifth, and a file's own ending-credits chapter counts as watched. |
-| **An update that keeps everything** | Upgrading from 4.4.6 keeps your library, profiles and history. Checked on a real 4.4.6 installation, rollback included. |
-
-**Not in 5.0.** Planned, but not promised for this release; each one is announced
-once it is proven on real hardware: an **Android app** (not started yet), **Android
-TV and Google TV** (still being studied), and native **Windows and Linux ARM64**
-apps (older ARM64 setups stay labelled as earlier versions).
-
-Windows is checked first. The 5.0 release notes will say what was checked on which
-system, and what was not.
-
-## Theia 4.4.6
-
-> [!IMPORTANT]
-> **Theia is free, and 4.4.6 is a maintenance update of the V4 line.** The
-> server, the library, ordinary viewing and everything in this release cost
-> nothing, and every change reaches everyone for free for a duration that is not
-> decided. Which later features might become paid, if any, has not been decided
-> either; it will be settled in the open and announced well before it happens.
-> Nothing is paid today.
-
-4.4.6 repairs remote-access activation when another program occupies its UDP
-port and restores automatic router rules that disappear while the server runs.
-Server administration opens in your browser again, and player controls can
-hide after returning to a maximized application window. It includes the earlier
-4.4.x fixes and no V5 features. [Read the 4.4.6 release notes](docs/releases/v4.4.6.md).
-
-**Run the 4.4.6 setup once**, or use Theia's setup-update button: the
-administration fix requires the new native player. A server-only update does
-not replace it. Your library, profiles, watchlists and history stay in place.
-
-- **A timeline you can read.** A still of the exact scene follows the pointer along
-  the playback bar, with its time, and nothing seeks until you click.
-- **Episodes that follow on.** *Skip opening* on a click, a cancellable 30-second
-  countdown to the next episode, a stop at the end of a season, and a sleep
-  timer. The markers are the chapters named in the file; Theia does not guess.
-- **Skip arrows that keep up:** 30 seconds by default, shown on the buttons, with
-  a choice of 10, 30 or 60.
-- **Settings in eight places,** including audio and subtitle choices remembered
-  per series, ordered languages, an audio output, interface scale, cache sizes
-  and editable shortcuts. Everything that was there is still there.
-- **Player updates are your choice.** Nothing is checked on its own until you
-  switch on *Automatic updates* or press *Check for updates*.
-- **Presence you can read, and private rooms.** Friends are online, inactive,
-  watching or offline; you can choose *Up for a film*, *Do not disturb* or
-  *Invisible*. A watch-party room admits only the friends its host invites.
-  Spoiler protection on a series page blurs the episodes you have not seen.
-
-![The playback bar of the native player with the pointer at 2:02:17: a still of that scene above the bar, the -30 s and +30 s buttons and the end time](docs/screenshots/player.webp)
-
-*The timeline preview: the pointer is at 2:02:17, nothing has seeked, and the scene
-at that second is drawn above the bar. The picture is a stand-in made from the
-film's own backdrop; see [docs/screenshots](docs/screenshots/README.md).*
-
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/series-detail.webp" alt="A series page with Spoiler protection switched on: two watched episodes sharp and the unfinished one blurred"></td>
-    <td width="50%"><img src="docs/screenshots/settings.webp" alt="Settings, Playback and series: when returning to a title, rewind on resume, and the forward and backward step of 10, 30 or 60 seconds"></td>
+    <td width="50%"><img src="docs/screenshots/search.webp" alt="Search for 'the': 34 films as a grid of cards, with the friends around in the navigation bar"></td>
+    <td width="50%"><img src="docs/screenshots/series.webp" alt="All series: a grid of cards"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/series-detail.webp" alt="A series page: Severance, season two, an episode part-way with a Resume button, and the Spoiler protection switch"></td>
+    <td width="50%"><img src="docs/screenshots/settings.webp" alt="Settings, Overview: the server, the sources, the playback choices and privacy at a glance"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/profiles.webp" alt="Who's watching? Seven profiles, each with their own progress"></td>
+    <td width="50%"><img src="docs/screenshots/settings-playback.webp" alt="Settings, Playback and series: when returning to a title, rewind on resume, and the forward and backward step of 10, 30 or 60 seconds"></td>
   </tr>
 </table>
 
-*Spoiler protection on a series page, and the Playback settings.*
+*One search across films and series, the series page, the settings, and the profile chooser.*
+
+### On your phone
+
+<table>
+  <tr>
+    <td width="33%"><img src="docs/screenshots/phone-home.webp" alt="The Android application: the home screen, with the film you were watching and a Continue watching row"></td>
+    <td width="33%"><img src="docs/screenshots/phone-library.webp" alt="The Android application: all movies as a two-column grid"></td>
+    <td width="33%"><img src="docs/screenshots/phone-film.webp" alt="The Android application: a film page with a Resume button"></td>
+  </tr>
+</table>
+
+*The Android application, in a phone emulator against the same sample library.*
+
+### On your television (beta)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/tv-home.webp" alt="Theia on the TV: the home screen, with the focus ring on the Resume button"></td>
+    <td width="50%"><img src="docs/screenshots/tv-row.webp" alt="Theia on the TV: the focus ring on a card of the Continue watching row"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/tv-library.webp" alt="Theia on the TV: the movies grid, seven cards to a row, with the focus ring on one"></td>
+    <td width="50%"><img src="docs/screenshots/tv-film.webp" alt="Theia on the TV: a film page with the focus ring on the Resume button"></td>
+  </tr>
+</table>
+
+*Theia on the TV is a **beta**. These pictures are from an Android TV emulator driven with the keys a remote sends; see [docs/screenshots](docs/screenshots/README.md).*
 
 ## Which program goes where
 
@@ -153,7 +221,8 @@ house, not on taste.
 | One computer that holds the films and is plugged into the screen | **All-in-one**, the default answer in the installer | It serves and it plays. The video stays on that computer, so playback is not limited by the network. |
 | A small machine in a cupboard or a NAS, and a television, a laptop or a desktop you watch on | **Server only** on that machine, then **player only** on each device you watch on | The server indexes, stores and streams; the player uses the sound and picture hardware of the machine in front of you, which is where the difference is heard. |
 | A computer that only watches, with the films held elsewhere | **Player only** | No library is scanned or stored locally. It asks the server for the catalogue and the files. |
-| A phone, tablet or television browser | **Nothing**; open the address the server prints in a browser | The web viewer remains available. Its viewing features are complete and no longer developed; server settings and administration are still maintained. |
+| An Android phone, or an Android TV / Google TV | The **Android application**: download `theia-android-5.0.0.apk` from the release page and point it at your server | Drawn for the hand on a phone and for the remote on a television (a beta); it plays what your server holds, and does not update itself. |
+| Any other phone, tablet or television browser | **Nothing**; open the address the server prints in a browser | The web viewer remains available. Its viewing features are complete and no longer developed; server settings and administration are still maintained. |
 
 The desktop downloads are **Windows x64**, **macOS** (Apple Silicon and Intel)
 and **Ubuntu 24.04 x64**. The **ARM64** setups, Windows and Ubuntu, are deferred
@@ -176,7 +245,8 @@ Other Linux distributions are not verified.
 - **A cinema that remembers people.** Local profiles keep separate progress,
   watched state and watchlists, and ask at startup who is watching. Profiles are
   household identities, not accounts; they have no passwords.
-- **Playback that remembers.** The player saves your server address, volume, mute
+- **Playback that remembers.** The player remembers the servers you have joined,
+  so the connect screen offers them one click away, and it saves volume, mute
   state and window size. Audio and subtitle choices apply to films and episodes,
   and are remembered per series. Series show resume progress and offer the next
   episode, with optional autoplay and time to cancel.
@@ -184,6 +254,11 @@ Other Linux distributions are not verified.
   Sound and picture capabilities depend on the operating system and the actual
   device: Windows can use supported bitstream outputs, while macOS and Linux use
   PCM. Linux uses software decoding and SDR rendering.
+- **A phone and a television.** The Android application plays your library on a
+  phone, drawn for the hand, and opens a television presentation (a beta) you drive
+  with the remote. It plays what your server holds, asks the server for a form the
+  device can read when a file is not one, and keeps AC-3, E-AC-3 and DTS sound as it
+  is when a television or receiver can take it.
 - **A server that adapts.** Direct play, remux and transcoding serve different
   client capabilities. The server remains a separate Go binary with SQLite and no
   graphical dependency.
@@ -202,9 +277,27 @@ Other Linux distributions are not verified.
   digest, runs the new player before replacing anything, and refuses while the
   player is open.
 
+Since 4.4, the player also gives you:
+
+- **A timeline you can read.** A still of the exact scene follows the pointer along
+  the playback bar, with its time, and nothing seeks until you click.
+- **Episodes that follow on.** *Skip opening* on a click, a cancellable 30-second
+  countdown to the next episode, a stop at the end of a season, and a sleep
+  timer. The markers are the chapters named in the file; Theia does not guess.
+- **Settings in eight places,** including audio and subtitle choices remembered
+  per series, ordered languages, an audio output, interface scale, cache sizes
+  and editable shortcuts.
+- **Player updates are your choice.** Nothing is checked on its own until you
+  switch on *Automatic updates* or press *Check for updates*.
+
+![The playback bar of the native player with the pointer at 2:02:17: a still of that scene above the bar, the -30 s and +30 s buttons and the end time](docs/screenshots/player.webp)
+
+*The timeline preview: the pointer is at 2:02:17, nothing has seeked, and the scene
+at that second is drawn above the bar. This picture was taken with 4.4.2 and is a
+stand-in made from the film's own backdrop; see [docs/screenshots](docs/screenshots/README.md).*
+
 Theia deliberately has no live TV, DVR, music library, plugins or multi-user
-permissions. Dedicated phone and TV apps have no announced date; those devices
-use the web viewer for now.
+permissions.
 
 ## Three-minute setup
 
@@ -246,9 +339,11 @@ Each profile has a **friend code**. Open the friends sheet in the player, copy
 your code to somebody, and enter theirs.
 
 1. Entering a code sends a request. You are told at once which profile it
-   reached, or that the person does not exist.
-2. The other side sees the request and accepts or declines. Nobody pastes a code
-   back.
+   reached, or that the person does not exist, and the person's name and picture
+   are shown straight away - even if their computer is off - while the request
+   waits. The picture is what a profile already publishes for friends.
+2. The other side sees the request, with your name and picture, and accepts or
+   declines. Nobody pastes a code back.
 3. Once you are friends, each of you sees the other's current film or episode as
    a card, for ninety seconds after it stops, unless they chose to hide it.
 
@@ -259,9 +354,9 @@ nothing to type, and no port has to be open. A request waits there while your
 friend is offline, and what you are watching reaches them within a second or two.
 Codes read `THEIA2-XXXXX-XXXXX`; an older code still works.
 
-<p align="center"><img src="docs/screenshots/friends.webp" width="420" alt="The Friends sheet: my status with six choices, then the friends grouped by what they are doing"></p>
+<p align="center"><img src="docs/screenshots/friends.webp" width="420" alt="The Friends sheet: my status, then the friends grouped by what they are doing: in a screening, online, do not disturb, inactive and offline"></p>
 
-*The friends sheet, with the six choices of your own status open. The friends are invented.*
+*The friends sheet. The friends are invented: Noor is watching a film, Sam and Theo are online, Lina asked not to be disturbed, Jade is inactive and Mina is offline.*
 
 **Presence.** The library bar shows how many friends are around, with their faces
 beside the number. A friend is *online*, *inactive* (nobody has touched their
@@ -288,8 +383,8 @@ in a private room needs 4.4.2.
 
 ## Downloads
 
-Every download below is a complete setup: the server, the launcher, the native
-player and its media engine, for all-in-one, server-only or player-only. **The
+Every desktop download below is a complete setup: the server, the launcher, the
+native player and its media engine, for all-in-one, server-only or player-only. **The
 setup looks for a newer setup before it installs**, so the file you downloaded,
 kept or sent to a friend always installs the newest Theia; offline, it installs
 what it carries.
@@ -300,13 +395,14 @@ what it carries.
 | macOS Apple Silicon | [Apple Silicon setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-darwin-arm64) | **supported** |
 | macOS Intel | [Intel Mac setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-darwin-amd64) | **supported** |
 | Ubuntu 24.04 x64 | [Linux x64 setup](https://github.com/Benitoow/theia-media/releases/latest/download/theia-setup-linux-amd64) | **supported** |
-| Windows ARM64 | [Windows ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-windows-arm64.exe) (4.2.1) | 4.4 deferred; native checks pending |
-| Ubuntu 24.04 ARM64 | [Linux ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-linux-arm64) (4.2.1) | 4.4 deferred; native checks pending |
+| Android phone, and Android TV / Google TV | `theia-android-5.0.0.apk` on the [release page](https://github.com/Benitoow/theia-media/releases/latest) | phone **supported**, television **beta**; Android 8.0 or later, not on Google Play, does not update itself |
+| Windows ARM64 | [Windows ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-windows-arm64.exe) (4.2.1) | not part of 5.0; native checks pending |
+| Ubuntu 24.04 ARM64 | [Linux ARM64 setup](https://github.com/Benitoow/theia-media/releases/download/v4.2.1/theia-setup-linux-arm64) (4.2.1) | not part of 5.0; native checks pending |
 
-**Upgrading from 4.4.x:** run the 4.4.6 setup once, or use Theia's setup-update
-button. It replaces the native player with the level-4 shell required by this
-release and keeps your data. **Upgrading from 3.x:** run the new setup. It reads
-the installation, updates it in place, closes running programs and restarts the
+**Upgrading from 4.x:** run the 5.0 setup once, or use Theia's setup-update
+button. It replaces the native player with the shell this release carries and
+keeps your data. **Upgrading from 3.x:** run the new setup. It reads the
+installation, updates it in place, closes running programs and restarts the
 server; your data stays. An automatic server update alone does not replace an
 older player.
 
@@ -343,19 +439,18 @@ decode is an excellent way to purchase an idle CPU.
 
 | | Minimum for direct play | Recommended when conversion is likely |
 | --- | --- | --- |
-| CPU | Any 64-bit `x86_64` processor or Apple chip; the ARM64 Windows and Ubuntu setups return in early November, see [Downloads](#downloads) | 4 recent CPU cores, or a supported hardware H.264 encoder |
+| CPU | Any 64-bit `x86_64` processor or Apple chip; the ARM64 Windows and Ubuntu setups are not part of 5.0 and stay linked as earlier versions, see [Downloads](#downloads) | 4 recent CPU cores, or a supported hardware H.264 encoder |
 | Free RAM | 512 MB | 2 GB |
 | App disk, excluding media | 250 MB | 1 GB for a larger artwork cache and working room |
 | Network | Faster than the media file's bitrate | Gigabit Ethernet for high-bitrate 4K remuxes |
-| Viewer | A supported desktop app, or the phone/TV web viewer | A device whose tested decoding and output capabilities match your library |
+| Viewer | A supported desktop app, the Android application, or the phone/TV web viewer | A device whose tested decoding and output capabilities match your library |
 
-The V3.2 Windows candidate measured **27.3 MB of resident memory** before a
-100-cycle stream endurance run and **32.9 MB** at its observed end and peak. A
-separate 10,000-film catalogue benchmark ended at **44.0 MB** of working set;
-the workloads are not interchangeable. The binary is **17.7 MB** and the
-installed FFmpeg runtime is about **87.9 MB**. Hardware encoders and decoders
-are tested on the host before Theia chooses one. Software conversion still
-needs enough CPU to remain above real time.
+The 5.0 server is a single binary of about 20 MB. Serving a sample library of 132
+films and 40 series to the player and a browser for a while, a throwaway 5.0 server
+held about 87 MB of working set on Windows; that is a sample taken at one moment, not
+an endurance run. Hardware encoders and decoders are tested on the host before Theia
+chooses one. Software conversion still needs enough CPU to remain above real time.
+FFmpeg, downloaded only when conversion is needed, comes on top of that.
 
 Windows x64 is the maintainer's real-device validation platform: it is where the
 app has played his own library on hardware he owns. Release CI builds all six
@@ -385,7 +480,7 @@ would be advertising wearing a Markdown costume.
 | Cost | Free (noncommercial licence from 4.0; GPL-3.0 up to 3.4); later optional extras are not decided | Local personal video is free; remote video and hardware transcoding use paid passes | Free, GPL-2.0, no premium tier | Free tier; several server and app features use Premiere |
 | Identity | No account; passwordless local profiles, friends by code | Plex account model | Local users and permissions | Local users; optional Emby Connect |
 | Server setup | One native binary for the server, no Docker or external runtime; the desktop player is a separate native application | Installers and NAS packages | Native packages, containers and NAS options | Installers, containers and many NAS options |
-| Clients | A native desktop player, and a responsive browser for administration and server settings | Browser plus wide TV, mobile, desktop and console coverage | Browser plus official and community apps | Browser plus TV and mobile apps |
+| Clients | A native desktop player, an Android application for phones and, in beta, Android TV, and a responsive browser for administration and server settings | Browser plus wide TV, mobile, desktop and console coverage | Browser plus official and community apps | Browser plus TV and mobile apps |
 | Hardware transcoding | Included; host capabilities are probed | Plex Pass | Included | Generally Premiere, with documented device exceptions |
 | Remote model | Embedded WireGuard, device keys, viewer-only routes | Account-based remote streaming; a paid pass is required for personal video away from home | You configure networking or a proxy | Manual access or Emby Connect |
 | Live TV, music, plugins | No | Yes | Yes | Yes |
@@ -414,6 +509,14 @@ The only external services are:
 - **Firebase Realtime Database**, project `theia-friends`, and Firebase's
   anonymous sign-in and token renewal: the friends service only (friend codes,
   profile photos, requests, presence and opinions).
+- **Google Drive**, only when you connect it: your own Google client, the consent
+  you give, and the folders or items you choose. With the Google picker Theia sees
+  only the items you selected; in the read-only mode it lists what that grant
+  covers. Files are read in bounded pieces for browsing, playback and previews,
+  nothing is uploaded, and the refresh token is sealed locally until you revoke it
+  in your Google account or in Theia.
+
+The Android application talks only to your own Theia server.
 
 **Firebase connects when the server starts**, opens an inbox event stream and
 publishes directory entries for **all local profiles**, even before a friend is
@@ -439,7 +542,11 @@ removal notice for the other side until their server has processed it. Your
 library catalogue and viewing history are not uploaded. These choices belong to a
 local profile and can be changed in the Privacy settings.
 
-There is no telemetry endpoint, analytics SDK, cloud account or frontend CDN.
+There is no telemetry endpoint, analytics SDK, Theia cloud account or frontend
+CDN. Google Drive is the only storage provider Theia can read besides your own
+folders and servers; it is your account and your client, and removing the
+connection revokes the grant.
+
 Remote access and watch parties use encrypted WireGuard traffic between your
 servers. Discord Rich Presence, when you switch it on, speaks only to the Discord
 client on your own computer.
@@ -456,6 +563,10 @@ file. They are not detected from picture or sound, and many files have none.
 Each release has its own notes, with what changed, what to do when updating and
 what was and was not checked.
 
+- **[5.0.0](docs/releases/v5.0.0.md)** — the biggest update so far: one library across
+  computers, NAS and Google Drive, one profile that follows you, the title page for
+  every source, an Android application for your phone and a television beta, the
+  pointer that leaves with the controls and the hold-to-run-at-2× gesture.
 - **[4.4.6](docs/releases/v4.4.6.md)** — remote-access recovery, working server
   administration and player controls that hide again after returning to the app.
 - **[4.4.5](docs/releases/v4.4.5.md)** — a small profile photo
@@ -493,27 +604,29 @@ what was and was not checked.
 - **[3.4 and earlier](docs/releases/v3.4.0.md)** — the V3 generation, up to the
   native desktop apps.
 
-**After 4.4.5.** The next step is **Theia 5.0**, which looks outward: cloud and
-servers, and storage in the cloud, the things that surround Theia. Whether it also
-opens Theia to mods or plugins is not decided, and there is no date. **There will be
-no account and no telemetry**, and for now every feature of V4 stays free. Comments
-and likes or dislikes on films remain a direction without a date; direct messages
-and calls are out of scope.
+**After 5.0.** The V5 generation is not finished: the Android application's autonomous
+mode (a phone reading your NAS or Drive without a server) is not built, the ARM64
+desktop builds remain to be proven, and a second cloud provider would be its own
+decision. **5.1 is on its way and is a big step up from 5.0: stay tuned.** There is no
+account and no telemetry, and every feature of V5 stays free for noncommercial use.
+Mods or plugins are not decided, and there is no date; direct messages and calls are
+out of scope.
 
 ## Help test and shape Theia
 
 All desktop packages pass native installation and generated-film checks. Those
 tests cannot cover every screen, audio device or household library, so real
-reports matter — on **Windows x64**, **macOS** and **Ubuntu 24.04 x64**, and on
-ARM64 once its setups return in early November. A try of **friends and a private
-room between two households** is worth as much on any of them. Tell us what
-worked as well as what failed.
+reports matter — on **Windows x64**, **macOS** and **Ubuntu 24.04 x64** (the ARM64
+setups are not part of 5.0 and stay linked as earlier versions), and on **Android**,
+on a phone and on a television. A try of **friends and a private room between two
+households**, a real NAS mount or a real Google Drive folder is worth as much on any
+of them. Tell us what worked as well as what failed.
 
 - [Join the field test](https://github.com/Benitoow/theia-media/issues/new?template=field_test.yml)
   and read the short [testing guide](docs/field-testing.md).
 - Talk to other users and testers on the [Discord server](https://discord.gg/5E55F7XFZp).
 - A [GitHub star](https://github.com/Benitoow/theia-media) helps this small
-  project reach more people. Thank you to everyone who already has.
+  project reach more people. **Thank you to everyone who already has.**
 
 ## Source code
 

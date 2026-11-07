@@ -1,7 +1,7 @@
-/* What's new: the announcement of a coming version while there is one (decisions
-   227 and 230), then the highlights of the latest release. Without script the
-   dates and the promise stand alone; the clock only appears when script can
-   fill it. Bone on ink, no gold, no pulse. */
+/* Changelog: the announcement of a coming version while there is one (decisions
+   227, 230 and 237), then every release from 3.3.0 onward grouped by generation.
+   Without script the dates and the promise stand alone; the clock only appears
+   when script can fill it. Bone on ink, no extra gold, no pulse. */
 .v5-section {
   padding-block-start: 0;
 }
@@ -172,40 +172,176 @@
   font-size: 0.875rem;
 }
 
-.news-section {
+/* Jump bar and generation-grouped release history (decision 237). */
+.changelog-jumps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.65rem;
+  margin-block-start: 2rem;
+}
+.jump-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-block-size: 44px;
+  max-inline-size: 100%;
+  padding: 0.45rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--bone);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background-color 180ms var(--ease),
+    border-color 180ms var(--ease);
+}
+.jump-pill:hover {
+  background: var(--raised);
+  border-color: var(--muted);
+  color: var(--bone);
+}
+.changelog-section {
+  position: relative;
   border-block-start: 1px solid var(--line);
 }
-.news-head {
+.changelog-head {
   display: flex;
+  flex-wrap: wrap;
   max-inline-size: none;
   justify-content: space-between;
   align-items: end;
-  gap: 2rem;
+  gap: 1.25rem 2rem;
 }
-.news-head h2 {
-  max-inline-size: 40rem;
-}
-.news-head > div {
+.changelog-head > div {
   min-inline-size: 0;
   max-inline-size: 100%;
 }
-.news-head > .text-link {
-  flex: none;
+.changelog-head h2 {
+  max-inline-size: 40rem;
+}
+.changelog-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+}
+.changelog-links .text-link {
   font-size: 0.9375rem;
 }
-.news-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 2rem clamp(2rem, 4vw, 3.5rem);
+.generation-group + .generation-group {
+  margin-block-start: clamp(4rem, 8vw, 6.5rem);
 }
-.news-item {
-  padding-block-start: 1.5rem;
-  border-block-start: 1px solid var(--line);
+.generation-head {
+  margin-block-end: 1.75rem;
 }
-.news-item p {
+.generation-head h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1.65rem, 3vw, 2.3rem);
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+.generation-lead {
+  max-inline-size: 42rem;
   margin-block-start: 0.75rem;
   color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+.release-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.release-entry {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  align-items: start;
+  gap: 1.25rem clamp(2rem, 4.5vw, 3.75rem);
+  min-inline-size: 0;
+  padding-block: clamp(1.85rem, 3.6vw, 2.6rem);
+  border-block-start: 1px solid var(--line);
+}
+.release-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  min-inline-size: 0;
+}
+.release-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  max-inline-size: 100%;
+}
+.release-tag,
+.release-current {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.7rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--bone);
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+.release-current {
+  border-color: var(--bone);
+  background: var(--raised);
+  font-size: 0.75rem;
+}
+.release-date {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+.release-notes-link {
+  font-size: 0.875rem;
+  color: var(--parchment);
+}
+.release-body {
+  min-inline-size: 0;
+}
+.release-body h4 {
+  color: var(--bone);
+  font-size: clamp(1.18rem, 2vw, 1.4rem);
+  font-weight: 500;
+  line-height: 1.32;
+  text-wrap: balance;
+}
+.release-summary {
+  max-inline-size: 46rem;
+  margin-block-start: 0.65rem;
+  color: var(--parchment);
+  font-size: 1rem;
+  line-height: 1.68;
+}
+.release-changes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.55rem;
+  max-inline-size: 46rem;
+  margin: 1rem 0 0;
+  padding-inline-start: 1.25rem;
+  list-style-type: disc;
+  color: var(--muted);
   font-size: 0.9375rem;
+  line-height: 1.68;
+}
+.release-changes li {
+  min-inline-size: 0;
+}
+.release-changes li::marker {
+  color: var(--line-hover);
 }
 
 html:lang(ar) .v5-label,
@@ -230,31 +366,41 @@ html:lang(ar) .v5-num,
 html:lang(ur) .v5-num,
 html:lang(hi) .v5-num,
 html:lang(bn) .v5-num,
-html:lang(zh-Hans) .v5-num {
+html:lang(zh-Hans) .v5-num,
+html:lang(ar) .generation-head h3,
+html:lang(ur) .generation-head h3,
+html:lang(hi) .generation-head h3,
+html:lang(bn) .generation-head h3,
+html:lang(zh-Hans) .generation-head h3 {
   letter-spacing: normal;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
 @media (max-width: 64rem) {
-  .news-head {
+  .changelog-head {
     align-items: start;
     flex-direction: column;
   }
-  .news-head > .text-link {
-    margin-block-start: -0.5rem;
-  }
   .v5-later-list {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 56rem) {
+  .release-entry {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.9rem;
+  }
+  .release-meta {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 1rem;
   }
 }
 @media (max-width: 52rem) {
   .v5-countdown,
   .v5-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .news-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 1.75rem;
   }
 }
 @media (max-width: 42rem) {
@@ -264,11 +410,12 @@ html:lang(zh-Hans) .v5-num {
     padding-block: 1.25rem;
   }
   .v5-item p,
-  .v5-later-item p {
+  .v5-later-item p,
+  .release-changes {
     font-size: 0.875rem;
   }
-  .news-item p {
-    font-size: 0.875rem;
+  .release-summary {
+    font-size: 0.9375rem;
   }
 }
 /* Four cells hold "minutes" and "segundos" down to 26rem; below it two rows of two

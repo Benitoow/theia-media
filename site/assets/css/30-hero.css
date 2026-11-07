@@ -1,6 +1,6 @@
 /* The supplied cinema loop keeps the warm dissolves and contrast veils. The hero
    is one centred composition: the announcement pill when there is one, the two
-   lines, one sentence, two actions and the platforms. Its foot holds the honest
+   lines, one sentence, three actions and the platforms. Its foot holds the honest
    note and the pause control, and nothing else. */
 .hero {
   position: relative;
@@ -226,8 +226,8 @@
     gap: 0.65rem;
   }
   .hero .btn {
-    flex: 1 1 9rem;
-    padding-inline: 0.65rem;
+    flex: 1 1 9.5rem;
+    padding-inline: 0.85rem;
     font-size: 0.875rem;
   }
   .hero-foot {

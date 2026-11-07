@@ -1,6 +1,6 @@
-/* The header: the mark, four pages, GitHub and the language. Native disclosures
-   also work without JavaScript. It floats over the hero on the home page and
-   sits in the flow everywhere else. */
+/* The header: the mark, four pages, Discord, GitHub and the language. Native
+   disclosures also work without JavaScript. It floats over the hero on the home
+   page and sits in the flow everywhere else. */
 .site-header {
   position: relative;
   z-index: 5;
@@ -39,8 +39,9 @@
 }
 .desktop-nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem 1.75rem;
+  gap: 0.25rem 1.5rem;
   margin-inline-start: auto;
 }
 .desktop-nav a,
@@ -72,6 +73,23 @@
   block-size: 0.4rem;
   border-radius: 50%;
   background: var(--bone);
+}
+.desktop-nav .nav-discord {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: rgb(19 18 17 / 0.72);
+  color: var(--bone);
+  font-weight: 500;
+  transition:
+    background-color 180ms var(--ease),
+    border-color 180ms var(--ease);
+}
+.desktop-nav .nav-discord:hover {
+  background: var(--raised);
+  border-color: var(--muted);
+  color: var(--bone);
+  text-decoration: none;
 }
 .desktop-nav .nav-icon {
   justify-content: center;
@@ -164,7 +182,7 @@
   display: none;
 }
 
-@media (max-width: 64rem) {
+@media (max-width: 68rem) {
   .nav {
     gap: 1rem;
   }
@@ -172,7 +190,7 @@
     gap: 0.25rem 1rem;
   }
 }
-@media (max-width: 52rem) {
+@media (max-width: 60rem) {
   .desktop-nav {
     display: none;
   }

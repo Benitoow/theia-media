@@ -1,0 +1,25 @@
+<div class="wrap page-head">
+  <h1 id="page-title">{{t:changelog.title}}</h1>
+  <p class="lead">{{t:changelog.lead}}</p>
+  <nav class="changelog-jumps" aria-label="{{t:changelog.jumpLabel}}">{{block:changelog_jumps}}</nav>
+</div>
+
+{{block:v5_section}}
+
+<section id="changelog" class="section changelog-section" aria-labelledby="changelog-title">
+  <span id="new" class="anchor-alias"></span>
+  <div class="wrap">
+    <header class="section-head changelog-head">
+      <div>
+        <h2 id="changelog-title">{{t:changelog.historyTitle}}</h2>
+      </div>
+      <div class="changelog-links">
+        <a class="text-link" href="https://github.com/Benitoow/theia-media/releases">{{logo:github}}{{t:changelog.allReleases}}{{icon:arrow:icon-arrow}}</a>
+        <a class="text-link" href="https://github.com/Benitoow/theia-media/releases.atom">{{logo:rss}}{{t:footer.feed}}{{icon:arrow:icon-arrow}}</a>
+      </div>
+    </header>
+    {{block:changelog}}
+  </div>
+</section>
+
+{{block:cta_band}}

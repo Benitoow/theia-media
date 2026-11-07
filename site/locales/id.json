@@ -9,9 +9,9 @@
       "title": "Unduh Theia untuk Windows, macOS, dan Linux",
       "description": "Pilih sistem dan prosesor Anda. Setiap berkas menampilkan versi, ukuran, dan SHA-256. Gratis untuk penggunaan pribadi, tanpa akun."
     },
-    "new": {
-      "title": "Yang baru di Theia",
-      "description": "Apa yang dibawa versi berikutnya dan apa yang diubah versi terbaru, dijelaskan apa adanya, beserta apa yang diperiksa di sistem mana."
+    "changelog": {
+      "title": "Riwayat perubahan Theia — setiap pembaruan sejak 3.3",
+      "description": "Riwayat rilis terperinci Theia sejak versi 3.3.0 ke atas, ditambah versi mendatang saat diumumkan, lengkap dengan catatan platform dan verifikasi."
     },
     "questions": {
       "title": "Pertanyaan tentang Theia",
@@ -36,7 +36,7 @@
     "menu": "Menu",
     "language": "Bahasa",
     "project": "Tautan proyek",
-    "new": "Yang baru",
+    "changelog": "Riwayat",
     "about": "Tentang",
     "privacy": "Privasi",
     "pages": "Halaman situs"
@@ -97,18 +97,22 @@
       {
         "title": "Pembaruan yang menjaga semuanya",
         "body": "Memperbarui dari 4.4.6 mempertahankan perpustakaan, profil, dan riwayat. Diperiksa pada instalasi 4.4.6 yang nyata, termasuk pengembalian ke versi sebelumnya."
+      },
+      {
+        "title": "Pustakamu di ponsel",
+        "body": "Aplikasi Android memutar pustakamu dari servermu, lengkap dengan profil dan posisi terakhir yang kamu tonton. Unduh APK dari halaman rilis."
+      },
+      {
+        "title": "Android TV dan Google TV (beta)",
+        "body": "Aplikasi yang sama membuka tampilan televisi yang kamu kendalikan dengan remote, dan mempertahankan suara AC-3, E-AC-3 dan DTS bila televisimu bisa menerimanya. Versi beta: beri tahu kami temuanmu."
       }
     ],
     "laterTitle": "Bukan di 5.0",
     "laterIntro": "Direncanakan, tetapi tidak dijanjikan untuk rilis ini. Masing-masing diumumkan setelah terbukti pada perangkat keras nyata.",
     "later": [
       {
-        "title": "Aplikasi Android",
-        "body": "Aplikasi ponsel untuk server atau sumber Anda. Belum dimulai; direncanakan setelah versi desktop."
-      },
-      {
-        "title": "Android TV dan Google TV",
-        "body": "Casting atau aplikasi di TV: ruang keluarga masih dikaji."
+        "title": "Ponsel tanpa server, dan casting",
+        "body": "Ponsel yang membaca NAS atau Drive-mu sendiri, dan casting ke layar. Diumumkan setelah dibangun dan diperiksa."
       },
       {
         "title": "Komputer ARM",
@@ -175,7 +179,7 @@
     "intro": "Pilih sistem, lalu prosesor. Unduhan hanya dimulai saat kamu memilih berkas.",
     "system": "Sistemmu",
     "processor": "Prosesormu",
-    "mobile": "Aplikasi Theia ditujukan untuk komputer desktop. Penampil web yang ada tetap tersedia di ponsel dan TV; pemutarannya tidak lagi dikembangkan secara aktif.",
+    "mobile": "Aplikasi Theia untuk komputer desktop, ditambah aplikasi Android untuk ponsel dan, dalam beta, untuk Android TV dan Google TV. Ponsel dan TV lain tetap memakai penampil web; pemutarannya tidak lagi dikembangkan secara aktif.",
     "windowsWarning": "Windows dapat menampilkan peringatan SmartScreen karena Theia belum ditandatangani dengan sertifikat kode. Klik Info selengkapnya, lalu Tetap jalankan. Periksa SHA-256 sebelum menjalankannya. Hak administrator tidak diminta.",
     "macosWarning": "Jadikan pemasang dapat dijalankan dengan chmod +x, lalu jalankan. Aplikasi ditandatangani secara ad hoc, tanpa notarisasi: saat pertama kali, buka dengan Control-klik, lalu Buka.",
     "linuxWarning": "Hanya Ubuntu 24.04, X11 atau XWayland. Pasang prasyarat di bawah, gunakan chmod +x, lalu jalankan. Dekode perangkat lunak, SDR, dan audio PCM; distribusi lain belum diverifikasi.",
@@ -203,27 +207,262 @@
     "release": "Semua berkas rilis",
     "help": "Prosesor apa yang kupakai?"
   },
-  "new": {
-    "title": "Yang baru",
-    "lead": "Setiap rilis, dijelaskan apa adanya: apa yang berubah, apa yang diperiksa, dan apa yang belum."
-  },
-  "news": {
-    "title": "Detail kecil. Malam lebih nyaman.",
-    "notes": "Baca catatan rilis",
-    "items": [
-      {
-        "title": "Foto dengan bingkai yang pas",
-        "body": "Geser dan perbesar foto profil sebelum menyimpan. Foto kecil pun memenuhi lingkaran."
+  "changelog": {
+    "title": "Riwayat perubahan",
+    "lead": "Setiap pembaruan mulai versi 3.3.0 ke atas, dijelaskan apa adanya: apa yang berubah, apa yang diperiksa, dan apa yang belum diverifikasi.",
+    "historyTitle": "Setiap pembaruan sejak 3.3.0",
+    "jumpLabel": "Lompat ke generasi",
+    "jumpV5Upcoming": "5.0 mendatang",
+    "jumpV5": "Generasi 5",
+    "jumpV4": "Generasi 4",
+    "jumpV3": "Generasi 3",
+    "allReleases": "GitHub Releases",
+    "notes": "Catatan rilis",
+    "redirectTitle": "Yang baru kini menjadi Riwayat perubahan",
+    "redirectBody": "Anda sedang diarahkan ke riwayat perubahan lengkap Theia.",
+    "redirectAction": "Buka riwayat perubahan",
+    "generations": {
+      "v5": {
+        "title": "Generasi 5",
+        "lead": "Satu perpustakaan terpadu lintas server, berbagi NAS, dan Google Drive, profil yang mengikuti Anda, serta aplikasi Android."
       },
-      {
-        "title": "Episode berikutnya, sesuai keinginanmu",
-        "body": "Bab bernama memungkinkan melewati pembuka. Episode berikutnya memakai hitung mundur yang bisa dibatalkan dan berhenti di akhir musim."
+      "v4": {
+        "title": "Generasi 4",
+        "lead": "Profil rumah tangga, teman, ulasan, ruang nonton bersama pribadi, akses jarak jauh langsung lewat WireGuard, dan paket antarmuka bertanda tangan."
       },
-      {
-        "title": "Garis waktu yang jelas",
-        "body": "Pratinjau adegan sebelum berpindah. Pertahankan pilihan audio dan takarir dengan pengaturan yang tidak mengganggu."
+      "v3": {
+        "title": "Generasi 3 — mulai 3.3",
+        "lead": "Pemisahan menjadi server, pemutar desktop native, dan pemasang terminal, lalu keenam target desktop."
       }
-    ]
+    },
+    "releases": {
+      "v5.0.0": {
+        "title": "Semua milik Anda, dalam satu perpustakaan",
+        "summary": "Membuka Generasi 5 dengan menggabungkan beberapa server Theia, berbagi NAS, dan folder Google Drive menjadi satu perpustakaan, bersama profil tertaut dan aplikasi Android.",
+        "changes": [
+          "Menggabungkan beberapa server Theia, folder NAS yang dipasang (riwayat tetap aman saat NAS tertidur; kit uji UGREEN belum diverifikasi pada UGREEN fisik), dan folder Google Drive pilihan yang diputar dalam potongan pendek (selama Google belum menyetujui klien OAuth milik Theia, penyambungan mungkin meminta klien Google milik Anda sendiri).",
+          "Menautkan profil Anda di seluruh server sehingga status sudah ditonton dan posisi lanjut tonton mengikuti Anda dari satu mesin ke mesin lain dengan aturan konflik dan tonton ulang yang deterministik.",
+          "Menambahkan halaman terpadu Server dan sumber di pengaturan pemutar serta administrasi web, lengkap dengan ikon tower, laptop, NAS, dan cloud serta pemasangan mesin memakai kode pendek.",
+          "Menampilkan nama dan foto profil pengirim pada permintaan teman yang masuk tepat sebelum diterima, bahkan saat server mereka luring; merancang ulang layar sambung dan mulai awal untuk mengingat hingga enam server, menampilkan status penemuan mDNS secara jelas, di atas kanvas glif kuningan yang dihasilkan.",
+          "Menyatukan halaman judul untuk semua sumber; menampilkan gambar episode anti-spoiler setelah melewati seperlima terakhir dan menghitung bab kredit akhir sebagai sudah ditonton; menyembunyikan penunjuk tetikus saat kontrol diam selama pemutaran; menahan Spasi (putar) selama 220 mdtk untuk memutar pada kecepatan 2x di luar ruang nonton bersama.",
+          "Menghadirkan aplikasi ponsel Android (Android 8.0+, kontrol genggam, gambar-dalam-gambar, sesi media layar kunci, dan lanjut tonton lintas perangkat, diperiksa pada Xiaomi POCO dengan Android 16) serta beta Android TV / Google TV dengan navigasi remote dan passthrough AC-3, E-AC-3, serta DTS bila didukung.",
+          "Memperbarui dari 4.4.6 mempertahankan perpustakaan, profil, dan riwayat Anda (diperiksa pada instalasi 4.4.6, termasuk pengembalian versi); pemasang desktop Windows dan Linux ARM64 tetap di 4.2.1."
+        ]
+      },
+      "v4.4.6": {
+        "title": "Akses jarak jauh pulih sendiri, dan pemutar tidak menghalangi layar",
+        "summary": "Pembaruan shell yang membuat akses jarak jauh otomatis tangguh terhadap port UDP sibuk dan mulai ulang router, memperbaiki tautan administrasi peramban, serta menjaga jendela yang dipulihkan tetap bersih.",
+        "changes": [
+          "Mencadangkan port UDP kosong secara otomatis saat port akses jarak jauh pilihan sedang sibuk, dan menampilkan pesan galat yang jelas ketika port yang dipilih secara manual sudah terpakai.",
+          "Memeriksa penerusan port UPnP dan NAT-PMP secara berkala serta membuat ulang aturan router yang terhapus secara otomatis setelah router dimulai ulang (diverifikasi pada Freebox v9).",
+          "Memulihkan pembukaan administrasi server di peramban sistem dengan tombol Coba lagi saat gagal, serta mencegah kembalinya fokus Alt-Tab pada jendela yang dimaksimalkan menahan kontrol di atas film yang sedang diputar.",
+          "Menerbitkan pemasang desktop untuk Windows x64, Ubuntu 24.04 x64, macOS Apple Silicon, dan macOS Intel; pemasang desktop Windows dan Linux ARM64 tetap di 4.2.1."
+        ]
+      },
+      "v4.4.5": {
+        "title": "Lingkaran profil penuh, pembingkaian foto interaktif, dan bab instalasi baru",
+        "summary": "Paket antarmuka bertanda tangan yang memperbaiki avatar profil berukuran kecil, menambahkan pemotongan dan perbesaran interaktif di editor profil, serta menunggu pemeriksaan bab FFmpeg pada instalasi baru.",
+        "changes": [
+          "Menyesuaikan skala foto profil berukuran 512 px atau lebih kecil agar memenuhi bingkai lingkaran alih-alih menyisakan tepi gelap di sekeliling gambar kecil.",
+          "Menambahkan seret penunjuk, geser papan ketik, dan kontrol perbesaran saat membingkai foto profil di Sesuaikan profil; pemotongan berjalan secara lokal dan metadata dihapus di server.",
+          "Mengunduh FFmpeg terverifikasi SHA-256 (~80 MB) di latar belakang saat episode pertama pada instalasi baru dan memeriksa hingga dua menit untuk penanda bab agar Lewati pembuka dan Episode berikutnya muncul."
+        ]
+      },
+      "v4.4.4": {
+        "title": "Tombol akhir episode yang menepi saat dibutuhkan",
+        "summary": "Paket antarmuka bertanda tangan yang menyempurnakan tombol akhir episode dan pil bab agar menggeser garis waktu di penghujung episode tidak pernah terhalang.",
+        "changes": [
+          "Menepikan tombol akhir episode dan menjeda hitung mundur episode berikutnya secara lokal setiap kali Anda mengarahkan penunjuk atau memfokuskan garis waktu menjelang akhir episode (hitung mundur ruang tetap berjalan tanpa gangguan).",
+          "Menyembunyikan Lewati pembuka dan Ke adegan pascakredit setelah delapan detik lalu menampilkannya kembali setiap kali kontrol pemutaran aktif.",
+          "Mengganti kartu latar gelap dengan tiga pil terpisah: pil gelap Lewati pembuka, pil terang Episode berikutnya yang terisi sepanjang hitung mundur 30 detik, dan pil tenang Lanjut menonton."
+        ]
+      },
+      "v4.4.3": {
+        "title": "Urutan prarilis pada pembaru antarmuka",
+        "summary": "Paket antarmuka bertanda tangan yang memperbaiki perbandingan versi semantik untuk build penguji sehingga setiap shell 4.4 menerima pembaruan antarmuka akhir dengan mulus.",
+        "changes": [
+          "Memperbaiki urutan prarilis pada pembaru UI sehingga build penguji seperti 4.4.2-test.3 diurutkan lebih lama daripada rilis akhir seperti 4.4.2.",
+          "Menerbitkan ulang paket antarmuka bertanda tangan Ed25519 agar shell native tingkat-3 memperbarui antarmuka tanpa menjalankan ulang pemasang penuh."
+        ]
+      },
+      "v4.4.2": {
+        "title": "Pratinjau adegan, alur bab, pengaturan lebih lengkap, dan ruang pribadi",
+        "summary": "Pembaruan fitur utama V4 yang menambahkan gambar mini garis waktu tepat-bingkai, transisi episode berbasis bab, pengaturan delapan bagian, perlindungan spoiler, kehadiran lebih kaya, dan ruang khusus undangan.",
+        "changes": [
+          "Mendekode pratinjau arahkan-penunjuk garis waktu tepat-bingkai pada instans mesin kedua yang dijeda (dengan cadangan server untuk berkas HDR) dan menambahkan langkah lompatan 10 dtk, 30 dtk (bawaan), atau 60 dtk yang dapat dikonfigurasi serta bertumpuk saat ditekan cepat.",
+          "Menambahkan Lewati pembuka manual dari bab bernama, hitung mundur Episode berikutnya 30 detik yang dapat dibatalkan dan berhenti di akhir musim, Ke adegan pascakredit, serta pengatur waktu tidur.",
+          "Menata ulang pengaturan menjadi delapan kategori (Umum, Pemutaran, Audio dan takarir, Privasi, Server, Pembaruan, Statistik, Bantuan) dengan memori trek per serial, prioritas bahasa, preferensi forced/SDH, pemilihan perangkat audio, ofset sinkronisasi, skala UI, dan pintasan yang dapat disesuaikan.",
+          "Menyimpan progres pemutaran dengan rapi saat penutupan jendela berbatas waktu dan menambahkan sakelar Perlindungan spoiler per serial yang memburamkan cuplikan episode belum ditonton serta menyembunyikan sinopsis.",
+          "Memperluas status kehadiran teman (Daring, Tidak aktif, Menonton, Luring; Siap nonton film, Jangan ganggu, Tak terlihat; avatar bilah navigasi dan pemberitahuan kembali) serta membuat penghapusan teman membersihkan kedua sisi lewat pemberitahuan kotak masuk.",
+          "Menambahkan ruang nonton bersama pribadi khusus undangan dengan opsi permintaan bergabung dari teman."
+        ]
+      },
+      "v4.4.1": {
+        "title": "Pendapat antar rumah tangga, dan kehadiran tidak aktif",
+        "summary": "Paket antarmuka bertanda tangan yang mengirimkan pendapat judul antar teman lewat Firebase tanpa membuka port router dan memperkenalkan status Tidak aktif otomatis.",
+        "changes": [
+          "Mengirimkan satu pendapat per judul yang dapat disunting dan dihapus (jempol, tanggal, dan buram spoiler) antar teman melalui Firebase (theia-friends) tanpa perlu membuka port router.",
+          "Mengalihkan kehadiran ke Tidak aktif secara otomatis setelah lima menit diam, meredupkan cincin avatar, dan mengecualikan teman yang diam dari hitungan daring.",
+          "Hadir sebagai paket antarmuka bertanda tangan Ed25519 untuk shell native 4.4.0 bersama pembaruan server mandiri."
+        ]
+      },
+      "v4.4.0": {
+        "title": "Shell native yang stabil, pembaruan bertanda tangan yang lebih kecil",
+        "summary": "Memisahkan shell pemutar native yang dibekukan dari paket antarmuka bertanda tangan Ed25519 dengan pengembalian otomatis, serta menghadirkan direktori teman Firebase.",
+        "changes": [
+          "Memisahkan shell pemutar native dari paket antarmuka bertanda tangan Ed25519 yang diuji jalan saat peluncuran dan kembali otomatis jika gagal memulai.",
+          "Menyertakan direktori teman Firebase, permintaan teman yang bekerja saat luring (kode THEIA2- berdampingan dengan kode lama THEIA1-), dan pembaruan kehadiran cepat tanpa penerusan port router.",
+          "Mempertahankan jam pemutaran saat pemuatan ulang aliran terkonversi, menyimpan penyimpanan progres luring dalam kotak keluar berurutan per server/per profil, dan menonaktifkan putar otomatis episode di dalam ruang.",
+          "Menerbitkan pemasang desktop untuk Windows x64, Ubuntu 24.04 x64, macOS Apple Silicon, dan macOS Intel; pemasang desktop Windows dan Linux ARM64 tetap di 4.2.1 karena batas runner terhosting sementara server mandiri tersedia untuk keenam platform."
+        ]
+      },
+      "v4.3.1": {
+        "title": "Permintaan teman yang sampai tanpa penerusan port",
+        "summary": "Memperkenalkan direktori Firebase anonim untuk kode teman, permintaan luring, dan kehadiran; digabungkan dan diterbitkan langsung di dalam 4.4.0 pada hari yang sama.",
+        "changes": [
+          "Memindahkan penemuan teman, permintaan teman, dan kehadiran ke Firebase Realtime Database (theia-friends) dengan masuk anonim sehingga permintaan tetap sampai meski server rekan sedang mati atau di balik NAT.",
+          "Memperkenalkan kode teman THEIA2-XXXXX-XXXXX sambil menjaga kode THEIA1- yang sudah ada tetap berfungsi, memperbarui kehadiran dalam satu hingga dua detik, dan menampilkan pemberitahuan tak terjangkau secara jelas saat luring.",
+          "Menjaga aliran media, katalog koleksi, dan riwayat tontonan tetap di luar Firebase; terowongan WireGuard langsung tetap dikhususkan untuk pemutaran jarak jauh dan ruang."
+        ]
+      },
+      "v4.3.0": {
+        "title": "Ulasan judul, halaman judul bertab, mulai lebih cepat, dan pemasang macOS",
+        "summary": "Menambahkan ulasan judul rumah tangga dan teman, merancang ulang halaman judul dengan tab serta pemeriksaan kompatibilitas perangkat, memangkas ukuran pemutar, dan memulihkan kedua pemasang macOS.",
+        "changes": [
+          "Memungkinkan penonton memberi jempol naik/turun dan ulasan 500 karakter per judul dengan sakelar spoiler, serta mewarnai cincin profil dari foto masing-masing profil.",
+          "Merancang ulang halaman film dan serial dengan tab (episode, sinopsis, pemeran, saga, ulasan), pemilih versi berkas, dan pemeriksaan Pemutaran di perangkat ini.",
+          "Memperkecil biner pemutar desktop (11,5 MB vs 15,1 MB) dan aset UI (1,7 MB vs 4,5 MB), membuka halaman judul lebih cepat, serta memangkas separuh penggunaan CPU saat mencari.",
+          "Memulihkan pemasang lengkap macOS Apple Silicon dan Intel serta memulai ulang layanan launchd atau systemd dengan bersih setelah pembaruan dari dalam aplikasi di macOS dan Linux.",
+          "Memeriksa secara daring saat pemasangan apakah ada rilis pemasang yang lebih baru sebelum menulis berkas."
+        ]
+      },
+      "v4.2.2": {
+        "title": "Tingkat kualitas sesuai permintaan, dan ruang tanpa jeda tak sengaja",
+        "summary": "Memeriksa film yang belum diukur sesuai permintaan saat membuka menu kualitas dan mencegah klik latar belakang di ruang nonton bersama menjeda semua orang.",
+        "changes": [
+          "Memicu pemeriksaan aliran FFmpeg seketika saat membuka menu kualitas pada film yang belum diukur agar pilihan kualitas lebih rendah langsung muncul.",
+          "Mengubah klik latar belakang video di dalam ruang nonton bersama agar membangunkan kontrol alih-alih menjeda pemutaran untuk seluruh ruang.",
+          "Menyorot tombol ruang selama ruang aktif dan menghapus tanda panah bawah yang membingungkan pada pulau pemutaran solo.",
+          "Menghadirkan pemasang desktop untuk Windows x64 dan Ubuntu 24.04 x64 bersama server mandiri untuk keenam platform."
+        ]
+      },
+      "v4.2.1": {
+        "title": "Audio Windows bersama panggilan suara, layar penuh bersih, dan pembaruan terverifikasi",
+        "summary": "Menjaga panggilan suara tetap terdengar selama pemutaran di Windows secara bawaan, memperbaiki tumpang tindih bilah tugas dari jendela dimaksimalkan ke layar penuh, dan menambahkan pembaruan pemasang terverifikasi SHA-256.",
+        "changes": [
+          "Menjadikan mode bersama sebagai bawaan audio Windows agar Discord dan panggilan suara tetap terdengar saat menonton film, dengan pengaturan opsional Suara murni ke amplifier untuk passthrough bitstream eksklusif.",
+          "Memperbaiki masuk ke layar penuh dari jendela Windows yang dimaksimalkan agar bilah tugas tidak pernah tertinggal di atas, serta menyederhanakan pulau solo kembali ke jam waktu selesai.",
+          "Mengunduh dan memverifikasi SHA-256 pemasang lengkap Windows dari tombol pembaruan di dalam aplikasi, serta memeriksa pembaruan pada server tanpa tampilan setiap enam jam di luar pemutaran.",
+          "Berfungsi sebagai pemasang desktop native terbaru untuk Windows ARM64 dan Ubuntu 24.04 ARM64 sementara rilis V4 berikutnya menyediakan pemasang desktop x64 dan macOS."
+        ]
+      },
+      "v4.2.0": {
+        "title": "Gambar di pulau ruang, perbaikan status jendela, dan pembaruan keamanan Go",
+        "summary": "Menghadirkan foto profil dan gambar TMDB tersimpan ke dalam pulau ruang nonton bersama, memperkuat layar penuh dan transfer ruang, serta memperbarui runtime Go.",
+        "changes": [
+          "Menampilkan avatar profil serta poster/gambar latar TMDB tersimpan di dalam pulau ruang nonton bersama dengan gerakan lebih halus dan kontrol sinkronisasi ulang/ofset pribadi.",
+          "Memperbaiki pemulihan jendela dengan tombol F / Escape dan klik ganda bilah judul, mencabut transfer berkas ruang seketika saat keluar atau menghapus teman, serta membatasi waktu tunggu pemuatan banyak anggota.",
+          "Memperbaiki berkas bundel yang hilang saat menjalankan ulang pemasang dan menghentikan judul yang dihapus (HTTP 404 atau 410) agar tidak menghambat antrean penyimpanan progres pemutaran.",
+          "Membangun ulang biner server dan pemasang dengan Go 1.26.9 untuk mengatasi imbauan keamanan pustaka standar GO-2026-6617."
+        ]
+      },
+      "v4.1.0": {
+        "title": "Nonton bersama tersinkronisasi lintas rumah tangga",
+        "summary": "Memperkenalkan ruang terenkripsi hingga delapan orang dengan koreksi selisih waktu yang halus, streaming berkas langsung opsional lewat WireGuard, dan pulau dinamis.",
+        "changes": [
+          "Menyinkronkan sesi nonton bersama hingga delapan peserta menggunakan penyesuaian kecepatan halus, tunggu penyangga pemuatan 10 detik, kontrol khusus tuan rumah atau bersama, serta ofset potongan per tamu.",
+          "Memutar berkas milik tuan rumah secara langsung lewat WireGuard terenkripsi ketika tamu yang diundang tidak memiliki salinan lokal di koleksinya sendiri.",
+          "Menambahkan pil pulau dinamis di bawah bilah judul, pemetaan port UPnP/NAT-PMP multi-antarmuka, titik akhir kode teman IPv6, dan pemeriksaan versi protokol ruang.",
+          "Menghentikan server lokal yang dijalankan oleh peluncur theia secara otomatis sepuluh detik setelah pemutar desktop ditutup."
+        ]
+      },
+      "v4.0.0": {
+        "title": "Profil, teman, pemasang layar penuh, dan fondasi baru",
+        "summary": "Membuka Generasi 4 dengan profil rumah tangga, kehadiran teman peer-to-peer lewat WireGuard, Discord Rich Presence opsional, pemasang terminal yang dibangun ulang, dan lisensi PolyForm Noncommercial.",
+        "changes": [
+          "Menambahkan pemilih profil Siapa yang menonton? saat mulai, kode teman, kehadiran teman peer-to-peer lewat WireGuard (TTL dalam memori 90 detik), dan akses jarak jauh khusus teman.",
+          "Memperkenalkan Discord Rich Presence lokal opsional dengan sakelar persetujuan terpisah sebelum membagikan judul yang sedang ditonton.",
+          "Membangun ulang theia-setup menjadi formulir terminal interaktif layar penuh dengan saran folder, penghitungan berkas video, dan pembaruan di tempat yang menjaga koleksi serta progres.",
+          "Meningkatkan penguraian nama berkas (judul, tahun, tag rilis Prancis, berkas multi-episode), menyertakan libmpv LGPL tersemat di Linux (PulseAudio/ALSA), mengelompokkan pengaturan, dan memperkenalkan ikon T-di-atas-matahari.",
+          "Memindahkan rilis mulai 4.0 ke atas ke PolyForm Noncommercial 1.0.0 dengan pengembangan sumber privat (3.4.0 dan sebelumnya tetap GPL-3.0 pada tag publiknya), meluncurkan situs web statis, dan memperbarui source-map-js."
+        ]
+      },
+      "v3.4.0": {
+        "title": "Enam build desktop, halaman detail lengkap, dan penutup V3",
+        "summary": "Rilis terakhir V3 yang memperluas pemasang desktop lengkap ke keenam target OS/prosesor serta menambahkan tampilan detail film dan serial yang kaya.",
+        "changes": [
+          "Menerbitkan pemasang lengkap untuk keenam target desktop: Windows x64, Windows ARM64, macOS Apple Silicon, macOS Intel, Ubuntu 24.04 x64, dan Ubuntu 24.04 ARM64.",
+          "Menambahkan halaman detail film dan serial dengan sinopsis TMDB tersimpan, deretan pemeran, pemeriksaan resolusi/HDR berkas, serta pemeriksaan layar dan driver GPU Windows.",
+          "Melengkapi pelacakan episode serial dengan bilah lanjut tonton, kontrol tandai sudah ditonton/atur ulang, lompat ke episode belum ditonton berikutnya, dan ajakan episode berikutnya 10 detik.",
+          "Memungkinkan pembatalan sambungan server yang sedang berlangsung, mencoba ulang penyimpanan progres pemutaran yang belum terkirim secara otomatis, dan menandai pemutaran penampil peramban telah selesai fiturnya."
+        ]
+      },
+      "v3.3.6": {
+        "title": "Kesetaraan pengemasan rilis dan keutuhan bundel macOS",
+        "summary": "Memperketat pengemasan rilis dengan gerbang kesetaraan byte-demi-byte 67 pemeriksaan serta menjaga tautan simbolik framework dan tanda tangan kode macOS saat ekstraksi maupun pembaruan.",
+        "changes": [
+          "Mewajibkan kecocokan persis versi pemutar di dalam ZIP luring Windows dan menambahkan gerbang kesetaraan CI byte-demi-byte 67 perbandingan antara aset mandiri dan bundel luring.",
+          "Mengajarkan pengekstrak ZIP Go untuk membuat ulang tautan simbolik .framework macOS secara aman dan mempertahankan izin 0644/0755 agar verifikasi codesign ketat berhasil.",
+          "Memperbarui pembaru macOS agar mengganti bundel Theia.app secara utuh dan bersih saat peningkatan versi."
+        ]
+      },
+      "v3.3.5": {
+        "title": "Studio takarir, status pemutaran berbasis peristiwa, dan statistik tontonan",
+        "summary": "Menambahkan penyesuai takarir langsung berskala 1080p, memangkas penggunaan CPU pemutaran diam sebesar dua pertiga, memperhalus pengubahan ukuran tepi jendela, dan memperkenalkan statistik tontonan.",
+        "changes": [
+          "Menambahkan pengaturan khusus Pemutaran dan Takarir dengan pratinjau langsung berskala 1080p untuk ukuran, posisi vertikal (sub-pos), warna, garis tepi, pita latar 70%, keluarga font, dan ketebalan untuk SRT maupun ASS.",
+          "Mengganti polling status dengan pembaruan berbasis peristiwa (memangkas CPU diam dari 2,8% menjadi 0,9%) dan menunda SetWindowRgn saat menyeret tepi sehingga pengubahan ukuran jendela naik dari 5 menjadi 95 bingkai.",
+          "Memperkenalkan dasbor statistik tontonan dengan total jam menonton, jumlah dimulai/diselesaikan, bilah perbandingan film terhadap serial, dan serial teratas.",
+          "Menambahkan popover transpor dua tab Bahasa / Kualitas dan penggeser volume yang dapat diciutkan."
+        ]
+      },
+      "v3.3.4": {
+        "title": "Pemutar desktop native hadir di Apple Silicon",
+        "summary": "Menghadirkan aplikasi native macOS Apple Silicon, pemasang, dan layanan latar belakang launchd, bersama build deterministik yang dapat direproduksi.",
+        "changes": [
+          "Menghadirkan Theia.app native di macOS Apple Silicon yang merender melalui permukaan OpenGL libmpv, dipasang oleh theia-setup-darwin-arm64 dengan tautan ~/.local/bin dan layanan launchd.",
+          "Mempertahankan tautan simbolik framework di dalam ZIP luring macOS (menghemat 25 MB per unduhan) dan menyesuaikan bilah transpor pemutar web dengan rapi di bawah lebar 44rem.",
+          "Menghapus stempel waktu build yang tertanam demi menghasilkan biner Go dan pemasang yang deterministik."
+        ]
+      },
+      "v3.3.3": {
+        "title": "Gambar latar utama seragam dan pengaturan bilah-dan-panel",
+        "summary": "Menghadirkan gambar latar bermasker yang konsisten di Beranda, Film, dan Serial, memperlebar pengaturan menjadi lembar berbagian, serta memverifikasi aset tertanam di CI.",
+        "changes": [
+          "Menyeragamkan gambar latar utama yang diperhalus dan bermasker tepi di tampilan Beranda, Film, dan Serial.",
+          "Mengganti modal pengaturan sempit dengan lembar bilah-dan-panel yang lebih lebar (Antarmuka, Pemutaran, Server, Pembaruan), tindakan Batal/Simpan, dan URL server yang dapat disalin sekali klik.",
+          "Menambahkan pemeriksaan rilis CI yang memastikan bundel luring menanamkan antarmuka web terkompilasi sekaligus kunci TMDB."
+        ]
+      },
+      "v3.3.2": {
+        "title": "Perintah peluncur theia dan penghapusan instalasi bersih",
+        "summary": "Memperkenalkan satu perintah theia untuk menjalankan server dan pemutar bersamaan, memperbaiki tampilan koleksi kosong baru, serta menambahkan penghapusan instalasi bersih.",
+        "changes": [
+          "Menambahkan peluncur theia di PATH serta di App Paths / Start Menu Windows, menjalankan theia-server secara otomatis bila diperlukan sebelum membuka theia-player.",
+          "Memperbaiki tampilan beranda pada koleksi baru yang masih kosong (mengembalikan larik baris kosong alih-alih null) sehingga instalasi baru langsung tampil.",
+          "Menambahkan theia-setup --uninstall untuk menghentikan proses yang berjalan dan menghapus biner, pintasan, entri registri, serta perubahan PATH sambil membiarkan %APPDATA%\\Theia tetap utuh."
+        ]
+      },
+      "v3.3.1": {
+        "title": "Unduhan rilis yang lebih ringkas dan diagnostik build",
+        "summary": "Menyederhanakan aset rilis GitHub dari 20 berkas menjadi 9 unduhan bernama jelas, menanamkan diagnostik versi, dan menambal imbauan kerentanan dependensi.",
+        "changes": [
+          "Menyatukan aset rilis publik dari 20 berkas menjadi 9 unduhan berlabel jelas (pemasang, bundel luring, dan paket pembaru) serta menghentikan jembatan nama berkas sementara 3.2.",
+          "Mengompilasi dan memverifikasi tag versi rilis di theia-player --diagnostics serta memperbaiki kondisi balapan penjaga pemutaran peramban.",
+          "Memperbarui devalue untuk mengatasi imbauan keamanan GHSA-9rgm-9g3h-6x36."
+        ]
+      },
+      "v3.3.0": {
+        "title": "Generasi native: server, pemutar desktop libmpv, dan pemasang",
+        "summary": "Memisahkan Theia menjadi server lokal, pemutar desktop native berbasis Tauri dan libmpv LGPL tersemat, serta pemasang ruang pengguna tanpa hak administrator.",
+        "changes": [
+          "Memisahkan Theia menjadi theia-server (pengindeksan koleksi, metadata TMDB tersimpan, dan streaming HTTP lokal), theia-player (aplikasi desktop native Rust/Tauri), dan theia-setup.",
+          "Mengintegrasikan mesin libmpv LGPL tersemat SHA-256 dengan dekode perangkat keras d3d11va / gpu-next, Matroska, pemetaan nada Dolby Vision Profile 7, passthrough bitstream TrueHD/Atmos/DTS-HD dengan cadangan PCM, serta takarir eksternal dan gambar.",
+          "Memasang di ruang pengguna tanpa hak administrator melalui panduan terminal enam pertanyaan atau opsi CLI, memverifikasi intisari SHA-256, dan mendukung arsip ZIP luring.",
+          "Memuat muatan koleksi lengkap dalam dua permintaan HTTP lokal (terukur 0,7 detik untuk 250 film)."
+        ]
+      }
+    }
   },
   "privacy": {
     "title": "Privasi",

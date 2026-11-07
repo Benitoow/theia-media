@@ -9,9 +9,9 @@
       "title": "Download Theia for Windows, macOS and Linux",
       "description": "Choose your system and processor. Each file shows its version, size and SHA-256. Free for personal use, no account."
     },
-    "new": {
-      "title": "What's new in Theia",
-      "description": "What the next version brings and what the latest one changed, said plainly, with what was checked on which system."
+    "changelog": {
+      "title": "Theia changelog — every update since 3.3",
+      "description": "Detailed release history of Theia from version 3.3.0 onward, plus the upcoming version when announced, with platform and verification notes."
     },
     "questions": {
       "title": "Questions about Theia",
@@ -36,7 +36,7 @@
     "menu": "Menu",
     "language": "Language",
     "project": "Project links",
-    "new": "What's new",
+    "changelog": "Changelog",
     "about": "About",
     "privacy": "Privacy",
     "pages": "Site pages"
@@ -97,18 +97,22 @@
       {
         "title": "An update that keeps everything",
         "body": "Upgrading from 4.4.6 keeps your library, profiles and history. Checked on a real 4.4.6 installation, rollback included."
+      },
+      {
+        "title": "Your library on your phone",
+        "body": "An Android app plays your library from your server, with your profile and the places where you stopped. Download the APK from the release page."
+      },
+      {
+        "title": "Android TV and Google TV (beta)",
+        "body": "The same app opens a television presentation you drive with the remote, and keeps AC-3, E-AC-3 and DTS sound when your television can take it. A beta: tell us what you find."
       }
     ],
     "laterTitle": "Not in 5.0",
     "laterIntro": "Planned, but not promised for this release. Each one is announced once it is proven on real hardware.",
     "later": [
       {
-        "title": "An Android app",
-        "body": "A phone app for your server or your sources. Not started yet; planned after the desktop release."
-      },
-      {
-        "title": "Android TV and Google TV",
-        "body": "Casting or an app on the TV: the living room is still being studied."
+        "title": "A phone without a server, and casting",
+        "body": "A phone that reads your NAS or Drive on its own, and casting to a screen. Announced once built and checked."
       },
       {
         "title": "ARM computers",
@@ -175,7 +179,7 @@
     "intro": "Choose your system, then your processor. The download starts only when you choose a file.",
     "system": "Your system",
     "processor": "Your processor",
-    "mobile": "Theia's apps are for desktop computers. The existing browser viewer remains available on phones and TVs; its playback is no longer actively developed.",
+    "mobile": "Theia's apps are for desktop computers, plus an Android application for phones and, as a beta, for Android TV and Google TV. Other phones and TVs keep the browser viewer; its playback is no longer actively developed.",
     "windowsWarning": "Windows may show a SmartScreen warning because Theia is not code-signed yet. Click More info, then Run anyway. Check its SHA-256 before running it. No administrator rights are requested.",
     "macosWarning": "Make the setup executable with chmod +x, then run it. The app is ad-hoc signed and not notarised: open the app the first time with Control-click, then Open.",
     "linuxWarning": "Ubuntu 24.04, X11 or XWayland only. Install the prerequisites below, then use chmod +x and run the setup. Software decoding, SDR and PCM audio; other distributions are unverified.",
@@ -203,27 +207,262 @@
     "release": "All release files",
     "help": "Which processor do I have?"
   },
-  "new": {
-    "title": "What's new",
-    "lead": "Each release, said plainly: what changed, what was checked and what was not."
-  },
-  "news": {
-    "title": "Small details. Better evenings.",
-    "notes": "Read the release notes",
-    "items": [
-      {
-        "title": "Your photo, properly framed",
-        "body": "Drag and zoom your profile photo before saving. Small photos fill the circle, too."
+  "changelog": {
+    "title": "Changelog",
+    "lead": "Every update from version 3.3.0 onward, said plainly: what changed, what was checked, and what remains unverified.",
+    "historyTitle": "Every update since 3.3.0",
+    "jumpLabel": "Jump to generation",
+    "jumpV5Upcoming": "Upcoming 5.0",
+    "jumpV5": "Generation 5",
+    "jumpV4": "Generation 4",
+    "jumpV3": "Generation 3",
+    "allReleases": "GitHub Releases",
+    "notes": "Release notes",
+    "redirectTitle": "What's new is now the Changelog",
+    "redirectBody": "You are being taken to the full Theia changelog.",
+    "redirectAction": "Open the changelog",
+    "generations": {
+      "v5": {
+        "title": "Generation 5",
+        "lead": "One unified library across servers, NAS shares and Google Drive, a profile that follows you, and the Android app."
       },
-      {
-        "title": "The next episode, on your terms",
-        "body": "Named chapters enable Skip opening. The next episode follows a countdown you can cancel, and stops at the end of a season."
+      "v4": {
+        "title": "Generation 4",
+        "lead": "Household profiles, friends, opinions, private watch-party rooms, direct WireGuard remote access and signed interface packs."
       },
-      {
-        "title": "A timeline you can read",
-        "body": "Preview a scene before seeking. Keep your audio and subtitle preferences, with settings that stay out of the way."
+      "v3": {
+        "title": "Generation 3 — from 3.3",
+        "lead": "The split into server, native desktop player and terminal setup, then the six desktop targets."
       }
-    ]
+    },
+    "releases": {
+      "v5.0.0": {
+        "title": "Everything you own, in one library",
+        "summary": "Opens Generation 5 by combining multiple Theia servers, NAS shares and Google Drive folders into a single library, alongside linked profiles and the Android application.",
+        "changes": [
+          "Combines multiple Theia servers, mounted NAS folders (history survives NAS sleep; the UGREEN test kit remains unverified on a physical UGREEN) and chosen Google Drive folders streamed in short pieces (until Google approves Theia's own OAuth client, connecting may request your own Google client).",
+          "Links your profile across your servers so watched state and resume positions follow you from one machine to the next with deterministic conflict and rewatch rules.",
+          "Adds a unified Servers and sources page in player settings and web administration, with tower, laptop, NAS and cloud icons plus short-code machine pairing.",
+          "Shows the sender's name and profile photo on incoming friend requests immediately before acceptance, even when their server is offline; redesigns the connect and cold-start screen to remember up to six servers, surface explicit mDNS discovery states and rest on a generated brass glyph canvas.",
+          "Unifies the title page across all sources; reveals anti-spoil episode artwork past the last fifth and counts ending-credits chapters as watched; hides the pointer with idle controls during playback; holds Space (play) for 220 ms to run at 2x speed outside watch-party rooms.",
+          "Ships the Android phone app (Android 8.0+, handheld controls, picture-in-picture, lock-screen media session and cross-device resume, checked on Xiaomi POCO with Android 16) and an Android TV / Google TV beta with remote navigation and AC-3, E-AC-3 and DTS passthrough where supported.",
+          "Upgrading from 4.4.6 preserves your library, profiles and history (checked on a 4.4.6 installation, rollback included); Windows and Linux ARM64 desktop setups remain at 4.2.1."
+        ]
+      },
+      "v4.4.6": {
+        "title": "Remote access recovers, and the player steps out of the way",
+        "summary": "Shell update making automatic remote access resilient to busy UDP ports and router restarts, fixing the browser administration link and keeping restored windows clean.",
+        "changes": [
+          "Reserves a free UDP port automatically when the preferred remote-access port is busy, and shows a clear error when a manually chosen port is already taken.",
+          "Checks UPnP and NAT-PMP port forwarding periodically and recreates dropped router rules automatically after a router restart (verified on a Freebox v9).",
+          "Restores opening server administration in the system browser with a Retry button on failure, and stops Alt-Tab focus return on a maximized window from holding controls over a playing film.",
+          "Publishes desktop setups for Windows x64, Ubuntu 24.04 x64, macOS Apple Silicon and macOS Intel; Windows and Linux ARM64 desktop setups stay at 4.2.1."
+        ]
+      },
+      "v4.4.5": {
+        "title": "Filled profile circles, interactive photo framing and fresh-install chapters",
+        "summary": "Signed interface pack improving small profile avatars, adding interactive crop and zoom in the profile editor, and waiting for FFmpeg chapter inspection on fresh installs.",
+        "changes": [
+          "Scales profile photos of 512 px or smaller to fill the circular frame instead of leaving dark margins around small images.",
+          "Adds pointer drag, keyboard nudging and zoom controls when framing a profile photo in Customize profile; cropping runs locally and metadata is stripped on the server.",
+          "Downloads SHA-256-verified FFmpeg (~80 MB) in the background on a fresh install's first episode and checks up to two minutes for chapter markers so Skip opening and Next episode appear."
+        ]
+      },
+      "v4.4.4": {
+        "title": "End-of-episode prompts that step aside",
+        "summary": "Signed interface pack refining episode-ending buttons and chapter pills so scrubbing the timeline at the end of an episode is never blocked.",
+        "changes": [
+          "Steps end-of-episode buttons aside and pauses the local next-episode countdown whenever you hover or focus the timeline near the end of an episode (room countdowns continue uninterrupted).",
+          "Hides Skip opening and Go to post-credits after eight seconds and brings them back whenever playback controls wake.",
+          "Replaces the dark backing card with three distinct pills: a dark Skip opening pill, a light Next episode pill that fills across the 30-second countdown, and a quiet Keep watching pill."
+        ]
+      },
+      "v4.4.3": {
+        "title": "Prerelease ordering in the interface updater",
+        "summary": "Signed interface pack fixing semantic-version comparison for tester builds so every 4.4 shell receives final interface updates cleanly.",
+        "changes": [
+          "Fixes prerelease ordering in the UI updater so tester builds such as 4.4.2-test.3 rank older than final releases such as 4.4.2.",
+          "Republishes the Ed25519-signed interface pack so level-3 native shells update the interface without re-running the full setup."
+        ]
+      },
+      "v4.4.2": {
+        "title": "Scene previews, chapter flow, richer settings and private rooms",
+        "summary": "Major V4 feature update adding exact-frame timeline thumbnails, chapter-driven episode transitions, eight-section settings, spoiler protection, richer presence and invite-only rooms.",
+        "changes": [
+          "Decodes exact-frame timeline hover previews in a second paused engine instance (with server fallback for HDR files) and adds configurable 10 s, 30 s (default) or 60 s skip steps that stack on rapid presses.",
+          "Adds manual Skip opening from named chapters, a cancellable 30-second Next episode countdown that stops at a season finale, Go to post-credits scene, and a sleep timer.",
+          "Reorganises settings into eight categories (General, Playback, Audio and subtitles, Privacy, Server, Updates, Statistics, Help) with per-series track memory, language priority, forced/SDH preferences, audio device selection, sync offsets, UI scale and customizable shortcuts.",
+          "Saves playback progress cleanly during bounded window close and adds a per-series Spoiler protection switch that blurs unwatched episode stills and hides synopses.",
+          "Expands friend presence (Online, Inactive, Watching, Offline; Up for a film, Do not disturb, Invisible; navigation-bar avatars and return notices) and makes removing a friend clean up both sides via inbox notice.",
+          "Adds private invite-only watch-party rooms with optional join requests from friends."
+        ]
+      },
+      "v4.4.1": {
+        "title": "Opinions between households, and idle presence",
+        "summary": "Signed interface pack carrying friend title opinions over Firebase without open router ports and introducing the automatic Inactive state.",
+        "changes": [
+          "Delivers one editable, deletable opinion per title (thumb, date and spoiler blur) between friends through Firebase (theia-friends) without requiring open router ports.",
+          "Switches presence to Inactive automatically after five minutes idle, dimming the avatar ring and excluding idle friends from the online count.",
+          "Ships as an Ed25519-signed interface pack for 4.4.0 native shells alongside updated standalone servers."
+        ]
+      },
+      "v4.4.0": {
+        "title": "A stable native shell, smaller signed updates",
+        "summary": "Splits the frozen native player shell from Ed25519-signed interface packs with automatic rollback, and ships the Firebase friend directory.",
+        "changes": [
+          "Separates the native player shell from Ed25519-signed interface packs that trial-boot on launch and roll back automatically if startup fails.",
+          "Includes the Firebase friend directory, offline-capable friend requests (THEIA2- codes alongside legacy THEIA1- codes) and fast presence updates without router port forwarding.",
+          "Preserves the playback clock across converted stream reloads, stores offline progress saves in an ordered per-server/per-profile outbox, and disables episode autoplay in rooms.",
+          "Publishes desktop setups for Windows x64, Ubuntu 24.04 x64, macOS Apple Silicon and macOS Intel; Windows and Linux ARM64 desktop setups stay at 4.2.1 due to hosted runner limits while standalone servers ship for all six platforms."
+        ]
+      },
+      "v4.3.1": {
+        "title": "Friend requests that arrive without port forwarding",
+        "summary": "Introduces the anonymous Firebase directory for friend codes, offline requests and presence; merged and published directly within 4.4.0 the same day.",
+        "changes": [
+          "Moves friend discovery, friend requests and presence to Firebase Realtime Database (theia-friends) with anonymous sign-in so requests arrive even when a peer's server is off or behind NAT.",
+          "Introduces THEIA2-XXXXX-XXXXX friend codes while keeping existing THEIA1- codes working, updates presence within one to two seconds, and shows an explicit unreachable notice when offline.",
+          "Keeps media streams, library catalogues and watch history off Firebase; direct WireGuard tunnels remain dedicated to remote playback and rooms."
+        ]
+      },
+      "v4.3.0": {
+        "title": "Title reviews, tabbed title pages, faster startup and macOS setups",
+        "summary": "Adds household and friend title reviews, redesigns title pages around tabs and device compatibility checks, trims player weight and restores both macOS setups.",
+        "changes": [
+          "Lets viewers leave a thumb up/down and a 500-character review per title with a spoiler switch, and tints profile rings from each profile's photo.",
+          "Redesigns film and series pages with tabs (episodes, synopsis, cast, saga, reviews), a file version chooser and a Playback on this device check.",
+          "Shrinks the desktop player binary (11.5 MB vs 15.1 MB) and UI assets (1.7 MB vs 4.5 MB), opens title pages faster and halves CPU usage while searching.",
+          "Restores complete macOS Apple Silicon and Intel setups and restarts launchd or systemd services cleanly after in-app updates on macOS and Linux.",
+          "Checks online during setup whether a newer installer release exists before writing files."
+        ]
+      },
+      "v4.2.2": {
+        "title": "On-demand quality rungs, and rooms without stray pauses",
+        "summary": "Inspects unmeasured films on demand when opening the quality menu and prevents background clicks in a watch party from pausing everyone.",
+        "changes": [
+          "Triggers an immediate FFmpeg stream inspection when opening the quality menu on an unmeasured film so lower quality options appear right away.",
+          "Changes clicking the video background inside a watch-party room to wake the controls rather than toggling pause for the whole room.",
+          "Highlights the room button while a room is active and removes the misleading down chevron on the solo playback island.",
+          "Ships desktop setups for Windows x64 and Ubuntu 24.04 x64 alongside standalone servers for all six platforms."
+        ]
+      },
+      "v4.2.1": {
+        "title": "Shared Windows audio alongside calls, clean fullscreen and verified updates",
+        "summary": "Keeps voice calls audible during playback on Windows by default, fixes maximized-to-fullscreen taskbar overlap, and adds SHA-256 setup updates.",
+        "changes": [
+          "Defaults Windows audio to shared mode so Discord and voice calls stay audible beside a film, with an opt-in Untouched sound to the amplifier setting for exclusive bitstream passthrough.",
+          "Fixes entering fullscreen from a maximized Windows window so the taskbar never remains on top, and simplifies the solo island back to the end-time clock.",
+          "Downloads and SHA-256-verifies the full Windows setup from the in-app update button, and checks headless servers for updates every six hours outside playback.",
+          "Serves as the latest native desktop setup for Windows ARM64 and Ubuntu 24.04 ARM64 while later V4 releases ship x64 and macOS desktop setups."
+        ]
+      },
+      "v4.2.0": {
+        "title": "Artwork in the room island, window-state fixes and Go security update",
+        "summary": "Brings profile photos and cached TMDB artwork into the watch-party island, hardens fullscreen and room transfers, and updates the Go runtime.",
+        "changes": [
+          "Displays profile avatars and cached TMDB posters/backdrops inside the watch-party island with smoother motion and personal resync/offset controls.",
+          "Fixes keyboard F / Escape and title-bar double-click window restoration, revokes room file transfers immediately on leave or unfriend, and caps multi-member loading waits.",
+          "Repairs missing bundle files when re-running setup and stops deleted titles (HTTP 404 or 410) from blocking queued playback progress saves.",
+          "Rebuilds server and setup binaries with Go 1.26.9 to address standard-library security advisory GO-2026-6617."
+        ]
+      },
+      "v4.1.0": {
+        "title": "Synchronized watch parties across households",
+        "summary": "Introduces encrypted rooms for up to eight people with gentle drift correction, optional direct file streaming over WireGuard and the dynamic island.",
+        "changes": [
+          "Synchronizes watch parties for up to eight participants using gentle speed nudging, a 10-second loading buffer wait, host-only or shared controls, and a per-guest cut offset.",
+          "Streams the host's file directly over encrypted WireGuard when an invited guest does not have a local copy in their own library.",
+          "Adds the dynamic island pill below the title bar, multi-interface UPnP/NAT-PMP port mapping, IPv6 friend-code endpoints and room protocol version checks.",
+          "Stops a local server started by the theia launcher automatically ten seconds after the desktop player exits."
+        ]
+      },
+      "v4.0.0": {
+        "title": "Profiles, friends, full-screen setup and a new foundation",
+        "summary": "Opens Generation 4 with household profiles, peer-to-peer WireGuard friend presence, opt-in Discord Rich Presence, a rebuilt terminal installer and PolyForm Noncommercial licensing.",
+        "changes": [
+          "Adds the startup Who's watching? profile chooser, friend codes, peer-to-peer WireGuard friend presence (90-second in-memory TTL) and friends-only remote access.",
+          "Introduces opt-in local Discord Rich Presence with a separate consent toggle before sharing the title being watched.",
+          "Rebuilds theia-setup as a full-screen interactive terminal form with folder suggestions, video file counts and in-place updates keeping library and progress.",
+          "Improves filename parsing (titles, years, French release tags, multi-episode files), bundles pinned LGPL libmpv on Linux (PulseAudio/ALSA), groups settings and introduces the T-over-the-sun icon.",
+          "Moves releases from 4.0 onward to PolyForm Noncommercial 1.0.0 with private source development (3.4.0 and earlier remain GPL-3.0 at their public tags), launches the static website, and updates source-map-js."
+        ]
+      },
+      "v3.4.0": {
+        "title": "Six desktop builds, rich detail pages and wrapping up V3",
+        "summary": "Final V3 release expanding complete desktop setups to all six OS/processor targets and adding rich film and series detail views.",
+        "changes": [
+          "Publishes complete setups for all six desktop targets: Windows x64, Windows ARM64, macOS Apple Silicon, macOS Intel, Ubuntu 24.04 x64 and Ubuntu 24.04 ARM64.",
+          "Adds film and series detail pages with cached TMDB synopses, cast rails, file resolution/HDR inspection and a Windows display and GPU driver check.",
+          "Completes series episode tracking with resume bars, mark-watched/reset controls, jump to next unwatched episode and a 10-second next-episode prompt.",
+          "Allows cancelling an in-flight server connection, retries unsent playback progress saves automatically, and marks browser viewer playback feature-complete."
+        ]
+      },
+      "v3.3.6": {
+        "title": "Release packaging parity and macOS bundle integrity",
+        "summary": "Hardens release packaging with a 67-check byte-for-byte parity gate and preserves macOS framework symlinks and code signatures across extraction and updates.",
+        "changes": [
+          "Enforces an exact player version match in the Windows offline ZIP and adds a 67-comparison byte-for-byte CI parity gate between standalone assets and offline bundles.",
+          "Teaches the Go ZIP extractor to recreate macOS .framework symbolic links safely and preserve 0644/0755 permissions so strict codesign verification passes.",
+          "Updates the macOS updater to swap the complete Theia.app bundle cleanly during upgrades."
+        ]
+      },
+      "v3.3.5": {
+        "title": "Subtitle studio, event-driven playback status and viewing statistics",
+        "summary": "Adds a live 1080p-scaled subtitle customizer, cuts idle playback CPU by two thirds, smooths window edge resizing and introduces viewing statistics.",
+        "changes": [
+          "Adds dedicated Playback and Subtitles settings with a live 1080p-scaled preview for size, vertical position (sub-pos), colour, outline, 70% background band, font family and weight across SRT and ASS.",
+          "Replaces status polling with event-driven updates (cutting idle CPU from 2.8% to 0.9%) and defers SetWindowRgn during edge drag so window resize rises from 5 to 95 frames.",
+          "Introduces the viewing statistics dashboard with total hours watched, started/completed counts, films-to-series split bar and top series.",
+          "Adds a two-tab Languages / Quality transport popover and a collapsible volume slider."
+        ]
+      },
+      "v3.3.4": {
+        "title": "The native desktop player reaches Apple Silicon",
+        "summary": "Delivers the native macOS Apple Silicon application, installer and background launchd service, alongside deterministic reproducible builds.",
+        "changes": [
+          "Ships native Theia.app on macOS Apple Silicon rendering through a libmpv OpenGL surface, installed by theia-setup-darwin-arm64 with a ~/.local/bin link and launchd service.",
+          "Preserves framework symbolic links inside the macOS offline ZIP (saving 25 MB per download) and adapts the web player transport bar cleanly below 44rem.",
+          "Removes embedded build timestamps for deterministic Go and setup binaries."
+        ]
+      },
+      "v3.3.3": {
+        "title": "Unified hero backdrops and rail-and-panel settings",
+        "summary": "Brings consistent masked backdrop artwork to Home, Films and Series, widens settings into a sectioned sheet and verifies embedded assets in CI.",
+        "changes": [
+          "Unifies softened, edge-masked hero backdrop artwork across the Home, Films and Series views.",
+          "Replaces the narrow settings modal with a wider rail-and-panel sheet (Interface, Playback, Server, Update), Cancel/Save actions and a one-click copyable server URL.",
+          "Adds a CI release check confirming offline bundles embed both the compiled web interface and the TMDB key."
+        ]
+      },
+      "v3.3.2": {
+        "title": "The theia launcher command and clean uninstallation",
+        "summary": "Introduces the single theia command to start server and player together, fixes fresh empty libraries and adds clean uninstallation.",
+        "changes": [
+          "Adds the theia launcher on PATH and in Windows App Paths / Start Menu, starting theia-server automatically when needed before opening theia-player.",
+          "Fixes the home view on a brand-new empty library (returning an empty rows array instead of null) so fresh installs render immediately.",
+          "Adds theia-setup --uninstall to stop running processes and remove binaries, shortcuts, registry entries and PATH changes while leaving %APPDATA%\\Theia intact."
+        ]
+      },
+      "v3.3.1": {
+        "title": "Streamlined release downloads and build diagnostics",
+        "summary": "Simplifies GitHub release assets from 20 files to 9 clearly named downloads, embeds version diagnostics and patches a dependency advisory.",
+        "changes": [
+          "Consolidates public release assets from 20 files down to 9 clearly labelled downloads (installer, offline bundle and updater packages) and retires the temporary 3.2 filename bridge.",
+          "Compiles and verifies the release version tag in theia-player --diagnostics and fixes a browser playback guard race condition.",
+          "Updates devalue to resolve security advisory GHSA-9rgm-9g3h-6x36."
+        ]
+      },
+      "v3.3.0": {
+        "title": "The native generation: server, libmpv desktop player and setup",
+        "summary": "Splits Theia into a local server, a native desktop player built on Tauri and pinned LGPL libmpv, and a user-space installer without administrator rights.",
+        "changes": [
+          "Separates Theia into theia-server (library indexing, cached TMDB metadata and local HTTP streaming), theia-player (native Rust/Tauri desktop app) and theia-setup.",
+          "Integrates a SHA-256-pinned LGPL libmpv engine with d3d11va / gpu-next hardware decoding, Matroska, Dolby Vision Profile 7 tone-mapping, TrueHD/Atmos/DTS-HD bitstream passthrough with PCM fallback, and external plus image subtitles.",
+          "Installs in user space without administrator privileges through a six-question terminal wizard or CLI flags, verifying SHA-256 digests and supporting offline ZIP archives.",
+          "Loads the complete library payload in two local HTTP requests (measured at 0.7 seconds for 250 films)."
+        ]
+      }
+    }
   },
   "privacy": {
     "title": "Privacy",

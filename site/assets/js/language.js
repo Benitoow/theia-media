@@ -20,8 +20,9 @@
   // #discover, #demo and #help stay on the home page, so they are not listed.
   var moved = {
     download: "download",
-    new: "new",
-    v5: "new",
+    new: "changelog",
+    changelog: "changelog",
+    v5: "changelog",
     faq: "questions",
     ledger: "questions",
     limits: "questions",

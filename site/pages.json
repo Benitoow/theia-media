@@ -1,7 +1,7 @@
 [
   { "id": "home", "slug": "" },
   { "id": "download", "slug": "download" },
-  { "id": "new", "slug": "new" },
+  { "id": "changelog", "slug": "changelog" },
   { "id": "questions", "slug": "questions" },
   { "id": "privacy", "slug": "privacy" },
   { "id": "about", "slug": "about" }
