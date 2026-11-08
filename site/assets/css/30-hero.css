@@ -92,7 +92,6 @@
   object-fit: cover;
   object-position: center;
   mix-blend-mode: screen;
-  filter: sepia(0.2);
   mask-image: linear-gradient(
     180deg,
     transparent 6rem,
@@ -115,16 +114,16 @@
   background:
     linear-gradient(
       180deg,
-      rgb(11 10 9 / 0.7),
-      rgb(11 10 9 / 0.15) 24%,
-      rgb(11 10 9 / 0.3) 65%,
+      rgb(0 0 0 / 0.75),
+      rgb(0 0 0 / 0.2) 24%,
+      rgb(0 0 0 / 0.45) 65%,
       var(--ink)
     ),
     radial-gradient(
       ellipse 60% 70% at 50% 48%,
-      rgb(11 10 9 / 0.74),
-      rgb(11 10 9 / 0.56) 58%,
-      rgb(11 10 9 / 0.25)
+      rgb(0 0 0 / 0.8),
+      rgb(0 0 0 / 0.6) 58%,
+      rgb(0 0 0 / 0.3)
     );
 }
 .hero-foot {
