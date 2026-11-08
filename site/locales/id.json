@@ -205,7 +205,10 @@
     "legacyNote": "Pemasang lama ini mendahului 4.4 dan belum memiliki fitur pemutar terbaru. Versinya sendiri tertera di atas.",
     "upgrade": "Sudah memakai Theia? Jalankan pemasang untuk memperbarui program tanpa menghapus koleksi dan progres. Pembaruan server saja tidak mengganti pemutar.",
     "release": "Semua berkas rilis",
-    "help": "Prosesor apa yang kupakai?"
+    "help": "Prosesor apa yang kupakai?",
+    "apk": "Ponsel, tablet, dan Google TV (APK)",
+    "androidWarning": "Kompatibel dengan Android 8.0 ke atas (ponsel, tablet, dan Android TV / Google TV). Unduh dan pasang APK langsung di perangkat Anda.",
+    "verifiedAndroid": "Ditandatangani dengan kunci rilis resmi Theia. Diverifikasi pada ponsel fisik dan Android TV."
   },
   "changelog": {
     "title": "Riwayat perubahan",

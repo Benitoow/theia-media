@@ -209,7 +209,7 @@
   // ---- the download station: one system at a time; never the processor ----
   var pills = document.querySelectorAll("[data-os-pill]");
   var live = document.getElementById("os-live");
-  var names = { windows: "Windows", macos: "macOS", linux: "Linux" };
+  var names = { windows: "Windows", macos: "macOS", linux: "Linux", android: "Android" };
 
   function show(os, announce) {
     root.dataset.os = os;

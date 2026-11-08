@@ -205,7 +205,10 @@
     "legacyNote": "Este instalador es anterior a 4.4 y no incluye las nuevas funciones del reproductor. Arriba se indica su propia versión.",
     "upgrade": "¿Ya usas Theia? Ejecuta el instalador para actualizar los programas y conservar biblioteca y progreso. Actualizar solo el servidor no reemplaza el reproductor.",
     "release": "Todos los archivos de la versión",
-    "help": "¿Qué procesador tengo?"
+    "help": "¿Qué procesador tengo?",
+    "apk": "Teléfono, tableta y Google TV (APK)",
+    "androidWarning": "Compatible con Android 8.0 y versiones posteriores (teléfonos, tabletas y Android TV / Google TV). Descarga e instala el APK directamente en tu dispositivo.",
+    "verifiedAndroid": "Firmado con la clave oficial de lanzamiento de Theia. Verificado en teléfono físico y Android TV."
   },
   "changelog": {
     "title": "Historial de cambios",

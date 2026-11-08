@@ -121,6 +121,9 @@ const ASSET_ROWS = {
     ["theia-setup-linux-amd64", "Ubuntu 24.04 x64", "x64", "verifiedLinux"],
     ["theia-setup-linux-arm64", "Ubuntu 24.04 ARM64", "arm", "verifiedLinux"],
   ],
+  android: [
+    ["theia-android-5.0.0.apk", "Android", "apk", "verifiedAndroid"],
+  ],
 };
 
 function renderLegacyNewRedirect(language, catalogue, siteUrl) {
@@ -502,12 +505,12 @@ export function build(argv = process.argv.slice(2)) {
     const copyField = (id, label, value, context) =>
       `<div class="copy-field"><span>${label}</span><div class="copy-row"><code id="${id}" dir="ltr">${escapeHTML(value)}</code><button class="copy-button" type="button" data-copy="${id}" aria-label="${t("download.copy")} — ${label} — ${context}">${icon("copy")}<span>${t("download.copy")}</span></button></div></div>`;
 
-    const osMarks = { windows: "windows", macos: "apple", linux: "linux" };
+    const osMarks = { windows: "windows", macos: "apple", linux: "linux", android: "phone" };
     const blocks = {
       download_panels: () =>
         Object.entries(ASSET_ROWS)
           .map(([os, assets]) => {
-            const title = { windows: "Windows", macos: "macOS", linux: "Linux" }[
+            const title = { windows: "Windows", macos: "macOS", linux: "Linux", android: "Android" }[
               os
             ];
             const prerequisite =

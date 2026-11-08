@@ -80,9 +80,9 @@ empty frames where the library now shows itself. The friends crop was added on
 
 | Published file | What it is | Where it is used |
 | --- | --- | --- |
-| `img/shot-library.webp` | The *All movies* screen of the Windows player built from the 4.4.2 source, cropped to 4:3 below the navigation and scaled to 1200 x 900 | "A library that feels like yours", labelled *Screenshot* |
-| `img/shot-player.webp` | The same player during a sample film, the pointer on the playback bar at 2:02:17 with the timeline preview open, scaled to 1600 x 943 | "A player built for your files", labelled *Screenshot* |
-| `img/shot-friends.webp` | A 1200 x 707 crop of the real friends interface rendered in Edge against that same sample server, showing invented friends watching, online and up for a film | "Closer, even from a distance", labelled *Screenshot* |
+| `img/shot-library.webp` | The *All movies* screen of the player built from the 5.0 source, cropped and scaled to 1200 x 900 | "A library that feels like yours", labelled *Screenshot* |
+| `img/shot-player.webp` | The title page and video canvas during a sample film from the 5.0 source, scaled to 1600 x 943 | "A player built for your files", labelled *Screenshot* |
+| `img/shot-friends.webp` | A 1200 x 707 crop of the real friends interface in 5.0 rendered in Edge against the sample server, showing invented friends watching, online and up for a film | "Closer, even from a distance", labelled *Screenshot* |
 
 All come from the sample library described in `docs/screenshots/README.md` of the
 public repository: 132 recent films and 40 series, every file a two-second clip
@@ -93,16 +93,16 @@ film is a 2 h 46 min video made from the title's own TMDB backdrop, panned and z
 the picture in the player and in the preview is not the film. Nothing here was
 fetched from anywhere else, and no image of a real household or library is shown.
 
-The library and player pictures are native Windows captures. The friends picture
-is a crop of `e-friends.png` (2800 x 2300), taken on 20 October 2026 with the
-existing `scripts/sample-library/shoot-friends.mjs` bench. As documented beside
+The library and film pictures are captures from the 5.0 interface. The friends picture
+is a crop of `friends.png` (2800 x 2640), taken on 7 November 2026 with the
+existing `scripts/sample-library/shoot-readme.mjs` bench. As documented beside
 the README screenshots, that browser bench marks the sample friends as living
 in another household and the service as reachable; Firebase is blocked. It is
 an interface capture with sample data, not evidence of a real network session.
-The source SHA-256 is
-`15a0c2ef48513326a8bfb22fb6aa250f9da9f7da3f15eba68c37d2eafce21d4a`;
-the published WebP SHA-256 is
-`ac9f17169764735b166a8d77386f152bf35371c86df660e8416b970762d7680f`.
+The published WebP SHA-256 digests are:
+- `shot-library.webp`: `f3c801a8d4218a249bc229e21e368e23c17bd05914def2bf611739692a5f6d4e`
+- `shot-player.webp`: `26fa8006b98d41ce204641e041459f0c71a253ef61644dd1eff27e264ecd81e9`
+- `shot-friends.webp`: `fbbf559982932cb84b0711407575349877f3b1b878170a143b63358a6cfaeca4`
 
 The site uses the player's 1600:943 aspect ratio for its three screenshot
 windows, with cover fitting anchored at the top. The player stays entirely
@@ -110,9 +110,9 @@ visible; the library is cropped at the bottom. Captions sit below the images
 instead of covering the playback controls. No screenshot is stretched or padded.
 
 ```sh
-ffmpeg -i n-movies.png -vf "crop=1680:1260:60:392,scale=1200:900:flags=lanczos"   -c:v libwebp -quality 84 -compression_level 6 shot-library.webp
-ffmpeg -i n-timeline.png -vf "scale=1600:943:flags=lanczos"   -c:v libwebp -quality 84 -compression_level 6 shot-player.webp
-ffmpeg -i e-friends.png -vf "crop=1200:707:800:670" -c:v libwebp -quality 84 -compression_level 6 shot-friends.webp
+ffmpeg -i library.png -vf "crop=2200:1650:300:0,scale=1200:900:flags=lanczos" -c:v libwebp -quality 84 -compression_level 6 shot-library.webp
+ffmpeg -i film.png -vf "scale=1600:943:flags=lanczos" -c:v libwebp -quality 84 -compression_level 6 shot-player.webp
+ffmpeg -i friends.png -vf "crop=2400:1414:200:400,scale=1200:707:flags=lanczos" -c:v libwebp -quality 84 -compression_level 6 shot-friends.webp
 ```
 
 ## The recording

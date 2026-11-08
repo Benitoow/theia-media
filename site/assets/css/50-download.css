@@ -104,7 +104,8 @@
 }
 .js[data-os="windows"] #panel-windows,
 .js[data-os="macos"] #panel-macos,
-.js[data-os="linux"] #panel-linux {
+.js[data-os="linux"] #panel-linux,
+.js[data-os="android"] #panel-android {
   display: block;
 }
 .js .panel + .panel {

@@ -10,6 +10,12 @@
 			"tag": "v5.0.0",
 			"url": "https://github.com/Benitoow/theia-media/releases/download/v5.0.0/theia-setup-windows-amd64.exe"
 		},
+		"theia-android-5.0.0.apk": {
+			"size": 6729237,
+			"sha256": "9461e04320e8a2b1a85726f53786f7413dfaff738c12efd1b35c5065b3c05b58",
+			"tag": "v5.0.0",
+			"url": "https://github.com/Benitoow/theia-media/releases/download/v5.0.0/theia-android-5.0.0.apk"
+		},
 		"theia-setup-windows-arm64.exe": {
 			"size": 64026875,
 			"sha256": "d8120abe52555f6fe72b72784a002e7138ba5bcdb348d853bef2c866b3b6f044",

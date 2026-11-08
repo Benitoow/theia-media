@@ -205,7 +205,10 @@
     "legacyNote": "Cet ancien installateur précède la 4.4 et ne contient pas les nouvelles fonctions du lecteur. Sa propre version est indiquée ci-dessus.",
     "upgrade": "Déjà sur Theia ? Relancez l’installateur pour mettre à jour les programmes et garder bibliothèque et progression. Une mise à jour du serveur seul ne remplace pas le lecteur.",
     "release": "Tous les fichiers de la version",
-    "help": "Quel est mon processeur ?"
+    "help": "Quel est mon processeur ?",
+    "apk": "Téléphone, tablette et Google TV (APK)",
+    "androidWarning": "Compatible avec Android 8.0 et versions ultérieures (téléphones, tablettes et Android TV / Google TV). Téléchargez et installez l'APK directement sur votre appareil.",
+    "verifiedAndroid": "Signé avec la clé officielle de version Theia. Testé sur téléphone physique et Android TV."
   },
   "changelog": {
     "title": "Changelog",

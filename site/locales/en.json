@@ -205,7 +205,10 @@
     "legacyNote": "This older setup predates 4.4 and does not include the newer player features. Its own version is shown above.",
     "upgrade": "Already using Theia? Run the setup to update the desktop programs and keep your library and progress. A server-only update does not replace the player.",
     "release": "All release files",
-    "help": "Which processor do I have?"
+    "help": "Which processor do I have?",
+    "apk": "Phone, tablet and Google TV (APK)",
+    "androidWarning": "Compatible with Android 8.0 and later (phones, tablets, and Android TV / Google TV). Download and install the APK directly on your device.",
+    "verifiedAndroid": "Signed with the official Theia release key. Verified on a physical phone and Android TV."
   },
   "changelog": {
     "title": "Changelog",

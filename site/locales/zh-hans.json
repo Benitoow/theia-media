@@ -205,7 +205,10 @@
     "legacyNote": "此旧版安装程序早于 4.4，不包含较新的播放器功能。其实际版本已在上方标明。",
     "upgrade": "已在使用 Theia？运行安装程序即可更新桌面程序并保留媒体库和进度。仅更新服务器不会替换播放器。",
     "release": "查看全部发布文件",
-    "help": "我的处理器是哪一种？"
+    "help": "我的处理器是哪一种？",
+    "apk": "手机、平板与 Google TV (APK)",
+    "androidWarning": "适用于 Android 8.0 及更高版本（手机、平板和 Android TV / Google TV）。直接在设备上下载并安装 APK。",
+    "verifiedAndroid": "使用 Theia 官方发布密钥签名。已在实体手机和 Android TV 上验证。"
   },
   "changelog": {
     "title": "更新日志",
