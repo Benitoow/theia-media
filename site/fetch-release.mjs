@@ -22,7 +22,8 @@ const SETUPS = [
 	'theia-setup-darwin-arm64',
 	'theia-setup-darwin-amd64',
 	'theia-setup-linux-amd64',
-	'theia-setup-linux-arm64'
+	'theia-setup-linux-arm64',
+	'theia-android-5.0.0.apk'
 ];
 
 const here = dirname(fileURLToPath(import.meta.url));
