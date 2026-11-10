@@ -465,6 +465,17 @@
           "Loads the complete library payload in two local HTTP requests (measured at 0.7 seconds for 250 films)."
         ]
       },
+      "v5.2.0": {
+        "title": "The phone scans your server, the interface calms down and updating restarts the player",
+        "summary": "The Android app reads the server's QR code itself, its player is the desktop's bar made small, the decorative gradients are gone, search rests on the connect screen's field of marks, and updating Theia now restarts the player.",
+        "changes": [
+          "The Android connect screen opens the camera, decodes the server's QR code inside the app and connects, with nothing to copy from one screen to another; the camera permission is asked only at the first scan.",
+          "The phone player is the desktop bar made small: one row of small icons, the island on top, no volume, and a single sheet for audio, subtitles and quality.",
+          "The server's QR code no longer points at a VPN adapter such as Cloudflare WARP: it follows your Wi-Fi.",
+          "Removes the decorative accent gradients, puts search on the connect screen's field of marks instead of a video loop (about 850 kB lighter) and squares the like and dislike thumbs with a corner badge.",
+          "Updating Theia restarts the player when an interface pack was installed, so the new interface is the one on screen."
+        ]
+      },
       "v5.1.1": {
         "title": "Official Electric Flame branding, pure OLED black and refined social layout",
         "summary": "Aligns visual identity with the official solar flame mark (#FF4500, #FFA100) and pure OLED black (#000000), resolves layout spacing in the Theia+ friends dialog, and embeds official multi-resolution icons into Windows binaries.",

@@ -465,6 +465,17 @@
           "Memuat muatan koleksi lengkap dalam dua permintaan HTTP lokal (terukur 0,7 detik untuk 250 film)."
         ]
       },
+      "v5.2.0": {
+        "title": "Ponsel memindai server Anda, antarmuka menjadi lebih tenang, dan pembaruan memulai ulang pemutar",
+        "summary": "Aplikasi Android membaca sendiri kode QR server, pemutarnya adalah bilah PC versi ringkas, gradien dekoratif dihapus, pencarian bertumpu pada bidang tanda di layar sambungan, dan memperbarui Theia kini memulai ulang pemutar.",
+        "changes": [
+          "Layar sambungan Android membuka kamera, membaca kode QR server di dalam aplikasi, lalu tersambung, tanpa menyalin apa pun dari satu layar ke layar lain; izin kamera hanya diminta saat pemindaian pertama.",
+          "Pemutar ponsel adalah bilah PC versi ringkas: satu baris ikon kecil, pulau di bagian atas, tanpa volume, dan satu lembar untuk audio, subtitel, dan kualitas.",
+          "Kode QR server tidak lagi mengarah ke adaptor VPN seperti Cloudflare WARP: kode itu mengikuti Wi-Fi Anda.",
+          "Menghapus gradien aksen dekoratif, menempatkan pencarian di atas bidang tanda layar sambungan alih-alih video berulang (sekitar 850 kB lebih ringan), dan membuat ikon suka dan tidak suka berbentuk persegi dengan lencana di sudut.",
+          "Memperbarui Theia memulai ulang pemutar ketika paket antarmuka terpasang, sehingga antarmuka baru yang tampil di layar."
+        ]
+      },
       "v5.1.1": {
         "title": "Identitas visual nyala api resmi, hitam OLED murni, dan tata letak sosial yang disempurnakan",
         "summary": "Menyelaraskan identitas visual dengan lambang nyala api surya resmi (#FF4500, #FFA100) dan hitam OLED murni (#000000), memperbaiki spasi pada dialog teman Theia+, serta menyematkan ikon multi-resolusi resmi ke biner Windows.",

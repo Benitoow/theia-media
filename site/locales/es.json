@@ -465,6 +465,17 @@
           "Carga los datos completos de la biblioteca en dos peticiones HTTP locales (medido en 0,7 segundos para 250 películas)."
         ]
       },
+      "v5.2.0": {
+        "title": "El teléfono escanea tu servidor, la interfaz se calma y actualizar reinicia el reproductor",
+        "summary": "La aplicación Android lee ella misma el código QR del servidor, su reproductor es la barra del PC en pequeño, desaparecen los degradados decorativos, la búsqueda descansa sobre el campo de signos de la pantalla de conexión y actualizar Theia ahora reinicia el reproductor.",
+        "changes": [
+          "La pantalla de conexión de Android abre la cámara, decodifica el código QR del servidor dentro de la aplicación y se conecta, sin copiar nada de una pantalla a otra; el permiso de cámara solo se pide en el primer escaneo.",
+          "El reproductor del teléfono es la barra del PC en pequeño: una sola fila de iconos pequeños, la isla arriba, sin volumen y una única hoja para audio, subtítulos y calidad.",
+          "El código QR del servidor ya no apunta a un adaptador VPN como Cloudflare WARP: sigue tu Wi-Fi.",
+          "Elimina los degradados de acento decorativos, apoya la búsqueda en el campo de signos de la pantalla de conexión en lugar de un bucle de vídeo (unos 850 kB menos) y vuelve cuadrados los pulgares de me gusta y no me gusta con una insignia en la esquina.",
+          "Actualizar Theia reinicia el reproductor cuando se instaló un paquete de interfaz, para que la nueva interfaz sea la que se ve en pantalla."
+        ]
+      },
       "v5.1.1": {
         "title": "Identidad visual de llama oficial, negro OLED puro y diseño social refinado",
         "summary": "Alinea la identidad visual con la marca oficial de la llama solar (#FF4500, #FFA100) y negro OLED puro (#000000), corrige los espaciados en el panel de amigos de Theia+ e integra iconos oficiales multirresolución en los ejecutables de Windows.",

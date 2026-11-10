@@ -465,6 +465,17 @@
           "Charge l’intégralité de la bibliothèque en deux requêtes HTTP locales (mesuré à 0,7 seconde pour 250 films)."
         ]
       },
+      "v5.2.0": {
+        "title": "Le téléphone scanne votre serveur, l’interface se calme et la mise à jour redémarre le lecteur",
+        "summary": "L’application Android lit elle-même le QR code du serveur, son lecteur est la barre du PC en réduit, les dégradés décoratifs disparaissent, la recherche repose sur le champ de signes de la page de connexion et la mise à jour de Theia redémarre désormais le lecteur.",
+        "changes": [
+          "L’écran de connexion Android ouvre la caméra, décode le QR code du serveur dans l’application et se connecte, sans rien copier d’un écran à l’autre ; la permission caméra n’est demandée qu’au premier scan.",
+          "Le lecteur du téléphone est la barre du PC en réduit : une seule rangée de petites icônes, l’île en haut, pas de volume, et une seule feuille pour l’audio, les sous-titres et la qualité.",
+          "Le QR code du serveur ne pointe plus vers une carte VPN comme Cloudflare WARP : il suit votre Wi-Fi.",
+          "Supprime les dégradés d’accent décoratifs, installe la recherche sur le champ de signes de la page de connexion au lieu d’une boucle vidéo (environ 850 ko de moins) et carre les pouces j’aime et je n’aime pas avec un badge en coin.",
+          "La mise à jour de Theia redémarre le lecteur quand un paquet d’interface a été installé, pour que la nouvelle interface soit celle à l’écran."
+        ]
+      },
       "v5.1.1": {
         "title": "Charte flamme officielle, noir OLED pur et raffinement de l'interface sociale",
         "summary": "Adopte la charte graphique de la flamme officielle (#FF4500, #FFA100) et un fond noir OLED pur (#000000), résout les décalages de l'onglet amis (Theia+) et intègre les icônes multi-résolutions officielles dans les exécutables Windows.",
