@@ -38,9 +38,7 @@
   display: block;
 }
 .gilded {
-  background: linear-gradient(110deg, var(--bone) 8%, var(--accent) 88%);
-  color: transparent;
-  background-clip: text;
+  color: var(--accent);
 }
 .hero .lead {
   max-inline-size: 35rem;

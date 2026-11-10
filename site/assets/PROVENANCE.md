@@ -76,13 +76,18 @@ web (CLAUDE.md, "No unverified image").
 The library and player captures were added on 20 October 2026, replacing the
 illustration `moment-library.webp` (removed), which showed a dark gallery with
 empty frames where the library now shows itself. The friends crop was added on
-26 October 2026, replacing the last illustration in the product cards.
+26 October 2026, replacing the last illustration in the product cards. All three
+and the share card were retaken on 10 November 2026 for the 5.1.1 interface (the
+Electric Flame colours on pure OLED black, decision 239), because the earlier ones
+showed the gold palette and a button the product no longer draws, and again the same
+evening once the wordmark underline and the profile glow were removed (decision 241).
 
 | Published file | What it is | Where it is used |
 | --- | --- | --- |
-| `img/shot-library.webp` | The *All movies* screen of the player built from the 5.0 source, cropped and scaled to 1200 x 900 | "A library that feels like yours", labelled *Screenshot* |
-| `img/shot-player.webp` | The title page and video canvas during a sample film from the 5.0 source, scaled to 1600 x 943 | "A player built for your files", labelled *Screenshot* |
-| `img/shot-friends.webp` | A 1200 x 707 crop of the real friends interface in 5.0 rendered in Edge against the sample server, showing invented friends watching, online and up for a film | "Closer, even from a distance", labelled *Screenshot* |
+| `img/shot-library.webp` | The *All movies* screen of the 5.1.1 interface, a 1400 x 1050 window rendered in Edge at 2x, scaled to 1200 x 900 (no crop) | "A library that feels like yours", labelled *Screenshot* |
+| `img/shot-player.webp` | The player's own interface on *Dune: Part Two* with the pointer on the timeline at 2:02:17, rendered in Edge, scaled to 1600 x 943. The picture behind the controls is the film's TMDB backdrop, standing in for the video (Edge has no video engine); the scene above the bar is the sample server's decode of the stand-in video at that second | "A player built for your files", labelled *Screenshot* |
+| `img/shot-friends.webp` | The real friends interface in 5.1.1 rendered in Edge against the sample server, a 1400 x 825 window at 2x scaled to 1200 x 707, showing invented friends watching, online and up for a film | "Closer, even from a distance", labelled *Screenshot* |
+| `img/og-image.jpg` | The share card, 1200 x 630: the wordmark, the headline and one line of the site's own words on pure black, and the library capture. Composed by `.theia-private/ui-tour-20261110/og.mjs` (not tracked) from the site's own Cinzel and Jost files. No image other than the product capture is in it | the link-sharing preview |
 
 All come from the sample library described in `docs/screenshots/README.md` of the
 public repository: 132 recent films and 40 series, every file a two-second clip
@@ -93,26 +98,32 @@ film is a 2 h 46 min video made from the title's own TMDB backdrop, panned and z
 the picture in the player and in the preview is not the film. Nothing here was
 fetched from anywhere else, and no image of a real household or library is shown.
 
-The library and film pictures are captures from the 5.0 interface. The friends picture
-is a crop of `friends.png` (2800 x 2640), taken on 7 November 2026 with the
-existing `scripts/sample-library/shoot-readme.mjs` bench. As documented beside
-the README screenshots, that browser bench marks the sample friends as living
-in another household and the service as reachable; Firebase is blocked. It is
-an interface capture with sample data, not evidence of a real network session.
-The published WebP SHA-256 digests are:
-- `shot-library.webp`: `f3c801a8d4218a249bc229e21e368e23c17bd05914def2bf611739692a5f6d4e`
-- `shot-player.webp`: `26fa8006b98d41ce204641e041459f0c71a253ef61644dd1eff27e264ecd81e9`
-- `shot-friends.webp`: `fbbf559982932cb84b0711407575349877f3b1b878170a143b63358a6cfaeca4`
+The three pictures are captures of the 5.1.1 interface taken on 10 November 2026
+with the tour scripts of `.theia-private/ui-tour-20261110/` (not tracked), against a
+throwaway sample server cut off from every network. As documented beside the README
+screenshots (`docs/screenshots/README.md`), that browser bench marks the sample
+friends as living in another household and the service as reachable; Firebase is
+blocked, and the throwaway server had the Theia+ test code activated so that the
+friends sheet is unlocked. They are interface captures with sample data, not
+evidence of a real network session. The published SHA-256 digests are:
+- `shot-library.webp`: `4fc5bd7fa337895e766604adf0f76fbf913a74766f7a15a8a7af0e4f48bb8322`
+- `shot-player.webp`: `cf44786dda0432ea42041c9cf44d9b8c8655951ff0b9b8998322e7f48a52fe21`
+- `shot-friends.webp`: `e9715ed8c98a56ac944c662f7a895b5d8d73878dbe7d2d50ecde8c49ebb5e04d`
+- `og-image.jpg`: `c34b4122868e9bf801c4a067f27cc3d8aad3ca18ddb7e673d2b1023f14fcef2a`
 
 The site uses the player's 1600:943 aspect ratio for its three screenshot
 windows, with cover fitting anchored at the top. The player stays entirely
 visible; the library is cropped at the bottom. Captions sit below the images
 instead of covering the playback controls. No screenshot is stretched or padded.
+The recording below is not part of this retake: it is a capture of the shipped
+application from 22 October 2026 and still shows the earlier palette.
 
 ```sh
-ffmpeg -i library.png -vf "crop=2200:1650:300:0,scale=1200:900:flags=lanczos" -c:v libwebp -quality 84 -compression_level 6 shot-library.webp
-ffmpeg -i film.png -vf "scale=1600:943:flags=lanczos" -c:v libwebp -quality 84 -compression_level 6 shot-player.webp
-ffmpeg -i friends.png -vf "crop=2400:1414:200:400,scale=1200:707:flags=lanczos" -c:v libwebp -quality 84 -compression_level 6 shot-friends.webp
+# the 2800-pixel captures of `final.mjs`: site-library.png (1400 x 1050 window),
+# player.png and site-friends.png (1400 x 825 windows), all at 2x
+ffmpeg -i site-library.png -vf "scale=1200:900:flags=lanczos" -c:v libwebp -quality 82 -compression_level 6 shot-library.webp
+ffmpeg -i player.png -vf "scale=1600:943:flags=lanczos" -c:v libwebp -quality 82 -compression_level 6 shot-player.webp
+ffmpeg -i site-friends.png -vf "scale=1200:707:flags=lanczos" -c:v libwebp -quality 82 -compression_level 6 shot-friends.webp
 ```
 
 ## The recording

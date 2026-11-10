@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/Benitoow/theia-media/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Benitoow/theia-media?style=flat-square&color=FF4500"></a>
   <a href="LICENSE"><img alt="Free for noncommercial use: PolyForm Noncommercial from 4.0, GPL-3.0 up to 3.4" src="https://img.shields.io/badge/licence-PolyForm%20NC%20(4.0%2B)%20%C2%B7%20GPL--3.0%20(%E2%89%A43.4)-555?style=flat-square"></a>
-  <a href="#theia-51-instant-refresh-system-tray-theia-social-beta-and-deep-performance"><img alt="Theia 5.1" src="https://img.shields.io/badge/Theia-5.1.1-FF4500?style=flat-square"></a>
+  <a href="#theia-52-the-phone-scans-your-server-and-the-interface-calms-down"><img alt="Theia 5.2" src="https://img.shields.io/badge/Theia-5.2.0-FF4500?style=flat-square"></a>
   <a href="https://discord.gg/5E55F7XFZp"><img alt="Join the Discord" src="https://img.shields.io/badge/Discord-join%20us-5865F2?style=flat-square"></a>
   <img alt="Windows x64" src="https://img.shields.io/badge/Windows-x64-555?style=flat-square">
   <img alt="Ubuntu 24.04 x64" src="https://img.shields.io/badge/Ubuntu%2024.04-x64-555?style=flat-square">
@@ -21,10 +21,10 @@
 
 <p align="center">
   <a href="https://theia-media.app/">Website</a> ·
-  <a href="#theia-51-instant-refresh-system-tray-theia-social-beta-and-deep-performance">Theia 5.1</a> ·
+  <a href="#theia-52-the-phone-scans-your-server-and-the-interface-calms-down">Theia 5.2</a> ·
   <a href="#see-it">Screenshots</a> ·
   <a href="#downloads">Downloads</a> ·
-  <a href="docs/releases/v5.1.1.md">5.1 release notes</a> ·
+  <a href="docs/releases/v5.2.0.md">5.2 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/5E55F7XFZp">Discord</a>
@@ -32,7 +32,7 @@
 
 ![The home screen of Theia: navigation with friends around, the film you were watching, and the rows below it](docs/screenshots/home.webp)
 
-*The home screen of Theia 5.0, in English, on a sample library of 132 recent films and 40 series with friends around. How every picture on this page was made, and what is real in it, is in [docs/screenshots](docs/screenshots/README.md).*
+*The home screen of Theia 5.1, in English, on a sample library of 132 recent films and 40 series with friends around. How every picture on this page was made, and what is real in it, is in [docs/screenshots](docs/screenshots/README.md).*
 
 Theia turns the folders of films and series on your computers, your NAS and your
 Google Drive into one private cinema. A small server looks after your library, a
@@ -52,6 +52,21 @@ connect it: **Google Drive**, through your own Google client. See
 | One download | Built for choosing | Private by default |
 | --- | --- | --- |
 | One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud account. TMDB supplies metadata, GitHub Releases supplies updates, and Firebase carries the friends service described above. |
+
+## Theia 5.2: The phone scans your server and the interface calms down
+
+> [!IMPORTANT]
+> **Theia 5.2 is a polish release on the 5.1 interface, and the phone gets the most.**
+> [Read the 5.2 release notes](docs/releases/v5.2.0.md) for what was and was not checked.
+
+| New in 5.2 | What it means |
+| --- | --- |
+| **Scan the server's QR code in the app** | The Android application's connect screen opens the camera, reads the QR code your server shows, and connects. Nothing to copy from one screen to another. |
+| **A phone player that is the desktop's, made small** | One row of small icons under the timeline, the island on top, no volume, and a sheet that is named for everything it holds: audio, subtitles and quality. |
+| **No more gold-era gradients** | The underline under the wordmark, the glow in the profile button and the Theia+ gradients are gone. Black scrims over artwork stay. |
+| **Search on the connect screen's field** | The search page rests on the same quiet field of marks as the connect screen, instead of a video loop: about 850 kB lighter. |
+| **Updating Theia restarts the player** | After an update the player restarts on its own, so the new interface is the one you see. |
+| **A QR code that points at your Wi-Fi** | On a machine running a VPN such as Cloudflare WARP, the server's QR code no longer points at the VPN. |
 
 ## Theia 5.1: Instant refresh, system tray, Theia+ social beta and deep performance
 
@@ -265,8 +280,9 @@ Since 4.4, the player also gives you:
 ![The playback bar of the native player with the pointer at 2:02:17: a still of that scene above the bar, the -30 s and +30 s buttons and the end time](docs/screenshots/player.webp)
 
 *The timeline preview: the pointer is at 2:02:17, nothing has seeked, and the scene
-at that second is drawn above the bar. This picture was taken with 4.4.2 and is a
-stand-in made from the film's own backdrop; see [docs/screenshots](docs/screenshots/README.md).*
+at that second is drawn above the bar. The picture behind the controls is the film's
+own backdrop standing in for the video, because this capture is the player's interface
+rendered in a browser; see [docs/screenshots](docs/screenshots/README.md).*
 
 Theia deliberately has no live TV, DVR, music library, plugins or multi-user
 permissions.
@@ -535,6 +551,13 @@ file. They are not detected from picture or sound, and many files have none.
 Each release has its own notes, with what changed, what to do when updating and
 what was and was not checked.
 
+- **[5.2.0](docs/releases/v5.2.0.md)** — the phone scans your server's QR code and
+  plays with the desktop's bar made small, the gold-era gradients go, search rests on
+  the connect screen's field of marks, and updating Theia restarts the player.
+- **[5.1.1](docs/releases/v5.1.1.md)** — the official flame identity on pure OLED black,
+  the Theia+ friends sheet laid out properly and the official mark in the Windows programs.
+- **[5.1.0](docs/releases/v5.1.0.md)** — instant library refresh, a system tray for the
+  headless server, the Theia+ social beta and a much lighter database and bundle.
 - **[5.0.0](docs/releases/v5.0.0.md)** — the biggest update so far: one library across
   computers, NAS and Google Drive, one profile that follows you, the title page for
   every source, an Android application for your phone and a television beta, the
