@@ -464,6 +464,18 @@
           "Memasang di ruang pengguna tanpa hak administrator melalui panduan terminal enam pertanyaan atau opsi CLI, memverifikasi intisari SHA-256, dan mendukung arsip ZIP luring.",
           "Memuat muatan koleksi lengkap dalam dua permintaan HTTP lokal (terukur 0,7 detik untuk 250 film)."
         ]
+      },
+      "v5.1.0": {
+        "title": "Penyegaran instan, baki sistem, beta Theia+, dan optimasi mendalam",
+        "summary": "Menghadirkan sinkronisasi pustaka waktu nyata via Server-Sent Events, baki sistem tanpa CGO, pembukaan beta Theia+, konfigurasi firewall otomatis, dan optimasi kueri hingga 99,8 %.",
+        "changes": [
+          "Menambahkan rekonsiliasi pustaka waktu nyata via Server-Sent Events (GET /api/library/events), memangkas interval pemantau dari 60 dtk ke 10 dtk dan stabilisasi ke 3 dtk, memperbarui cache pemutar otomatis tanpa memuat ulang halaman.",
+          "Memperkenalkan baki sistem native tanpa CGO untuk server tanpa monitor di Windows (area notifikasi Win32, ketahanan mulai ulang Explorer) serta notifikasi macOS dan Linux, dengan menu admin web, pemindaian ulang, pemasangan, dan penonaktifan.",
+          "Membuka tiket sosial seumur hidup Theia+ (teman, status daring, ruang bersama, ulasan) dalam fase beta gratis via bot Alex di Discord di #theia-plus dengan lapisan kaca buram; server inti dan pemutaran tetap 100 % gratis.",
+          "Menyederhanakan pemasangan perangkat dengan kode 6 digit dan mengotomatiskan aturan firewall Windows untuk porta 8383 di jaringan privat (--firewall), serta panduan diagnostik pada layar koneksi.",
+          "Menghapus kueri N+1 SQLite saat kompilasi katalog (-99,8 % kueri, dari 2.502 menjadi 5 kueri batch), memperluas pool menjadi 6 koneksi, mengaktifkan memori terpetakan 256 MB, dan menjalankan PRAGMA optimize saat dimatikan.",
+          "Memisahkan video pencarian 814 kB ke pemuatan lambat, menerapkan memo pada kartu media, dan memangkas waktu mulai penginstal Lipgloss dari 8 dtk ke 2 dtk dengan kursor default pada tombol lanjutkan."
+        ]
       }
     }
   },

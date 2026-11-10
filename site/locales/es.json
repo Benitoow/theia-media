@@ -464,6 +464,18 @@
           "Instala en el espacio del usuario sin privilegios de administrador mediante un asistente de terminal de seis preguntas o parámetros CLI, verificando resúmenes SHA-256 y admitiendo archivos ZIP sin conexión.",
           "Carga los datos completos de la biblioteca en dos peticiones HTTP locales (medido en 0,7 segundos para 250 películas)."
         ]
+      },
+      "v5.1.0": {
+        "title": "Actualización instantánea, bandeja del sistema, beta Theia+ y alto rendimiento",
+        "summary": "Incorpora sincronización en tiempo real mediante Server-Sent Events, icono de bandeja nativo sin CGO, apertura de la beta de Theia+, reglas automáticas de cortafuegos y optimizaciones que reducen las consultas en un 99,8 %.",
+        "changes": [
+          "Añade conciliación de biblioteca en tiempo real mediante Server-Sent Events (GET /api/library/events), reduce el intervalo del observador de 60 s a 10 s y la estabilización a 3 s, invalidando la caché de los reproductores sin recargar la página.",
+          "Introduce una bandeja de sistema nativa sin CGO para servidores sin monitor en Windows (área de notificación Win32, recuperación de Explorer) y notificaciones en macOS y Linux, con acciones para administración web, reescaneo, emparejamiento y apagado.",
+          "Abre el pase social Theia+ de por vida (amigos, estado en línea, salas compartidas, opiniones) en beta cerrada gratuita mediante el bot Alex en Discord en #theia-plus bajo un panel de cristal esmerilado; el servidor y la reproducción siguen siendo 100 % gratuitos.",
+          "Facilita el emparejamiento con código de 6 dígitos y automatiza la regla de cortafuegos en Windows para el puerto 8383 en redes privadas (--firewall), añadiendo avisos de diagnóstico en la pantalla de conexión.",
+          "Elimina las consultas N+1 en SQLite durante la compilación del catálogo (-99,8 % de consultas, de 2.502 a 5 consultas por lotes), amplía el grupo a 6 conexiones, habilita 256 MB de memoria asignada y ejecuta PRAGMA optimize al apagar.",
+          "Separa el vídeo de búsqueda de 814 kB en un fragmento de carga diferida, memoriza tarjetas de medios y reduce el inicio del instalador Lipgloss de 8 s a 2 s con navegación predeterminada al botón continuar."
+        ]
       }
     }
   },

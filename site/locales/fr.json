@@ -464,6 +464,18 @@
           "S’installe dans l’espace utilisateur sans droits administrateur en six questions dans le terminal ou via des options CLI, avec contrôle SHA-256 et prise en charge des archives ZIP hors ligne.",
           "Charge l’intégralité de la bibliothèque en deux requêtes HTTP locales (mesuré à 0,7 seconde pour 250 films)."
         ]
+      },
+      "v5.1.0": {
+        "title": "Rafraîchissement instantané, system tray, bêta Theia+ et optimisations profondes",
+        "summary": "Apporte la synchronisation de bibliothèque en temps réel via Server-Sent Events, une icône system tray dédiée sans CGO, l'ouverture de la bêta Theia+, la configuration automatisée du pare-feu et des optimisations réduisant les requêtes de 99,8 %.",
+        "changes": [
+          "Ajoute la réconciliation de bibliothèque en temps réel par Server-Sent Events (GET /api/library/events), abaisse la scrutation du watcher de 60 s à 10 s et la stabilisation à 3 s, invalidant automatiquement les caches des lecteurs connectés sans rechargement de page.",
+          "Introduit une icône system tray native sans CGO pour serveurs headless sous Windows (zone de notification Win32, résilience aux redémarrages d'Explorer) ainsi que des notifications macOS et Linux, avec accès rapide à l'administration, au rescannage, à l'appairage et à l'arrêt propre.",
+          "Ouvre le passe social à vie Theia+ (liste d'amis, présence, salles synchronisées, avis partagés) en phase de bêta fermée avec codes distribués gratuitement par le bot Discord Alex dans #theia-plus derrière un voile frosted glass ; le serveur et la lecture restent 100 % gratuits.",
+          "Simplifie l'appairage avec code à 6 chiffres et automatise la règle de pare-feu Windows pour le port 8383 sur réseaux privés lors du setup (--firewall), avec indications diagnostiques sur l'écran de connexion.",
+          "Élimine les requêtes SQLite N+1 à la compilation du catalogue (-99,8 % d'allers-retours, de 2 502 à 5 requêtes groupées), élargit le pool à 6 connexions, active 256 Mo d'entrées-sorties mappées en mémoire et exécute PRAGMA optimize à l'arrêt.",
+          "Isole la vidéo de boucle de recherche de 814 ko dans un fragment chargé à la demande, mémoïse les fiches médias et réduit le délai de démarrage de l'installeur Lipgloss de 8 s à 2 s avec curseur de validation par défaut."
+        ]
       }
     }
   },

@@ -464,6 +464,18 @@
           "Instala no espaço do usuário sem privilégios de administrador por um assistente de terminal de seis perguntas ou parâmetros de linha de comando, verificando resumos SHA-256 e aceitando arquivos ZIP offline.",
           "Carrega todos os dados da biblioteca em duas requisições HTTP locais (medido em 0,7 segundo para 250 filmes)."
         ]
+      },
+      "v5.1.0": {
+        "title": "Atualização instantânea, bandeja do sistema, beta Theia+ e alto desempenho",
+        "summary": "Traz sincronização em tempo real via Server-Sent Events, ícone de bandeja nativo sem CGO, abertura do beta Theia+, configuração automática de firewall e otimizações que cortam consultas em 99,8 %.",
+        "changes": [
+          "Adiciona reconciliação da biblioteca em tempo real por Server-Sent Events (GET /api/library/events), reduz o intervalo do observador de 60 s para 10 s e a estabilização para 3 s, invalidando o cache dos reprodutores sem recarregar a página.",
+          "Introduz ícone de bandeja nativo sem CGO para servidores no Windows (área de notificação Win32, recuperação do Explorer) e notificações no macOS e Linux, com ações para administração web, reescaneamento, pareamento e desligamento suave.",
+          "Abre o passe social vitalício Theia+ (amigos, presença, salas compartilhadas, opiniões) em beta fechado gratuito pelo bot Alex no Discord em #theia-plus sob efeito de vidro fosco; servidor e reprodução continuam 100 % gratuitos.",
+          "Simplifica o pareamento com código de 6 dígitos e automatiza regra de firewall no Windows para a porta 8383 em redes privadas (--firewall), com diagnósticos na tela de conexão.",
+          "Elimina consultas N+1 no SQLite na compilação do catálogo (-99,8 % de consultas, de 2.502 para 5 consultas em lote), expande pool para 6 conexões, ativa 256 MB de memória mapeada e roda PRAGMA optimize no desligamento.",
+          "Separa o vídeo de busca de 814 kB em carregamento sob demanda, memoriza cartões de mídia e reduz o início do instalador Lipgloss de 8 s para 2 s com cursor padrão no continuar."
+        ]
       }
     }
   },

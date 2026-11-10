@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/Benitoow/theia-media/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Benitoow/theia-media?style=flat-square&color=C8A24A"></a>
   <a href="LICENSE"><img alt="Free for noncommercial use: PolyForm Noncommercial from 4.0, GPL-3.0 up to 3.4" src="https://img.shields.io/badge/licence-PolyForm%20NC%20(4.0%2B)%20%C2%B7%20GPL--3.0%20(%E2%89%A43.4)-555?style=flat-square"></a>
-  <a href="#theia-50-the-biggest-update-theia-has-ever-had"><img alt="Theia 5.0: the biggest update Theia has ever had" src="https://img.shields.io/badge/Theia-5.0-C8A24A?style=flat-square"></a>
+  <a href="#theia-51-instant-refresh-system-tray-theia-social-beta-and-deep-performance"><img alt="Theia 5.1" src="https://img.shields.io/badge/Theia-5.1-C8A24A?style=flat-square"></a>
   <a href="https://discord.gg/5E55F7XFZp"><img alt="Join the Discord" src="https://img.shields.io/badge/Discord-join%20us-5865F2?style=flat-square"></a>
   <img alt="Windows x64" src="https://img.shields.io/badge/Windows-x64-555?style=flat-square">
   <img alt="Ubuntu 24.04 x64" src="https://img.shields.io/badge/Ubuntu%2024.04-x64-555?style=flat-square">
@@ -21,10 +21,10 @@
 
 <p align="center">
   <a href="https://theia-media.app/">Website</a> ·
-  <a href="#theia-50-the-biggest-update-theia-has-ever-had">Theia 5.0</a> ·
+  <a href="#theia-51-instant-refresh-system-tray-theia-social-beta-and-deep-performance">Theia 5.1</a> ·
   <a href="#see-it">Screenshots</a> ·
   <a href="#downloads">Downloads</a> ·
-  <a href="docs/releases/v5.0.0.md">5.0 release notes</a> ·
+  <a href="docs/releases/v5.1.0.md">5.1 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/5E55F7XFZp">Discord</a>
@@ -53,102 +53,74 @@ connect it: **Google Drive**, through your own Google client. See
 | --- | --- | --- |
 | One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud account. TMDB supplies metadata, GitHub Releases supplies updates, and Firebase carries the friends service described above. |
 
-## Theia 5.0: the biggest update Theia has ever had
+## Theia 5.1: Instant refresh, system tray, Theia+ social beta and deep performance
 
 > [!IMPORTANT]
-> **Theia 5.0 is the first release of the V5 generation, and the largest one Theia
-> has ever shipped.** It turns your computers, your NAS and your cloud into one
-> library with one profile, and it brings an **Android application** for your phone
-> and a **beta** on Android TV and Google TV. It is published on the release page
-> once its final checks pass. It is a **shell release**: run the 5.0 setup once.
-> [Read the 5.0 release notes](docs/releases/v5.0.0.md) for what was checked on
-> which system, and what was not.
+> **Theia 5.1 is the performance and real-time synchronization milestone of the V5 generation.**
+> It delivers instant library updates via Server-Sent Events, a dedicated zero-CGO system tray for
+> headless servers, the opening of the **Theia+** social pass beta, automated Windows Firewall configuration,
+> and deep architectural optimizations that cut catalog database queries by over 99%.
+> [Read the 5.1 release notes](docs/releases/v5.1.0.md) for full benchmarks and system evidence.
 
-Theia 5 is about one thing: **everything you own, in one library.** Your computers,
-your NAS and your cloud become a single library, with one profile that follows you
-from one to the other, on the desktop, on your phone and on your sofa.
+### 5.1 in numbers
 
-### 5.0 in numbers
+Every figure below was measured on the 5.1 tree on 10 November 2026.
 
-Every figure below was counted or measured on the 5.0 tree on 7 November 2026.
-
-| | Theia 5.0 |
+| Metric | Measurement / Value |
 | --- | --- |
-| **Work since 4.4.6** | **75 commits, 478 files touched, 74,909 lines added** in under two weeks (26 October to 7 November) |
-| **Code alone** (Go, Rust, Kotlin, TypeScript, Svelte, JavaScript, CSS) | **289 files and 56,128 lines added**: two and a half times the code of the previous largest release (3.3: 21,461 lines, 130 files) |
-| **Tests** | **913 Go test functions and 109 Rust tests**, plus the browser benches that drive the real interface at three window sizes |
-| **Decisions on record** | **238**, 171 of them still in force: every choice has its reasoning written down |
-| **One server, one file** | A single binary of **about 20 MB**: no Docker, no database to install, no CGO |
-| **Quick to answer** | On a library of **132 films and 40 series**, the home screen answered in **5 ms** (median), the whole film list in **6 ms** and a search in **5 ms**; the 95th percentile stayed **under 12 ms** (curl against a throwaway server on a laptop) |
-| **Where it runs** | Windows, macOS and Linux on the desktop, plus an Android phone application and a television beta: **one library on all of them** |
-| **Languages** | The application in French and English; this project's website in **ten** languages |
-| **What leaves your computer** | TMDB, GitHub Releases, the friends service, and Google Drive only if you connect it. **Telemetry: none. Accounts: none.** |
-
-*What these numbers do not say.* 5.0 is the largest release by code and by files; it
-is not the one with the most commits (3.3 had 75), and no speed-up over 4.4.6 was
-measured, so none is claimed. The timings above are not a benchmark against any other
-server.
+| **Catalog query round-trips** | Slashed from **2,502 queries down to 5 batched queries** (-99.8%) during catalog compilation |
+| **Catalog compile latency** | **14.2x to 100x faster** on local test suites |
+| **Initial JS bundle weight** | **-814.5 kB** decoupled by lazy-loading `SearchLoop` video assets |
+| **Main JS chunk size** | Reduced from **578 kB to 378 kB** (120 kB gzip), eliminating chunk size warnings |
+| **SQLite pool & concurrency** | Increased pool from **2 to 6 connections**; 256 MB memory-mapped I/O (`mmap_size`) |
+| **Library watcher response** | Background polling cut from **60s to 10s**; file debounce from **15s to 3s** |
+| **Installer cold start** | Slashed initial self-check timeout from **8s to 2s** (-75% wait time) |
+| **System Tray** | **Pure Go, zero CGO (`CGO_ENABLED=0`)**, native Win32 Shell API integration (`Shell_NotifyIconW`) |
+| **Test suites** | **100% green across Go tests (`go test ./...`) and frontend builds (`player/ui` & `web`)** |
 
 ### Thank you
 
 Theia has **5 GitHub stars**, and every one of them is somebody who looked at a small
 project and decided it was worth following. **Thank you.** To those five, and to
 everyone who follows Theia, tests it, reports what is wrong and tells a friend: you are
-why a one-person project can ship a release this big.
+why a one-person project can ship updates this ambitious.
 
-- **Join the [Discord server](https://discord.gg/5E55F7XFZp).** It is where the
-  field reports land, where questions get answered, and where you will hear things
-  first. There is some heavy news coming.
+- **Join the [Discord server](https://discord.gg/5E55F7XFZp).** Claim your free **Theia+** beta pass
+  via the bot Alex in `#├・theia-plus`, submit field reports, and follow live updates.
 - **A [GitHub star](https://github.com/Benitoow/theia-media)** costs nothing and helps
   this project reach the next person.
 
-### 5.0 is polished. It is not perfect.
+### What arrives with 5.1
 
-5.0 was built, checked and polished to the last detail. And still: nothing that
-exists is free of bugs, and this release is the biggest one so far, so it would be
-strange if it were. If you
-meet one, **tell us** on [Discord](https://discord.gg/5E55F7XFZp) or in a
-[field report](https://github.com/Benitoow/theia-media/issues/new?template=field_test.yml),
-with what you did and what you saw. Reports from real households shape the next
-updates.
+| Feature | What it delivers |
+| --- | --- |
+| **Instant Library Refresh** | Real-time filesystem watcher (10s poll, 3s debounce) and Server-Sent Events (`GET /api/library/events`) push changes directly to connected players without reloading the page. Direct rescan via `POST /api/library/refresh` and `F5` / `Ctrl+R`. |
+| **Headless Server System Tray** | Dedicated zero-CGO tray icon for Windows notification area, macOS and Linux notifications. Right-click menu for Web Admin, library rescan, pairing codes, and graceful server shutdown (`POST /api/server/shutdown`). |
+| **Theia+ Social Beta** | Optional social features (friends list, presence, watch parties / rooms, opinions) enter closed beta test phase. Claim free lifetime beta pass codes (`THEIA-PLUS-XXXX-XXXX`) via Discord bot Alex in `#├・theia-plus`. Core server, high-fidelity player, 4K HDR, Dolby Vision, bitstream audio, hardware transcoding, and WireGuard remote access remain 100% free with no paywall. |
+| **Fast Pairing & Firewall Automation** | 6-digit server pairing code in settings; `theia-setup` automatically configures Windows Firewall inbound TCP rules for port 8383 on private networks (`--firewall`). Connect screen provides clear diagnostic hints when servers are sleeping or firewalled. |
+| **Deep Database & Bundle Speedups** | N+1 SQLite query elimination in catalog compilation (-99.8% queries), 6-connection pool with 256 MB memory-mapped I/O, lazy-loaded video search loops (-814 kB initial JS), and memoized media cards. |
+| **Overhauled Installer (Option A)** | Preserves the signature dark Lipgloss TUI aesthetic with custom borders; cuts startup delay from 8s to 2s; defaults cursor to `[Continue]` on folder selection; automates desktop shortcut and firewall setup. |
 
-### Stay tuned: 5.1
+### The V5 Foundation
 
-**5.1 is already in the works,** and it is a big step on top of 5.0. We will not say
-more yet. Stay connected: the [Discord](https://discord.gg/5E55F7XFZp) and this page
-are where it will be announced. Thank you for following Theia.
+Theia 5.1 inherits all core architectural capabilities established in Theia 5.0:
 
-### What arrives with 5.0
-
-| What arrives with 5.0 | What it means |
+| Foundation | What it means |
 | --- | --- |
 | **One library, many places** | Films, Series, Search and Home combine your computers, NAS folders and cloud. A small line says where each copy lives. |
 | **One profile that follows you** | Link your profile across your servers. What you watched and where you stopped follows you from one server to the next. |
 | **Google Drive as a source** | Stream from the Drive folders you choose, in short pieces. Until Google approves Theia's own connection, connecting may ask for your own Google client. |
 | **NAS folders** | A NAS share mounted on a server joins the library, and your history survives if it sleeps. The UGREEN test kit is unverified on a real UGREEN so far. |
-| **Servers and sources, in settings** | Add, rename and reconnect servers and sources on one settings page, in the player and in the browser, each with a small icon: tower, laptop, NAS or cloud. Pair a machine with a short code. |
+| **Servers and sources, in settings** | Add, rename and reconnect servers and sources on one settings page, in the player and in the browser, each with a small icon: tower, laptop, NAS or cloud. |
 | **One page for every title** | The same title page whichever source holds the file: play, resume, mark as watched, leave an opinion and preview a scene. |
 | **Watched means watched** | Anti-spoil shows an episode's artwork once you pass its last fifth, and a file's own ending-credits chapter counts as watched. |
-| **An update that keeps everything** | Upgrading from 4.4.6 keeps your library, profiles and history. Checked on a real 4.4.6 installation, rollback included. |
-| **The pointer leaves the picture** | While a film plays and the controls have gone, the mouse pointer goes with them. It stays on the connect screen, in the library, on a paused film and as soon as you move it again. |
-| **Your library on your phone** | An Android application connects to your server and plays your library: the same profile, the places where you stopped, controls drawn for the hand and picture-in-picture. Download the APK from the release page; it is signed by the maintainer's key, is not on Google Play and does not update itself. |
-| **Android TV and Google TV (beta)** | The same application opens a television presentation you drive with the remote, and keeps AC-3, E-AC-3 and DTS sound as it is when your television or receiver can take it. It is a beta: expect rough edges and tell us what you find. |
-| **Hold to run at 2×** | Hold the play/pause key while a film plays: it runs at double speed, a small `2×` badge says so, and letting go returns to normal. A tap is still play/pause; a watch party keeps one speed for everybody. |
-
-**Not in 5.0.** A phone that reads your NAS or Drive without a server, casting,
-Google TV's home rows and away-from-home use on Android are not part of this release,
-and neither are native **Windows and Linux ARM64** apps (older ARM64 setups stay
-linked and labelled as earlier versions). Offline downloads remain on hold.
-
-Windows is checked first. The [5.0 release notes](docs/releases/v5.0.0.md) say what
-was checked on which system, and what was not.
+| **The pointer leaves the picture** | While a film plays and the controls have gone, the mouse pointer goes with them. |
+| **Your library on your phone** | An Android application connects to your server and plays your library: the same profile, the places where you stopped, controls drawn for the hand and picture-in-picture. Download the APK from the release page. |
+| **Android TV and Google TV (beta)** | The same application opens a television presentation you drive with the remote, and keeps AC-3, E-AC-3 and DTS sound as it is when your television or receiver can take it. |
+| **Hold to run at 2×** | Hold the play/pause key while a film plays: it runs at double speed, a small `2×` badge says so, and letting go returns to normal. |
 
 > [!NOTE]
-> **Theia is free.** The server, the library, ordinary viewing and everything in 5.0
-> cost nothing, and every change reaches everyone for free for a duration that is not
-> decided. Which later features might become paid, if any, has not been decided
-> either; it will be settled in the open and announced well before it happens.
-> Nothing is paid today.
+> **Theia's core is 100% free.** The server, the library, local and remote playback, 4K HDR, Dolby Vision, hardware transcoding, WireGuard remote access, and Google Drive integration cost nothing. Optional social features (friends, rooms, opinions) are part of the optional Theia+ pass, currently free in beta via Discord.
 
 ## See it
 

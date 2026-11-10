@@ -464,6 +464,18 @@
           "Installs in user space without administrator privileges through a six-question terminal wizard or CLI flags, verifying SHA-256 digests and supporting offline ZIP archives.",
           "Loads the complete library payload in two local HTTP requests (measured at 0.7 seconds for 250 films)."
         ]
+      },
+      "v5.1.0": {
+        "title": "Instant refresh, system tray, Theia+ social beta and deep performance",
+        "summary": "Delivers real-time library synchronization through Server-Sent Events, a dedicated zero-CGO desktop system tray, the opening of the Theia+ social beta pass, automated firewall setup, and database optimizations cutting query round-trips by 99.8%.",
+        "changes": [
+          "Adds real-time library reconciliation via Server-Sent Events (GET /api/library/events) and reduces file watcher polling from 60s to 10s and settling debounce to 3s, automatically invalidating connected player caches without page reloads.",
+          "Introduces a zero-CGO native system tray for headless servers on Windows (Win32 notification area, explorer restart resilience) alongside macOS and Linux desktop notifications, with quick actions for Web Admin, rescan, pairing and graceful shutdown.",
+          "Opens the Theia+ lifetime social pass (friends list, online status, watch party rooms, shared opinions) in a closed beta phase, distributing free activation codes via the Discord bot Alex in #theia-plus, behind an OSD frosted-glass gate; core server and viewing remain 100% free.",
+          "Simplifies machine pairing with 6-digit codes and automates Windows Firewall inbound rules for port 8383 on private networks during setup (--firewall), adding diagnostic connection hints on the player connect screen.",
+          "Eliminates N+1 SQLite queries during catalog compilation (-99.8% query round-trips from 2,502 down to 5 batched queries), expands the database pool to 6 connections, enables 256 MB memory-mapped I/O, and runs PRAGMA optimize on shutdown.",
+          "Decouples the 814 kB search-loop video asset from the player bundle into a lazy-loaded chunk, adds React.memo to media cards, and slashes the Lipgloss installer startup check timeout from 8s to 2s with default cursor navigation."
+        ]
       }
     }
   },
