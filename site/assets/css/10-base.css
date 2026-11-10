@@ -3,17 +3,17 @@
    main material: one idea per screen, and room around it. docs/design-system.md
    section 12. */
 :root {
-  --ink: #0b0a09;
-  --surface: #131211;
-  --raised: #1c1a18;
-  --line: #2a2724;
-  --line-strong: #454039;
-  --line-hover: #625b51;
-  --bone: #ede7dc;
-  --parchment: #d6cfc2;
-  --muted: #8c857a;
-  --accent: #c8a24a;
-  --accent-bright: #e3c173;
+  --ink: #000000;
+  --surface: #0a0b0e;
+  --raised: #12141a;
+  --line: #1c1f28;
+  --line-strong: #303544;
+  --line-hover: #485066;
+  --bone: #f4f4f6;
+  --parchment: #dcdce2;
+  --muted: #8e8e98;
+  --accent: #ff4500;
+  --accent-bright: #ffa100;
   --font-body:
     "Jost Variable", "Theia Arabic", "Theia Devanagari", "Theia Bengali",
     "Theia Chinese", sans-serif;

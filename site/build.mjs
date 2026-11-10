@@ -139,7 +139,7 @@ function renderLegacyNewRedirect(language, catalogue, siteUrl) {
 <link rel="canonical" href="${escapeHTML(canonical)}">
 <noscript><meta http-equiv="refresh" content="0; url=../changelog/"></noscript>
 <style>
-  html { background: #0b0a09; color: #ede7dc; font: 400 1rem/1.65 system-ui, sans-serif; }
+  html { background: #000000; color: #f4f4f6; font: 400 1rem/1.65 system-ui, sans-serif; }
   body { margin: 0; min-block-size: 100vh; display: grid; place-items: center; padding: 2rem 1rem; box-sizing: border-box; }
   main { max-inline-size: 32rem; text-align: center; }
   .mark { margin: 0 0 1.5rem; font: 400 1.5rem/1 Georgia, serif; letter-spacing: 0.16em; text-transform: uppercase; }
