@@ -465,6 +465,16 @@
           "Charge l’intégralité de la bibliothèque en deux requêtes HTTP locales (mesuré à 0,7 seconde pour 250 films)."
         ]
       },
+      "v5.1.1": {
+        "title": "Charte flamme officielle, noir OLED pur et raffinement de l'interface sociale",
+        "summary": "Adopte la charte graphique de la flamme officielle (#FF4500, #FFA100) et un fond noir OLED pur (#000000), résout les décalages de l'onglet amis (Theia+) et intègre les icônes multi-résolutions officielles dans les exécutables Windows.",
+        "changes": [
+          "Harmonise l'identité visuelle avec la marque officielle de la flamme solaire en substituant l'ancienne palette ambre par l'orange-rouge ardent (#FF4500) et les reflets ambre néon (#FFA100).",
+          "Adopte des surfaces noir OLED pur (#000000) garantissant l'extinction complète des pixels sur écrans OLED et téléviseurs sans rémanence lumineuse, avec ratios de contraste certifiés WCAG AA.",
+          "Corrige l'alignement et les décalages dans l'onglet Amis (Theia+) : élimine le vide sous le titre, aère et sépare les sections de code d'ami par des bordures fines dédiées.",
+          "Intègre des icônes multi-résolutions (16 à 256 px) directement compilées dans les ressources Windows (.syso), la barre des tâches, le raccourci et la zone de notification."
+        ]
+      },
       "v5.1.0": {
         "title": "Rafraîchissement instantané, system tray, bêta Theia+ et optimisations profondes",
         "summary": "Apporte la synchronisation de bibliothèque en temps réel via Server-Sent Events, une icône system tray dédiée sans CGO, l'ouverture de la bêta Theia+, la configuration automatisée du pare-feu et des optimisations réduisant les requêtes de 99,8 %.",

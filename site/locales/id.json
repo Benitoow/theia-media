@@ -465,6 +465,16 @@
           "Memuat muatan koleksi lengkap dalam dua permintaan HTTP lokal (terukur 0,7 detik untuk 250 film)."
         ]
       },
+      "v5.1.1": {
+        "title": "Identitas visual nyala api resmi, hitam OLED murni, dan tata letak sosial yang disempurnakan",
+        "summary": "Menyelaraskan identitas visual dengan lambang nyala api surya resmi (#FF4500, #FFA100) dan hitam OLED murni (#000000), memperbaiki spasi pada dialog teman Theia+, serta menyematkan ikon multi-resolusi resmi ke biner Windows.",
+        "changes": [
+          "Menyelaraskan identitas visual dengan lambang resmi nyala api surya, menggantikan palet amber lama dengan merah-oranye Electric Flame (#FF4500) dan aksen neon amber (#FFA100).",
+          "Menerapkan latar hitam OLED murni (#000000) untuk memastikan piksel benar-benar mati di layar OLED dan bioskop rumah gelap, bersertifikasi kontras WCAG AA.",
+          "Merombak tata letak dialog teman Theia+: menghilangkan ruang kosong vertikal, memisahkan bagian kode teman dengan pembatas halus dan bantalan rapi, serta memperjelas tajuk kehadiran.",
+          "Menyematkan tangga ikon resmi multi-resolusi (16 hingga 256 px) ke dalam sumber daya biner Windows (.syso), taskbar, pintasan desktop, dan baki sistem."
+        ]
+      },
       "v5.1.0": {
         "title": "Penyegaran instan, baki sistem, beta Theia+, dan optimasi mendalam",
         "summary": "Menghadirkan sinkronisasi pustaka waktu nyata via Server-Sent Events, baki sistem tanpa CGO, pembukaan beta Theia+, konfigurasi firewall otomatis, dan optimasi kueri hingga 99,8 %.",

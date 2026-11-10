@@ -465,6 +465,16 @@
           "Loads the complete library payload in two local HTTP requests (measured at 0.7 seconds for 250 films)."
         ]
       },
+      "v5.1.1": {
+        "title": "Official Electric Flame branding, pure OLED black and refined social layout",
+        "summary": "Aligns visual identity with the official solar flame mark (#FF4500, #FFA100) and pure OLED black (#000000), resolves layout spacing in the Theia+ friends dialog, and embeds official multi-resolution icons into Windows binaries.",
+        "changes": [
+          "Harmonizes visual identity with the official solar flame mark, replacing the legacy amber palette with vibrant Electric Flame red-orange (#FF4500) and neon amber highlights (#FFA100).",
+          "Adopts pure OLED black surfaces (#000000) ensuring true pixel-off contrast on OLED displays and dark home cinemas, certified under WCAG AA contrast standards.",
+          "Overhauls the Theia+ friends dialog layout: eliminates vertical voids, separates friend code sections with dedicated hairline dividers and padding, and refines presence group headers.",
+          "Embeds official multi-resolution icon ladders (16 to 256 px) into compiled Windows resources (.syso), taskbar pins, desktop shortcuts, and system tray."
+        ]
+      },
       "v5.1.0": {
         "title": "Instant refresh, system tray, Theia+ social beta and deep performance",
         "summary": "Delivers real-time library synchronization through Server-Sent Events, a dedicated zero-CGO desktop system tray, the opening of the Theia+ social beta pass, automated firewall setup, and database optimizations cutting query round-trips by 99.8%.",

@@ -465,6 +465,16 @@
           "Carrega todos os dados da biblioteca em duas requisições HTTP locais (medido em 0,7 segundo para 250 filmes)."
         ]
       },
+      "v5.1.1": {
+        "title": "Identidade visual da chama oficial, preto OLED puro e layout social refinado",
+        "summary": "Alinha a identidade visual com a marca oficial da chama solar (#FF4500, #FFA100) e preto OLED puro (#000000), corrige espaçamentos no diálogo de amigos do Theia+ e incorpora ícones multirresolução oficiais nos executáveis do Windows.",
+        "changes": [
+          "Harmoniza a identidade visual com a marca oficial da chama solar, substituindo a paleta âmbar pelo vermelho-alaranjado Electric Flame (#FF4500) e destaques em âmbar neon (#FFA100).",
+          "Adota superfícies em preto OLED puro (#000000) garantindo desligamento total de pixels em telas OLED e home theaters escuros, com contraste certificado no padrão WCAG AA.",
+          "Reformula o layout do diálogo de amigos do Theia+: elimina espaços verticais vazios, separa as seções de código de amigo com divisores finos e espaçamentos dedicados, e aprimora os cabeçalhos de presença.",
+          "Incorpora ícones multirresolução oficiais (16 a 256 px) compilados nos recursos do Windows (.syso), barra de tarefas, atalhos da área de trabalho e bandeja do sistema."
+        ]
+      },
       "v5.1.0": {
         "title": "Atualização instantânea, bandeja do sistema, beta Theia+ e alto desempenho",
         "summary": "Traz sincronização em tempo real via Server-Sent Events, ícone de bandeja nativo sem CGO, abertura do beta Theia+, configuração automática de firewall e otimizações que cortam consultas em 99,8 %.",
