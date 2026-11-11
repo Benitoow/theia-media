@@ -465,6 +465,17 @@
           "Memuat muatan koleksi lengkap dalam dua permintaan HTTP lokal (terukur 0,7 detik untuk 250 film)."
         ]
       },
+      "v5.2.1": {
+        "title": "Pass Anda mengikuti Anda, pemasangan yang gagal menjelaskan sebabnya, dan film Drive dibaca lebih dulu",
+        "summary": "Pass Theia+ tetap di perangkat Anda dan ditawarkan ke setiap server, pemasangan yang gagal menjelaskan sebabnya, film Google Drive dibaca lebih dulu, ponsel berwarna hitam rata, semua warna abu-abu netral, dan pengaturan web mirip dengan pemutar.",
+        "changes": [
+          "Pass Theia+ yang Anda aktifkan disimpan di perangkat ini dan ditawarkan lagi ke server mana pun yang memintanya, bukan hanya hidup di satu server.",
+          "Pemasangan yang gagal menjelaskan apa yang terjadi: server lain tidak menjawab, menolak sambungan, atau tidak dapat dijangkau.",
+          "Film Google Drive dibaca lebih dulu, beberapa segmen sekaligus dan hanya di memori, sehingga remux 4K lebih kecil kemungkinannya berhenti.",
+          "Ponsel berwarna hitam rata tanpa abu-abu terangkat atau cahaya, dan semua abu-abu di Theia netral: panel berwarna #333333 dan warna galat lebih terang agar tetap terbaca di atasnya.",
+          "Pengaturan web dan panel server pemutar menampilkan hal yang sama, dan kata THEIA muncul seperti judul film di layar pemuatan dan di situs ini."
+        ]
+      },
       "v5.2.0": {
         "title": "Ponsel memindai server Anda, antarmuka menjadi lebih tenang, dan pembaruan memulai ulang pemutar",
         "summary": "Aplikasi Android membaca sendiri kode QR server, pemutarnya adalah bilah PC versi ringkas, gradien dekoratif dihapus, pencarian bertumpu pada bidang tanda di layar sambungan, dan memperbarui Theia kini memulai ulang pemutar.",

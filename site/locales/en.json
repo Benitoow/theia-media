@@ -465,6 +465,17 @@
           "Loads the complete library payload in two local HTTP requests (measured at 0.7 seconds for 250 films)."
         ]
       },
+      "v5.2.1": {
+        "title": "Your pass follows you, a failed pairing says why, and Drive films are read ahead",
+        "summary": "The Theia+ pass stays on your device and is offered to every server, a pairing that fails says why, Google Drive films are read ahead, a phone is flat black, every grey is plain, and the web settings match the player's.",
+        "changes": [
+          "The Theia+ pass you activate is kept on this device and offered again to any server that asks, instead of living on one server.",
+          "A failed pairing says what happened: the other server did not answer, refused the connection, or could not be reached.",
+          "Google Drive films are read ahead, a few segments at a time and only in memory, so a 4K remux has less reason to pause.",
+          "A phone is flat black with no lifted greys or glow, and every grey in Theia is plain: panels are #333333 and the error colour is lighter to stay readable on them.",
+          "The web settings and the player's server pane draw the same things, and the word THEIA enters like a title sequence on the loading screens and on this site."
+        ]
+      },
       "v5.2.0": {
         "title": "The phone scans your server, the interface calms down and updating restarts the player",
         "summary": "The Android app reads the server's QR code itself, its player is the desktop's bar made small, the decorative gradients are gone, search rests on the connect screen's field of marks, and updating Theia now restarts the player.",

@@ -465,6 +465,17 @@
           "Carrega todos os dados da biblioteca em duas requisições HTTP locais (medido em 0,7 segundo para 250 filmes)."
         ]
       },
+      "v5.2.1": {
+        "title": "Seu passe acompanha você, um pareamento que falha diz o porquê e os filmes do Drive são lidos antecipadamente",
+        "summary": "O passe do Theia+ fica no seu dispositivo e é oferecido a cada servidor, um pareamento que falha diz o porquê, os filmes do Google Drive são lidos antecipadamente, o celular é preto chapado, todos os cinzas são neutros e os ajustes da web se parecem com os do player.",
+        "changes": [
+          "O passe do Theia+ que você ativa fica guardado neste dispositivo e é oferecido de novo a qualquer servidor que pedir, em vez de viver em um único servidor.",
+          "Um pareamento que falha diz o que aconteceu: o outro servidor não respondeu, recusou a conexão ou não pôde ser alcançado.",
+          "Os filmes do Google Drive são lidos antecipadamente, alguns segmentos por vez e só na memória, para que um remux 4K tenha menos motivos para travar.",
+          "O celular é preto chapado, sem cinzas elevados nem brilho, e todos os cinzas do Theia são neutros: os painéis são #333333 e a cor de erro é mais clara para continuar legível sobre eles.",
+          "Os ajustes da web e o painel de servidor do player desenham as mesmas coisas, e a palavra THEIA entra como uma abertura de filme nas telas de carregamento e neste site."
+        ]
+      },
       "v5.2.0": {
         "title": "O telefone escaneia seu servidor, a interface se acalma e atualizar reinicia o player",
         "summary": "O aplicativo Android lê sozinho o QR code do servidor, seu player é a barra do PC em tamanho reduzido, os gradientes decorativos saem, a busca descansa sobre o campo de sinais da tela de conexão e atualizar o Theia agora reinicia o player.",

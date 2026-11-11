@@ -465,6 +465,17 @@
           "Charge l’intégralité de la bibliothèque en deux requêtes HTTP locales (mesuré à 0,7 seconde pour 250 films)."
         ]
       },
+      "v5.2.1": {
+        "title": "Votre passe vous suit, une association qui échoue dit pourquoi et les films Drive sont lus par anticipation",
+        "summary": "Le passe Theia+ reste sur votre appareil et est proposé à chaque serveur, une association qui échoue dit pourquoi, les films Google Drive sont lus par anticipation, le téléphone est en noir plat, tous les gris sont neutres et les réglages du web ressemblent à ceux du lecteur.",
+        "changes": [
+          "Le passe Theia+ que vous activez est gardé sur cet appareil et reproposé à tout serveur qui le demande, au lieu de vivre sur un seul serveur.",
+          "Une association qui échoue dit ce qui s’est passé : l’autre serveur n’a pas répondu, a refusé la connexion ou n’a pas pu être joint.",
+          "Les films Google Drive sont lus par anticipation, quelques segments à la fois et seulement en mémoire, pour qu’un remux 4K ait moins de raisons de s’interrompre.",
+          "Le téléphone est en noir plat, sans gris relevés ni lueur, et tous les gris de Theia sont neutres : les panneaux sont #333333 et la couleur d’erreur est plus claire pour rester lisible dessus.",
+          "Les réglages du web et le volet serveur du lecteur dessinent les mêmes choses, et le mot THEIA entre comme un générique sur les écrans de chargement et sur ce site."
+        ]
+      },
       "v5.2.0": {
         "title": "Le téléphone scanne votre serveur, l’interface se calme et la mise à jour redémarre le lecteur",
         "summary": "L’application Android lit elle-même le QR code du serveur, son lecteur est la barre du PC en réduit, les dégradés décoratifs disparaissent, la recherche repose sur le champ de signes de la page de connexion et la mise à jour de Theia redémarre désormais le lecteur.",

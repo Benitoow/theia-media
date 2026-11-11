@@ -465,6 +465,17 @@
           "Carga los datos completos de la biblioteca en dos peticiones HTTP locales (medido en 0,7 segundos para 250 películas)."
         ]
       },
+      "v5.2.1": {
+        "title": "Tu pase te sigue, un emparejamiento fallido dice por qué y las películas de Drive se leen por adelantado",
+        "summary": "El pase de Theia+ se queda en tu dispositivo y se ofrece a cada servidor, un emparejamiento que falla dice por qué, las películas de Google Drive se leen por adelantado, el teléfono es negro plano, todos los grises son neutros y los ajustes web se parecen a los del reproductor.",
+        "changes": [
+          "El pase de Theia+ que activas se guarda en este dispositivo y se vuelve a ofrecer a cualquier servidor que lo pida, en lugar de vivir en un solo servidor.",
+          "Un emparejamiento fallido dice qué pasó: el otro servidor no respondió, rechazó la conexión o no se pudo alcanzar.",
+          "Las películas de Google Drive se leen por adelantado, unos pocos segmentos a la vez y solo en memoria, para que un remux 4K tenga menos motivos para detenerse.",
+          "El teléfono es negro plano, sin grises elevados ni brillo, y todos los grises de Theia son neutros: los paneles son #333333 y el color de error es más claro para seguir siendo legible sobre ellos.",
+          "Los ajustes web y el panel de servidor del reproductor dibujan lo mismo, y la palabra THEIA entra como una secuencia de títulos en las pantallas de carga y en este sitio."
+        ]
+      },
       "v5.2.0": {
         "title": "El teléfono escanea tu servidor, la interfaz se calma y actualizar reinicia el reproductor",
         "summary": "La aplicación Android lee ella misma el código QR del servidor, su reproductor es la barra del PC en pequeño, desaparecen los degradados decorativos, la búsqueda descansa sobre el campo de signos de la pantalla de conexión y actualizar Theia ahora reinicia el reproductor.",
