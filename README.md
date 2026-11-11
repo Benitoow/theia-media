@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/Benitoow/theia-media/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Benitoow/theia-media?style=flat-square&color=FF4500"></a>
   <a href="LICENSE"><img alt="Free for noncommercial use: PolyForm Noncommercial from 4.0, GPL-3.0 up to 3.4" src="https://img.shields.io/badge/licence-PolyForm%20NC%20(4.0%2B)%20%C2%B7%20GPL--3.0%20(%E2%89%A43.4)-555?style=flat-square"></a>
-  <a href="#theia-52-the-phone-scans-your-server-and-the-interface-calms-down"><img alt="Theia 5.2" src="https://img.shields.io/badge/Theia-5.2.0-FF4500?style=flat-square"></a>
+  <a href="#theia-521-your-pass-follows-you-and-the-settings-match"><img alt="Theia 5.2.1" src="https://img.shields.io/badge/Theia-5.2.1-FF4500?style=flat-square"></a>
   <a href="https://discord.gg/5E55F7XFZp"><img alt="Join the Discord" src="https://img.shields.io/badge/Discord-join%20us-5865F2?style=flat-square"></a>
   <img alt="Windows x64" src="https://img.shields.io/badge/Windows-x64-555?style=flat-square">
   <img alt="Ubuntu 24.04 x64" src="https://img.shields.io/badge/Ubuntu%2024.04-x64-555?style=flat-square">
@@ -21,10 +21,10 @@
 
 <p align="center">
   <a href="https://theia-media.app/">Website</a> ·
-  <a href="#theia-52-the-phone-scans-your-server-and-the-interface-calms-down">Theia 5.2</a> ·
+  <a href="#theia-521-your-pass-follows-you-and-the-settings-match">Theia 5.2.1</a> ·
   <a href="#see-it">Screenshots</a> ·
   <a href="#downloads">Downloads</a> ·
-  <a href="docs/releases/v5.2.0.md">5.2 release notes</a> ·
+  <a href="docs/releases/v5.2.1.md">5.2 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/5E55F7XFZp">Discord</a>
@@ -52,6 +52,21 @@ connect it: **Google Drive**, through your own Google client. See
 | One download | Built for choosing | Private by default |
 | --- | --- | --- |
 | One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud account. TMDB supplies metadata, GitHub Releases supplies updates, and Firebase carries the friends service described above. |
+
+## Theia 5.2.1: Your pass follows you and the settings match
+
+> [!IMPORTANT]
+> **Theia 5.2.1 is a repair-and-polish release on 5.2, made after a day of using it on three machines.**
+> [Read the 5.2.1 release notes](docs/releases/v5.2.1.md) for what was and was not checked.
+
+| New in 5.2.1 | What it means |
+| --- | --- |
+| **The Theia+ pass follows the device** | The code you activated is kept on this device and offered to every server that asks, instead of living on one server. |
+| **A failed pairing says why** | The other server did not answer, refused the connection, or could not be reached: three different sentences instead of one. |
+| **Drive films are read ahead** | The next segments of a Google Drive film are fetched while the current one plays, so a 4K remux has less reason to pause. |
+| **A phone is flat black, every grey is plain** | No lifted greys or glows on a phone; panels are a plain `#333333` everywhere, and the error colour is lighter so it stays readable on them. |
+| **The web settings and the player's server pane match** | Caches, presence and privacy on the web; connect a device, Google Drive, access from outside, this computer and help request in the player. |
+| **THEIA enters like a title sequence** | The word on the loading and connect screens, and on the site's home page, lights up letter by letter, once. |
 
 ## Theia 5.2: The phone scans your server and the interface calms down
 
@@ -551,6 +566,10 @@ file. They are not detected from picture or sound, and many files have none.
 Each release has its own notes, with what changed, what to do when updating and
 what was and was not checked.
 
+- **[5.2.1](docs/releases/v5.2.1.md)** — the Theia+ pass follows the device, a failed
+  pairing says why, Google Drive films are read ahead, a phone is flat black, every grey is
+  plain, the web settings and the player's server pane match, and THEIA enters like a title
+  sequence.
 - **[5.2.0](docs/releases/v5.2.0.md)** — the phone scans your server's QR code and
   plays with the desktop's bar made small, the gold-era gradients go, search rests on
   the connect screen's field of marks, and updating Theia restarts the player.

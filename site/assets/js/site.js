@@ -348,3 +348,64 @@
     });
   });
 })();
+
+// ---- the wordmark above the pitch (decision 244) ----------------------------------------
+// Plays the entrance once, only while it can be seen: in view, tab visible, the display face
+// loaded (or given up on after three seconds). Anything missing or failing leaves the final
+// state, which is the markup's own; reduced motion never arms it.
+(function () {
+  var root = document.getElementById("theia-hero");
+  if (!root || !window.matchMedia) return;
+  var calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+  if (calm.matches) return;
+
+  var inView = false;
+  var fontReady = false;
+  var observer = null;
+
+  function sync() {
+    root.classList.toggle(
+      "is-live",
+      inView && fontReady && document.visibilityState === "visible",
+    );
+  }
+
+  function ready() {
+    if (fontReady) return;
+    fontReady = true;
+    sync();
+  }
+
+  function stop() {
+    root.classList.remove("is-armed", "is-live");
+    document.removeEventListener("visibilitychange", sync);
+    if (observer) observer.disconnect();
+  }
+
+  try {
+    root.classList.add("is-armed");
+    if ("IntersectionObserver" in window) {
+      observer = new IntersectionObserver(function (entries) {
+        inView = entries[entries.length - 1].isIntersecting;
+        sync();
+      });
+      observer.observe(root);
+    } else {
+      inView = true;
+    }
+    document.addEventListener("visibilitychange", sync);
+    if (document.fonts && document.fonts.load) {
+      document.fonts.load('400 1em "Cinzel Variable"', "THEIA").then(ready, ready);
+      setTimeout(ready, 3000);
+    } else {
+      ready();
+    }
+    var onCalm = function () {
+      if (calm.matches) stop();
+    };
+    if (calm.addEventListener) calm.addEventListener("change", onCalm);
+    else if (calm.addListener) calm.addListener(onCalm);
+  } catch (e) {
+    stop();
+  }
+})();
