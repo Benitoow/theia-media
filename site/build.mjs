@@ -125,6 +125,14 @@ const ASSET_ROWS = {
     ["theia-android-5.0.0.apk", "Android", "apk", "verifiedAndroid"],
   ],
 };
+const assetRowsFor = (release) => {
+  const androidApk = Object.keys(release.assets || {}).find((name) =>
+    /^theia-android-.*\.apk$/.test(name),
+  );
+  return androidApk
+    ? { ...ASSET_ROWS, android: [[androidApk, "Android", "apk", "verifiedAndroid"]] }
+    : ASSET_ROWS;
+};
 
 function renderLegacyNewRedirect(language, catalogue, siteUrl) {
   const canonical = `${siteUrl}/${language.id}/changelog/`;
@@ -181,7 +189,7 @@ function buildAgentArtifacts({
   visibleReleases,
 }) {
   const publishedDate = release.publishedAt.slice(0, 10);
-  const setupLines = Object.entries(ASSET_ROWS).flatMap(([os, rows]) =>
+  const setupLines = Object.entries(assetRowsFor(release)).flatMap(([os, rows]) =>
     rows.map(([filename, label, , verifiedKey]) => {
       const asset = release.assets[filename];
       const tag = asset.tag || release.tag;
@@ -508,7 +516,7 @@ export function build(argv = process.argv.slice(2)) {
     const osMarks = { windows: "windows", macos: "apple", linux: "linux", android: "phone" };
     const blocks = {
       download_panels: () =>
-        Object.entries(ASSET_ROWS)
+        Object.entries(assetRowsFor(release))
           .map(([os, assets]) => {
             const title = { windows: "Windows", macos: "macOS", linux: "Linux", android: "Android" }[
               os

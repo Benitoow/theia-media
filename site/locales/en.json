@@ -239,6 +239,17 @@
       }
     },
     "releases": {
+      "v5.3.0": {
+        "title": "New original logos and icons, Obsidian OLED surfaces, two-way pairing sync and merged series",
+        "summary": "Every logo and icon has been redrawn from scratch across all platforms, dark surfaces move to neutral Obsidian OLED tones, pairing two servers connects both ways in one step and syncs profiles and watch progress, local and remote seasons merge on the title page, and server settings split into three clearer tabs.",
+        "changes": [
+          "Redraws every Theia logo, app icon, desktop shortcut, tray badge, web favicon and TV banner from four original masters across Windows, macOS, Linux, Android and the web.",
+          "Shifts dark panels and overlays to deeper Obsidian OLED grey (#141414, #1E1E1E, #2B2B2B) with stronger text contrast on OLED displays and televisions.",
+          "Makes server pairing bidirectional in a single step and keeps viewer identities, avatars, your Theia+ pass and watch progress in sync between paired servers.",
+          "Merges seasons and copies held on a paired server right onto the local title page so a split series reads and plays as one.",
+          "Reorganizes server settings into three tabs (Library & sources, Access & devices, Server & maintenance), tightens mobile menu spacing, and improves Google Drive indexing stability."
+        ]
+      },
       "v5.0.0": {
         "title": "Everything you own, in one library",
         "summary": "Opens Generation 5 by combining multiple Theia servers, NAS shares and Google Drive folders into a single library, alongside linked profiles and the Android application.",

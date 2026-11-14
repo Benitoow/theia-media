@@ -239,6 +239,17 @@
       }
     },
     "releases": {
+      "v5.3.0": {
+        "title": "Logo dan ikon orisinal baru, permukaan Obsidian OLED, pemasangan dua arah, dan seri tergabung",
+        "summary": "Seluruh logo dan ikon digambar ulang dari awal di semua platform, permukaan gelap beralih ke warna abu Obsidian OLED yang netral, pemasangan dua server kini terhubung dua arah dalam satu langkah sambil menyinkronkan profil dan progres tontonan, musim lokal dan jauh bergabung di halaman judul, dan pengaturan server dibagi menjadi tiga tab.",
+        "changes": [
+          "Menggambar ulang semua logo Theia, ikon aplikasi, pintasan desktop, ikon baki sistem, favicon web, dan spanduk TV dari empat master orisinal untuk Windows, macOS, Linux, Android, dan web.",
+          "Mengubah panel gelap ke abu Obsidian OLED (#141414, #1E1E1E, #2B2B2B) dengan kontras teks yang lebih nyaman di layar OLED dan televisi.",
+          "Menjadikan pemasangan server dua arah dalam satu langkah serta menjaga profil, avatar, pass Theia+, dan progres tontonan tetap sinkron.",
+          "Menggabungkan musim lokal dan salinan di server terpasang langsung pada halaman judul.",
+          "Memisahkan pengaturan server ke dalam tiga tab (Perpustakaan & sumber, Akses & perangkat, Server & pemeliharaan), merapikan jarak menu seluler, dan menstabilkan pengindeksan Google Drive."
+        ]
+      },
       "v5.0.0": {
         "title": "Semua milik Anda, dalam satu perpustakaan",
         "summary": "Membuka Generasi 5 dengan menggabungkan beberapa server Theia, berbagi NAS, dan folder Google Drive menjadi satu perpustakaan, bersama profil tertaut dan aplikasi Android.",

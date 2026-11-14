@@ -239,6 +239,17 @@
       }
     },
     "releases": {
+      "v5.3.0": {
+        "title": "Novos logotipos e ícones originais, superfícies Obsidian OLED, pareamento bidirecional e séries unificadas",
+        "summary": "Todos os logotipos e ícones foram redesenhados do zero em todas as plataformas, os painéis escuros adotam o cinza Obsidian OLED, o pareamento entre dois servidores passa a conectar nos dois sentidos em uma etapa com sincronização de perfis e progresso, as temporadas locais e remotas se unem na página do título e os ajustes do servidor se dividem em três abas.",
+        "changes": [
+          "Redesenhados todos os logotipos, ícones de aplicativo, atalhos, bandeja do sistema, favicons e banners de TV a partir de quatro originais no Windows, macOS, Linux, Android e web.",
+          "Traz painéis e camadas escuras para o cinza Obsidian OLED (#141414, #1E1E1E, #2B2B2B) com maior contraste em telas OLED e TVs.",
+          "Torna o pareamento entre servidores bidirecional em um passo e mantém perfis, avatares, o passe Theia+ e o progresso de visualização sincronizados.",
+          "Reúne na página do título as temporadas locais e as disponíveis em um servidor pareado.",
+          "Organiza os ajustes do servidor em três abas (Biblioteca e fontes, Acesso e dispositivos, Servidor e manutenção), melhora o espaçamento no celular e estabiliza a indexação do Google Drive."
+        ]
+      },
       "v5.0.0": {
         "title": "Tudo o que você tem, em uma única biblioteca",
         "summary": "Abre a Geração 5 reunindo vários servidores Theia, compartilhamentos de NAS e pastas do Google Drive em uma só biblioteca, junto com perfis vinculados e o aplicativo Android.",
