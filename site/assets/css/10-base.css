@@ -4,11 +4,11 @@
    section 12. */
 :root {
   --ink: #000000;
-  --surface: #333333;
-  --raised: #404040;
-  --line: #4d4d4d;
-  --line-strong: #303544;
-  --line-hover: #485066;
+  --surface: #141414;
+  --raised: #1e1e1e;
+  --line: #2b2b2b;
+  --line-strong: #383838;
+  --line-hover: #525252;
   --bone: #f5f5f5;
   --parchment: #dcdcdc;
   --muted: #c0c0c0;
@@ -276,7 +276,7 @@ code {
   color: var(--bone);
 }
 .btn-outline {
-  background: rgb(11 10 9 / 0.48);
+  background: rgb(0 0 0 / 0.48);
   border-color: var(--line-hover);
   color: var(--bone);
 }

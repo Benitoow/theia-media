@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/Benitoow/theia-media/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Benitoow/theia-media?style=flat-square&color=FF4500"></a>
   <a href="LICENSE"><img alt="Free for noncommercial use: PolyForm Noncommercial from 4.0, GPL-3.0 up to 3.4" src="https://img.shields.io/badge/licence-PolyForm%20NC%20(4.0%2B)%20%C2%B7%20GPL--3.0%20(%E2%89%A43.4)-555?style=flat-square"></a>
-  <a href="#theia-521-your-pass-follows-you-and-the-settings-match"><img alt="Theia 5.2.1" src="https://img.shields.io/badge/Theia-5.2.1-FF4500?style=flat-square"></a>
+  <a href="#theia-53-original-brand-imagery-obsidian-oled-bidirectional-sync-and-hybrid-series"><img alt="Theia 5.3.0" src="https://img.shields.io/badge/Theia-5.3.0-FF4500?style=flat-square"></a>
   <a href="https://discord.gg/5E55F7XFZp"><img alt="Join the Discord" src="https://img.shields.io/badge/Discord-join%20us-5865F2?style=flat-square"></a>
   <img alt="Windows x64" src="https://img.shields.io/badge/Windows-x64-555?style=flat-square">
   <img alt="Ubuntu 24.04 x64" src="https://img.shields.io/badge/Ubuntu%2024.04-x64-555?style=flat-square">
@@ -21,10 +21,10 @@
 
 <p align="center">
   <a href="https://theia-media.app/">Website</a> ·
-  <a href="#theia-521-your-pass-follows-you-and-the-settings-match">Theia 5.2.1</a> ·
+  <a href="#theia-53-original-brand-imagery-obsidian-oled-bidirectional-sync-and-hybrid-series">Theia 5.3.0</a> ·
   <a href="#see-it">Screenshots</a> ·
   <a href="#downloads">Downloads</a> ·
-  <a href="docs/releases/v5.2.1.md">5.2 release notes</a> ·
+  <a href="docs/releases/v5.3.0.md">5.3 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/5E55F7XFZp">Discord</a>
@@ -52,6 +52,20 @@ connect it: **Google Drive**, through your own Google client. See
 | One download | Built for choosing | Private by default |
 | --- | --- | --- |
 | One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud account. TMDB supplies metadata, GitHub Releases supplies updates, and Firebase carries the friends service described above. |
+
+## Theia 5.3: Original brand imagery, Obsidian OLED, bidirectional sync and hybrid series
+
+> [!IMPORTANT]
+> **Theia 5.3 (`v5.3.0`) is a Shell release replacing every legacy brand logo and icon with rights-cleared masters (`assets/README.md`), adopting the Obsidian OLED palette (`#141414`), and shipping bidirectional pairing sync, hybrid local/remote series seasons and three-tab server settings.**
+> [Read the 5.3 release notes](docs/releases/v5.3.0.md) for what was and was not checked.
+
+| New in 5.3 | What it means |
+| --- | --- |
+| **Rights-cleared brand artwork everywhere** | All desktop shells, setups, system tray, favicons, Android launcher/TV banner, and Play Store visuals are regenerated from four clean master PNGs documented in [`assets/README.md`](assets/README.md). |
+| **Obsidian OLED palette** | Neutral greys move to `#141414` panels, `#1E1E1E` raised surfaces and `#2B2B2B` hairlines across the web interface, player OSD, installer and site. |
+| **Bidirectional server pairing and sync** | Pairing registers both servers in one step and synchronizes profiles, avatars, Theia+ pass and watch progress over `/api/ecosystem/v1/sync`. |
+| **Hybrid local and remote series** | Missing seasons and copies from paired servers merge right into local series and movie detail pages. |
+| **Three-tab server settings** | Server administration inside the player splits into *Library & sources*, *Access & devices* and *Server & maintenance*. |
 
 ## Theia 5.2.1: Your pass follows you and the settings match
 
@@ -566,6 +580,7 @@ file. They are not detected from picture or sound, and many files have none.
 Each release has its own notes, with what changed, what to do when updating and
 what was and was not checked.
 
+- **[5.3.0](docs/releases/v5.3.0.md)** — original rights-cleared brand imagery across every target (`assets/README.md`), Obsidian OLED surfaces (`#141414`), bidirectional pairing and profile/progress sync, hybrid local/remote series seasons, and three-tab server settings.
 - **[5.2.1](docs/releases/v5.2.1.md)** — the Theia+ pass follows the device, a failed
   pairing says why, Google Drive films are read ahead, a phone is flat black, every grey is
   plain, the web settings and the player's server pane match, and THEIA enters like a title

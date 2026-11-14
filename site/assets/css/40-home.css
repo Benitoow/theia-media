@@ -96,7 +96,7 @@
   justify-content: center;
   border: 1px solid var(--bone);
   border-radius: 50%;
-  background: #ede7dcf2;
+  background: #f5f5f5f2;
   color: var(--ink);
   cursor: pointer;
 }

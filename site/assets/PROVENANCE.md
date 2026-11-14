@@ -202,8 +202,8 @@ neutral wallpaper and a folder made for the purpose, which is what §12.1 asks.
 
 | File | What it is |
 | --- | --- |
-| Former `img/theia-wordmark.webp` (retired on 23 October 2026) | A crop (x 190, y 350, 1170 × 330), scaled to 600 px wide, of `assets/theia-logo.png`, the repository's prestige logo (SHA-256 `ec101250872a049fad617cb9e523f77bf40f1fe078227d50da4f6d49036bc912`). The header and share card now set the wordmark in the local Cinzel face |
-| `img/favicon-16.png`, `img/favicon-32.png`, `img/apple-touch-icon.png` | Copied unchanged from `web/static/`: crops of `assets/theia-icon.png`, itself a crop of the maintainer-supplied `assets/logo_icon_TNY.png` (SHA-256 `54046c5d9c50af5973b17a2298148d6b1a913ee6e59e6ff7241fc6a1751691c5`). **Source and licence not yet recorded** (decision 167) |
+| Former `img/theia-wordmark.webp` (retired on 23 October 2026) | A crop of the former header wordmark, replaced when the header and share card moved to the local Cinzel face |
+| `img/favicon-16.png`, `img/favicon-32.png`, `img/apple-touch-icon.png` | Copied unchanged from `web/static/`: crops of `assets/theia-icon.png`, supplied by the maintainer on 14 November 2026 (decision 247) as rights-cleared artwork replacing the retired earlier image |
 | `img/og-image.jpg` | The share card, 1200 × 630: the existing native library screenshot, unchanged in colour and aspect ratio, beside the name and text set in local Cinzel/Jost. Composed in HTML and captured in Edge with the repository's Playwright; labelled *Screenshot / Sample library*. No generated illustration or image logo |
 
 ## Fonts
