@@ -239,6 +239,15 @@
       }
     },
     "releases": {
+      "v5.3.1": {
+        "title": "Le mode anti-spoil suit votre profil, et une copie appairée garde son générique et ses crédits",
+        "summary": "Une version de réparation sur la 5.3.0 : le choix anti-spoil est mémorisé par profil d’une série à l’autre et après un relancement, et un épisode lu depuis un serveur appairé garde Passer le générique, la scène post-générique et le compte à rebours de fin.",
+        "changes": [
+          "Mémorise le choix anti-spoil avec le profil : il suit une autre série, une réouverture et un relancement, et chaque profil garde le sien.",
+          "Lit les marqueurs de chapitre d’une copie détenue par un serveur appairé depuis ce serveur : Passer le générique, Aller à la scène post-générique et le compte à rebours de fin y fonctionnent aussi.",
+          "Fait démarrer le compte à rebours de fin à 30 secondes au lieu de 31."
+        ]
+      },
       "v5.3.0": {
         "title": "Nouveaux logos et icônes originaux, surfaces Obsidian OLED, association bidirectionnelle et séries unifiées",
         "summary": "Tous les logos et icônes ont été redessinés de zéro sur chaque plateforme, les surfaces sombres adoptent le gris Obsidian OLED, l’association de deux serveurs se fait dans les deux sens en une étape avec synchronisation des profils et de la progression, les saisons locales et distantes fusionnent sur la fiche du titre, et les réglages serveur passent à trois onglets.",

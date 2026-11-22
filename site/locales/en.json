@@ -239,6 +239,15 @@
       }
     },
     "releases": {
+      "v5.3.1": {
+        "title": "The anti-spoil mode follows your profile, and a paired copy keeps its opening and credits",
+        "summary": "A repair release on 5.3.0: the anti-spoil choice is remembered by the profile across series and relaunches, and an episode played from a paired server keeps its Skip opening, post-credits scene and ending countdown.",
+        "changes": [
+          "Remembers the anti-spoil choice with the profile, so it follows another series, a reopen and a relaunch, and each profile keeps its own.",
+          "Reads the chapter markers of a copy held by a paired server from that server, so Skip opening, Go to the post-credits scene and the ending countdown work there too.",
+          "Starts the ending countdown at 30 seconds instead of 31."
+        ]
+      },
       "v5.3.0": {
         "title": "New original logos and icons, Obsidian OLED surfaces, two-way pairing sync and merged series",
         "summary": "Every logo and icon has been redrawn from scratch across all platforms, dark surfaces move to neutral Obsidian OLED tones, pairing two servers connects both ways in one step and syncs profiles and watch progress, local and remote seasons merge on the title page, and server settings split into three clearer tabs.",

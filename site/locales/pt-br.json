@@ -239,6 +239,15 @@
       }
     },
     "releases": {
+      "v5.3.1": {
+        "title": "O modo anti-spoiler segue o seu perfil, e uma cópia emparelhada mantém a abertura e os créditos",
+        "summary": "Uma versão de reparo sobre a 5.3.0: a escolha anti-spoiler é lembrada por perfil entre séries e reinicializações, e um episódio reproduzido de um servidor emparelhado mantém Pular abertura, a cena pós-créditos e a contagem final.",
+        "changes": [
+          "Guarda a escolha anti-spoiler com o perfil: ela acompanha outra série, uma reabertura e um reinício, e cada perfil mantém a sua.",
+          "Lê os marcadores de capítulo de uma cópia de um servidor emparelhado nesse servidor, para que Pular abertura, Ir para a cena pós-créditos e a contagem final também funcionem ali.",
+          "Inicia a contagem final em 30 segundos em vez de 31."
+        ]
+      },
       "v5.3.0": {
         "title": "Novos logotipos e ícones originais, superfícies Obsidian OLED, pareamento bidirecional e séries unificadas",
         "summary": "Todos os logotipos e ícones foram redesenhados do zero em todas as plataformas, os painéis escuros adotam o cinza Obsidian OLED, o pareamento entre dois servidores passa a conectar nos dois sentidos em uma etapa com sincronização de perfis e progresso, as temporadas locais e remotas se unem na página do título e os ajustes do servidor se dividem em três abas.",

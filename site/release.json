@@ -1,14 +1,14 @@
 {
-	"tag": "v5.3.0",
-	"name": "Theia v5.3.0",
-	"publishedAt": "2026-11-14T12:08:10Z",
-	"url": "https://github.com/Benitoow/theia-media/releases/tag/v5.3.0",
+	"tag": "v5.3.1",
+	"name": "Theia v5.3.1",
+	"publishedAt": "2026-11-22T22:43:46Z",
+	"url": "https://github.com/Benitoow/theia-media/releases/tag/v5.3.1",
 	"assets": {
 		"theia-setup-windows-amd64.exe": {
-			"size": 70888510,
-			"sha256": "d312efc39aeb07c87ba2269fb1f15eb8f664d085b0aefce2d0a4055119d5df7e",
-			"tag": "v5.3.0",
-			"url": "https://github.com/Benitoow/theia-media/releases/download/v5.3.0/theia-setup-windows-amd64.exe"
+			"size": 71367064,
+			"sha256": "4cb3fbbf3c6f2919dc5f51f8c164f90e821c71d26216d7e3581b02c287ff0f47",
+			"tag": "v5.3.1",
+			"url": "https://github.com/Benitoow/theia-media/releases/download/v5.3.1/theia-setup-windows-amd64.exe"
 		},
 		"theia-setup-windows-arm64.exe": {
 			"size": 63856703,
@@ -17,22 +17,22 @@
 			"url": "https://github.com/Benitoow/theia-media/releases/download/v5.3.0/theia-setup-windows-arm64.exe"
 		},
 		"theia-setup-darwin-arm64": {
-			"size": 40138154,
-			"sha256": "bb3fd007394561c31631d96840b7a496c96ed3f73eef217d3bc8a8e836b9b675",
-			"tag": "v5.3.0",
-			"url": "https://github.com/Benitoow/theia-media/releases/download/v5.3.0/theia-setup-darwin-arm64"
+			"size": 40614763,
+			"sha256": "926a038f679df3c530713de3e6e3860429963e943606a291fb2200cccade2384",
+			"tag": "v5.3.1",
+			"url": "https://github.com/Benitoow/theia-media/releases/download/v5.3.1/theia-setup-darwin-arm64"
 		},
 		"theia-setup-darwin-amd64": {
-			"size": 43887196,
-			"sha256": "15c177d43509b3a84f6e6e7ebed3258d415e7c59ab1144647e8f6b2dd9476529",
-			"tag": "v5.3.0",
-			"url": "https://github.com/Benitoow/theia-media/releases/download/v5.3.0/theia-setup-darwin-amd64"
+			"size": 44367184,
+			"sha256": "ead2a9d585fed35bed4c6c10e05c9a1359ef8b710983966460371e107f8327bf",
+			"tag": "v5.3.1",
+			"url": "https://github.com/Benitoow/theia-media/releases/download/v5.3.1/theia-setup-darwin-amd64"
 		},
 		"theia-setup-linux-amd64": {
-			"size": 90404960,
-			"sha256": "1db3f4c3d988f6939351b4a4864b3fb11c88e7bdb542d6c6b2691b88c9361835",
-			"tag": "v5.3.0",
-			"url": "https://github.com/Benitoow/theia-media/releases/download/v5.3.0/theia-setup-linux-amd64"
+			"size": 90890327,
+			"sha256": "a59f94ac6afc4a874002f2edb5c6a2e62d86abd49e9b7cc55b79866598abcd3c",
+			"tag": "v5.3.1",
+			"url": "https://github.com/Benitoow/theia-media/releases/download/v5.3.1/theia-setup-linux-amd64"
 		},
 		"theia-setup-linux-arm64": {
 			"size": 86110418,
@@ -40,11 +40,11 @@
 			"tag": "v5.3.0",
 			"url": "https://github.com/Benitoow/theia-media/releases/download/v5.3.0/theia-setup-linux-arm64"
 		},
-		"theia-android-5.3.0.apk": {
-			"size": 6047081,
-			"sha256": "07a24b761f88bb6a86982efde7f4b641ebeb131ae364c2674de364fc12991ef5",
-			"tag": "v5.3.0",
-			"url": "https://github.com/Benitoow/theia-media/releases/download/v5.3.0/theia-android-5.3.0.apk"
+		"theia-android-5.3.1.apk": {
+			"size": 6047377,
+			"sha256": "86f3663bd17e261a75fd610d5f9c5c1d831cb402461d4de0f52c9a63c95b6364",
+			"tag": "v5.3.1",
+			"url": "https://github.com/Benitoow/theia-media/releases/download/v5.3.1/theia-android-5.3.1.apk"
 		}
 	}
 }

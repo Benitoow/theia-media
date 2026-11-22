@@ -239,6 +239,15 @@
       }
     },
     "releases": {
+      "v5.3.1": {
+        "title": "El modo antiespoiler sigue a tu perfil y una copia emparejada conserva su apertura y créditos",
+        "summary": "Una versión de reparación sobre 5.3.0: la elección antiespoiler se recuerda por perfil entre series y reinicios, y un episodio reproducido desde un servidor emparejado conserva Saltar apertura, la escena poscréditos y la cuenta atrás final.",
+        "changes": [
+          "Guarda la elección antiespoiler con el perfil: sigue a otra serie, una reapertura y un reinicio, y cada perfil conserva la suya.",
+          "Lee los marcadores de capítulo de una copia de un servidor emparejado desde ese servidor, de modo que Saltar apertura, Ir a la escena poscréditos y la cuenta atrás final también funcionan allí.",
+          "Inicia la cuenta atrás final en 30 segundos en lugar de 31."
+        ]
+      },
       "v5.3.0": {
         "title": "Nuevos logotipos e iconos originales, superficies Obsidian OLED, emparejamiento bidireccional y series unificadas",
         "summary": "Todos los logotipos e iconos se han redibujado desde cero en cada plataforma, los paneles oscuros pasan a tonos neutros Obsidian OLED, emparejar dos servidores conecta en ambos sentidos en un solo paso sincronizando perfiles y progreso, las temporadas locales y remotas se combinan en la ficha y los ajustes del servidor se dividen en tres pestañas.",

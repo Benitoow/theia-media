@@ -239,6 +239,15 @@
       }
     },
     "releases": {
+      "v5.3.1": {
+        "title": "Mode anti-spoiler mengikuti profil Anda, dan salinan dari server berpasangan mempertahankan pembukaan serta kreditnya",
+        "summary": "Rilis perbaikan untuk 5.3.0: pilihan anti-spoiler diingat per profil di antara serial dan peluncuran ulang, dan episode yang diputar dari server berpasangan mempertahankan Lewati pembukaan, adegan pasca-kredit, dan hitungan mundur akhir.",
+        "changes": [
+          "Menyimpan pilihan anti-spoiler bersama profil, sehingga mengikuti serial lain, pembukaan ulang, dan peluncuran ulang, dan setiap profil menyimpan pilihannya sendiri.",
+          "Membaca penanda bab salinan milik server berpasangan dari server itu, sehingga Lewati pembukaan, Pergi ke adegan pasca-kredit, dan hitungan mundur akhir juga berfungsi di sana.",
+          "Memulai hitungan mundur akhir pada 30 detik, bukan 31."
+        ]
+      },
       "v5.3.0": {
         "title": "Logo dan ikon orisinal baru, permukaan Obsidian OLED, pemasangan dua arah, dan seri tergabung",
         "summary": "Seluruh logo dan ikon digambar ulang dari awal di semua platform, permukaan gelap beralih ke warna abu Obsidian OLED yang netral, pemasangan dua server kini terhubung dua arah dalam satu langkah sambil menyinkronkan profil dan progres tontonan, musim lokal dan jauh bergabung di halaman judul, dan pengaturan server dibagi menjadi tiga tab.",

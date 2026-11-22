@@ -563,7 +563,7 @@
   },
   "noto-chinese": {
     "source": "notosanssc",
-    "sha256": "7f9ffda5570ef726ae950bc1673cec55b463fc1823a3820ac2a280bca7a80755",
+    "sha256": "bcf2a8a44ec6fd15b78c5c8630c433bd894e9c80492799c7b308557fd6fa7ed5",
     "codepoints": [
       32,
       35,
@@ -1456,6 +1456,7 @@
       36981,
       36991,
       36992,
+      37027,
       37096,
       37117,
       37197,
