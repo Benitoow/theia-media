@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/Benitoow/theia-media/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Benitoow/theia-media?style=flat-square&color=FF4500"></a>
   <a href="LICENSE"><img alt="Free for noncommercial use: PolyForm Noncommercial from 4.0, GPL-3.0 up to 3.4" src="https://img.shields.io/badge/licence-PolyForm%20NC%20(4.0%2B)%20%C2%B7%20GPL--3.0%20(%E2%89%A43.4)-555?style=flat-square"></a>
-  <a href="#theia-53-original-brand-imagery-obsidian-oled-bidirectional-sync-and-hybrid-series"><img alt="Theia 5.3.0" src="https://img.shields.io/badge/Theia-5.3.0-FF4500?style=flat-square"></a>
+  <a href="#theia-531-the-anti-spoil-mode-follows-you-and-a-paired-copy-keeps-its-opening-and-credits"><img alt="Theia 5.3.1" src="https://img.shields.io/badge/Theia-5.3.1-FF4500?style=flat-square"></a>
   <a href="https://discord.gg/5E55F7XFZp"><img alt="Join the Discord" src="https://img.shields.io/badge/Discord-join%20us-5865F2?style=flat-square"></a>
   <img alt="Windows x64" src="https://img.shields.io/badge/Windows-x64-555?style=flat-square">
   <img alt="Ubuntu 24.04 x64" src="https://img.shields.io/badge/Ubuntu%2024.04-x64-555?style=flat-square">
@@ -21,10 +21,10 @@
 
 <p align="center">
   <a href="https://theia-media.app/">Website</a> ·
-  <a href="#theia-53-original-brand-imagery-obsidian-oled-bidirectional-sync-and-hybrid-series">Theia 5.3.0</a> ·
+  <a href="#theia-531-the-anti-spoil-mode-follows-you-and-a-paired-copy-keeps-its-opening-and-credits">Theia 5.3.1</a> ·
   <a href="#see-it">Screenshots</a> ·
   <a href="#downloads">Downloads</a> ·
-  <a href="docs/releases/v5.3.0.md">5.3 release notes</a> ·
+  <a href="docs/releases/v5.3.1.md">5.3.1 release notes</a> ·
   <a href="#three-minute-setup">Setup</a> ·
   <a href="#theia-plex-jellyfin-or-emby">Compare</a> ·
   <a href="https://discord.gg/5E55F7XFZp">Discord</a>
@@ -52,6 +52,18 @@ connect it: **Google Drive**, through your own Google client. See
 | One download | Built for choosing | Private by default |
 | --- | --- | --- |
 | One setup includes the server, launcher, native player and media engine. Choose all-in-one, server-only or player-only. FFmpeg is downloaded only when the server needs conversion. | Resume, profiles, watchlists, duration filters, one search across films and series, and a nightly pick. | No telemetry or cloud account. TMDB supplies metadata, GitHub Releases supplies updates, and Firebase carries the friends service described above. |
+
+## Theia 5.3.1: The anti-spoil mode follows you, and a paired copy keeps its opening and credits
+
+> [!IMPORTANT]
+> **Theia 5.3.1 is a repair release on 5.3.0 for two behaviours reported in use: the anti-spoil choice is now remembered by the profile, and an episode played from a paired server keeps its opening skip, post-credits scene and ending countdown.**
+> [Read the 5.3.1 release notes](docs/releases/v5.3.1.md) for what was and was not checked.
+
+| New in 5.3.1 | What it means |
+| --- | --- |
+| **The anti-spoil mode follows the profile** | Turning it on used to last only for the page that was open. It now follows you from one series to another, survives a reopen and a relaunch, and each profile keeps its own choice. |
+| **A paired copy keeps its opening and credits** | The chapter markers of a copy held by a paired server are read from that server, so *Skip opening*, *Go to the post-credits scene* and the ending countdown work there too. |
+| **The ending countdown opens at 30 seconds** | It was announcing 31 because its deadline and its displayed instant came from two clock readings; both now come from one. |
 
 ## Theia 5.3: Original brand imagery, Obsidian OLED, bidirectional sync and hybrid series
 
@@ -580,6 +592,7 @@ file. They are not detected from picture or sound, and many files have none.
 Each release has its own notes, with what changed, what to do when updating and
 what was and was not checked.
 
+- **[5.3.1](docs/releases/v5.3.1.md)** — a repair release on 5.3.0: the anti-spoil choice is remembered by the profile across series and relaunches, and an episode played from a paired server keeps its opening skip, post-credits scene and ending countdown (decisions 202 and 225, amended).
 - **[5.3.0](docs/releases/v5.3.0.md)** — original rights-cleared brand imagery across every target (`assets/README.md`), Obsidian OLED surfaces (`#141414`), bidirectional pairing and profile/progress sync, hybrid local/remote series seasons, and three-tab server settings.
 - **[5.2.1](docs/releases/v5.2.1.md)** — the Theia+ pass follows the device, a failed
   pairing says why, Google Drive films are read ahead, a phone is flat black, every grey is
